@@ -1,9 +1,7 @@
-import { useState } from "react"
 import { toast } from "sonner"
 import { useRefreshFeed } from "@readspace/shared"
 
 export function useDeepRefresh() {
-    const [isRefreshing, setIsRefreshing] = useState(false)
     const refreshFeed = useRefreshFeed()
 
     const handleDeepRefresh = async (
@@ -12,7 +10,6 @@ export function useDeepRefresh() {
     ) => {
         if (!feedId) return
 
-        setIsRefreshing(true)
         toast.loading("Checking for new articles...", { id: "deep-refresh" })
 
         try {
@@ -30,13 +27,11 @@ export function useDeepRefresh() {
             toast.error("Failed to check for new articles. Please try again.", {
                 id: "deep-refresh",
             })
-        } finally {
-            setIsRefreshing(false)
         }
     }
 
     return {
-        isRefreshing,
+        isRefreshing: refreshFeed.isPending,
         handleDeepRefresh,
     }
 }

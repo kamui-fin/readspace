@@ -1,4 +1,4 @@
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 interface KbdProps extends React.HTMLAttributes<HTMLElement> {
     children: React.ReactNode

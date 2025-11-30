@@ -1,71 +1,168 @@
-"use client"
+import { useRef, useState, useMemo, useEffect } from "react"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { type Article, ContentView } from "@readspace/shared"
+import { Skeleton } from "@/components/ui/skeleton"
 
-import { useEffect, useRef } from "react"
-
+import { AiSummaryCard } from "./AiSummaryCard"
 import { AnimatedContent } from "./AnimatedContent"
 import { ArticleHeader } from "./ArticleHeader"
 import { ArticleToolbar } from "./ArticleToolbar"
-import { useArticleContext } from "./ArticleContext"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { ProseContainer } from "./ProseContainer"
+import { useArticleAI } from "./hooks/use-article-ai"
+import { useArticleInteractions } from "./hooks/use-article-interactions"
+import { useArticleReading } from "./hooks/use-article-reading"
 
-export function ArticleContent() {
+interface ArticleContentProps {
+    article: Article
+    isRecentlyReadMode: boolean
+    isReadLaterMode: boolean
+    shouldShowPreviewBanner: boolean
+    shouldShowFeedBadge: boolean
+    onMarkAsRead?: () => void
+    onArticleRemoved?: () => void
+    onBack?: () => void
+    isLoading?: boolean
+}
+
+function estimateReadTime(text: string): number {
+    if (!text) return 0
+    const wordsPerMinute = 200
+    // Strip HTML tags
+    const cleanText = text.replace(/<[^>]*>/g, "")
+    const words = cleanText.trim().split(/\s+/).length
+    return Math.ceil(words / wordsPerMinute)
+}
+
+export function ArticleContent({
+    article,
+    isRecentlyReadMode,
+    isReadLaterMode,
+    shouldShowPreviewBanner,
+    shouldShowFeedBadge,
+    onMarkAsRead,
+    onArticleRemoved,
+    onBack,
+    isLoading,
+}: ArticleContentProps) {
     const contentRef = useRef<HTMLDivElement>(null)
     const isMobile = useIsMobile()
 
+    // Local state for content view
+    const [contentView, setContentView] = useState<ContentView>(
+        article.extracted_content ? ContentView.Extracted : ContentView.Original
+    )
+
+    // Auto-switch to extracted view when content becomes available
+    const prevExtractedContentRef = useRef(article.extracted_content)
+    useEffect(() => {
+        if (article.extracted_content && !prevExtractedContentRef.current) {
+            setContentView(ContentView.Extracted)
+        }
+        prevExtractedContentRef.current = article.extracted_content
+    }, [article.extracted_content])
+
+    // Hooks
     const {
-        article,
-        contentSource,
-        setContentSource,
-        handleMarkAsRead,
-        handleToggleReadLater,
-        handleScrollMarkAsRead,
-        handleContentClickMarkAsRead,
+        aiSummary,
+        displayContent,
+        translatedContent,
+        translatedLanguage,
+        isExtracting,
+        isSummarizing,
+        isTranslating,
         handleExtractContent,
         handleSummarize,
         handleTranslate,
-        extractFullText,
-        summarizeArticle,
-        isTranslating,
-        onBack,
+    } = useArticleAI({
+        article,
+        contentView,
+        setContentView,
+    })
+
+    const {
+        handleMarkAsRead: markAsReadInteraction,
+        handleToggleReadLater,
+        handleScrollMarkAsRead,
+        handleContentClickMarkAsRead,
+    } = useArticleInteractions({
+        article,
+        isRecentlyReadMode,
         isReadLaterMode,
-        optimisticReadLater,
-        contentKey,
-        translatedContent,
-        translatedLanguage,
-        // State from context
-        currentContent,
-        currentReadTime,
-        isShowingSummary,
-        setCurrentReadTime,
-        shouldShowFeedBadge,
-    } = useArticleContext()
+        shouldShowPreviewBanner,
+        isMobile: !!isMobile,
+        onMarkAsRead,
+        onArticleRemoved,
+    })
 
-    // Update read time when article changes
+    const { handleScroll } = useArticleReading({
+        article,
+        onMarkAsRead: () =>
+            handleScrollMarkAsRead(contentRef.current?.scrollTop || 0),
+    })
+
+    // Client-side read time calculation
+    const [clientReadTime, setClientReadTime] = useState(0)
+
     useEffect(() => {
-        setCurrentReadTime(article.estimated_read_time_minutes)
-    }, [article.id, article.estimated_read_time_minutes, setCurrentReadTime])
-
-    // Scroll tracking for marking as read
-    useEffect(() => {
-        const el = contentRef.current
-        if (!el) return
-
-        const handleScroll = () => {
-            handleScrollMarkAsRead(el.scrollTop)
+        if (displayContent) {
+            setClientReadTime(estimateReadTime(displayContent))
+        } else if (article.description) {
+            setClientReadTime(estimateReadTime(article.description))
+        } else {
+            setClientReadTime(article.estimated_read_time_minutes || 0)
         }
+    }, [displayContent, article.description, article.estimated_read_time_minutes])
 
-        el.addEventListener("scroll", handleScroll)
-        return () => el.removeEventListener("scroll", handleScroll)
-    }, [handleScrollMarkAsRead])
+    // Local state for AI summary dismissal
+    const [isAiSummaryDismissed, setIsAiSummaryDismissed] = useState(false)
+
+    // Combine scroll handlers
+    const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const target = e.currentTarget
+        handleScroll(target.scrollTop, target.scrollHeight, target.clientHeight)
+        handleScrollMarkAsRead(target.scrollTop)
+    }
+
+    // Derive content key for animation
+    const contentKey = useMemo(() => {
+        if (contentView === ContentView.Translated && translatedLanguage) {
+            return `translated-${translatedLanguage}-${article.id}`
+        }
+        return `${contentView}-${article.id}`
+    }, [contentView, article.id, translatedLanguage])
+
+    const toolbar = (
+        <ArticleToolbar
+            hideBackground={true}
+            article={article}
+            contentView={contentView}
+            setContentView={setContentView}
+            handleMarkAsRead={markAsReadInteraction}
+            handleToggleReadLater={handleToggleReadLater}
+            handleExtractContent={handleExtractContent}
+            handleSummarize={async () => {
+                setIsAiSummaryDismissed(false)
+                if (!aiSummary) {
+                    await handleSummarize()
+                }
+            }}
+            handleTranslate={handleTranslate}
+            isExtracting={isExtracting}
+            isSummarizing={isSummarizing}
+            isTranslating={isTranslating}
+            onBack={onBack}
+            isReadLaterMode={isReadLaterMode}
+            translatedContent={translatedContent}
+            translatedLanguage={translatedLanguage}
+        />
+    )
 
     return (
         <div className="flex-1 overflow-hidden flex flex-col h-full">
             {/* Mobile Toolbar - Fixed at top */}
             {isMobile && (
                 <div className="md:hidden bg-background/95 backdrop-blur-sm border-b px-4 py-3 shrink-0">
-                    <ArticleToolbar
-                        hideBackground={true}
-                    />
+                    {toolbar}
                 </div>
             )}
 
@@ -74,70 +171,81 @@ export function ArticleContent() {
                 className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth"
                 style={{ scrollbarGutter: "stable" }}
                 onClick={handleContentClickMarkAsRead}
+                onScroll={onScroll}
             >
-                <div className="mx-auto max-w-4xl">
-                    <article className="px-6 py-8 prose prose-slate dark:prose-invert prose-2xl article-content prose-headings:font-semibold prose-headings:text-foreground prose-p:text-foreground prose-p:leading-relaxed prose-p:text-xl prose-li:text-foreground prose-li:text-xl prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:py-3 prose-blockquote:px-4 prose-blockquote:text-xl prose-code:bg-muted prose-code:px-1.5 prose-code:py-1 prose-code:rounded prose-code:text-lg prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:text-foreground prose-a:text-primary prose-a:no-underline prose-a:hover:underline prose-img:rounded-lg prose-img:shadow-sm prose-strong:text-foreground prose-em:text-foreground prose-figcaption:text-muted-foreground prose-figcaption:text-sm prose-figcaption:italic prose-figure:my-8 prose-hr:border-border prose-th:text-foreground prose-th:font-semibold prose-th:border-border prose-td:text-foreground prose-td:border-border prose-table:border-border prose-thead:border-border prose-tr:border-border prose-ol:text-foreground prose-ul:text-foreground prose-dl:text-foreground prose-dt:text-foreground prose-dt:font-semibold prose-dd:text-foreground prose-lead:text-muted-foreground prose-video:rounded-lg prose-video:shadow-sm prose-kbd:bg-muted prose-kbd:text-foreground prose-kbd:px-2 prose-kbd:py-1 prose-kbd:rounded prose-kbd:border prose-kbd:border-border">
+                <div className="mx-auto max-w-4xl px-4 md:px-8">
+                    <ProseContainer>
                         <ArticleHeader
-                            currentReadTime={currentReadTime}
+                            article={article}
+                            currentReadTime={clientReadTime}
                             shouldShowFeedBadge={shouldShowFeedBadge}
                             isMobile={!!isMobile}
+                            isRecentlyReadMode={isRecentlyReadMode}
+                            shouldShowPreviewBanner={shouldShowPreviewBanner}
+                            toolbar={toolbar}
                         />
-                        {(() => {
-                            const displayContent =
-                                contentSource === "translated"
-                                    ? translatedContent
-                                    : contentSource === "extracted"
-                                      ? article.extracted_content
-                                      : article.content ||
-                                        article.description ||
-                                        ""
 
-                            return displayContent ? (
-                                <AnimatedContent
-                                    contentKey={contentKey}
-                                    className=""
+                        {aiSummary && !isAiSummaryDismissed && (
+                            <AiSummaryCard
+                                summary={aiSummary}
+                                className="mt-4"
+                                onDismiss={() => setIsAiSummaryDismissed(true)}
+                            />
+                        )}
+
+                        {isLoading || isExtracting || isTranslating ? (
+                            <div className="space-y-4 mt-8">
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-[90%]" />
+                                <Skeleton className="h-4 w-[95%]" />
+                                <Skeleton className="h-4 w-[80%]" />
+                                <Skeleton className="h-4 w-[85%]" />
+                                <Skeleton className="h-4 w-[60%]" />
+                            </div>
+                        ) : displayContent ? (
+                            <AnimatedContent
+                                contentKey={contentKey}
+                                className="mt-8"
+                            >
+                                <div
+                                    className="text-xl leading-relaxed"
+                                    style={{
+                                        fontFamily:
+                                            "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
+                                    }}
                                 >
                                     <div
-                                        className="text-xl leading-relaxed"
-                                        style={{
-                                            fontFamily:
-                                                "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
+                                        dangerouslySetInnerHTML={{
+                                            __html: displayContent,
                                         }}
-                                    >
+                                    />
+                                </div>
+                            </AnimatedContent>
+                        ) : (
+                            <div className="space-y-6 mt-8">
+                                {(article.description || article.user_note) && (
+                                    <blockquote className="border-l-4 border-primary/30 bg-muted/30 pl-4 italic text-muted-foreground prose prose-sm max-w-none">
                                         <div
                                             dangerouslySetInnerHTML={{
-                                                __html: displayContent,
+                                                __html:
+                                                    article.user_note ||
+                                                    article.description ||
+                                                    "",
                                             }}
                                         />
-                                    </div>
-                                </AnimatedContent>
-                            ) : (
-                                <div className="space-y-6">
-                                    {(article.description ||
-                                        article.user_note) && (
-                                        <blockquote className="border-l-4 border-primary/30 bg-muted/30 pl-4 italic text-muted-foreground prose prose-sm max-w-none">
-                                            <div
-                                                dangerouslySetInnerHTML={{
-                                                    __html:
-                                                        article.user_note ||
-                                                        article.description ||
-                                                        "",
-                                                }}
-                                            />
-                                        </blockquote>
-                                    )}
-                                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                                        <div className="mx-auto max-w-md">
-                                            <p className="text-sm text-muted-foreground">
-                                                This article doesn&apos;t have
-                                                any content available.
-                                            </p>
-                                        </div>
+                                    </blockquote>
+                                )}
+                                <div className="flex flex-col items-center justify-center py-8 text-center">
+                                    <div className="mx-auto max-w-md">
+                                        <p className="text-sm text-muted-foreground">
+                                            This article doesn&apos;t have any
+                                            content available.
+                                        </p>
                                     </div>
                                 </div>
-                            )
-                        })()}
-                    </article>
+                            </div>
+                        )}
+                    </ProseContainer>
                 </div>
             </div>
         </div>

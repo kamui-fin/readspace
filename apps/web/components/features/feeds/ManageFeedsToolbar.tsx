@@ -5,8 +5,7 @@ import { useManageFeedsContext } from "./ManageFeedsContext"
 
 export function ManageFeedsToolbar() {
     const {
-        searchTerm,
-        setSearchTerm,
+
         filterFolderId,
         setFilterFolderId,
         folders,
@@ -19,8 +18,7 @@ export function ManageFeedsToolbar() {
 
     return (
         <FeedFiltersPanel
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
+
             filterFolderId={filterFolderId}
             onFolderFilterChange={setFilterFolderId}
             folders={folders}

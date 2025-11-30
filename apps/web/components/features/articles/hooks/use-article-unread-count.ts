@@ -1,19 +1,19 @@
 import { useMemo } from "react"
-import type { Subscription } from "@readspace/shared"
+import { type Subscription, ArticleFilterMode } from "@readspace/shared"
 
 interface UseArticleUnreadCountProps {
     unreadCounts:
-        | {
-              read_later_count?: number
-              today_count?: number
-              feed_counts?: Record<string, number>
-              total_unread?: number
-          }
-        | null
-        | undefined
+    | {
+        read_later?: number
+        today?: number
+        feed_counts?: Record<string, number>
+        total_unread?: number
+    }
+    | null
+    | undefined
     feedId?: string
     folderId?: string
-    mode?: "allArticles" | "recentlyRead" | "readLater" | "today"
+    mode?: ArticleFilterMode
     allUserFeeds: Subscription[] | null
 }
 
@@ -28,11 +28,12 @@ export function useArticleUnreadCount({
         const typedUnreadCounts = unreadCounts || {}
 
         // No unread counts for recently read
-        if (mode === "recentlyRead") return 0
+        if (mode === ArticleFilterMode.RecentlyRead) return 0
 
-        if (mode === "readLater")
-            return typedUnreadCounts?.read_later_count || 0
-        if (mode === "today") return typedUnreadCounts?.today_count || 0
+        if (mode === ArticleFilterMode.ReadLater)
+            return typedUnreadCounts?.read_later || 0
+        if (mode === ArticleFilterMode.Today)
+            return typedUnreadCounts?.today || 0
 
         if (feedId) return unreadCounts?.feed_counts?.[feedId] || 0
 

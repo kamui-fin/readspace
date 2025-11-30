@@ -5,23 +5,20 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import {
-    type FeedDetail,
-    type FeedSummary,
-} from "@readspace/shared"
+import { type FeedDetail, type FeedSummary } from "@readspace/shared"
 import { EditFeedForm } from "./EditFeedForm"
 
 interface EditFeedDialogProps {
     feed: FeedSummary &
-    Partial<
-        Pick<
-            FeedDetail,
-            | "description"
-            | "language"
-            | "top_level_category"
-            | "popularity_score"
+        Partial<
+            Pick<
+                FeedDetail,
+                | "description"
+                | "language"
+                | "top_level_category"
+                | "popularity_score"
+            >
         >
-    >
     isOpen: boolean
     onClose: () => void
 }

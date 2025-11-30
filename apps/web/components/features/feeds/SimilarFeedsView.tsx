@@ -4,7 +4,7 @@ import type { ReactNode } from "react"
 
 import { FeedCard } from "@/components/features/feeds/FeedCard"
 import { FeedCardSkeleton } from "@/components/features/feeds/FeedCardSkeleton"
-import { useSimilarFeedsById } from "@/components/features/discover/hooks/use-similar-feeds-by-id"
+import { useSimilarFeeds } from "@/components/features/discover/hooks/use-similar-feeds"
 
 interface SimilarFeedsClientProps {
     feedId: string
@@ -73,7 +73,7 @@ function EmptyState() {
 }
 
 export default function SimilarFeedsView({ feedId }: SimilarFeedsClientProps) {
-    const { similarFeeds, error, isLoading } = useSimilarFeedsById(feedId)
+    const { similarFeeds, error, isLoading } = useSimilarFeeds(feedId)
 
     const renderContent = () => {
         if (isLoading) {

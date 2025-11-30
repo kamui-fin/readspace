@@ -10,18 +10,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.constants import ERROR_FEED_NOT_FOUND
 from app.core.custom_exceptions import NotFoundError
 from app.crud.feed.core import get_feed_by_id
-from app.crud.feed.subscription import create_subscription
-from app.db.session import get_db, get_db_factory
+from app.db.session import get_db_factory
 from app.models.feed import Feed
 from app.services.feeds.service import add_feed
 from app.services.folder import ensure_default_folder
 from app.services.user.auth import get_current_user
 from app.services.user.resource_limits import enforce_subscription_limit
-from app.typing.common import MessageResponse
 from app.typing.feeds import FeedCreate
 from app.typing.subscriptions import (
-    SubscriptionCreate,
-    SubscriptionCreateByFeedId,
+    SubscriptionResponse,
 )
 from app.typing.user import TokenData
 
@@ -51,7 +48,7 @@ async def verify_feed_exists(db: AsyncSession, feed_id: UUID) -> Feed:
 # --- Routes ---
 @router.post(
     "/",
-    response_model=MessageResponse,
+    response_model=SubscriptionResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Add a new RSS feed",
     description="Add a new RSS feed by URL with automatic parsing, validation, and subscription creation.",
@@ -60,7 +57,7 @@ async def add_new_feed(
     feed_in: Annotated[FeedCreate, Body(description="Feed URL and folder assignment")],
     db_factory: Annotated[Any, Depends(get_db_factory)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-) -> MessageResponse:
+) -> SubscriptionResponse:
     """
     Add a new RSS feed by URL. Validates, parses, and creates subscription.
     """
@@ -86,46 +83,4 @@ async def add_new_feed(
     )
 
     logger.info("Feed added successfully", feed_id=str(subscription.feed_id))
-    return MessageResponse(message="Feed added successfully")
-
-
-@router.post(
-    "/{feed_id}/subscribe",
-    response_model=MessageResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Subscribe to an existing feed",
-    description="Subscribe to an existing feed UUID without re-parsing URL.",
-)
-async def subscribe_to_feed(
-    feed_id: UUID,
-    subscription_data: Annotated[SubscriptionCreateByFeedId, Body()],
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[TokenData, Depends(get_current_user)],
-) -> MessageResponse:
-    """
-    Subscribe to an existing RSS feed by its UUID.
-    """
-    # 1. Bind Context
-    logger.bind(user_id=current_user.sub, feed_id=str(feed_id))
-    user_uuid = UUID(current_user.sub)
-
-    # 2. Validation & Limits
-    feed = await verify_feed_exists(db, feed_id)
-    await enforce_subscription_limit(db, user_uuid)
-
-    # 3. Create Subscription
-    subscription = await create_subscription(
-        db=db,
-        user_id=user_uuid,
-        subscription_in=SubscriptionCreate(
-            url=str(feed.url),
-            folder_id=subscription_data.folder_id,
-            custom_title=subscription_data.custom_title,
-        ),
-        feed_db=feed,
-    )
-
-    logger.info(
-        "Feed subscription created successfully", subscription_id=str(subscription.id)
-    )
-    return MessageResponse(message="Subscribed to feed successfully")
+    return subscription

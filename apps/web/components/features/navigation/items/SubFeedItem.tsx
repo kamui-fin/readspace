@@ -2,7 +2,7 @@
 
 import { memo, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
+import { FeedIcon } from "@/components/features/feeds/FeedIcon"
 import { motion } from "framer-motion"
 import {
     SidebarLeftMenuSubButton,
@@ -48,14 +48,7 @@ const SubFeedItemComponent = ({
     index,
     disableAnimation = false,
 }: SubFeedItemProps) => {
-    const [imageError, setImageError] = useState(false)
 
-    /**
-     * Handle image load error by setting fallback state
-     */
-    const handleImageError = () => {
-        setImageError(true)
-    }
 
     const content = (
         <SidebarMenuSubItem>
@@ -72,18 +65,13 @@ const SubFeedItemComponent = ({
                     >
                         <div className="flex flex-grow items-center overflow-hidden pl-2">
                             {/* Feed favicon with fallback */}
-                            {item.image && !imageError ? (
-                                <Image
-                                    src={item.image}
-                                    alt=""
-                                    width={16}
-                                    height={16}
-                                    className="mr-2 h-4 w-4 shrink-0 rounded"
-                                    onError={handleImageError}
-                                />
-                            ) : (
-                                <div className="mr-2 h-4 w-4 shrink-0 rounded bg-primary/8" />
-                            )}
+                            <FeedIcon
+                                feed={{
+                                    title: item.title,
+                                    image_url: item.image,
+                                }}
+                                className="mr-2 h-4 w-4 shrink-0 rounded"
+                            />
                             <span className="truncate">{item.title}</span>
                             {/* Star indicator for favorited feeds (hidden in pinned section) */}
                             {item.isFavorite && !item.isPinned && (

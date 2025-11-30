@@ -2,6 +2,19 @@ import { PaginatedResponse } from "./common";
 
 export type Priority = "HIGH" | "MEDIUM" | "LOW";
 
+export enum ArticleFilterMode {
+  AllArticles = "allArticles",
+  RecentlyRead = "recentlyRead",
+  ReadLater = "readLater",
+  Today = "today",
+}
+
+export enum ContentView {
+  Original = "original",
+  Extracted = "extracted",
+  Translated = "translated",
+}
+
 // ============= Core Types =============
 
 /**

@@ -21,6 +21,8 @@ interface RegularFeedItemData {
     isActive: boolean
     /** Whether this feed is favorited */
     isFavorite: boolean
+    /** Whether this item is collapsible (always false/undefined for regular items) */
+    isCollapsible?: boolean
 }
 
 interface RegularFeedItemProps {

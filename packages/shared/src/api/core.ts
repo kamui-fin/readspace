@@ -106,6 +106,11 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
     throw new ApiError(response.status, parseErrorMessage(error));
   }
+
+  if (response.status === 204) {
+    return null as T;
+  }
+
   return response.json();
 }
 

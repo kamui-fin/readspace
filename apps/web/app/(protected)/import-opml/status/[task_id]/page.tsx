@@ -1,14 +1,17 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { RSS_QUERY_KEYS } from "@readspace/shared"
+import {
+    RSS_QUERY_KEYS,
+    useCancelImportTask,
+    useImportTaskStatus,
+} from "@readspace/shared"
 import { useQueryClient } from "@tanstack/react-query"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
-import { useOpmlTaskStatus } from "@/components/features/opml/hooks/use-opml-task-status"
 import { LoadingCard } from "@/components/features/opml/status/LoadingCard"
 import { ErrorCard } from "@/components/features/opml/status/ErrorCard"
 import { ProgressCard } from "@/components/features/opml/status/ProgressCard"
@@ -24,12 +27,34 @@ export default function ImportStatusPage() {
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
     const {
-        task: taskStatus,
+        data: taskStatus,
         isLoading,
         error: statusError,
-        handleCancelImport,
-        isCancelling,
-    } = useOpmlTaskStatus(taskId)
+    } = useImportTaskStatus(taskId)
+    const cancelImportMutation = useCancelImportTask()
+    const router = useRouter()
+
+    const handleCancelImport = async () => {
+        try {
+            const response = await cancelImportMutation.mutateAsync(taskId)
+
+            // Check if cancellation was successful
+            if (response.cancelled) {
+                toast.success("Import cancelled successfully")
+                router.push("/import-opml")
+            } else {
+                toast.success(response.message || "Task was already completed")
+                router.push("/import-opml")
+            }
+        } catch (error) {
+            console.error("Error cancelling import task:", error)
+            toast.error(
+                "Failed to cancel import. It may have already completed."
+            )
+        }
+    }
+
+    const isCancelling = cancelImportMutation.isPending
 
     // Invalidate queries when import completes
     useEffect(() => {
@@ -105,9 +130,7 @@ export default function ImportStatusPage() {
                 )}
 
                 {/* Results Card (for completed imports) */}
-                {status === "completed" && (
-                    <ResultsCard task={taskStatus} />
-                )}
+                {status === "completed" && <ResultsCard task={taskStatus} />}
 
                 {/* Pending Card */}
                 {status === "pending" && (
@@ -119,9 +142,7 @@ export default function ImportStatusPage() {
                 )}
 
                 {/* Failed Card */}
-                {status === "failed" && (
-                    <FailedCard task={taskStatus} />
-                )}
+                {status === "failed" && <FailedCard task={taskStatus} />}
             </div>
         )
     }

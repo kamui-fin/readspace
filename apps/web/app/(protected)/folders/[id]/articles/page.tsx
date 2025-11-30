@@ -1,11 +1,15 @@
-"use client"
-
+import { cookies } from "next/headers"
 import { ArticlesView } from "@/components/features/articles/ArticlesView"
-import { useParams } from "next/navigation"
+import { getLayoutFromCookie, LAYOUT_COOKIE_NAME } from "@/lib/cookies"
 
-export default function FolderArticlesPage() {
-    const params = useParams()
-    const folderId = params.id as string
+interface PageProps {
+    params: Promise<{ id: string }>
+}
 
-    return <ArticlesView folderId={folderId} />
+export default async function FolderArticlesPage({ params }: PageProps) {
+    const { id: folderId } = await params
+    const cookieStore = await cookies()
+    const layout = getLayoutFromCookie(cookieStore.get(LAYOUT_COOKIE_NAME)?.value)
+
+    return <ArticlesView folderId={folderId} defaultLayout={layout} />
 }

@@ -12,10 +12,7 @@ import {
 } from "@/components/ui/select"
 
 interface FeedFiltersPanelProps {
-    /** Current search term */
-    searchTerm: string
-    /** Callback when search term changes */
-    onSearchChange: (searchTerm: string) => void
+
     /** Current filter folder ID */
     filterFolderId: string | "all"
     /** Callback when folder filter changes */
@@ -39,8 +36,7 @@ interface FeedFiltersPanelProps {
  * Provides a clean interface for filtering feeds and performing bulk operations.
  */
 export function FeedFiltersPanel({
-    searchTerm,
-    onSearchChange,
+
     filterFolderId,
     onFolderFilterChange,
     folders,
@@ -52,15 +48,7 @@ export function FeedFiltersPanel({
 }: FeedFiltersPanelProps) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-            {/* Search input */}
-            <div className="md:col-span-1">
-                <Input
-                    placeholder="Search feeds by title or URL..."
-                    value={searchTerm}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                    className="h-10"
-                />
-            </div>
+
 
             {/* Folder filter and export */}
             <div className="md:col-span-1 flex gap-2 items-center">

@@ -1,6 +1,6 @@
 """OPML import Taskiq tasks."""
 
-from typing import Annotated, Any
+from typing import Any
 
 import structlog
 from taskiq import Context, TaskiqDepends

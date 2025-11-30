@@ -1,5 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
+import { Rss } from "lucide-react"
 
 interface FeedIconProps {
     feed: {
@@ -10,9 +11,7 @@ interface FeedIconProps {
 }
 
 export function FeedIcon({ feed, className }: FeedIconProps) {
-    const getFeedInitials = () => {
-        return feed.title ? feed.title.charAt(0).toUpperCase() : "F"
-    }
+
 
     // Deterministic color based on title length or char code
     const getBgColor = () => {
@@ -50,7 +49,7 @@ export function FeedIcon({ feed, className }: FeedIconProps) {
             <AvatarFallback
                 className={cn("text-white font-bold rounded", getBgColor())}
             >
-                {getFeedInitials()}
+                <Rss className="h-3/4 w-3/4 text-white" />
             </AvatarFallback>
         </Avatar>
     )

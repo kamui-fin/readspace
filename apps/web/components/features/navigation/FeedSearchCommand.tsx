@@ -3,16 +3,11 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { Command } from "cmdk"
-import * as Dialog from "@radix-ui/react-dialog"
-import {
-    fuzzySearch,
-    useFeeds,
-    useFolders,
-    useUnreadCounts,
-} from "@readspace/shared"
 import { Search, Star } from "lucide-react"
-import Image from "next/image"
-import "./feed-search-command.scss"
+import { useFeedSearch } from "./hooks/use-feed-search"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
+import { FeedIcon } from "@/components/features/feeds/FeedIcon"
 
 interface FeedSearchCommandProps {
     /** Whether the command palette is open */
@@ -35,61 +30,14 @@ export function FeedSearchCommand({
     isMobile,
     onCloseSidebar,
 }: FeedSearchCommandProps) {
-    const [searchValue, setSearchValue] = React.useState("")
     const router = useRouter()
-
-    // Data queries
-    const { data: feeds = [] } = useFeeds()
-    const { data: folders = [] } = useFolders()
-    const { data: unreadCounts } = useUnreadCounts()
-    const feedUnreadCounts = unreadCounts?.feed_counts
-
-    // Type-safe folder data
-    const typedFolders = React.useMemo(
-        () => (folders as Array<{ id: string; name: string }>) || [],
-        [folders]
-    )
-
-    // Filter feeds with fuzzy search (limit to 100 results for performance)
-    const filteredFeeds = React.useMemo(() => {
-        if (!searchValue.trim()) {
-            return feeds.slice(0, 100)
-        }
-        // Create a searchable array
-        const searchableItems = feeds.map((feed) => ({
-            original: feed,
-            title: feed.custom_title || feed.feed.title,
-            url: feed.feed.url,
-        }))
-
-        return fuzzySearch(searchableItems, searchValue, ["title", "url"])
-            .slice(0, 100)
-            .map((item) => item.original)
-    }, [feeds, searchValue])
-
-    // Group feeds by folder (no separate favorites group)
-    const groupedFeeds = React.useMemo(() => {
-        const groups: Record<string, typeof feeds> = {
-            no_folder: [],
-        }
-
-        // Initialize groups for each folder
-        typedFolders.forEach((folder) => {
-            groups[folder.id] = []
-        })
-
-        // Group feeds
-        filteredFeeds.forEach((feed) => {
-            // Add to folder or no_folder (no separate favorites)
-            if (feed.folder?.id) {
-                groups[feed.folder.id]?.push(feed)
-            } else {
-                groups.no_folder!.push(feed)
-            }
-        })
-
-        return groups
-    }, [filteredFeeds, typedFolders])
+    const {
+        searchValue,
+        setSearchValue,
+        typedFolders,
+        groupedFeeds,
+        feedUnreadCounts,
+    } = useFeedSearch()
 
     /**
      * Handle feed selection
@@ -110,138 +58,146 @@ export function FeedSearchCommand({
     /**
      * Reset search when closing
      */
-    const handleClose = () => {
-        onClose()
-        setSearchValue("")
+    const handleClose = (open: boolean) => {
+        if (!open) {
+            onClose()
+            setSearchValue("")
+        }
     }
 
     return (
-        <Command.Dialog
-            open={isOpen}
-            onOpenChange={handleClose}
-            label="Feed Search"
-        >
-            <Dialog.Title className="sr-only">Search Feeds</Dialog.Title>
-            <div className="cmdk-framer-header">
-                <Search />
-                <Command.Input
-                    value={searchValue}
-                    onValueChange={setSearchValue}
-                    placeholder="Search my subscriptions..."
-                />
-            </div>
+        <Dialog open={isOpen} onOpenChange={handleClose}>
+            <DialogContent className="p-0 max-w-2xl overflow-hidden shadow-2xl [&>button]:hidden">
+                <DialogTitle className="sr-only">Search Feeds</DialogTitle>
+                <Command className="flex h-full w-full flex-col overflow-hidden rounded-xl bg-background">
+                    <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
+                        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                        <Command.Input
+                            value={searchValue}
+                            onValueChange={setSearchValue}
+                            placeholder="Search my subscriptions..."
+                            className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                    </div>
 
-            <Command.List>
-                <Command.Empty>No feeds found.</Command.Empty>
+                    <Command.List className="max-h-[400px] overflow-y-auto overflow-x-hidden p-2">
+                        <Command.Empty className="py-6 text-center text-sm">
+                            No feeds found.
+                        </Command.Empty>
 
-                {/* Folder groups */}
-                {typedFolders.map((folder) => {
-                    const folderFeeds = groupedFeeds[folder.id] || []
-                    if (folderFeeds.length === 0) return null
+                        {/* Folder groups */}
+                        {typedFolders.map((folder) => {
+                            const folderFeeds = groupedFeeds[folder.id] || []
+                            if (folderFeeds.length === 0) return null
 
-                    return (
-                        <Command.Group key={folder.id} heading={folder.name}>
-                            {folderFeeds.map((feed) => {
-                                const unreadCount =
-                                    feedUnreadCounts?.[feed.feed.id] || 0
-                                return (
-                                    <Command.Item
-                                        key={feed.id}
-                                        value={`${feed.custom_title || feed.feed.title} ${feed.feed.link || feed.feed.url}`}
-                                        onSelect={() =>
-                                            handleSelectFeed(feed.feed.id)
-                                        }
-                                    >
-                                        <div className="cmdk-framer-icon-wrapper">
-                                            {feed.feed.image_url ? (
-                                                <Image
-                                                    src={feed.feed.image_url}
-                                                    alt=""
-                                                    width={32}
-                                                    height={32}
-                                                />
-                                            ) : (
-                                                <div className="feed-placeholder" />
-                                            )}
-                                        </div>
-                                        <div className="cmdk-framer-item-meta">
-                                            <span>
-                                                {feed.custom_title ||
-                                                    feed.feed.title}
-                                            </span>
-                                            {feed.feed.link && (
-                                                <span className="cmdk-framer-item-subtitle">
-                                                    {feed.feed.link}
-                                                </span>
-                                            )}
-                                        </div>
-                                        {feed.is_favorite && (
-                                            <Star className="feed-star-icon" />
-                                        )}
-                                        {unreadCount > 0 && (
-                                            <kbd className="cmdk-framer-badge">
-                                                {unreadCount}
-                                            </kbd>
-                                        )}
-                                    </Command.Item>
-                                )
-                            })}
-                        </Command.Group>
-                    )
-                })}
+                            return (
+                                <Command.Group
+                                    key={folder.id}
+                                    heading={folder.name}
+                                    className="overflow-hidden p-1 text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
+                                >
+                                    {folderFeeds.map((feed) => {
+                                        const unreadCount =
+                                            feedUnreadCounts?.[feed.feed.id] || 0
+                                        return (
+                                            <Command.Item
+                                                key={feed.id}
+                                                value={`${feed.custom_title || feed.feed.title} ${feed.feed.link || feed.feed.url}`}
+                                                onSelect={() =>
+                                                    handleSelectFeed(feed.feed.id)
+                                                }
+                                                className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50"
+                                            >
+                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md mr-3">
+                                                    <FeedIcon
+                                                        feed={{
+                                                            title: feed.custom_title || feed.feed.title,
+                                                            image_url: feed.feed.image_url,
+                                                        }}
+                                                        className="h-full w-full rounded-md"
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col flex-1 min-w-0 mr-2">
+                                                    <span className="truncate font-medium">
+                                                        {feed.custom_title ||
+                                                            feed.feed.title}
+                                                    </span>
+                                                    {feed.feed.link && (
+                                                        <span className="truncate text-xs text-muted-foreground">
+                                                            {feed.feed.link}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {feed.is_favorite && (
+                                                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 mr-2" />
+                                                )}
+                                                {unreadCount > 0 && (
+                                                    <span className="ml-auto text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
+                                                        {unreadCount}
+                                                    </span>
+                                                )}
+                                            </Command.Item>
+                                        )
+                                    })}
+                                </Command.Group>
+                            )
+                        })}
 
-                {/* No folder group */}
-                {groupedFeeds.no_folder &&
-                    groupedFeeds.no_folder.length > 0 && (
-                        <Command.Group heading="No Folder">
-                            {groupedFeeds.no_folder.map((feed) => {
-                                const unreadCount =
-                                    feedUnreadCounts?.[feed.feed.id] || 0
-                                return (
-                                    <Command.Item
-                                        key={feed.id}
-                                        value={`${feed.custom_title || feed.feed.title} ${feed.feed.link || feed.feed.url}`}
-                                        onSelect={() =>
-                                            handleSelectFeed(feed.feed.id)
-                                        }
-                                    >
-                                        <div className="cmdk-framer-icon-wrapper">
-                                            {feed.feed.image_url ? (
-                                                <Image
-                                                    src={feed.feed.image_url}
-                                                    alt=""
-                                                    width={32}
-                                                    height={32}
-                                                />
-                                            ) : (
-                                                <div className="feed-placeholder" />
-                                            )}
-                                        </div>
-                                        <div className="cmdk-framer-item-meta">
-                                            <span>
-                                                {feed.custom_title ||
-                                                    feed.feed.title}
-                                            </span>
-                                            {feed.feed.link && (
-                                                <span className="cmdk-framer-item-subtitle">
-                                                    {feed.feed.link}
-                                                </span>
-                                            )}
-                                        </div>
-                                        {feed.is_favorite && (
-                                            <Star className="feed-star-icon" />
-                                        )}
-                                        {unreadCount > 0 && (
-                                            <kbd className="cmdk-framer-badge">
-                                                {unreadCount}
-                                            </kbd>
-                                        )}
-                                    </Command.Item>
-                                )
-                            })}
-                        </Command.Group>
-                    )}
-            </Command.List>
-        </Command.Dialog>
+                        {/* No folder group */}
+                        {groupedFeeds.no_folder &&
+                            groupedFeeds.no_folder.length > 0 && (
+                                <Command.Group
+                                    heading="No Folder"
+                                    className="overflow-hidden p-1 text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
+                                >
+                                    {groupedFeeds.no_folder.map((feed) => {
+                                        const unreadCount =
+                                            feedUnreadCounts?.[feed.feed.id] || 0
+                                        return (
+                                            <Command.Item
+                                                key={feed.id}
+                                                value={`${feed.custom_title || feed.feed.title} ${feed.feed.link || feed.feed.url}`}
+                                                onSelect={() =>
+                                                    handleSelectFeed(feed.feed.id)
+                                                }
+                                                className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50"
+                                            >
+                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md mr-3">
+                                                    <FeedIcon
+                                                        feed={{
+                                                            title: feed.custom_title || feed.feed.title,
+                                                            image_url: feed.feed.image_url,
+                                                        }}
+                                                        className="h-full w-full rounded-md"
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col flex-1 min-w-0 mr-2">
+                                                    <span className="truncate font-medium">
+                                                        {feed.custom_title ||
+                                                            feed.feed.title}
+                                                    </span>
+                                                    {feed.feed.link && (
+                                                        <span className="truncate text-xs text-muted-foreground">
+                                                            {feed.feed.link}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {feed.is_favorite && (
+                                                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 mr-2" />
+                                                )}
+                                                {unreadCount > 0 && (
+                                                    <span className="ml-auto text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md">
+                                                        {unreadCount}
+                                                    </span>
+                                                )}
+                                            </Command.Item>
+                                        )
+                                    })}
+                                </Command.Group>
+                            )}
+                    </Command.List>
+                </Command>
+            </DialogContent>
+        </Dialog>
     )
 }

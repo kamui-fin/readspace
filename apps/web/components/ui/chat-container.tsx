@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 import { Children, useCallback, useEffect, useRef, useState } from "react"
 
 const useAutoScroll = (

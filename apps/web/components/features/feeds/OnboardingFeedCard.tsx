@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { useRefreshFeed, useSubscribeToFeed } from "@readspace/shared"
+import { useRefreshFeed, useCreateFeed } from "@readspace/shared"
 import { Check, Plus } from "lucide-react"
 import React, { useState } from "react"
 import { BaseFeedCard } from "./BaseFeedCard"
@@ -25,7 +25,7 @@ export function OnboardingFeedCard({
     isFollowing = false,
 }: OnboardingFeedCardProps) {
     const [isSubscribed, setIsSubscribed] = useState(isFollowing)
-    const subscribeToFeed = useSubscribeToFeed()
+    const createFeed = useCreateFeed()
     const refreshFeed = useRefreshFeed()
 
     // Update local state when isFollowing prop changes
@@ -48,9 +48,9 @@ export function OnboardingFeedCard({
             })
 
             // Subscribe to feed with default folder (backend will handle creating default folder)
-            await subscribeToFeed.mutateAsync({
-                feedId: feed.id,
-                folderId: "default", // Backend will handle this
+            await createFeed.mutateAsync({
+                url: feed.url,
+                folder_id: "default", // Backend will handle this
             })
         } catch (error) {
             // Revert UI state on error
@@ -59,21 +59,30 @@ export function OnboardingFeedCard({
         }
     }
 
+    // Normalize feed to FeedSummary type
+    const normalizedFeed = {
+        id: feed.id,
+        url: feed.url,
+        title: feed.title || "Untitled Feed",
+        link: feed.link,
+        image_url: feed.image_url,
+        error_count: 0, // New feeds start with 0 errors
+        description: feed.description,
+    }
+
     return (
         <div className="px-2 md:px-4 w-full border-b border-border/40 last:border-0 py-4">
             <BaseFeedCard
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                feed={feed as any}
+                feed={normalizedFeed}
                 showFollowButton={false}
                 headerActions={
                     <Button
                         onClick={handleSubscribe}
                         disabled={isSubscribed}
-                        className={`h-8 px-3 text-xs font-medium flex items-center gap-1.5 transition-colors ${
-                            isSubscribed
-                                ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/10 cursor-default"
-                                : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                        }`}
+                        className={`h-8 px-3 text-xs font-medium flex items-center gap-1.5 transition-colors ${isSubscribed
+                            ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/10 cursor-default"
+                            : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                            }`}
                         variant={isSubscribed ? "outline" : "default"}
                     >
                         {isSubscribed ? (

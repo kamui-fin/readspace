@@ -1,6 +1,7 @@
 export * from "./use-articles";
 export * from "./use-feeds";
 export * from "./use-folders";
+export * from "./use-is-subscribed";
 export * from "./use-opml";
 export * from "./use-users";
 

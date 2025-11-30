@@ -48,8 +48,8 @@ export function MainNavigationItems({
 
     const typedUnreadCounts =
         (unreadCounts as {
-            read_later_count?: number
-            today_count?: number
+            read_later?: number
+            today?: number
         }) || {}
 
     /**
@@ -58,9 +58,9 @@ export function MainNavigationItems({
     const getCountForItem = (title: string): number | null => {
         switch (title) {
             case "Today":
-                return typedUnreadCounts.today_count || 0
+                return typedUnreadCounts.today || 0
             case "Read Later":
-                return typedUnreadCounts.read_later_count || 0
+                return typedUnreadCounts.read_later || 0
             default:
                 return null
         }

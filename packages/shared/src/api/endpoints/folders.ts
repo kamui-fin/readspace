@@ -2,8 +2,6 @@ import { ApiClient } from "../core";
 import { Folder } from "../types/folders";
 
 export const folders = {
-  getFolders: () => ApiClient.get<Folder[]>("/api/folders/"),
-  getFolder: (id: string) => ApiClient.get<Folder>(`/api/folders/${id}`),
   createFolder: (data: { name: string }) =>
     ApiClient.post<Folder>("/api/folders/", data),
   updateFolder: (id: string, data: { name: string }) =>

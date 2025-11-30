@@ -87,6 +87,14 @@ async def get_task_owner(task_id: str) -> str | None:
     return await repo.get_owner(task_id)
 
 
+async def cleanup_user_task(task_id: str, user_id: str) -> None:
+    """
+    Remove task ownership and user association.
+    Used for cleaning up completed/old tasks.
+    """
+    await repo.remove_ownership(task_id, user_id)
+
+
 async def list_user_tasks(user_id: str) -> list[OpmlTaskMetadata]:
     """
     List all active OPML import tasks for the user.
@@ -125,7 +133,9 @@ async def list_user_tasks(user_id: str) -> list[OpmlTaskMetadata]:
             active_tasks.append(state.to_metadata())
 
         except Exception as e:
-            logger.error("Error retrieving task metadata", task_id=task_id, error=str(e))
+            logger.error(
+                "Error retrieving task metadata", task_id=task_id, error=str(e)
+            )
             # Include as unknown rather than hiding it, so user knows something happened
             active_tasks.append(
                 OpmlTaskMetadata(
@@ -164,7 +174,9 @@ async def get_task_status(task_id: str, user_id: str) -> OpmlImportStatusRespons
             )
 
         if owner != user_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied."
+            )
 
         # It exists in ownership but no state yet -> Pending
         return OpmlImportStatusResponse(
@@ -183,7 +195,9 @@ async def get_task_status(task_id: str, user_id: str) -> OpmlImportStatusRespons
 
     # 2. Verify Ownership
     if state.user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied."
+        )
 
     # 3. Build Response
     response = OpmlImportStatusResponse(
@@ -198,7 +212,9 @@ async def get_task_status(task_id: str, user_id: str) -> OpmlImportStatusRespons
         if not state.message:
             # Use OPML title if available for better UX
             source_name = state.opml_title or state.filename
-            response.message = f"Importing '{source_name}': {state.progress_percentage}%"
+            response.message = (
+                f"Importing '{source_name}': {state.progress_percentage}%"
+            )
 
     elif state.status in (ImportStatus.COMPLETED, ImportStatus.CANCELLED):
         response.result = state.to_result()

@@ -16,10 +16,10 @@ class FeedBase(BaseModel):
     """Core feed fields - reused across schemas."""
 
     url: str
-    title: str = Field(..., max_length=500)
+    title: str = Field(...)
     description: str = "Follow recent articles from this feed"
     link: str | None = None
-    language: str = "en" 
+    language: str = "en"
     image_url: str | None = None
 
     @field_validator("url", "link", mode="before")
@@ -200,6 +200,8 @@ class ParsedFeed(BaseModel):
     """
 
     title: str
+    id: str | None = None
+    url: str | None = None
     description: str | None = None
     link: str | None = None
     language: str | None = None

@@ -28,7 +28,7 @@ import {
     Trash2,
     AlertCircle,
 } from "lucide-react"
-import Image from "next/image"
+import { FeedIcon } from "@/components/features/feeds/FeedIcon"
 
 // Custom hook to handle time formatting without hydration issues
 function useRelativeTime(dateString: string | null | undefined) {
@@ -162,15 +162,7 @@ export function FeedTableRow({
             {/* Feed title and URL */}
             <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
-                    {feed.image_url && (
-                        <Image
-                            src={feed.image_url}
-                            alt=""
-                            width={20}
-                            height={20}
-                            className="h-5 w-5 rounded-sm object-cover"
-                        />
-                    )}
+                    <FeedIcon feed={feed} className="h-5 w-5 rounded-sm" />
                     <div className="flex flex-col">
                         <span
                             className="whitespace-nowrap"

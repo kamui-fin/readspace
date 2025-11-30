@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Clock, FileText, Upload } from "lucide-react"
 import { useRef } from "react"
 import { useOpmlImport } from "./hooks/use-opml-import"
-import { useActiveTaskPolling } from "@/components/features/opml/hooks/use-active-task-polling"
+import { useActiveImportTask } from "@readspace/shared"
 
 export default function OpmlImportView() {
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -20,7 +20,7 @@ export default function OpmlImportView() {
         handleDrop,
     } = useOpmlImport()
 
-    const { activeImports } = useActiveTaskPolling()
+    const { data: activeTask } = useActiveImportTask()
 
     const handleButtonClick = () => {
         if (fileInputRef.current) {
@@ -40,21 +40,17 @@ export default function OpmlImportView() {
                 <div className="max-w-4xl mx-auto">
                     <div className="mb-8">
                         <h1 className="text-2xl sm:text-3xl font-bold mb-3">
-                            {activeImports && activeImports.length > 0
-                                ? "Import Began"
-                                : "OPML Import"}
+                            {activeTask ? "Import Began" : "OPML Import"}
                         </h1>
                         <p className="text-muted-foreground leading-relaxed max-w-2xl">
-                            {activeImports && activeImports.length > 0
+                            {activeTask
                                 ? "Your OPML import is currently running. Check the progress below."
                                 : "Import feeds from an OPML file exported from another RSS reader."}
                         </p>
                     </div>
 
                     {/* Show active import status or upload section */}
-                    {activeImports &&
-                        activeImports.length > 0 &&
-                        activeImports[0] ? (
+                    {activeTask ? (
                         <Card>
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
@@ -62,20 +58,17 @@ export default function OpmlImportView() {
                                         <Clock className="h-5 w-5 text-blue-600 animate-pulse" />
                                         <div>
                                             <div className="font-medium">
-                                                {activeImports[0].filename}
+                                                {activeTask.filename}
                                             </div>
                                             <div className="text-sm text-muted-foreground">
-                                                {
-                                                    activeImports[0]
-                                                        .estimated_feeds
-                                                }{" "}
+                                                {activeTask.estimated_feeds}{" "}
                                                 feeds
                                             </div>
                                         </div>
                                     </div>
                                     <Button asChild>
                                         <a
-                                            href={`/import-opml/status/${activeImports[0].task_id}`}
+                                            href={`/import-opml/status/${activeTask.task_id}`}
                                         >
                                             View Progress
                                         </a>

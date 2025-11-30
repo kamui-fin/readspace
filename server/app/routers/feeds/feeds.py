@@ -5,6 +5,7 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Body, Depends, Query, status
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import ERROR_FEED_NOT_FOUND
@@ -18,8 +19,9 @@ from app.crud.feed.subscription import (
     update_subscription,
 )
 from app.db.session import get_db, get_db_factory
+
 from app.models.feed import FeedSubscription
-from app.services.feeds.service import refresh_feed, SessionFactory
+from app.services.feeds.service import SessionFactory, refresh_feed
 from app.services.user.auth import get_current_user
 from app.typing.common import MessageResponse
 from app.typing.feeds import FeedDetail
@@ -112,23 +114,7 @@ async def get_feed(
         db, feed_id=feed_id, user_id=UUID(current_user.sub)
     )
 
-    # 3. Auto-Refresh if not subscribed (Preview Mode)
-    # If the user is not subscribed, we want to ensure they see fresh content
-    # so they can decide whether to subscribe.
-    if not subscription:
-        logger.info(
-            "Auto-refreshing unsubscribed feed for preview", feed_id=str(feed_id)
-        )
-        # We use a separate session factory for the service call to ensure isolation
-        await refresh_feed(db_factory, feed_id)
-
-        # Re-fetch the feed to get the updated data
-        feed = await get_feed_by_id(db, feed_id=feed_id)
-        if not feed:
-            # Should not happen since we just refreshed it, but handle safely
-            raise NotFoundError(message=ERROR_FEED_NOT_FOUND)
-
-    # 4. Merge Data
+    # 5. Merge Data
     feed_detail = FeedDetail.model_validate(feed, from_attributes=True)
     feed_detail.is_subscribed = subscription is not None
 

@@ -62,7 +62,7 @@ class EntryListItem(ContentFields, UserStateFields, FeedContextFields):
     article_type: str = "feed"  # Deprecated: for backward compatibility
 
     # Override to exclude heavy fields in lists
-    description: str | None = Field(None, max_length=300, description="Truncated preview")
+    description: str | None = Field(None, description="Truncated preview")
     content: None = None  # Never include in lists
 
 

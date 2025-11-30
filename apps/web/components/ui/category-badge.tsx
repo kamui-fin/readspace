@@ -15,7 +15,7 @@ import {
 } from "lucide-react"
 import * as React from "react"
 
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 const categoryBadgeVariants = cva(
     "inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-[0.98]",
@@ -70,7 +70,7 @@ const getCategoryIcon = (categoryName: string) => {
 
 export interface CategoryBadgeProps
     extends React.HTMLAttributes<HTMLDivElement>,
-        VariantProps<typeof categoryBadgeVariants> {
+    VariantProps<typeof categoryBadgeVariants> {
     category: string
     iconKey?: string
     selected?: boolean

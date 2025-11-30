@@ -18,14 +18,14 @@ export function SidebarFeedsSkeleton() {
                     <SidebarLeftMenuButton className="flex-1" asChild>
                         <div className="flex items-center gap-2">
                             <div className="flex h-4 w-4 shrink-0 items-center justify-center">
-                                <Skeleton className="h-4 w-4 bg-muted-foreground/20" />
+                                <Skeleton className="h-4 w-4 bg-sidebar-accent" />
                             </div>
-                            <Skeleton className="h-4 w-12 bg-muted-foreground/20" />
+                            <Skeleton className="h-4 w-12 bg-sidebar-accent" />
                         </div>
                     </SidebarLeftMenuButton>
                     <div className="flex items-center gap-2 shrink-0 pr-2">
-                        <Skeleton className="h-4 w-4 rounded-full bg-muted-foreground/20" />
-                        <Skeleton className="h-5 w-8 rounded-full bg-muted-foreground/20" />
+                        <Skeleton className="h-4 w-4 rounded-full bg-sidebar-accent" />
+                        <Skeleton className="h-5 w-8 rounded-full bg-sidebar-accent" />
                     </div>
                 </div>
             </SidebarMenuItem>
@@ -43,15 +43,15 @@ export function SidebarFeedsSkeleton() {
                         <SidebarLeftMenuButton className="flex-1" asChild>
                             <div className="flex items-center gap-2">
                                 <div className="flex h-4 w-4 shrink-0 items-center justify-center">
-                                    <Skeleton className="h-4 w-4 bg-muted-foreground/20" />
+                                    <Skeleton className="h-4 w-4 bg-sidebar-accent" />
                                 </div>
-                                <Skeleton className="h-4 w-24 bg-muted-foreground/20" />
+                                <Skeleton className="h-4 w-24 bg-sidebar-accent" />
                             </div>
                         </SidebarLeftMenuButton>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 pr-2">
-                        <Skeleton className="h-4 w-4 rounded-full bg-muted-foreground/20" />
-                        <Skeleton className="h-5 w-8 rounded-full bg-muted-foreground/20" />
+                        <Skeleton className="h-4 w-4 rounded-full bg-sidebar-accent" />
+                        <Skeleton className="h-5 w-8 rounded-full bg-sidebar-accent" />
                     </div>
                 </div>
 
@@ -65,13 +65,13 @@ export function SidebarFeedsSkeleton() {
                                 asChild
                             >
                                 <div className="flex items-center gap-2">
-                                    <Skeleton className="h-4 w-4 rounded-sm shrink-0 bg-muted-foreground/20" />
-                                    <Skeleton className="h-4 w-32 bg-muted-foreground/20" />
+                                    <Skeleton className="h-4 w-4 rounded-sm shrink-0 bg-sidebar-accent" />
+                                    <Skeleton className="h-4 w-32 bg-sidebar-accent" />
                                 </div>
                             </SidebarLeftMenuSubButton>
                             <div className="flex items-center gap-2 shrink-0 pr-2">
-                                <Skeleton className="h-4 w-4 rounded-full bg-muted-foreground/20" />
-                                <Skeleton className="h-5 w-6 rounded-full bg-muted-foreground/20" />
+                                <Skeleton className="h-4 w-4 rounded-full bg-sidebar-accent" />
+                                <Skeleton className="h-5 w-6 rounded-full bg-sidebar-accent" />
                             </div>
                         </div>
                     </SidebarMenuSubItem>
@@ -84,13 +84,13 @@ export function SidebarFeedsSkeleton() {
                                 asChild
                             >
                                 <div className="flex items-center gap-2">
-                                    <Skeleton className="h-4 w-4 rounded-sm shrink-0 bg-muted-foreground/20" />
-                                    <Skeleton className="h-4 w-28 bg-muted-foreground/20" />
+                                    <Skeleton className="h-4 w-4 rounded-sm shrink-0 bg-sidebar-accent" />
+                                    <Skeleton className="h-4 w-28 bg-sidebar-accent" />
                                 </div>
                             </SidebarLeftMenuSubButton>
                             <div className="flex items-center gap-2 shrink-0 pr-2">
-                                <Skeleton className="h-4 w-4 rounded-full bg-muted-foreground/20" />
-                                <Skeleton className="h-5 w-8 rounded-full bg-muted-foreground/20" />
+                                <Skeleton className="h-4 w-4 rounded-full bg-sidebar-accent" />
+                                <Skeleton className="h-5 w-8 rounded-full bg-sidebar-accent" />
                             </div>
                         </div>
                     </SidebarMenuSubItem>
@@ -102,13 +102,13 @@ export function SidebarFeedsSkeleton() {
                 <div className="flex items-center w-full group/item">
                     <SidebarLeftMenuButton className="flex-1" asChild>
                         <div className="flex items-center gap-2">
-                            <Skeleton className="h-4 w-4 rounded-sm shrink-0 bg-muted-foreground/20" />
-                            <Skeleton className="h-4 w-36 bg-muted-foreground/20" />
+                            <Skeleton className="h-4 w-4 rounded-sm shrink-0 bg-sidebar-accent" />
+                            <Skeleton className="h-4 w-36 bg-sidebar-accent" />
                         </div>
                     </SidebarLeftMenuButton>
                     <div className="flex items-center gap-2 shrink-0 pr-2">
-                        <Skeleton className="h-4 w-4 rounded-full bg-muted-foreground/20" />
-                        <Skeleton className="h-5 w-7 rounded-full bg-muted-foreground/20" />
+                        <Skeleton className="h-4 w-4 rounded-full bg-sidebar-accent" />
+                        <Skeleton className="h-5 w-7 rounded-full bg-sidebar-accent" />
                     </div>
                 </div>
             </SidebarMenuItem>
@@ -117,13 +117,13 @@ export function SidebarFeedsSkeleton() {
                 <div className="flex items-center w-full group/item">
                     <SidebarLeftMenuButton className="flex-1" asChild>
                         <div className="flex items-center gap-2">
-                            <Skeleton className="h-4 w-4 rounded-sm shrink-0 bg-muted-foreground/20" />
-                            <Skeleton className="h-4 w-40 bg-muted-foreground/20" />
+                            <Skeleton className="h-4 w-4 rounded-sm shrink-0 bg-sidebar-accent" />
+                            <Skeleton className="h-4 w-40 bg-sidebar-accent" />
                         </div>
                     </SidebarLeftMenuButton>
                     <div className="flex items-center gap-2 shrink-0 pr-2">
-                        <Skeleton className="h-4 w-4 rounded-full bg-muted-foreground/20" />
-                        <Skeleton className="h-5 w-6 rounded-full bg-muted-foreground/20" />
+                        <Skeleton className="h-4 w-4 rounded-full bg-sidebar-accent" />
+                        <Skeleton className="h-5 w-6 rounded-full bg-sidebar-accent" />
                     </div>
                 </div>
             </SidebarMenuItem>

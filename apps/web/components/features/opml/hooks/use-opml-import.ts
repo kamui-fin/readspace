@@ -4,7 +4,6 @@ import { useState, useCallback } from "react"
 import { toast } from "react-hot-toast"
 
 export function useOpmlImport() {
-    const [file, setFile] = useState<File | null>(null)
     const [isDragging, setIsDragging] = useState(false)
     const uploadOpmlMutation = useImportOPML()
     const router = useRouter()
@@ -23,13 +22,6 @@ export function useOpmlImport() {
             const validation = await validateOpml(file)
             if (!validation.isValid) {
                 toast.error(validation.error || "Invalid OPML file")
-                return
-            }
-
-            if (validation.hasNestedCategories) {
-                toast.error(
-                    "OPML files with nested categories are not supported. Please flatten your categories before importing."
-                )
                 return
             }
 

@@ -30,6 +30,20 @@ interface SearchResultsProps {
     isPreviewError?: boolean
 }
 
+function createPreviewFeedData(
+    previewFeed: FeedDiscoveryResult
+): FeedSummary & { is_preview: true } {
+    return {
+        id: previewFeed.id,
+        url: previewFeed.url,
+        title: previewFeed.title,
+        link: previewFeed.link ?? null,
+        image_url: previewFeed.image_url ?? null,
+        error_count: 0,
+        is_preview: true,
+    }
+}
+
 /**
  * Search Results component - displays feed search results with pagination.
  *
@@ -56,22 +70,13 @@ export function SearchResults({
         status === "loading" || status === "stalled" || isPreviewLoading
 
     // Prepare preview feed data if available
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let previewFeedData: any = null
+    let previewFeedData:
+        | (FeedSummary & {
+            is_preview: true
+        })
+        | null = null
     if (previewFeed && !isPreviewLoading && !previewError) {
-        previewFeedData = {
-            ...previewFeed,
-            folder_id: "",
-            folder_name: null,
-            is_favorite: false,
-            top_level_category: previewFeed.top_level_category,
-            unread_count: 0,
-            last_refreshed_at: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            is_preview: true,
-            preview_url: previewFeed.link,
-        }
+        previewFeedData = createPreviewFeedData(previewFeed)
     }
 
     // Show skeleton while preview is loading
@@ -116,10 +121,10 @@ export function SearchResults({
                             className="w-32 h-auto"
                         />
                     </div>
-                    <h3 className="text-xl font-medium mb-3 text-black dark:text-foreground">
+                    <h3 className="text-xl font-medium mb-3 text-foreground dark:text-foreground">
                         No matching feeds found
                     </h3>
-                    <p className="text-gray-500 dark:text-muted-foreground text-center max-w-md">
+                    <p className="text-muted-foreground text-center max-w-md">
                         Try rephrasing your query or browsing by category.
                     </p>
                 </div>

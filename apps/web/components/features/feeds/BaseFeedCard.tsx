@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { useFeeds, type FeedSummary } from "@readspace/shared"
+import { useIsSubscribed, type FeedSummary } from "@readspace/shared"
 import { cn } from "@/lib/utils"
 import { Trash2 } from "lucide-react"
 import { useState } from "react"
@@ -13,7 +13,7 @@ interface BaseFeedCardProps {
     | (FeedSummary & { description?: string | null })
     | (FeedSummary & {
         is_preview: true
-        preview_url: string
+
         description?: string | null
     })
     /** Variant for styling */
@@ -47,40 +47,15 @@ export function BaseFeedCard({
     const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false)
     const [isUnsubscribeModalOpen, setIsUnsubscribeModalOpen] = useState(false)
 
-    // Get the user's subscribed feeds to check if this feed is subscribed
-    const { data: feedsData } = useFeeds(
-        {},
-        {
-            refetchOnMount: false,
-            refetchOnWindowFocus: false,
-            refetchOnReconnect: false,
-            staleTime: 10 * 60 * 1000, // 10 minutes
-            gcTime: 15 * 60 * 1000, // 15 minutes
-            refetchInterval: false,
-        }
-    )
-
-    // Normalize URL function to handle www/non-www variations
-    const normalizeUrl = (url: string) => {
-        return url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")
-    }
-
     // Check if this feed is in the user's subscription list
     const isPreviewFeed = "is_preview" in feed && feed.is_preview === true
-    const feedUrl = isPreviewFeed ? feed.url : feed.url
+    const feedUrl = feed.url
 
-    // For preview feeds, compare by normalized RSS URL
-    // For regular feeds, compare by ID first, then fall back to URL comparison
-    const subscribedFeed = feedsData?.find((f) => {
-        if (!isPreviewFeed) {
-            // Regular feed: check by ID
-            return f.id === feed.id
-        }
-        // Preview feed: check by normalized URL
-        return normalizeUrl(f.feed.url) === normalizeUrl(feedUrl)
-    })
-
-    const isFollowed = !!subscribedFeed
+    const { isSubscribed: isFollowed, subscription: subscribedFeed } =
+        useIsSubscribed({
+            id: feed.id,
+            url: feedUrl,
+        })
 
     const truncateText = (text: string, maxLength: number) => {
         if (text.length <= maxLength) return text
@@ -114,7 +89,7 @@ export function BaseFeedCard({
                 <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-lg text-black dark:text-foreground leading-tight tracking-tight">
+                            <h3 className="font-semibold text-lg text-foreground dark:text-foreground leading-tight tracking-tight">
                                 {feed.title || "Untitled Feed"}
                             </h3>
                             <a
@@ -196,7 +171,7 @@ export function BaseFeedCard({
                 isOpen={isUnsubscribeModalOpen}
                 onClose={() => setIsUnsubscribeModalOpen(false)}
                 feed={feed}
-                subscriptionId={subscribedFeed?.id}
+                feedId={subscribedFeed?.feed.id ?? feed.id}
             />
         </div>
     )

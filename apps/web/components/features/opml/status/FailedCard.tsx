@@ -31,14 +31,16 @@ export function FailedCard({ task }: FailedCardProps) {
                                     </div>
                                 )}
                                 <p className="text-sm text-destructive">
-                                    {error || "The import process encountered an error."}
+                                    {error ||
+                                        "The import process encountered an error."}
                                 </p>
                             </div>
                         </div>
                     </div>
                     {metadata?.created_at && (
                         <div className="text-xs text-muted-foreground pl-9">
-                            Started: {new Date(metadata.created_at).toLocaleString()}
+                            Started:{" "}
+                            {new Date(metadata.created_at).toLocaleString()}
                         </div>
                     )}
                 </div>

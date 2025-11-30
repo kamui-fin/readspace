@@ -56,6 +56,7 @@ interface EditFeedFormProps {
 
 export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
     const form = useForm<FormValues>({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(formSchema as any),
         defaultValues: {
             title: feed.title || "",
@@ -86,7 +87,7 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
     })
 
     const onSubmit = (values: FormValues) => {
-        const updates: Record<string, any> = {}
+        const updates: Record<string, string | number | undefined> = {}
 
         // Only include changed fields
         if (values.title !== feed.title) updates.title = values.title
@@ -116,10 +117,7 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
 
     return (
         <Form {...form}>
-            <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
-            >
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 {/* Title */}
                 <FormField
                     control={form.control}
@@ -178,10 +176,7 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
                                 <SelectContent>
                                     {Object.values(FEED_CATEGORIES).map(
                                         (cat) => (
-                                            <SelectItem
-                                                key={cat}
-                                                value={cat}
-                                            >
+                                            <SelectItem key={cat} value={cat}>
                                                 {cat}
                                             </SelectItem>
                                         )
@@ -191,9 +186,7 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
                             {field.value && (
                                 <button
                                     type="button"
-                                    onClick={() =>
-                                        field.onChange("")
-                                    }
+                                    onClick={() => field.onChange("")}
                                     className="text-xs text-muted-foreground hover:text-foreground underline mt-1"
                                 >
                                     Clear category
@@ -219,8 +212,7 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
                                 />
                             </FormControl>
                             <p className="text-xs text-muted-foreground">
-                                Language code (ISO 639-1), max 50
-                                characters
+                                Language code (ISO 639-1), max 50 characters
                             </p>
                             <FormMessage />
                         </FormItem>
@@ -306,8 +298,7 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
                                 />
                             </FormControl>
                             <p className="text-xs text-muted-foreground">
-                                Popularity estimate (0-100) for feed
-                                ranking
+                                Popularity estimate (0-100) for feed ranking
                             </p>
                             <FormMessage />
                         </FormItem>
@@ -315,20 +306,11 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
                 />
 
                 <div className="flex justify-end gap-2">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={onClose}
-                    >
+                    <Button type="button" variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button
-                        type="submit"
-                        disabled={updateFeed.isPending}
-                    >
-                        {updateFeed.isPending
-                            ? "Saving..."
-                            : "Save Changes"}
+                    <Button type="submit" disabled={updateFeed.isPending}>
+                        {updateFeed.isPending ? "Saving..." : "Save Changes"}
                     </Button>
                 </div>
             </form>

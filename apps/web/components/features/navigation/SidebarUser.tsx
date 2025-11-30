@@ -3,7 +3,8 @@
 import { ChevronsUpDown, Clock, LogOut, Upload } from "lucide-react"
 import { useState } from "react"
 
-import { Avatar, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import BoringAvatar from "boring-avatars"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -23,13 +24,18 @@ import Link from "next/link"
 import ThemeSwitcher from "./ThemeSwitcher"
 
 interface SidebarUserProps {
-    avatar: string
+    avatar?: string | null
     name: string | null
     email: string | null
     handleSignOut: () => void
 }
 
-export function SidebarUser({ avatar, name, email, handleSignOut }: SidebarUserProps) {
+export function SidebarUser({
+    avatar,
+    name,
+    email,
+    handleSignOut,
+}: SidebarUserProps) {
     const { isMobile } = useSidebarLeft()
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
 
@@ -61,9 +67,22 @@ export function SidebarUser({ avatar, name, email, handleSignOut }: SidebarUserP
                                     <>
                                         <Avatar className="h-8 w-8 rounded-lg">
                                             <AvatarImage
-                                                src={avatar}
-                                                alt={name}
+                                                src={avatar || undefined}
+                                                alt={name || ""}
                                             />
+                                            <AvatarFallback className="rounded-lg bg-transparent">
+                                                <BoringAvatar
+                                                    size={32}
+                                                    name={name || email || "User"}
+                                                    variant="beam"
+                                                    colors={[
+                                                        "#6a994e", // Secondary
+                                                        "#386641", // Primary
+                                                        "#6a994e", // Secondary
+                                                    ]}
+                                                    square
+                                                />
+                                            </AvatarFallback>
                                         </Avatar>
                                         <div className="grid flex-1 text-left text-sm leading-tight">
                                             <span className="truncate font-semibold">

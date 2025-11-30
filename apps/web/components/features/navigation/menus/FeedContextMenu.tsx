@@ -10,7 +10,7 @@ import {
 import { DeleteConfirmDialog } from "@/components/features/feeds/DeleteConfirmDialog"
 import { RenameDialog } from "@/components/features/feeds/RenameDialog"
 import { useFeedContextMenu } from "@/components/features/feeds/hooks/use-feed-context-menu"
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 import { MoreHorizontal, Pencil, Star, Trash2 } from "lucide-react"
 
 interface FeedContextMenuProps {
@@ -69,8 +69,8 @@ export function FeedContextMenu({
                         className={cn(
                             "h-6 w-6 p-0 transition-all duration-150",
                             "opacity-0 group-hover/item:opacity-100 data-[state=open]:opacity-100",
-                            "hover:bg-[hsl(var(--nav-hover))]",
-                            "active:bg-[hsl(var(--nav-hover))/0.8]",
+                            "hover:bg-[var(--nav-hover)]",
+                            "active:bg-[var(--nav-hover)/0.8]",
                             "rounded-full cursor-pointer"
                         )}
                         onClick={(e) => {

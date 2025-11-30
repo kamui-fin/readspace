@@ -15,25 +15,26 @@ interface FeedUnsubscribeDialogProps {
     isOpen: boolean
     onClose: () => void
     feed: FeedSummary
-    subscriptionId?: string
+    feedId: string
 }
 
 export function FeedUnsubscribeDialog({
     isOpen,
     onClose,
     feed,
-    subscriptionId,
+    feedId,
 }: FeedUnsubscribeDialogProps) {
     const [isProcessing, setIsProcessing] = useState(false)
     const deleteFeed = useDeleteFeed()
 
     const handleConfirm = async () => {
-        if (!subscriptionId) return
+        if (!feedId) return
 
         setIsProcessing(true)
         try {
-            await deleteFeed.mutateAsync({ feedId: subscriptionId })
+            await deleteFeed.mutateAsync({ feedId })
             onClose()
+
         } catch {
             // Error toast is handled by the mutation
         } finally {

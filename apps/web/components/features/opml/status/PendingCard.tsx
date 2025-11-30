@@ -9,7 +9,11 @@ interface PendingCardProps {
     isCancelling: boolean
 }
 
-export function PendingCard({ task, onCancel, isCancelling }: PendingCardProps) {
+export function PendingCard({
+    task,
+    onCancel,
+    isCancelling,
+}: PendingCardProps) {
     const { metadata } = task
 
     return (
@@ -34,7 +38,13 @@ export function PendingCard({ task, onCancel, isCancelling }: PendingCardProps) 
                                 <p className="text-sm text-muted-foreground">
                                     Your import will start processing shortly.
                                     {metadata?.estimated_feeds && (
-                                        <span> Estimated {metadata.estimated_feeds} feeds to process.</span>
+                                        <span>
+                                            {" "}
+                                            Estimated {
+                                                metadata.estimated_feeds
+                                            }{" "}
+                                            feeds to process.
+                                        </span>
                                     )}
                                 </p>
                             </div>
@@ -42,7 +52,8 @@ export function PendingCard({ task, onCancel, isCancelling }: PendingCardProps) 
                     </div>
                     {metadata?.created_at && (
                         <div className="text-xs text-muted-foreground pl-9">
-                            Queued: {new Date(metadata.created_at).toLocaleString()}
+                            Queued:{" "}
+                            {new Date(metadata.created_at).toLocaleString()}
                         </div>
                     )}
                 </div>

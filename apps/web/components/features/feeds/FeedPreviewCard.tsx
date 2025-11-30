@@ -4,7 +4,6 @@ import { type FeedSummary } from "@readspace/shared"
 interface FeedPreviewCardProps {
     feed: FeedSummary & {
         is_preview: true
-        preview_url: string
     }
 }
 

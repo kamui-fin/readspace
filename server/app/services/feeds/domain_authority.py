@@ -43,11 +43,12 @@ def get_domain_authority_score(domain: str) -> DomainScore:
         return DomainScore(score=0.0)
 
     # formatting: ensure clean domain
-    rank = tranco.rank(domain)
+    t_list = tranco.list()
+    rank = t_list.rank(domain)
 
     # Fallback: if not found, try the parent domain (e.g., blog.google.com -> google.com)
     if rank == -1 and domain.count(".") > 1:
-        rank = tranco.rank(".".join(domain.split(".")[-2:]))
+        rank = t_list.rank(".".join(domain.split(".")[-2:]))
 
     if rank == -1:
         return DomainScore(score=0.0)

@@ -14,7 +14,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { colorTokens } from "@/design-tokens/colors"
+import { colorTokens } from "@readspace/design-tokens"
 import {
     ArrowLeft,
     BookmarkIcon,
@@ -30,39 +30,49 @@ import {
 import { useState } from "react"
 import { toast } from "react-hot-toast"
 import { LanguageSelector } from "./LanguageSelector"
-import { useArticleContext } from "./ArticleContext"
+import { ContentView, type Article } from "@readspace/shared"
 
 interface ArticleToolbarProps {
     hideBackground?: boolean
+    article: Article
+    contentView: ContentView
+    setContentView: (view: ContentView) => void
+    handleMarkAsRead: () => void
+    handleToggleReadLater: () => void
+    handleExtractContent: () => void
+    handleSummarize: () => void
+    handleTranslate: (language: string) => void
+    isExtracting: boolean
+    isSummarizing: boolean
+    isTranslating: boolean
+    onBack?: () => void
+    isReadLaterMode: boolean
+    translatedContent: string | null
+    translatedLanguage: string | null
 }
 
 export function ArticleToolbar({
     hideBackground = false,
+    article,
+    contentView,
+    setContentView,
+    handleMarkAsRead,
+    handleToggleReadLater,
+    handleExtractContent,
+    handleSummarize,
+    handleTranslate,
+    isExtracting,
+    isSummarizing,
+    isTranslating,
+    onBack,
+    isReadLaterMode,
+    translatedContent,
+    translatedLanguage,
 }: ArticleToolbarProps) {
-    const {
-        article,
-        contentSource,
-        setContentSource,
-        handleMarkAsRead,
-        handleToggleReadLater,
-        handleExtractContent,
-        handleSummarize,
-        handleTranslate,
-        extractFullText,
-        summarizeArticle,
-        isTranslating,
-        onBack,
-        isReadLaterMode,
-        translatedContent,
-        translatedLanguage,
-    } = useArticleContext()
-
     const [showLanguageSelector, setShowLanguageSelector] = useState(false)
     const isMobile = useIsMobile()
 
     const hasTranslatedContent = !!translatedContent
-    const isExtracting = extractFullText.isFetching
-    const isSummarizing = summarizeArticle.isFetching
 
     const handleCopyUrl = async () => {
         if (!article.link) {
@@ -122,21 +132,18 @@ export function ArticleToolbar({
                 className={`flex items-center ${isMobile ? "gap-1" : "gap-1"}`}
             >
                 {/* Content Source Tabs - Show when link is available */}
-                {article.link && setContentSource && (
+                {article.link && setContentView && (
                     <div className="mr-2">
                         <Tabs
-                            value={contentSource}
+                            value={contentView}
                             onValueChange={(value) => {
-                                const newSource = value as
-                                    | "original"
-                                    | "extracted"
-                                    | "translated"
+                                const newView = value as ContentView
                                 // Always update the content source state for immediate tab feedback
-                                setContentSource(newSource)
+                                setContentView(newView)
 
                                 // If switching to extracted and no content exists yet, trigger extraction
                                 if (
-                                    newSource === "extracted" &&
+                                    newView === ContentView.Extracted &&
                                     !article.extracted_content
                                 ) {
                                     handleExtractContent()
@@ -146,14 +153,14 @@ export function ArticleToolbar({
                         >
                             <TabsList className="h-8">
                                 <TabsTrigger
-                                    value="original"
+                                    value={ContentView.Original}
                                     title="Original RSS content"
                                     className="h-7 px-2"
                                 >
                                     <FileText className="h-4 w-4" />
                                 </TabsTrigger>
                                 <TabsTrigger
-                                    value="extracted"
+                                    value={ContentView.Extracted}
                                     title="Full article content"
                                     className="h-7 px-2"
                                     disabled={isExtracting}
@@ -166,7 +173,7 @@ export function ArticleToolbar({
                                 </TabsTrigger>
                                 {hasTranslatedContent && (
                                     <TabsTrigger
-                                        value="translated"
+                                        value={ContentView.Translated}
                                         title={`Translated content${translatedLanguage ? ` (${translatedLanguage})` : ""}`}
                                         className="h-7 px-2"
                                     >
@@ -215,10 +222,10 @@ export function ArticleToolbar({
                                         className={`h-4 w-4 transition-all duration-200 hover:scale-110 ${article.is_saved ? "scale-110" : ""}`}
                                         style={{
                                             fill: article.is_saved
-                                                ? colorTokens.primary.DEFAULT
+                                                ? "#eab308"
                                                 : "transparent",
                                             color: article.is_saved
-                                                ? colorTokens.primary.DEFAULT
+                                                ? "#eab308"
                                                 : colorTokens.foreground,
                                         }}
                                     />

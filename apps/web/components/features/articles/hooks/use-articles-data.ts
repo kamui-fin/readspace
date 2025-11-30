@@ -4,6 +4,7 @@ import {
     useInfiniteReadLaterArticles,
     useInfiniteRecentlyReadArticles,
     useInfiniteTodayArticles,
+    ArticleFilterMode,
 } from "@readspace/shared"
 import type { Article } from "@readspace/shared"
 
@@ -15,7 +16,7 @@ interface ArticlesPageData {
 }
 
 interface UseArticlesDataProps {
-    mode: "allArticles" | "recentlyRead" | "readLater" | "today"
+    mode: ArticleFilterMode
     feedId?: string
     folderId?: string
     publishedSince?: string
@@ -56,58 +57,50 @@ export function useArticlesData({
     const todayQuery = useInfiniteTodayArticles(
         { limit: 25 },
         {
-            enabled: mode === "today",
+            enabled: mode === ArticleFilterMode.Today,
         }
     )
 
     const recentlyReadQuery = useInfiniteRecentlyReadArticles(
         { limit: 25 },
         {
-            enabled: mode === "recentlyRead",
+            enabled: mode === ArticleFilterMode.RecentlyRead,
         }
     )
 
     const readLaterQuery = useInfiniteReadLaterArticles(
         { limit: 25 },
         {
-            enabled: mode === "readLater",
+            enabled: mode === ArticleFilterMode.ReadLater,
         }
     )
 
     const allArticlesQuery = useInfiniteArticles(queryParams, {
         enabled:
-            mode !== "today" && mode !== "recentlyRead" && mode !== "readLater",
+            mode !== ArticleFilterMode.Today &&
+            mode !== ArticleFilterMode.RecentlyRead &&
+            mode !== ArticleFilterMode.ReadLater,
         staleTime: 5 * 60 * 1000, // 5 minutes
         gcTime: 30 * 60 * 1000, // 30 minutes
     })
 
     // Select the active query based on mode
     const activeQuery =
-        mode === "today"
+        mode === ArticleFilterMode.Today
             ? todayQuery
-            : mode === "recentlyRead"
-              ? recentlyReadQuery
-              : mode === "readLater"
-                ? readLaterQuery
-                : allArticlesQuery
+            : mode === ArticleFilterMode.RecentlyRead
+                ? recentlyReadQuery
+                : mode === ArticleFilterMode.ReadLater
+                    ? readLaterQuery
+                    : allArticlesQuery
 
-    const {
-        data,
-        isLoading,
-        isFetching,
-        isFetchingNextPage,
-        fetchNextPage,
-        hasNextPage,
-        refetch,
-        error,
-    } = activeQuery
+    const { data } = activeQuery
 
     // Flatten paginated data into a single array
     const articles = useMemo(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const infiniteData = data as {
             pages: ArticlesPageData[]
-            pageParams: any[]
+            pageParams: unknown[]
         }
         if (!infiniteData?.pages) return []
         return infiniteData.pages.flatMap(
@@ -116,14 +109,8 @@ export function useArticlesData({
     }, [data])
 
     return {
+        query: activeQuery,
+        // Helper to get flattened articles, but components can also do this
         articles,
-        isLoading,
-        isFetching,
-        isFetchingNextPage,
-        fetchNextPage,
-        hasNextPage,
-        refetch,
-        error,
-        activeQuery, // Expose full query if needed
     }
 }

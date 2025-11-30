@@ -10,7 +10,11 @@ interface ProgressCardProps {
     isCancelling: boolean
 }
 
-export function ProgressCard({ task, onCancel, isCancelling }: ProgressCardProps) {
+export function ProgressCard({
+    task,
+    onCancel,
+    isCancelling,
+}: ProgressCardProps) {
     const { progress, metadata } = task
 
     if (!progress) return null
@@ -35,14 +39,16 @@ export function ProgressCard({ task, onCancel, isCancelling }: ProgressCardProps
                                     </div>
                                 )}
                                 <div className="text-sm text-muted-foreground">
-                                    Processing {progress.completed} of {progress.total} feeds
+                                    Processing {progress.completed} of{" "}
+                                    {progress.total} feeds
                                 </div>
                             </div>
                         </div>
                     </div>
                     {metadata?.created_at && (
                         <div className="text-xs text-muted-foreground pl-9">
-                            Started: {new Date(metadata.created_at).toLocaleString()}
+                            Started:{" "}
+                            {new Date(metadata.created_at).toLocaleString()}
                         </div>
                     )}
                 </div>
@@ -52,7 +58,10 @@ export function ProgressCard({ task, onCancel, isCancelling }: ProgressCardProps
                     <div className="flex justify-between text-sm text-muted-foreground">
                         <span>Progress</span>
                         <span>
-                            {Math.round((progress.completed / progress.total) * 100)}%
+                            {Math.round(
+                                (progress.completed / progress.total) * 100
+                            )}
+                            %
                         </span>
                     </div>
                     <Progress

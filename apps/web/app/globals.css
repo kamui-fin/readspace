@@ -1,8 +1,6 @@
 @import "tailwindcss";
 
-@config '../tailwind.config.ts';
-
-/* Import local design tokens */
+@import "@readspace/design-tokens/theme.css";
 
 @layer utilities {
     button {
@@ -17,29 +15,6 @@
     .article-content .highlight-blue,
     .article-content .highlight-green {
         cursor: pointer !important;
-    }
-
-    #epub-container {
-        font-size: 1.7rem;
-    }
-
-    #epub-container p {
-        padding: 0.3rem;
-    }
-
-    .highlight-yellow {
-        background-color: yellow;
-        cursor: pointer;
-    }
-
-    .highlight-blue {
-        background-color: lightblue;
-        cursor: pointer;
-    }
-
-    .highlight-green {
-        background-color: greenyellow;
-        cursor: pointer;
     }
 
     h1,
@@ -59,9 +34,7 @@
     }
 }
 
-.perspective-1000 {
-    perspective: 1000px;
-}
+
 
 /* Toast styles */
 .toast {
@@ -135,12 +108,33 @@ pre {
     width: auto !important;
 }
 
-.article-content pre,
-.article-content code {
+.article-content pre {
     overflow-x: auto;
     max-width: 100%;
     white-space: pre-wrap;
     word-break: break-word;
+}
+
+.article-content code {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Specific styling for code blocks inside pre */
+.article-content pre code {
+    overflow-x: visible;
+    max-width: 100%;
+}
+
+/* Specific styling for inline code */
+.article-content code:not(pre code) {
+    display: inline;
+    white-space: normal;
+    overflow-wrap: break-word;
+    font-size: 0.85rem;
+    font-family:
+        ui-monospace, SFMono-Regular, "SF Mono", Consolas,
+        "Liberation Mono", Menlo, monospace;
 }
 
 .article-content table {

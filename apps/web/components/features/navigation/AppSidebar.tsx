@@ -12,11 +12,9 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { createClient } from "@/lib/supabase/client"
-import { cn } from "@readspace/shared"
-import { User } from "@supabase/supabase-js"
+import { cn } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
-import { useEffect, useState } from "react"
 import { SidebarMain } from "./SidebarMain"
 import { SidebarSecondary } from "./SidebarSecondary"
 import { Logo } from "@/components/ui/logo"
@@ -66,34 +64,22 @@ const data = {
     ],
 }
 
+import { useCurrentUser } from "@/hooks/use-current-user"
+
 export function AppSidebar({
     ...props
 }: React.ComponentProps<typeof SidebarLeft>) {
-    const [user, setUser] = useState<User | null>(null)
-    const [isLoadingUser, setIsLoadingUser] = useState(true)
+    const { user, isLoading: isLoadingUser } = useCurrentUser()
     const supabase = createClient()
 
-    useEffect(() => {
-        const getUserFromSession = async () => {
-            const {
-                data: { session },
-            } = await supabase.auth.getSession()
-            setUser(session?.user ?? null)
-            setIsLoadingUser(false)
-        }
-        getUserFromSession()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
     const handleSignOut = async () => {
-        setUser(null)
         await supabase.auth.signOut()
         window.location.href = "/login"
     }
 
-    const avatar = user?.user_metadata.avatar_url || "/notion-avatar.png"
+    const avatar = user?.user_metadata.avatar_url
     const name =
-        user?.user_metadata?.full_name || user?.user_metadata?.display_name
+        user?.user_metadata?.full_name || user?.user_metadata?.display_name || null
     const email = user?.email || null
     return (
         <>
@@ -116,7 +102,11 @@ export function AppSidebar({
                                     href="/today"
                                     className="flex items-center"
                                 >
-                                    <Logo showText={true} iconSize={30} textSize="text-xl pb-[2px]" />
+                                    <Logo
+                                        showText={true}
+                                        iconSize={30}
+                                        textSize="text-xl pb-[2px]"
+                                    />
                                 </Link>
                             </SidebarLeftMenuButton>
                         </SidebarMenuItem>

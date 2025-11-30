@@ -100,11 +100,25 @@ export function FeedCard({
         </>
     )
 
+    // Normalize the feed to FeedSummary type
+    const normalizedFeed: FeedSummary & { description?: string | null } =
+        "error_count" in feed
+            ? (feed as FeedSummary & { description?: string | null })
+            : {
+                // FeedDiscoveryResult -> FeedSummary conversion
+                id: feed.id,
+                url: feed.url,
+                title: feed.title,
+                link: feed.link ?? null,
+                image_url: feed.image_url ?? null,
+                error_count: 0,
+                description: (feed as FeedDiscoveryResult).description,
+            }
+
     return (
         <>
             <BaseFeedCard
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                feed={feed as any}
+                feed={normalizedFeed}
                 variant="default"
                 className={className}
                 headerActions={dropdownActions}

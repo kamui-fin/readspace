@@ -115,7 +115,7 @@ export function useUpdateArticle(
         note?: string | null;
       };
     },
-    unknown
+    { previousArticle: Article | undefined }
   >,
 ) {
   const queryClient = useQueryClient();
@@ -143,6 +143,106 @@ export function useUpdateArticle(
       }
 
       await ApiClient.updateArticle(articleId, updateData);
+    },
+    onMutate: async ({ articleId, data }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.article(articleId),
+      });
+      await queryClient.cancelQueries({
+        queryKey: [RSS_QUERY_KEYS.ARTICLES],
+      });
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.unreadCounts(),
+      });
+
+      // Snapshot the previous value
+      const previousArticle = queryClient.getQueryData<Article>(
+        queryKeys.article(articleId),
+      );
+
+      // Optimistically update article detail
+      if (previousArticle) {
+        queryClient.setQueryData<Article>(queryKeys.article(articleId), {
+          ...previousArticle,
+          ...data,
+          // Map frontend fields to backend fields for the optimistic update
+          ...(data.note !== undefined && { user_note: data.note }),
+          // Ensure priority is of correct type if provided
+          ...(data.priority && { priority: data.priority as any }),
+        });
+      }
+
+      // Optimistically update infinite lists
+      queryClient.setQueriesData(
+        { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
+        (oldData: any) => {
+          if (!oldData?.pages) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              items: page.items.map((item: ArticleSummary) =>
+                item.id === articleId
+                  ? {
+                    ...item,
+                    ...data,
+                    ...(data.priority && { priority: data.priority as any }),
+                    // If marking as read, it might disappear from some lists (like unread only),
+                    // but for optimistic updates, we usually just update the state.
+                    // If we want to remove it, it's more complex.
+                    // For now, just update the properties.
+                  }
+                  : item,
+              ),
+            })),
+          };
+        },
+      );
+
+      // Optimistically update unread counts
+      if (data.is_read === true) {
+        queryClient.setQueryData<ArticleCountsResponse>(
+          queryKeys.unreadCounts(),
+          (old) => {
+            if (!old) return old;
+
+            let newFeedCounts = old.feed_counts;
+
+            // Try to update specific feed count if we know the feed ID
+            if (previousArticle && !previousArticle.is_read) {
+              const feedId = previousArticle.feed_id;
+              if (feedId && old.feed_counts[feedId]) {
+                newFeedCounts = {
+                  ...old.feed_counts,
+                  [feedId]: Math.max(0, old.feed_counts[feedId] - 1),
+                };
+              }
+            }
+
+            return {
+              ...old,
+              feed_counts: newFeedCounts,
+              // We don't have total_unread in ArticleCountsResponse, so we don't update it.
+              // If the UI relies on derived total, it will recalculate from feed_counts.
+            };
+          },
+        );
+      }
+
+      return { previousArticle };
+    },
+    onError: (_err, { articleId }, context) => {
+      // Rollback
+      if (context?.previousArticle) {
+        queryClient.setQueryData(
+          queryKeys.article(articleId),
+          context.previousArticle,
+        );
+      }
+      // We can't easily rollback infinite lists perfectly without snapshots of all of them,
+      // but invalidating them in onSettled will fix it eventually.
+      // For now, we rely on onSettled to re-fetch.
     },
     onSettled: (_data, _error, { articleId }) => {
       // Invalidate article
@@ -461,53 +561,6 @@ export function useUnsaveArticle(
 }
 
 /**
- * Hook for extracting full text content from article URL
- */
-export function useExtractFullText(articleId: string, articleUrl?: string) {
-  const isValidArticleId =
-    articleId && articleId !== "skip" && articleId.length > 0;
-
-  const urlHash = articleUrl ? createContentHash(articleUrl) : "no-url";
-
-  return useQuery({
-    queryKey: queryKeys.extractedContent(articleId, urlHash),
-    queryFn: async (): Promise<ExtractFullTextResponse> => {
-      if (!isValidArticleId) {
-        throw new Error("Invalid article ID");
-      }
-      return ApiClient.extractFullText(articleId);
-    },
-    enabled: false, // Only run when manually triggered
-    staleTime: 30 * 60 * 1000, // 30 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
-  });
-}
-
-/**
- * Hook for generating AI summaries of articles
- */
-export function useSummarizeArticle(articleId: string, content?: string) {
-  const isValidArticleId =
-    articleId && articleId !== "skip" && articleId.length > 0;
-
-  const contentHash = content ? createContentHash(content) : "original";
-
-  return useQuery({
-    queryKey: queryKeys.summary(articleId, contentHash),
-    queryFn: async (): Promise<SummarizeResponse> => {
-      if (!isValidArticleId) {
-        throw new Error("Invalid article ID");
-      }
-      const requestBody: SummarizeRequest = content ? { content } : {};
-      return ApiClient.summarize(articleId, requestBody);
-    },
-    enabled: false, // Only run when manually triggered
-    staleTime: 30 * 60 * 1000, // 30 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
-  });
-}
-
-/**
  * Helper function to fetch translation with caching
  */
 export async function fetchTranslation(
@@ -540,5 +593,124 @@ export async function fetchTranslation(
     },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
+  });
+}
+
+/**
+ * Mutation hook for extracting full text
+ */
+export function useExtractFullTextMutation(
+  options?: UseMutationOptions<
+    ExtractFullTextResponse,
+    unknown,
+    { articleId: string; articleUrl: string }
+  >,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      articleId,
+      articleUrl,
+    }: {
+      articleId: string;
+      articleUrl: string;
+    }) => {
+      const urlHash = createContentHash(articleUrl);
+      return await queryClient.fetchQuery({
+        queryKey: queryKeys.extractedContent(articleId, urlHash),
+        queryFn: () => ApiClient.extractFullText(articleId),
+        staleTime: 30 * 60 * 1000,
+        gcTime: 60 * 60 * 1000,
+      });
+    },
+    onSuccess: (data, variables) => {
+      // Optimistically update the article with the extracted content
+      queryClient.setQueryData<Article>(
+        queryKeys.article(variables.articleId),
+        (oldArticle) => {
+          if (!oldArticle) return oldArticle;
+          return {
+            ...oldArticle,
+            extracted_content: data.content,
+            extracted_read_time: data.estimated_read_time_minutes,
+            estimated_read_time_minutes:
+              data.estimated_read_time_minutes ??
+              oldArticle.estimated_read_time_minutes,
+          };
+        },
+      );
+
+      // Invalidate the article to pick up extracted_content field
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.article(variables.articleId),
+      });
+    },
+    ...options,
+  });
+}
+
+/**
+ * Mutation hook for summarizing articles
+ */
+export function useSummarizeArticleMutation(
+  options?: UseMutationOptions<
+    SummarizeResponse,
+    unknown,
+    { articleId: string; content?: string }
+  >,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      articleId,
+      content,
+    }: {
+      articleId: string;
+      content?: string;
+    }) => {
+      const contentHash = content ? createContentHash(content) : "original";
+      return await queryClient.fetchQuery({
+        queryKey: queryKeys.summary(articleId, contentHash),
+        queryFn: () => {
+          const requestBody: SummarizeRequest = content ? { content } : {};
+          return ApiClient.summarize(articleId, requestBody);
+        },
+        staleTime: 30 * 60 * 1000,
+        gcTime: 60 * 60 * 1000,
+      });
+    },
+    ...options,
+  });
+}
+
+/**
+ * Mutation hook for translating articles
+ */
+export function useTranslateArticleMutation(
+  options?: UseMutationOptions<
+    TranslateResponse,
+    unknown,
+    { articleId: string; targetLanguage: string; content?: string }
+  >,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      articleId,
+      targetLanguage,
+      content,
+    }: {
+      articleId: string;
+      targetLanguage: string;
+      content?: string;
+    }) => {
+      return await fetchTranslation(
+        queryClient,
+        articleId,
+        targetLanguage,
+        content,
+      );
+    },
+    ...options,
   });
 }

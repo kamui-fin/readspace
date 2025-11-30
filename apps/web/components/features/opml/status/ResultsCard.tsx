@@ -35,14 +35,16 @@ export function ResultsCard({ task }: ResultsCardProps) {
                                     </div>
                                 )}
                                 <div className="text-sm text-muted-foreground">
-                                    Your OPML file has been successfully processed.
+                                    Your OPML file has been successfully
+                                    processed.
                                 </div>
                             </div>
                         </div>
                     </div>
                     {metadata?.created_at && (
                         <div className="text-xs text-muted-foreground pl-9">
-                            Started: {new Date(metadata.created_at).toLocaleString()}
+                            Started:{" "}
+                            {new Date(metadata.created_at).toLocaleString()}
                         </div>
                     )}
                 </div>
@@ -86,10 +88,13 @@ export function ResultsCard({ task }: ResultsCardProps) {
                         <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setShowErrorDetails(!showErrorDetails)}
+                            onClick={() =>
+                                setShowErrorDetails(!showErrorDetails)
+                            }
                             className="text-muted-foreground hover:text-foreground"
                         >
-                            {showErrorDetails ? "Hide" : "Show"} failed feeds ({result.errors.length})
+                            {showErrorDetails ? "Hide" : "Show"} failed feeds (
+                            {result.errors.length})
                         </Button>
 
                         {showErrorDetails && (

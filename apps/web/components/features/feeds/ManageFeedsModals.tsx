@@ -1,8 +1,9 @@
 "use client"
 
+import { BulkDeleteConfirmDialog } from "@/components/features/feeds/BulkDeleteConfirmDialog"
 import { BulkEditFolderModal } from "@/components/features/feeds/BulkEditFolderModal"
-import { FeedDeleteModal } from "@/components/features/feeds/FeedDeleteModal"
-import { FeedEditModal } from "@/components/features/feeds/FeedEditModal"
+import { DeleteConfirmDialog } from "@/components/features/feeds/DeleteConfirmDialog"
+import { RenameDialog } from "@/components/features/feeds/RenameDialog"
 import { useManageFeedsContext } from "./ManageFeedsContext"
 
 export function ManageFeedsModals() {
@@ -15,23 +16,29 @@ export function ManageFeedsModals() {
         folders,
         setIsBulkEditFolderModalOpen,
         closeModals,
-        handleFeedDeleted,
         handleBulkOperationComplete,
+        isBulkDeleteModalOpen,
+        setIsBulkDeleteModalOpen,
+        handleBulkDeleteConfirm,
+        isBulkDeleting,
     } = useManageFeedsContext()
 
     return (
         <>
-            <FeedEditModal
+            <RenameDialog
                 isOpen={isEditModalOpen}
-                feed={currentFeed}
-                onClose={closeModals}
+                onOpenChange={(open) => !open && closeModals()}
+                itemId={currentFeed?.id || ""}
+                itemTitle={currentFeed?.title || ""}
+                isFolder={false}
             />
 
-            <FeedDeleteModal
+            <DeleteConfirmDialog
                 isOpen={isDeleteModalOpen}
-                feed={currentFeed}
-                onClose={closeModals}
-                onDeleted={handleFeedDeleted}
+                onOpenChange={(open) => !open && closeModals()}
+                itemId={currentFeed?.id || ""}
+                itemTitle={currentFeed?.title || ""}
+                isFolder={false}
             />
 
             <BulkEditFolderModal
@@ -40,6 +47,14 @@ export function ManageFeedsModals() {
                 folders={folders}
                 onClose={() => setIsBulkEditFolderModalOpen(false)}
                 onComplete={handleBulkOperationComplete}
+            />
+
+            <BulkDeleteConfirmDialog
+                isOpen={isBulkDeleteModalOpen}
+                onOpenChange={setIsBulkDeleteModalOpen}
+                count={selectedFeedIds.length}
+                onConfirm={handleBulkDeleteConfirm}
+                isProcessing={isBulkDeleting}
             />
         </>
     )

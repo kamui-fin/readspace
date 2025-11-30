@@ -15,8 +15,8 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
-from app.core.config import get_settings
 import app.models  # noqa: F401
+from app.core.config import get_settings
 
 logger = structlog.get_logger(__name__)
 settings = get_settings()

@@ -7,25 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { ApiClient } from "../client";
 import { RSS_QUERY_KEYS, mutationKeys, queryKeys } from "../query-keys";
-import type { Folder, Subscription } from "../types";
-
-export function useFolders(
-  options?: Omit<
-    UseQueryOptions<
-      Folder[],
-      Error,
-      Folder[],
-      ReturnType<typeof queryKeys.folders>
-    >,
-    "queryKey" | "queryFn"
-  >,
-) {
-  return useQuery({
-    queryKey: queryKeys.folders(),
-    queryFn: () => ApiClient.getFolders() as Promise<Folder[]>,
-    ...options,
-  });
-}
+import type { Folder } from "../types";
 
 export function useCreateFolder(
   options?: UseMutationOptions<Folder, unknown, { name: string }>,

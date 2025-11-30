@@ -1,0 +1,26 @@
+{
+    "name": "@readspace/design-tokens",
+    "version": "0.0.0",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": "./src/index.ts",
+        "./theme.css": "./src/theme.css"
+    },
+    "scripts": {
+        "lint": "eslint .",
+        "check-types": "tsc --noEmit",
+        "format": "prettier --write src",
+        "format:check": "prettier --check src"
+    },
+    "devDependencies": {
+        "@readspace/eslint-config": "workspace:*",
+        "@readspace/typescript-config": "workspace:*",
+        "@tailwindcss/typography": "^0.5.16",
+        "@types/node": "^22.15.3",
+        "eslint": "^9.15.0",
+        "tailwindcss": "^4.0.15",
+        "tailwindcss-animate": "^1.0.7",
+        "typescript": "5.9.2"
+    }
+}

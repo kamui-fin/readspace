@@ -1,6 +1,5 @@
 import {
     useFeeds,
-    useFolders,
     useUnreadCounts,
     type Folder,
     type Subscription,
@@ -16,13 +15,21 @@ export type FeedItem = CollapsibleFeedItemData | RegularFeedItemData
 
 export function useFeedTree() {
     // Data queries - using global defaults for caching
-    const { data: folders, isLoading: isFoldersLoading } = useFolders()
-    const { data: feeds } = useFeeds({})
+    const { data: feeds, isLoading: isFeedsLoading } = useFeeds()
     const { data: unreadCounts } = useUnreadCounts()
     const pathname = usePathname()
 
     // Memoized type-safe data transformations
-    const typedFolders = useMemo(() => (folders as Folder[]) || [], [folders])
+    const typedFolders = useMemo(() => {
+        const folderMap = new Map<string, Folder>()
+            ; ((feeds as unknown as Subscription[]) || []).forEach((sub) => {
+                if (sub.folder) {
+                    folderMap.set(sub.folder.id, sub.folder)
+                }
+            })
+        return Array.from(folderMap.values())
+    }, [feeds])
+
     const typedFeeds = useMemo(
         () =>
             ((feeds as unknown as Subscription[]) || []).map(
@@ -41,12 +48,13 @@ export function useFeedTree() {
             ),
         [feeds, unreadCounts]
     )
+
     const typedUnreadCounts = useMemo(() => {
         const counts =
             (unreadCounts as {
                 total_unread?: number
-                read_later_count?: number
-                today_count?: number
+                read_later?: number
+                today?: number
             }) || {}
 
         // Calculate per-folder counts from feedUnreadCounts
@@ -91,14 +99,9 @@ export function useFeedTree() {
 
     // Extract favorited feeds for separate rendering
     const favoriteFeedItems: SubFeedItemData[] = useMemo(() => {
-        const favorites: SubFeedItemData[] = []
-
-        // Get all favorited feeds
-        const favoritedFeeds = typedFeeds.filter((feed) => feed.is_favorite)
-
-        // Transform favorites into SubFeedItemData
-        favoritedFeeds.forEach((feed) => {
-            favorites.push({
+        const favorites = typedFeeds
+            .filter((feed) => feed.is_favorite)
+            .map((feed) => ({
                 id: feed.id,
                 title: feed.title,
                 url: `/feeds/${feed.id}/articles`,
@@ -109,8 +112,7 @@ export function useFeedTree() {
                 // Star icon is hidden via isPinned flag
                 isFavorite: true,
                 isPinned: true,
-            })
-        })
+            }))
 
         // Sort favorites by title
         return favorites.sort((a, b) => a.title.localeCompare(b.title))
@@ -192,7 +194,7 @@ export function useFeedTree() {
     }, [typedFolders, typedFeeds, feedsByFolder, typedUnreadCounts, pathname])
 
     return {
-        isFoldersLoading,
+        isFoldersLoading: isFeedsLoading,
         typedFolders,
         favoriteFeedItems,
         feedItems,

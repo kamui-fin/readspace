@@ -41,7 +41,9 @@ export function useImportTaskStatus(
   return useQuery({
     queryKey: queryKeys.opmlImportStatus(taskId),
     queryFn: () =>
-      ApiClient.getImportTaskStatus(taskId!) as Promise<OpmlImportStatusResponse>,
+      ApiClient.getImportTaskStatus(
+        taskId!,
+      ) as Promise<OpmlImportStatusResponse>,
     enabled: !!taskId && enabled,
     refetchInterval: (query) => {
       const data = query.state.data;

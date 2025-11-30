@@ -12,7 +12,7 @@ import {
 import { ChevronRight } from "lucide-react"
 import { SubFeedItem, type SubFeedItemData } from "./SubFeedItem"
 import { FeedDropdownMenu } from "../menus/FeedContextMenu"
-import { usePersistedState } from "@/hooks/use-persisted-state"
+import { usePersistentState } from "@/hooks/use-persistent-state"
 
 interface CollapsibleFeedItemData {
     /** Unique identifier for the folder */
@@ -50,7 +50,7 @@ interface CollapsibleFeedItemProps {
 
 // Custom hooks
 function useFeedCollapse(feedId: string, initialOpen?: boolean) {
-    const [isOpen, setIsOpen] = usePersistedState(
+    const [isOpen, setIsOpen] = usePersistentState(
         `folder-${feedId}-collapsed`,
         initialOpen || false
     )
@@ -90,11 +90,10 @@ function FeedItemRoot({ children }: FeedItemRootProps) {
 
 interface FeedItemToggleProps {
     isOpen: boolean
-    onToggle: (open: boolean) => void
     title: string
 }
 
-function FeedItemToggle({ isOpen, onToggle, title }: FeedItemToggleProps) {
+function FeedItemToggle({ isOpen, title }: FeedItemToggleProps) {
     return (
         <CollapsibleTrigger asChild>
             <button
@@ -169,7 +168,6 @@ export function CollapsibleFeedItem({
             <FeedItemRoot>
                 <FeedItemToggle
                     isOpen={isOpen}
-                    onToggle={toggle}
                     title={feed.title}
                 />
                 <FeedItemButton

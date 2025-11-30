@@ -9,7 +9,10 @@ import { instantMeiliSearch } from "@meilisearch/instant-meilisearch"
 import { MeiliSearch } from "meilisearch"
 import type { HybridSearchConfig } from "@readspace/shared"
 
-// Environment variables for Meilisearch configuration
+// ============================================================================
+// Environment Configuration
+// ============================================================================
+
 export const MEILISEARCH_URL =
     process.env.NEXT_PUBLIC_MEILISEARCH_URL || "http://localhost:7700"
 export const MEILISEARCH_SEARCH_KEY =
@@ -20,6 +23,156 @@ if (!MEILISEARCH_SEARCH_KEY) {
         "NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY is not set. Search functionality may not work correctly."
     )
 }
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+/**
+ * Index name for feed search.
+ */
+export const FEEDS_INDEX_NAME = "feeds"
+
+/**
+ * Default search configuration.
+ */
+export const DEFAULT_SEARCH_CONFIG = {
+    hitsPerPage: 20, // Results per page
+    attributesToHighlight: ["title", "description"], // Fields to highlight in results
+    highlightPreTag: "<mark>", // HTML tag for highlighting
+    highlightPostTag: "</mark>",
+}
+
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+interface SearchRequest {
+    params?: SearchParams
+}
+
+interface SearchParams {
+    query?: string
+    q?: string
+    facetFilters?: Array<string | string[]>
+    filter?: Array<string | string[]>
+    hybrid?: {
+        semanticRatio: number
+        embedder?: string
+    }
+    showRankingScore?: boolean
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Check if a search request has a meaningful query string.
+ */
+function hasQuery(params?: SearchParams): boolean {
+    if (!params) return false
+    return (
+        (!!params.query && params.query.trim() !== "") ||
+        (!!params.q && params.q.trim() !== "")
+    )
+}
+
+/**
+ * Check if a filter array contains category filters.
+ */
+function hasCategoryFilter(filters: Array<string | string[]>): boolean {
+    return filters.some((filter) => {
+        if (typeof filter === "string") {
+            return (
+                filter.startsWith("top_level_category:") ||
+                filter.includes("top_level_category")
+            )
+        }
+        if (Array.isArray(filter)) {
+            return filter.some(
+                (f: string) =>
+                    typeof f === "string" &&
+                    (f.startsWith("top_level_category:") ||
+                        f.includes("top_level_category"))
+            )
+        }
+        return false
+    })
+}
+
+/**
+ * Check if a search request has meaningful search criteria.
+ * A request is meaningful if it has:
+ * - A query string, OR
+ * - A category filter (language-only filters are not enough)
+ */
+function hasMeaningfulCriteria(params?: SearchParams): boolean {
+    // Check for query
+    if (hasQuery(params)) {
+        return true
+    }
+
+    if (!params) return false
+
+    // Check facetFilters for category
+    if (params.facetFilters && Array.isArray(params.facetFilters)) {
+        if (hasCategoryFilter(params.facetFilters)) {
+            return true
+        }
+    }
+
+    // Check regular filter field for category
+    if (params.filter && Array.isArray(params.filter)) {
+        if (hasCategoryFilter(params.filter)) {
+            return true
+        }
+    }
+
+    return false
+}
+
+/**
+ * Apply hybrid search parameters to a search request.
+ */
+function applyHybridSearchParams(
+    request: SearchRequest,
+    hybridConfig: HybridSearchConfig
+): SearchRequest {
+    return {
+        ...request,
+        params: {
+            ...request.params,
+            hybrid: {
+                semanticRatio: hybridConfig.semanticRatio,
+                embedder: hybridConfig.embedder || "default",
+            },
+            showRankingScore: true,
+        },
+    }
+}
+
+/**
+ * Create an empty search result.
+ */
+function createEmptyResult() {
+    return {
+        hits: [],
+        nbHits: 0,
+        nbPages: 0,
+        page: 0,
+        processingTimeMS: 0,
+        hitsPerPage: 0,
+        exhaustiveNbHits: false,
+        query: "",
+        params: "",
+        facets: {},
+    }
+}
+
+// ============================================================================
+// Main Export: Search Client
+// ============================================================================
 
 /**
  * Create a search client with dynamic hybrid search support.
@@ -49,109 +202,32 @@ export function createSearchClient(
         ...baseClient,
         searchClient: {
             ...baseClient.searchClient,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            search(requests: Array<Record<string, any>>) {
+            search(requests: SearchRequest[]) {
                 // Apply hybrid search params dynamically if enabled
                 const hybridConfig = getHybridConfig?.()
+                let processedRequests = requests
+
                 if (hybridConfig) {
-                    requests = requests.map((request) => ({
-                        ...request,
-                        params: {
-                            ...request.params,
-                            hybrid: {
-                                semanticRatio: hybridConfig.semanticRatio,
-                                embedder: hybridConfig.embedder || "default",
-                            },
-                            showRankingScore: true,
-                        },
-                    }))
+                    processedRequests = requests.map((request) =>
+                        applyHybridSearchParams(request, hybridConfig)
+                    )
                 }
 
                 // Check if at least ONE request has meaningful search criteria
-                const hasAnyMeaningfulSearch = requests.some(({ params }) => {
-                    // Check both 'query' and 'q' fields (Meilisearch uses 'query')
-                    const hasQuery =
-                        (params?.query && params.query.trim() !== "") ||
-                        (params?.q && params.q.trim() !== "")
-
-                    // If any request has a query, allow all searches
-                    if (hasQuery) {
-                        return true
-                    }
-
-                    // Check for category filter specifically (not language-only)
-                    if (
-                        params?.facetFilters &&
-                        Array.isArray(params.facetFilters)
-                    ) {
-                        const hasCategoryFilter = params.facetFilters.some(
-                            (filter: string | string[]) => {
-                                if (typeof filter === "string") {
-                                    return filter.startsWith(
-                                        "top_level_category:"
-                                    )
-                                }
-                                if (Array.isArray(filter)) {
-                                    return filter.some((f: string) =>
-                                        f.startsWith("top_level_category:")
-                                    )
-                                }
-                                return false
-                            }
-                        )
-
-                        if (hasCategoryFilter) {
-                            return true
-                        }
-                    }
-
-                    // Also check regular filter field (Meilisearch uses this)
-                    if (params?.filter && Array.isArray(params.filter)) {
-                        const hasCategoryInFilter = params.filter.some(
-                            (filterGroup: string | string[]) => {
-                                if (Array.isArray(filterGroup)) {
-                                    return filterGroup.some(
-                                        (f: string) =>
-                                            typeof f === "string" &&
-                                            f.includes("top_level_category")
-                                    )
-                                }
-                                return (
-                                    typeof filterGroup === "string" &&
-                                    filterGroup.includes("top_level_category")
-                                )
-                            }
-                        )
-
-                        if (hasCategoryInFilter) {
-                            return true
-                        }
-                    }
-
-                    return false
-                })
+                const hasAnyMeaningfulSearch = processedRequests.some(
+                    ({ params }) => hasMeaningfulCriteria(params)
+                )
 
                 // Skip search only if NO request has meaningful criteria
                 if (!hasAnyMeaningfulSearch) {
                     // Return empty results without making a request
                     return Promise.resolve({
-                        results: requests.map(() => ({
-                            hits: [],
-                            nbHits: 0,
-                            nbPages: 0,
-                            page: 0,
-                            processingTimeMS: 0,
-                            hitsPerPage: 0,
-                            exhaustiveNbHits: false,
-                            query: "",
-                            params: "",
-                            facets: {},
-                        })),
+                        results: requests.map(() => createEmptyResult()),
                     })
                 }
 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                return baseClient.searchClient.search(requests as any)
+                return baseClient.searchClient.search(processedRequests as any)
             },
         },
     }
@@ -175,21 +251,6 @@ export const meilisearchClient = new MeiliSearch({
     host: MEILISEARCH_URL,
     apiKey: MEILISEARCH_SEARCH_KEY,
 })
-
-/**
- * Index name for feed search.
- */
-export const FEEDS_INDEX_NAME = "feeds"
-
-/**
- * Default search configuration.
- */
-export const DEFAULT_SEARCH_CONFIG = {
-    hitsPerPage: 20, // Results per page
-    attributesToHighlight: ["title", "description"], // Fields to highlight in results
-    highlightPreTag: "<mark>", // HTML tag for highlighting
-    highlightPostTag: "</mark>",
-}
 
 // Re-export hybrid search utilities from shared package
 export {

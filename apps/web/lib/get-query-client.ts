@@ -4,11 +4,6 @@ function makeQueryClient() {
     return new QueryClient({
         defaultOptions: {
             queries: {
-                // With SSR, we usually want to set some default staleTime
-                // above 0 to avoid refetching immediately on the client
-                staleTime: 5 * 60 * 1000, // 5 minutes
-                // Keep data in cache for 30 minutes (longer than staleTime)
-                gcTime: 30 * 60 * 1000, // 30 minutes
                 retry: 1,
                 // Prevent redundant requests during navigation
                 refetchOnMount: false,

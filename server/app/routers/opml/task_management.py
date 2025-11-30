@@ -5,8 +5,9 @@ from typing import Annotated
 import structlog
 from fastapi import APIRouter, Depends, Path
 
-from app.services.opml.tasks import cancel_user_task, list_user_tasks
+from app.services.opml.tasks import cancel_user_task, cleanup_user_task, list_user_tasks
 from app.services.user.auth import get_current_user
+from app.typing.common import ImportStatus
 from app.typing.opml import OpmlImportCancelResponse, OpmlTaskMetadata
 from app.typing.user import TokenData
 
@@ -34,7 +35,10 @@ async def get_active_import_task(
     # Return the most recent task based on creation timestamp
     recent_task = max(tasks, key=lambda x: x.created_at)
 
-    # TODO: cleanup old tasks
+    # If the most recent task is completed, clean it up and return None
+    if recent_task.status == ImportStatus.COMPLETED:
+        await cleanup_user_task(recent_task.task_id, current_user.sub)
+        return None
 
     return recent_task
 

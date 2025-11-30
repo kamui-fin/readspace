@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 import { Slot } from "@radix-ui/react-slot"
 import { CheckIcon, LoaderCircleIcon } from "lucide-react"
 import * as React from "react"
@@ -118,8 +118,8 @@ function StepperItem({
         completed || step < activeStep
             ? "completed"
             : activeStep === step
-              ? "active"
-              : "inactive"
+                ? "active"
+                : "inactive"
 
     const isLoading = loading && step === activeStep
 

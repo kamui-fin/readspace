@@ -9,17 +9,14 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import toast from "react-hot-toast"
 import { createClient } from "@/lib/supabase/client"
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import * as React from "react"
-import { useState } from "react"
 import { isCloudProd } from "@/lib/is-cloud-prod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
 import { GoogleSignInButton } from "@/components/features/auth/GoogleSignInButton"
 import {
     Form,
@@ -37,12 +34,10 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
     const router = useRouter()
     const supabase = createClient()
-    const [isLoading, setIsLoading] = useState(false)
-    const [isGoogleLoading, setIsGoogleLoading] = useState(false)
     const isProd = isCloudProd()
 
     const form = useForm<LoginFormValues>({
-        // @ts-ignore
+        // @ts-expect-error - zodResolver type mismatch
         resolver: zodResolver(loginSchema),
         defaultValues: {
             email: "",

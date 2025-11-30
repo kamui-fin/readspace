@@ -10,6 +10,8 @@ interface ArticlesLayoutProps {
     detail: ReactNode
     isMobile: boolean
     showContent: boolean
+    defaultLayout: number[]
+    onLayoutChange: (sizes: number[]) => void
 }
 
 export function ArticlesLayout({
@@ -17,6 +19,8 @@ export function ArticlesLayout({
     detail,
     isMobile,
     showContent,
+    defaultLayout,
+    onLayoutChange,
 }: ArticlesLayoutProps) {
     if (isMobile) {
         return (
@@ -31,9 +35,12 @@ export function ArticlesLayout({
     }
 
     return (
-        <ResizablePanelGroup direction="horizontal">
+        <ResizablePanelGroup
+            direction="horizontal"
+            onLayout={onLayoutChange}
+        >
             <ResizablePanel
-                defaultSize={35}
+                defaultSize={defaultLayout[0]}
                 minSize={25}
                 maxSize={50}
                 className="flex flex-col h-full border-r"
@@ -43,7 +50,7 @@ export function ArticlesLayout({
 
             <ResizableHandle />
 
-            <ResizablePanel defaultSize={65}>{detail}</ResizablePanel>
+            <ResizablePanel defaultSize={defaultLayout[1]}>{detail}</ResizablePanel>
         </ResizablePanelGroup>
     )
 }

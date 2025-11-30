@@ -1,28 +1,29 @@
-import { ArticleToolbar } from "./ArticleToolbar"
-import { useArticleContext } from "./ArticleContext"
+import type { Article } from "@readspace/shared"
 import { formatDistanceToNow, parseISO } from "date-fns"
-import Image from "next/image"
+import { FeedIcon } from "@/components/features/feeds/FeedIcon"
 import Link from "next/link"
 import { useState } from "react"
 
 interface ArticleHeaderProps {
+    article: Article
     currentReadTime: number | null
     shouldShowFeedBadge: boolean
     isMobile: boolean
+    isRecentlyReadMode: boolean
+    shouldShowPreviewBanner: boolean
+    toolbar?: React.ReactNode
 }
 
 export function ArticleHeader({
+    article,
     currentReadTime,
     shouldShowFeedBadge,
     isMobile,
+    isRecentlyReadMode,
+    shouldShowPreviewBanner,
+    toolbar,
 }: ArticleHeaderProps) {
-    const {
-        article,
-        isRecentlyReadMode,
-        shouldShowPreviewBanner,
-    } = useArticleContext()
 
-    const [feedImageError, setFeedImageError] = useState(false)
 
     const publishedAtString = article.published_at
     const readAtString = article.read_at
@@ -43,18 +44,13 @@ export function ArticleHeader({
                     href={`/feeds/${article.feed_id}/articles`}
                     className="inline-flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors duration-200 group"
                 >
-                    {article.feed_icon && !feedImageError ? (
-                        <Image
-                            src={article.feed_icon}
-                            alt={article.feed_title || "Feed image"}
-                            width={16}
-                            height={16}
-                            className="h-4 w-4 shrink-0 rounded"
-                            onError={() => setFeedImageError(true)}
-                        />
-                    ) : (
-                        <div className="h-4 w-4 shrink-0 rounded bg-primary/20" />
-                    )}
+                    <FeedIcon
+                        feed={{
+                            title: article.feed_title,
+                            image_url: article.feed_icon,
+                        }}
+                        className="h-4 w-4 shrink-0 rounded"
+                    />
                     <span className="text-xs font-medium tracking-wider uppercase text-muted-foreground group-hover:text-foreground transition-colors duration-200">
                         {article.feed_title}
                     </span>
@@ -90,11 +86,7 @@ export function ArticleHeader({
                 </div>
 
                 {/* Desktop Article Toolbar */}
-                {!shouldShowPreviewBanner && !isMobile && (
-                    <ArticleToolbar
-                        hideBackground={true}
-                    />
-                )}
+                {!shouldShowPreviewBanner && !isMobile && toolbar}
             </div>
         </div>
     )

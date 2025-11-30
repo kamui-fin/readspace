@@ -1,250 +1,115 @@
-import {
-    fuzzySearch,
-    useBulkDeleteFeeds,
-    useFeeds,
-    useFolders,
-    useUpdateFeed,
-    type SubscriptionExtended,
-} from "@readspace/shared"
-import { useMemo, useState } from "react"
-import { toast } from "react-hot-toast"
-import { useDebounce } from "@/hooks/use-debounce"
-import { exportFeedsToOPML } from "@/lib/opml-export"
+import { useFeedData, type FeedRowData } from "./use-feed-data"
+import { useFeedFilters } from "./use-feed-filters"
+import { useFeedModals } from "./use-feed-modals"
+import { useFeedSelection } from "./use-feed-selection"
 
-export interface FeedRowData {
-    id: string
-    title: string
-    url: string
-    link: string | null
-    folder_id: string | null
-    image_url: string | null
-    is_favorite: boolean
-    error_count: number
-    last_updated_at: string | null
-    last_error_message: string | null
-}
+export type { FeedRowData }
 
 export function useFeedManagement() {
-    // Data queries
+    // 1. Fetch Data
+    const { feeds, folders, isLoading, error } = useFeedData()
+
+    // 2. Filter Data
     const {
-        data: subscriptions = [],
-        isLoading: isLoadingFeeds,
-        error: feedsError,
-    } = useFeeds({ extended: true })
-    const { data: folders = [], isLoading: isLoadingFolders } = useFolders()
 
-    // Map subscriptions to flat Feed objects
-    const feeds: FeedRowData[] = useMemo(() => {
-        return (subscriptions as unknown as SubscriptionExtended[]).map(
-            (sub) => ({
-                id: sub.feed.id,
-                title: sub.custom_title || sub.feed.title,
-                url: sub.feed.url,
-                link: sub.feed.link,
-                folder_id: sub.folder?.id || null,
-                image_url: sub.feed.image_url || null,
-                is_favorite: sub.is_favorite,
-                error_count: sub.feed.error_count,
-                last_updated_at: sub.feed.last_updated_at,
-                last_error_message: sub.feed.last_error_message,
-            })
-        )
-    }, [subscriptions])
-
-    // Search and filter state
-    const [searchTerm, setSearchTerm] = useState("")
-    const [debouncedSearchTerm] = useDebounce<string>(searchTerm, 300)
-    const [filterFolderId, setFilterFolderId] = useState<string | "all">("all")
-
-    // Selection state
-    const [selectedFeedIds, setSelectedFeedIds] = useState<string[]>([])
-
-    // Mutations
-    const updateFeedMutation = useUpdateFeed()
-    const bulkDeleteFeedsMutation = useBulkDeleteFeeds()
-
-    // Type-safe folder data
-    const typedFolders = folders || []
-
-    /**
-     * Filter and search feeds based on current criteria
-     */
-    const filteredFeeds = useMemo(() => {
-        let tempFeeds = feeds
-
-        // Filter by folder
-        if (filterFolderId !== "all") {
-            tempFeeds = tempFeeds.filter(
-                (feed) => feed.folder_id === filterFolderId
-            )
-        }
-
-        // Search by title or URL
-        if (debouncedSearchTerm) {
-            tempFeeds = fuzzySearch(tempFeeds, debouncedSearchTerm, [
-                "title",
-                "url",
-            ])
-        }
-
-        return tempFeeds
-    }, [feeds, debouncedSearchTerm, filterFolderId])
-
-    /**
-     * Handle select all checkbox
-     */
-    const handleSelectAll = (checked: boolean) => {
-        if (checked) {
-            setSelectedFeedIds(filteredFeeds.map((feed) => feed.id))
-        } else {
-            setSelectedFeedIds([])
-        }
-    }
-
-    /**
-     * Handle individual feed selection
-     */
-    const handleSelectFeed = (feedId: string, checked: boolean) => {
-        if (checked) {
-            setSelectedFeedIds((prev) => [...prev, feedId])
-        } else {
-            setSelectedFeedIds((prev) => prev.filter((id) => id !== feedId))
-        }
-    }
-
-    /**
-     * Handle folder change for individual feed
-     */
-    const handleFolderChange = (feedId: string, newFolderId: string | null) => {
-        updateFeedMutation.mutate({
-            feedId,
-            data: {
-                folder_id: newFolderId === null ? undefined : newFolderId,
-            },
-        })
-    }
-
-    /**
-     * Handle bulk delete with confirmation
-     */
-    const handleBulkDelete = () => {
-        if (selectedFeedIds.length === 0) return
-
-        if (
-            window.confirm(
-                `Are you sure you want to delete ${selectedFeedIds.length} feed(s)?`
-            )
-        ) {
-            bulkDeleteFeedsMutation.mutate(
-                { feedIds: selectedFeedIds },
-                {
-                    onSuccess: () => {
-                        setSelectedFeedIds([])
-                    },
-                }
-            )
-        }
-    }
-
-    /**
-     * Handle OPML export
-     */
-    const handleExportOPML = () => {
-        if (filteredFeeds.length === 0) {
-            toast.error("No feeds to export")
-            return
-        }
-
-        try {
-            exportFeedsToOPML(filteredFeeds, typedFolders)
-            toast.success(`Exported ${filteredFeeds.length} feeds to OPML`)
-        } catch (error) {
-            toast.error("Failed to export OPML")
-            console.error("OPML export error:", error)
-        }
-    }
-
-    // Modal states
-    const [currentFeed, setCurrentFeed] = useState<FeedRowData | null>(null)
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-    const [isBulkEditFolderModalOpen, setIsBulkEditFolderModalOpen] =
-        useState(false)
-
-    /**
-     * Handle edit feed action
-     */
-    const handleEditFeed = (feed: FeedRowData) => {
-        setCurrentFeed(feed)
-        setIsEditModalOpen(true)
-    }
-
-    /**
-     * Handle delete feed action
-     */
-    const handleDeleteFeed = (feed: FeedRowData) => {
-        setCurrentFeed(feed)
-        setIsDeleteModalOpen(true)
-    }
-
-    /**
-     * Close all modals
-     */
-    const closeModals = () => {
-        setIsEditModalOpen(false)
-        setIsDeleteModalOpen(false)
-        setIsBulkEditFolderModalOpen(false)
-        setCurrentFeed(null)
-    }
-
-    /**
-     * Handle successful feed deletion
-     */
-    const handleFeedDeleted = (feedId: string) => {
-        closeModals()
-    }
-
-    /**
-     * Handle bulk operation completion
-     */
-    const handleBulkOperationComplete = () => {
-        closeModals()
-    }
-
-    const controllerResult = {
-        feeds: filteredFeeds,
-        folders: typedFolders,
-        isLoading: isLoadingFeeds || isLoadingFolders,
-        error: feedsError,
-        searchTerm,
-        setSearchTerm,
         filterFolderId,
         setFilterFolderId,
+        filteredFeeds,
+    } = useFeedFilters(feeds)
+
+    // 3. Handle Selection & Actions
+    const {
         selectedFeedIds,
         setSelectedFeedIds,
         handleSelectAll,
         handleSelectFeed,
         handleFolderChange,
-        handleBulkDelete,
+        performBulkDelete,
+        isBulkDeleting,
         handleExportOPML,
-        isAllSelected:
-            selectedFeedIds.length === filteredFeeds.length &&
-            filteredFeeds.length > 0,
+        isAllSelected,
+    } = useFeedSelection(filteredFeeds, folders)
 
-        // Modal state & handlers
+    // 4. Handle Modals
+    const {
         currentFeed,
         isEditModalOpen,
         isDeleteModalOpen,
         isBulkEditFolderModalOpen,
         setIsBulkEditFolderModalOpen,
+        isBulkDeleteModalOpen,
+        setIsBulkDeleteModalOpen,
+        handleEditFeed,
+        handleDeleteFeed,
+        closeModals,
+        handleFeedDeleted,
+    } = useFeedModals()
+
+    /**
+     * Handle bulk delete click (opens modal)
+     */
+    const handleBulkDelete = () => {
+        setIsBulkDeleteModalOpen(true)
+    }
+
+    /**
+     * Handle bulk delete confirmation
+     */
+    const handleBulkDeleteConfirm = () => {
+        performBulkDelete(() => {
+            closeModals()
+            // Selection is cleared by performBulkDelete
+        })
+    }
+
+    /**
+     * Handle completion of other bulk operations (like move)
+     */
+    const handleBulkOperationComplete = () => {
+        closeModals()
+        setSelectedFeedIds([])
+    }
+
+    return {
+        // Data
+        feeds: filteredFeeds,
+        folders,
+        isLoading,
+        error,
+
+        // Filter State
+
+        filterFolderId,
+        setFilterFolderId,
+
+        // Selection State
+        selectedFeedIds,
+        setSelectedFeedIds,
+        isAllSelected,
+        isBulkDeleting,
+
+        // Actions
+        handleSelectAll,
+        handleSelectFeed,
+        handleFolderChange,
+        handleBulkDelete,
+        handleBulkDeleteConfirm,
+        handleExportOPML,
+
+        // Modal State & Handlers
+        currentFeed,
+        isEditModalOpen,
+        isDeleteModalOpen,
+        isBulkEditFolderModalOpen,
+        setIsBulkEditFolderModalOpen,
+        isBulkDeleteModalOpen,
+        setIsBulkDeleteModalOpen,
         handleEditFeed,
         handleDeleteFeed,
         closeModals,
         handleFeedDeleted,
         handleBulkOperationComplete,
     }
-
-    return controllerResult
 }
 
 export type UseFeedManagementResult = ReturnType<typeof useFeedManagement>

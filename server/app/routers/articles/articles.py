@@ -10,8 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.custom_exceptions import NotFoundError
 from app.crud.article.actions import update_article_status
 from app.crud.article.reader import CursorPaginationParams, get_articles
-from app.db.session import get_db
+from app.db.session import get_db, get_db_factory
 from app.services.articles.service import get_article_details
+from app.services.feeds.service import SessionFactory, refresh_feed
 from app.services.user.auth import get_current_user
 from app.typing.common import CursorPaginatedResponse
 from app.typing.entries import EntryDetail, EntryListItem, EntryUpdate
@@ -30,6 +31,7 @@ router = APIRouter()
 )
 async def list_articles(
     db: Annotated[AsyncSession, Depends(get_db)],
+    db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
     cursor: str | None = Query(None, description="Cursor (article ID)"),
     limit: int = Query(50, ge=1, le=200),
@@ -55,8 +57,28 @@ async def list_articles(
 
     # 2. Query
     result = await get_articles(
-        db=db, user_id=UUID(current_user.sub), params=CursorPaginationParams(limit=limit, cursor=cursor), **filters
+        db=db,
+        user_id=UUID(current_user.sub),
+        params=CursorPaginationParams(limit=limit, cursor=cursor),
+        **filters,
     )
+
+    # 3. Auto-Refresh if empty feed (Preview Mode or Stale Feed)
+    # If we are looking at a specific feed (feed_id provided), and it's the first page (no cursor),
+    # and there are no articles, we should try to refresh the feed to see if there is new content.
+    if feed_id and not cursor and not result.items:
+        logger.info("Feed empty, auto-refreshing", feed_id=str(feed_id))
+        # Use separate session for refresh to ensure isolation
+        await refresh_feed(db_factory, feed_id)
+
+        # Re-fetch with fresh session state
+        db.expire_all()
+        result = await get_articles(
+            db=db,
+            user_id=UUID(current_user.sub),
+            params=CursorPaginationParams(limit=limit, cursor=cursor),
+            **filters,
+        )
 
     return CursorPaginatedResponse(
         items=result.items,
@@ -74,7 +96,7 @@ async def list_articles(
 )
 async def get_article(
     article_id: UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
 ) -> EntryDetail:
     """
@@ -82,14 +104,16 @@ async def get_article(
     """
     # Uses service directly, but checks explicitly for existence
     article = await get_article_details(
-        db=db,
+        db_factory=db_factory,
         article_id=article_id,
         user_id=UUID(current_user.sub),
-        allow_preview=False,
+        allow_preview=True,
     )
 
     if not article:
-        logger.warning("Article not found", article_id=str(article_id), user_id=current_user.sub)
+        logger.warning(
+            "Article not found", article_id=str(article_id), user_id=current_user.sub
+        )
         raise NotFoundError(message="Article not found")
 
     return article

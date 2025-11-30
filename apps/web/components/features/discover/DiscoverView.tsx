@@ -14,7 +14,7 @@
  * - Pagination support
  */
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { InstantSearch } from "react-instantsearch"
 
 import { DiscoverContent } from "@/components/features/discover/DiscoverContent"
@@ -23,6 +23,7 @@ import {
     createSearchClient,
     FEEDS_INDEX_NAME,
 } from "@/lib/meilisearch-client"
+import { usePersistentState } from "@/hooks/use-persistent-state"
 
 interface DiscoverPageClientProps {
     /** Initial language preference from URL params */
@@ -40,8 +41,11 @@ interface DiscoverPageClientProps {
 export default function DiscoverView({
     initialLanguage,
 }: DiscoverPageClientProps) {
-    // AI search state - defaults to disabled
-    const [aiSearchEnabled, setAiSearchEnabled] = useState("false")
+    // AI search state - defaults to disabled, persisted in localStorage
+    const [aiSearchEnabled, setAiSearchEnabled] = usePersistentState(
+        "discover-ai-search",
+        false
+    )
 
     // Use ref to allow search client to access current AI state without recreating
     const aiSearchEnabledRef = useRef(aiSearchEnabled)
@@ -50,22 +54,10 @@ export default function DiscoverView({
         aiSearchEnabledRef.current = aiSearchEnabled
     }, [aiSearchEnabled])
 
-    useEffect(() => {
-        if (typeof window !== "undefined") {
-            try {
-                const aiEnabled =
-                    localStorage.getItem("discover-ai-search") || "false"
-                setAiSearchEnabled(aiEnabled)
-            } catch (error) {
-                console.error("Error reading AI search settings:", error)
-            }
-        }
-    }, [])
-
     // Create search client once with a function that dynamically checks AI state
     const { searchClient } = useMemo(() => {
         return createSearchClient(() => {
-            return aiSearchEnabledRef.current === "true"
+            return aiSearchEnabledRef.current
                 ? createHybridSearchParams()
                 : undefined
         })
@@ -79,9 +71,7 @@ export default function DiscoverView({
         >
             <DiscoverContent
                 initialLanguage={initialLanguage}
-                onAiSettingsChange={(enabled) => {
-                    setAiSearchEnabled(enabled ? "true" : "false")
-                }}
+                onAiSettingsChange={setAiSearchEnabled}
             />
         </InstantSearch>
     )

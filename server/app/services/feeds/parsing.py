@@ -41,7 +41,9 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
     parsed = feedparser.parse(content, sanitize_html=True)
 
     if parsed.bozo:
-        logger.warning("Feed parsed with errors", url=url, error=str(parsed.bozo_exception))
+        logger.warning(
+            "Feed parsed with errors", url=url, error=str(parsed.bozo_exception)
+        )
 
     feed: dict[str, Any] = cast(dict[str, Any], parsed.feed)
 
@@ -73,12 +75,16 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
     last_updated_at = None
     if hasattr(feed, "updated_parsed") and feed.updated_parsed:
         try:
-            last_updated_at = datetime.fromtimestamp(mktime(feed.updated_parsed), tz=timezone.utc)
+            last_updated_at = datetime.fromtimestamp(
+                mktime(feed.updated_parsed), tz=timezone.utc
+            )
         except (ValueError, TypeError, OverflowError):
             pass
     elif hasattr(feed, "published_parsed") and feed.published_parsed:
         try:
-            last_updated_at = datetime.fromtimestamp(mktime(feed.published_parsed), tz=timezone.utc)
+            last_updated_at = datetime.fromtimestamp(
+                mktime(feed.published_parsed), tz=timezone.utc
+            )
         except (ValueError, TypeError, OverflowError):
             pass
 
@@ -101,6 +107,8 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
 
     return ParsedFeed(
         title=title,
+        id=url,  # Use URL as temporary ID for preview
+        url=url,
         description=description,
         link=link,
         language=language,
@@ -166,7 +174,11 @@ def _extract_article_data(entry: dict[str, Any], feed_url: str) -> ArticleCreate
         image_url = urljoin(feed_url or link, image_url)
 
     # Calculate reading time
-    read_time = min(calculate_reading_time(clean_content, default_wpm=200), 60) if clean_content else 1
+    read_time = (
+        min(calculate_reading_time(clean_content, default_wpm=200), 60)
+        if clean_content
+        else 1
+    )
 
     return ArticleCreate(
         title=title,
@@ -259,12 +271,20 @@ def _sanitize_and_fix_html(html_content: str, base_url: str | None) -> str:
                     continue
                 if tag.has_attr("href"):
                     val = tag.get("href")
-                    if val and isinstance(val, str) and not (val.startswith("data:") or val.startswith("mailto:")):
+                    if (
+                        val
+                        and isinstance(val, str)
+                        and not (val.startswith("data:") or val.startswith("mailto:"))
+                    ):
                         tag["href"] = urljoin(base_url, val)
                         has_changes = True
                 if tag.has_attr("src"):
                     val = tag.get("src")
-                    if val and isinstance(val, str) and not (val.startswith("data:") or val.startswith("mailto:")):
+                    if (
+                        val
+                        and isinstance(val, str)
+                        and not (val.startswith("data:") or val.startswith("mailto:"))
+                    ):
                         tag["src"] = urljoin(base_url, val)
                         has_changes = True
             if has_changes:
@@ -351,7 +371,11 @@ def find_best_article_image(entry: Any) -> tuple[str | None, str]:
                 src = img.get("src")
                 if src and isinstance(src, str):
                     # Skip common tracking pixels and icons
-                    if "icon" not in src.lower() and "emoji" not in src.lower() and "pixel" not in src.lower():
+                    if (
+                        "icon" not in src.lower()
+                        and "emoji" not in src.lower()
+                        and "pixel" not in src.lower()
+                    ):
                         return src, "html_parse"
         except Exception as e:
             logger.debug("Failed to extract image from HTML", error=str(e))

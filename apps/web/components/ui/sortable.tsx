@@ -25,13 +25,13 @@ import * as PortalPrimitive from "@radix-ui/react-portal"
 import { Primitive } from "@radix-ui/react-primitive"
 import * as React from "react"
 
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 const SortableImplContext = React.createContext<
     Pick<SortableProps, "getNewIndex"> &
-        Required<Pick<SortableProps, "getTransformStyle">> & {
-            activeId: UniqueIdentifier | null
-        }
+    Required<Pick<SortableProps, "getTransformStyle">> & {
+        activeId: UniqueIdentifier | null
+    }
 >({
     activeId: null,
     getTransformStyle: CSS.Transform.toString,
@@ -108,7 +108,7 @@ export const Sortable = ({
 
 export interface SortableListProps
     extends Omit<SortableContextProps, "children">,
-        React.ComponentPropsWithoutRef<typeof Primitive.ul> {
+    React.ComponentPropsWithoutRef<typeof Primitive.ul> {
     orientation?: "vertical" | "horizontal"
 }
 

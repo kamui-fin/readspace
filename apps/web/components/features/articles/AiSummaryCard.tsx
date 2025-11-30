@@ -5,44 +5,44 @@ import { Card, CardContent } from "@/components/ui/card"
 import { motion } from "framer-motion"
 import { Sparkles, X } from "lucide-react"
 import { Markdown } from "@/components/ui/markdown"
+import { cn } from "@/lib/utils"
 
 interface AiSummaryCardProps {
     summary: string
+    className?: string
     onDismiss: () => void
 }
 
-export function AiSummaryCard({ summary, onDismiss }: AiSummaryCardProps) {
+export function AiSummaryCard({ summary, className, onDismiss }: AiSummaryCardProps) {
     return (
         <motion.div
             initial={{ opacity: 0, y: -20, height: 0 }}
             animate={{ opacity: 1, y: 0, height: "auto" }}
             exit={{ opacity: 0, y: -20, height: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="overflow-hidden"
+            className={cn("overflow-hidden", className)}
         >
-            <Card className="mb-6 border-none bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/10 dark:from-primary/10 dark:via-secondary/10 dark:to-accent/15">
-                <CardContent className="p-4 md:p-6">
-                    <div className="flex items-start gap-2 md:gap-3">
-                        <div className="flex-shrink-0 p-1.5 md:p-2 bg-gradient-to-br from-primary to-secondary rounded-lg">
-                            <Sparkles className="h-3 w-3 md:h-4 md:w-4 text-primary-foreground" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-2">
-                                <h3 className="text-sm font-semibold text-primary mt-0 mb-0 p-0">
+            <Card className="border bg-card/50 shadow-sm">
+                <CardContent className="p-5">
+                    <div className="flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 ">
+                                <Sparkles className="h-4 w-4 text-primary" />
+                                <h3 className="text-sm font-medium text-foreground p-0 m-0!">
                                     AI Summary
                                 </h3>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={onDismiss}
-                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                                >
-                                    <X className="h-4 w-4" />
-                                </Button>
                             </div>
-                            <div className="text-lg prose prose-sm dark:prose-invert max-w-none text-foreground">
-                                <Markdown content={summary} />
-                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={onDismiss}
+                                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
+                        <div className="leading-relaxed text-muted-foreground prose prose-sm dark:prose-invert max-w-none">
+                            <Markdown content={summary} />
                         </div>
                     </div>
                 </CardContent>

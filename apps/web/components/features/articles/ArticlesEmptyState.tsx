@@ -3,11 +3,16 @@
 import { Button } from "@/components/ui/button"
 import { SidebarLeftTrigger } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { useFeeds, useFolders, useRefreshFeed } from "@readspace/shared"
+import {
+    useFeeds,
+    ArticleFilterMode,
+    type Subscription,
+    type Folder,
+} from "@readspace/shared"
 import { AlertTriangle, BookOpen, RefreshCw, Rss, Upload } from "lucide-react"
-import { useDeepRefresh } from "./hooks/useDeepRefresh"
+import { useDeepRefresh } from "./hooks/use-deep-refresh"
 import Link from "next/link"
-import { toast } from "sonner"
+import { useMemo } from "react"
 
 function GetStartedCards() {
     return (
@@ -46,7 +51,7 @@ function GetStartedCards() {
 }
 
 type ArticlesEmptyStateProps = {
-    mode?: "allArticles" | "recentlyRead" | "readLater" | "today"
+    mode?: ArticleFilterMode
     feedId?: string
     folderId?: string
     isPreviewMode?: boolean
@@ -55,7 +60,7 @@ type ArticlesEmptyStateProps = {
 }
 
 export function ArticlesEmptyState({
-    mode = "allArticles",
+    mode = ArticleFilterMode.AllArticles,
     feedId,
     folderId,
     isPreviewMode = false,
@@ -63,14 +68,8 @@ export function ArticlesEmptyState({
     onRefresh,
 }: ArticlesEmptyStateProps) {
     const isMobile = useIsMobile()
-    const refreshFeed = useRefreshFeed()
 
     // Get user's current feed/folder state
-    const { data: folders, isLoading: isFoldersLoading } = useFolders({
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        staleTime: 5 * 60 * 1000,
-    })
     const { data: feeds, isLoading: isFeedsLoading } = useFeeds(
         {},
         {
@@ -80,7 +79,16 @@ export function ArticlesEmptyState({
         }
     )
 
-    const typedFolders = (folders as Array<{ id: string; name: string }>) || []
+    const typedFolders = useMemo(() => {
+        const folderMap = new Map<string, Folder>()
+            ; ((feeds as unknown as Subscription[]) || []).forEach((sub) => {
+                if (sub.folder) {
+                    folderMap.set(sub.folder.id, sub.folder)
+                }
+            })
+        return Array.from(folderMap.values())
+    }, [feeds])
+
     const subscribedFeeds = (feeds || []).map((sub) => ({
         id: sub.feed.id,
         title: sub.custom_title || sub.feed.title,
@@ -88,7 +96,7 @@ export function ArticlesEmptyState({
 
     const hasNoFolders = typedFolders.length === 0
     const hasNoFeeds = subscribedFeeds.length === 0
-    const isLoading = isFoldersLoading || isFeedsLoading
+    const isLoading = isFeedsLoading
 
     // Deep refresh: poll external RSS feed (only for individual feeds)
     const { isRefreshing, handleDeepRefresh: performDeepRefresh } =
@@ -101,7 +109,7 @@ export function ArticlesEmptyState({
     // Special messaging for different modes
     const getModeSpecificContent = () => {
         switch (mode) {
-            case "recentlyRead":
+            case ArticleFilterMode.RecentlyRead:
                 return {
                     title: "No recently read articles",
                     subtitle:
@@ -120,7 +128,7 @@ export function ArticlesEmptyState({
                         </Button>
                     ),
                 }
-            case "readLater":
+            case ArticleFilterMode.ReadLater:
                 return {
                     title: "No articles saved for later",
                     subtitle:
@@ -139,7 +147,7 @@ export function ArticlesEmptyState({
                         </Button>
                     ),
                 }
-            case "today":
+            case ArticleFilterMode.Today:
                 return {
                     title: "No articles published today",
                     subtitle:
@@ -158,7 +166,9 @@ export function ArticlesEmptyState({
     if (
         modeContent &&
         !isLoading &&
-        (mode === "readLater" || mode === "recentlyRead" || !hasNoFeeds)
+        (mode === ArticleFilterMode.ReadLater ||
+            mode === ArticleFilterMode.RecentlyRead ||
+            !hasNoFeeds)
     ) {
         return (
             <div className="flex h-full w-full items-center justify-center p-6">
@@ -280,15 +290,15 @@ export function ArticlesEmptyState({
                         {feedId
                             ? "No articles in this feed"
                             : folderId
-                              ? "No articles in this folder"
-                              : "No articles found"}
+                                ? "No articles in this folder"
+                                : "No articles found"}
                     </h3>
                     <p className="text-sm text-muted-foreground/80 dark:text-muted-foreground leading-relaxed">
                         {feedId
-                            ? "This feed hasn&apos;t published any articles yet, or they may not have loaded"
+                            ? "This feed hasn't published any articles yet, or they may not have loaded"
                             : folderId
-                              ? "No feeds in this folder have published articles yet"
-                              : "Try refreshing or check back later for new content"}
+                                ? "No feeds in this folder have published articles yet"
+                                : "Try refreshing or check back later for new content"}
                     </p>
                 </div>
                 {onRefresh && feedId && (

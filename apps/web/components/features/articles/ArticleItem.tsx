@@ -4,6 +4,7 @@ import { formatDistanceToNow, parseISO } from "date-fns"
 import { Clock, Paperclip } from "lucide-react"
 import Image from "next/image"
 import { useState } from "react"
+import { FeedIcon } from "@/components/features/feeds/FeedIcon"
 
 import type { Article } from "@readspace/shared"
 
@@ -35,7 +36,7 @@ export function ArticleItem({
     isRecentlyReadMode = false,
     onClick,
 }: ArticleItemProps) {
-    const [feedImageError, setFeedImageError] = useState(false)
+
     const [articleImageError, setArticleImageError] = useState(false)
 
     const publishedAtString = article.published_at
@@ -150,25 +151,17 @@ export function ArticleItem({
                             )}
 
                             {/* Feed favicon */}
-                            {(article.feed_icon || article.link) &&
-                                !feedImageError ? (
-                                <Image
-                                    src={article.feed_icon || ""}
-                                    alt={article.feed_title || "Feed image"}
-                                    width={12}
-                                    height={12}
-                                    className="h-3 w-3 shrink-0 rounded"
-                                    onError={() => setFeedImageError(true)}
-                                />
-                            ) : (
-                                <div className="h-3 w-3 shrink-0 rounded bg-primary/8" />
-                            )}
+                            <FeedIcon
+                                feed={{
+                                    title: article.feed_title,
+                                    image_url: article.feed_icon,
+                                }}
+                                className="h-3 w-3 shrink-0 rounded"
+                            />
 
                             {/* Feed name or domain */}
                             <span className="text-[10px] text-muted-foreground truncate shrink-0 whitespace-nowrap overflow-hidden">
-                                {article.link
-                                    ? extractDomain(article.link)
-                                    : article.feed_title || "Unknown Feed"}
+                                {article.feed_title || "Unknown Feed"}
                             </span>
 
                             {/* Time display with clock icon */}

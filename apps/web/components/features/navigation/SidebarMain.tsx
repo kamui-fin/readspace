@@ -87,7 +87,7 @@ export function FeedsNavigation({
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 transition-all duration-150 hover:bg-[hsl(var(--nav-hover))] rounded-full"
+                        className="h-6 w-6 p-0 transition-all duration-150 hover:bg-[var(--nav-hover)] rounded-full"
                         onClick={() => setIsSearchOpen(true)}
                         title="Search feeds (Cmd/Ctrl + K)"
                     >
@@ -98,7 +98,7 @@ export function FeedsNavigation({
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0 transition-all duration-150 hover:bg-[hsl(var(--nav-hover))] rounded-full"
+                            className="h-6 w-6 p-0 transition-all duration-150 hover:bg-[var(--nav-hover)] rounded-full"
                             title="Manage Feeds"
                             onClick={() => {
                                 if (isMobile) {
@@ -113,7 +113,7 @@ export function FeedsNavigation({
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 transition-all duration-150 hover:bg-[hsl(var(--nav-hover))] rounded-full"
+                        className="h-6 w-6 p-0 transition-all duration-150 hover:bg-[var(--nav-hover)] rounded-full"
                         onClick={handleAddFolder}
                         title="Add new folder"
                     >
@@ -129,7 +129,7 @@ export function FeedsNavigation({
                     <SidebarFeedsSkeleton />
                 ) : (
                     feedItems.map((feed) =>
-                        "isCollapsible" in feed && feed.isCollapsible ? (
+                        feed.isCollapsible ? (
                             <CollapsibleFeedItem
                                 key={feed.id}
                                 feed={feed}

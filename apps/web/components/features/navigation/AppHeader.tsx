@@ -69,7 +69,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                     <motion.div variants={breadcrumbItem}>
                                         <BreadcrumbItem>
                                             {index ===
-                                                breadcrumbItems.length - 1 ? (
+                                            breadcrumbItems.length - 1 ? (
                                                 <BreadcrumbPage className="block truncate">
                                                     {breadcrumb.label}
                                                 </BreadcrumbPage>

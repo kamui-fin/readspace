@@ -1,6 +1,6 @@
 "use client"
 
-import type { Article } from "@readspace/shared"
+import { Article, ArticleFilterMode } from "@readspace/shared"
 import { CalendarIcon } from "lucide-react"
 import { ArticleItem } from "./ArticleItem"
 import { ArticlesEmptyState } from "./ArticlesEmptyState"
@@ -8,28 +8,41 @@ import { ArticlesViewSkeleton } from "./ArticlesViewSkeleton"
 import { useArticleGrouping } from "./hooks/use-article-grouping"
 import { useArticleVirtualizer } from "./hooks/use-article-virtualizer"
 
-import { useArticlesContext } from "./ArticlesContext"
+interface ArticlesListProps {
+    articles: Article[]
+    selectedArticleId: string | null
+    isLoading: boolean
+    isFetchingNextPage: boolean
+    hasNextPage: boolean
+    showUnreadOnly: boolean
+    isRecentlyReadMode?: boolean
+    isReadLaterMode?: boolean
+    isTodayMode?: boolean
+    feedId?: string
+    folderId?: string
+    fetchNextPage: () => void
+    onArticleSelect: (articleId: string) => void
+}
 
 /**
  * ArticlesList component handles the rendering and infinite scroll behavior
  * for the articles list view.
  */
-export function ArticlesList() {
-    const {
-        filteredArticles: articles,
-        selectedArticleId,
-        isArticlesLoading: isLoading,
-        isFetchingNextPage,
-        hasNextPage,
-        showUnreadOnly,
-        isRecentlyReadMode = false,
-        isReadLaterMode = false,
-        isTodayMode = false,
-        feedId,
-        folderId,
-        fetchNextPage,
-        handleArticleSelect: onArticleSelect,
-    } = useArticlesContext()
+export function ArticlesList({
+    articles,
+    selectedArticleId,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    showUnreadOnly,
+    isRecentlyReadMode = false,
+    isReadLaterMode = false,
+    isTodayMode = false,
+    feedId,
+    folderId,
+    fetchNextPage,
+    onArticleSelect,
+}: ArticlesListProps) {
     // Group articles by date
     const { filteredArticles, allRows } = useArticleGrouping({
         articles,
@@ -60,12 +73,12 @@ export function ArticlesList() {
             <ArticlesEmptyState
                 mode={
                     isRecentlyReadMode
-                        ? "recentlyRead"
+                        ? ArticleFilterMode.RecentlyRead
                         : isReadLaterMode
-                          ? "readLater"
-                          : isTodayMode
-                            ? "today"
-                            : "allArticles"
+                            ? ArticleFilterMode.ReadLater
+                            : isTodayMode
+                                ? ArticleFilterMode.Today
+                                : ArticleFilterMode.AllArticles
                 }
                 feedId={feedId}
                 folderId={folderId}
@@ -106,18 +119,18 @@ export function ArticlesList() {
                             style={{
                                 ...(isStickyItem && isActiveStickyItem
                                     ? {
-                                          background: "hsl(var(--background))",
-                                          zIndex: 10,
-                                      }
+                                        background: "var(--background)",
+                                        zIndex: 10,
+                                    }
                                     : {}),
                                 ...(isActiveStickyItem
                                     ? {
-                                          position: "sticky",
-                                      }
+                                        position: "sticky",
+                                    }
                                     : {
-                                          position: "absolute",
-                                          transform: `translateY(${virtualItem.start}px)`,
-                                      }),
+                                        position: "absolute",
+                                        transform: `translateY(${virtualItem.start}px)`,
+                                    }),
                                 top: 0,
                                 left: 0,
                                 width: "100%",
@@ -137,7 +150,7 @@ export function ArticlesList() {
                             ) : item ? (
                                 <>
                                     {"type" in item &&
-                                    item.type === "header" ? (
+                                        item.type === "header" ? (
                                         // Date Header with reasonable 48px height
                                         <div
                                             className={`flex items-center gap-2 px-4 py-2 bg-background/95 backdrop-blur-sm ${isActiveStickyItem ? "border-b" : ""}`}

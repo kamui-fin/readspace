@@ -11,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import toast from "react-hot-toast"
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 import { MailIcon } from "lucide-react"
 import * as React from "react"
 import { z } from "zod"
@@ -54,8 +54,6 @@ export function SignupForm({
 }: React.ComponentProps<"div">) {
     const [isAwaitingVerification, setIsAwaitingVerification] =
         React.useState(false)
-    const [isLoading, setIsLoading] = React.useState(false)
-    const [isGoogleLoading, setIsGoogleLoading] = React.useState(false)
     const isProd = isCloudProd()
     const router = useRouter()
 
@@ -63,7 +61,7 @@ export function SignupForm({
     type SignUpFormValues = z.infer<typeof schema>
 
     const form = useForm<SignUpFormValues>({
-        // @ts-ignore
+        // @ts-expect-error - zodResolver type mismatch
         resolver: zodResolver(schema),
         defaultValues: {
             email: "",
@@ -236,7 +234,7 @@ export function SignupForm({
                                     : "Continue"}
                             </Button>
 
-                            <div className="text-center text-sm pt-6">
+                            <div className="text-center text-sm">
                                 Already have an account?{" "}
                                 <a
                                     href="/login"

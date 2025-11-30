@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
 
-
 // Initialize the Supabase client
 const supabase = createClient()
 

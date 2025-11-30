@@ -1,21 +1,21 @@
 "use client"
 
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 export interface LoaderProps {
     variant?:
-        | "circular"
-        | "classic"
-        | "pulse"
-        | "pulse-dot"
-        | "dots"
-        | "typing"
-        | "wave"
-        | "bars"
-        | "terminal"
-        | "text-blink"
-        | "text-shimmer"
-        | "loading-dots"
+    | "circular"
+    | "classic"
+    | "pulse"
+    | "pulse-dot"
+    | "dots"
+    | "typing"
+    | "wave"
+    | "bars"
+    | "terminal"
+    | "text-blink"
+    | "text-shimmer"
+    | "loading-dots"
     size?: "sm" | "md" | "lg"
     text?: string
     className?: string
@@ -80,8 +80,8 @@ export function ClassicLoader({
                                 size === "sm"
                                     ? "-0.75px"
                                     : size === "lg"
-                                      ? "-1.25px"
-                                      : "-1px",
+                                        ? "-1.25px"
+                                        : "-1px",
                             transformOrigin: `${size === "sm" ? "0.75px" : size === "lg" ? "1.25px" : "1px"} ${size === "sm" ? "10px" : size === "lg" ? "14px" : "12px"}`,
                             transform: `rotate(${i * 30}deg)`,
                             opacity: 0,

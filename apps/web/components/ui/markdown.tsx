@@ -3,7 +3,7 @@
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 interface MarkdownProps {
     content: string
@@ -12,7 +12,12 @@ interface MarkdownProps {
 
 export function Markdown({ content, className }: MarkdownProps) {
     return (
-        <div className={cn("prose prose-sm dark:prose-invert max-w-none text-foreground", className)}>
+        <div
+            className={cn(
+                "prose prose-sm dark:prose-invert max-w-none text-foreground",
+                className
+            )}
+        >
             <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkBreaks]}
                 components={{
@@ -20,18 +25,13 @@ export function Markdown({ content, className }: MarkdownProps) {
                     div: ({ children }) => (
                         <div
                             className="whitespace-pre-wrap leading-relaxed"
-                            style={{
-                                fontFamily: "var(--font-inter)",
-                            }}
                         >
                             {children}
                         </div>
                     ),
                     // Customize rendering to match design system
                     p: ({ children }) => (
-                        <p className="mb-2 last:mb-0">
-                            {children}
-                        </p>
+                        <p className="mb-2 last:mb-0 !text-sm">{children}</p>
                     ),
                     strong: ({ children }) => (
                         <strong className="font-semibold text-foreground">
@@ -49,18 +49,13 @@ export function Markdown({ content, className }: MarkdownProps) {
                         </ol>
                     ),
                     li: ({ children }) => (
-                        <li className="text-sm">
-                            {children}
-                        </li>
+                        <li className="text-sm">{children}</li>
                     ),
                     code: ({ children }) => {
                         // Remove backticks from inline code content
                         const cleanChildren =
                             typeof children === "string"
-                                ? children.replace(
-                                    /^`+|`+$/g,
-                                    ""
-                                )
+                                ? children.replace(/^`+|`+$/g, "")
                                 : children
                         return (
                             <code className="bg-muted/50 px-1 py-0.5 rounded text-xs">

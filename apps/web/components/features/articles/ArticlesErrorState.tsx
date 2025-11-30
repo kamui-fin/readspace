@@ -28,14 +28,14 @@ export function ArticlesErrorState({
     const is404 =
         errorMessage.toLowerCase().includes("not found") ||
         errorMessage.includes("404") ||
-        (error as any)?.status === 404 ||
-        (error as any)?.code === "NOT_FOUND"
+        (error as { status?: number })?.status === 404 ||
+        (error as { code?: string })?.code === "NOT_FOUND"
 
     const isNetworkError =
         errorMessage.toLowerCase().includes("network") ||
         errorMessage.toLowerCase().includes("fetch") ||
         errorMessage.toLowerCase().includes("connection") ||
-        (error as any)?.code === "NETWORK_ERROR"
+        (error as { code?: string })?.code === "NETWORK_ERROR"
 
     // Determine appropriate icon, title, and description
     const getErrorContent = () => {

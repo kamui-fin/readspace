@@ -1,7 +1,6 @@
 import { Logo } from "@/components/ui/logo"
 import { SignupForm } from "@/components/features/auth/SignupForm"
 import { createClient } from "@/lib/supabase/server"
-import Image from "next/image"
 import { redirect } from "next/navigation"
 
 export const metadata = {
@@ -25,7 +24,7 @@ export default async function SignupPage() {
             <div className="flex w-full max-w-sm flex-col gap-6">
                 <a
                     href="#"
-                    className="flex items-center gap-2 self-center font-medium font-logo text-black"
+                    className="flex items-center gap-2 self-center font-medium font-logo text-foreground"
                 >
                     <Logo />
                 </a>

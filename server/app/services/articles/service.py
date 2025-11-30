@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.constants import AUTO_EXTRACT_ON_FETCH, MIN_CONTENT_LENGTH
 from app.crud.article import reader
 from app.services.articles import scrape
+from app.services.feeds.service import SessionFactory
 from app.typing.entries import EntryDetail
 from app.utils.text import is_content_complete
 
@@ -29,7 +30,9 @@ async def _enrich_with_auto_extract(article: EntryDetail) -> EntryDetail:
         if article.link:
             logger.info("Auto-extracting content", article_id=article.id)
 
-            extracted, read_time, error = await scrape.extract_full_content(str(article.link), article.title)
+            extracted, read_time, error = await scrape.extract_full_content(
+                str(article.link), article.title
+            )
 
             if extracted and not error:
                 # Return new object with updates
@@ -46,13 +49,23 @@ async def _enrich_with_auto_extract(article: EntryDetail) -> EntryDetail:
 
 
 async def get_article_details(
-    db: AsyncSession, article_id: UUID, user_id: UUID, allow_preview: bool = False
+    db_factory: SessionFactory,
+    article_id: UUID,
+    user_id: UUID,
+    allow_preview: bool = False,
 ) -> EntryDetail | None:
     """
     Get single article with business logic (Auto-Extraction).
     """
     # 1. Call CRUD
-    row = await reader.get_article_by_id(db, article_id=article_id, user_id=user_id, load_full_content=True)
+    async with db_factory() as db:
+        row = await reader.get_article_by_id(
+            db,
+            article_id=article_id,
+            user_id=user_id,
+            load_full_content=True,
+            allow_preview=allow_preview,
+        )
 
     if not row:
         return None

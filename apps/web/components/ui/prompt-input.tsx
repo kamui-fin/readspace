@@ -7,7 +7,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 import React, {
     createContext,
     useContext,
@@ -28,7 +28,7 @@ type PromptInputContextType = {
 const PromptInputContext = createContext<PromptInputContextType>({
     isLoading: false,
     value: "",
-    setValue: () => {},
+    setValue: () => { },
     maxHeight: 240,
     onSubmit: undefined,
     disabled: false,

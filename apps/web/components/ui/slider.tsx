@@ -9,7 +9,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 function Slider({
     className,
@@ -28,8 +28,8 @@ function Slider({
         Array.isArray(value)
             ? value
             : Array.isArray(defaultValue)
-              ? defaultValue
-              : [min, max]
+                ? defaultValue
+                : [min, max]
     )
 
     React.useEffect(() => {

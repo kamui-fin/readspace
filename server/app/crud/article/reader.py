@@ -40,7 +40,9 @@ class CursorPaginationResult(BaseModel):
     """Result of cursor-based pagination."""
 
     items: list[Any] = Field(description="List of items for current page")
-    next_cursor: str | None = Field(description="Cursor for next page, None if no more pages")
+    next_cursor: str | None = Field(
+        description="Cursor for next page, None if no more pages"
+    )
     has_more: bool = Field(description="Whether there are more pages available")
 
     class Config:
@@ -58,7 +60,9 @@ class ArticleTransformer:
     """Transform database models to API responses."""
 
     @staticmethod
-    def _truncate_description(description: str | None, max_length: int = 300) -> str | None:
+    def _truncate_description(
+        description: str | None, max_length: int = 300
+    ) -> str | None:
         """Truncate description to max length."""
         if not description:
             return None
@@ -256,12 +260,14 @@ async def get_articles(
             (
                 selectinload(FeedArticle.content).undefer_group("content_details")
                 if load_full_content
-                else selectinload(FeedArticle.content).undefer(ArticleContent.description)
+                else selectinload(FeedArticle.content).undefer(
+                    ArticleContent.description
+                )
             ),
             selectinload(FeedArticle.feed),
         )
         .join(Feed, Feed.id == FeedArticle.feed_id)
-        .join(
+        .outerjoin(
             FeedSubscription,
             and_(
                 FeedSubscription.feed_id == Feed.id,
@@ -282,6 +288,12 @@ async def get_articles(
         query = query.where(FeedArticle.feed_id == feed_id)
     elif folder_id:
         query = query.where(FeedSubscription.folder_id == folder_id)
+    elif is_saved:
+        # If explicitly asking for saved items, allow unsubscribed feeds
+        pass
+    else:
+        # Default: Only show subscribed feeds
+        query = query.where(FeedSubscription.id.isnot(None))
 
     if is_saved is not None:
         if is_saved:
@@ -339,11 +351,17 @@ async def get_articles(
     transformer = ArticleTransformer()
     if load_full_content:
         items = [
-            transformer.to_entry_detail(row[0], row[1], subscription=row[2]).model_dump() for row in rows_to_process
+            transformer.to_entry_detail(
+                row[0], row[1], subscription=row[2]
+            ).model_dump()
+            for row in rows_to_process
         ]
     else:
         items = [
-            transformer.to_entry_list_item(row[0], row[1], subscription=row[2]).model_dump() for row in rows_to_process
+            transformer.to_entry_list_item(
+                row[0], row[1], subscription=row[2]
+            ).model_dump()
+            for row in rows_to_process
         ]
 
     next_cursor = None
@@ -351,7 +369,9 @@ async def get_articles(
         last_item = rows_to_process[-1][0]
         next_cursor = _create_cursor(last_item.published_at)
 
-    return CursorPaginationResult(items=items, next_cursor=next_cursor, has_more=has_more)
+    return CursorPaginationResult(
+        items=items, next_cursor=next_cursor, has_more=has_more
+    )
 
 
 async def get_article_by_id(
@@ -360,6 +380,7 @@ async def get_article_by_id(
     article_id: UUID,
     user_id: UUID,
     load_full_content: bool = True,
+    allow_preview: bool = False,
 ) -> tuple[FeedArticle, UserEntry | None] | None:
     """Get single article by ID with user state."""
     content_options = (
@@ -378,9 +399,26 @@ async def get_article_by_id(
                 UserEntry.user_id == user_id,
             ),
         )
-        .join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id)
-        .filter(FeedSubscription.user_id == user_id, FeedArticle.id == article_id)
     )
+
+    if allow_preview:
+        stmt = stmt.outerjoin(
+            FeedSubscription,
+            and_(
+                FeedSubscription.feed_id == FeedArticle.feed_id,
+                FeedSubscription.user_id == user_id,
+            ),
+        )
+    else:
+        stmt = stmt.join(
+            FeedSubscription,
+            and_(
+                FeedSubscription.feed_id == FeedArticle.feed_id,
+                FeedSubscription.user_id == user_id,
+            ),
+        )
+
+    stmt = stmt.filter(FeedArticle.id == article_id)
 
     result = await db.execute(stmt)
     row = result.first()
@@ -402,7 +440,8 @@ async def check_article_saved_by_url(
         select(ArticleContent, UserEntry)
         .outerjoin(
             UserEntry,
-            (UserEntry.content_id == ArticleContent.id) & (UserEntry.user_id == user_id),
+            (UserEntry.content_id == ArticleContent.id)
+            & (UserEntry.user_id == user_id),
         )
         .where(ArticleContent.link == url)
         .limit(1)
@@ -461,7 +500,9 @@ async def get_read_later_articles(
         last_item = entries_to_process[-1]
         next_cursor = _create_cursor(last_item.created_at)
 
-    return CursorPaginationResult(items=items, next_cursor=next_cursor, has_more=has_more)
+    return CursorPaginationResult(
+        items=items, next_cursor=next_cursor, has_more=has_more
+    )
 
 
 async def fetch_recent_article_texts_for_feeds(
@@ -498,7 +539,9 @@ async def fetch_recent_article_texts_for_feeds(
             .subquery()
         )
 
-        stmt = select(subquery.c.feed_id, subquery.c.title, subquery.c.description).where(subquery.c.rn <= limit)
+        stmt = select(
+            subquery.c.feed_id, subquery.c.title, subquery.c.description
+        ).where(subquery.c.rn <= limit)
 
         result = await db.execute(stmt)
         rows = result.all()

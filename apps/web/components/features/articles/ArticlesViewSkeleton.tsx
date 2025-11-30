@@ -54,17 +54,19 @@ function ArticleContentSkeleton() {
 
 interface ArticlesViewSkeletonProps {
     showUnreadBadge?: boolean
+    layout?: number[]
 }
 
 export function ArticlesViewSkeleton({
     showUnreadBadge = false,
+    layout = [35, 65],
 }: ArticlesViewSkeletonProps) {
     return (
         <div className="flex h-full md:h-[calc(100vh-1rem)] w-full bg-background md:rounded-xl md:shadow-sm">
             {/* Desktop: Resizable panels */}
             <div className="hidden md:flex w-full">
                 <ResizablePanelGroup direction="horizontal">
-                    <ResizablePanel defaultSize={35} minSize={15} maxSize={60}>
+                    <ResizablePanel defaultSize={layout[0]} minSize={15} maxSize={60}>
                         <div className="flex h-full flex-col border-r">
                             <div className="flex h-14 items-center justify-between border-b px-4">
                                 <div className="flex items-center space-x-2 min-w-0 flex-1">
@@ -118,7 +120,7 @@ export function ArticlesViewSkeleton({
                     </ResizablePanel>
                     <ResizableHandle />
                     <ResizablePanel
-                        defaultSize={65}
+                        defaultSize={layout[1]}
                         className="overflow-hidden"
                     >
                         <div className="flex flex-col h-full">

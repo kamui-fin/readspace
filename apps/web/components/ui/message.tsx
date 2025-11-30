@@ -5,7 +5,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 import { Markdown } from "./markdown"
 
 export type MessageProps = {
@@ -63,7 +63,11 @@ const MessageContent = ({
     )
 
     return markdown ? (
-        <Markdown className={classNames} content={children as string} {...(props as any)} />
+        <Markdown
+            className={classNames}
+            content={children as string}
+            {...(props as any)} /* eslint-disable-line @typescript-eslint/no-explicit-any */
+        />
     ) : (
         <div className={classNames} {...props}>
             {children}
