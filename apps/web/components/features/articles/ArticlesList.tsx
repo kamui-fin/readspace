@@ -190,15 +190,6 @@ export function ArticlesList({
                     )
                 })}
             </div>
-
-            {/* End indicator */}
-            {!hasNextPage && allRows.length > 0 && (
-                <div className="py-8 text-center">
-                    <p className="text-xs text-muted-foreground">
-                        You&apos;ve reached the end of the articles
-                    </p>
-                </div>
-            )}
         </div>
     )
 }

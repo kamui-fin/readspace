@@ -29,6 +29,7 @@ export interface ArticleSummary {
   description: string | null; // Truncated to ~300 chars
   image_url: string | null;
   author: string | null;
+  tags?: string[] | null;
   source_domain: string | null;
 
   // User state

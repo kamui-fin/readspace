@@ -55,6 +55,7 @@ export function BaseFeedCard({
         useIsSubscribed({
             id: feed.id,
             url: feedUrl,
+            initialIsSubscribed: feed.is_subscribed,
         })
 
     const truncateText = (text: string, maxLength: number) => {

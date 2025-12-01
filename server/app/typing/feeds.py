@@ -216,6 +216,7 @@ class ParsedFeed(BaseModel):
     last_updated_at: datetime | None = None
     tags: list[str] = Field(default_factory=list)
     articles: list["ArticleCreate"] = Field(default_factory=list)
+    is_subscribed: bool = False
 
 
 class BulkDeleteResponse(BaseModel):

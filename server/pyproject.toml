@@ -91,6 +91,7 @@ cryptography = "^46.0.3"
 sqlmodel = "^0.0.27"
 listparser = {extras = ["lxml"], version = "^0.20"}
 langcodes = "^3.5.0"
+url-normalize = "^2.2.1"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"

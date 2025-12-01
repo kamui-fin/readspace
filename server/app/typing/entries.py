@@ -23,6 +23,7 @@ class ContentFields(BaseModel):
     content: str | None = None
     image_url: str | None = None
     author: str | None = None
+    tags: list[str] | None = None
 
 
 class UserStateFields(BaseModel):
@@ -132,3 +133,4 @@ class ArticleCreate(BaseModel):
     author: str | None = None
     published_at: datetime
     guid: str
+    tags: list[str] | None = None

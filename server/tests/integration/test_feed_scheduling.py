@@ -100,9 +100,9 @@ class TestNextFetchAtCalculation:
 
         next_fetch = calculate_next_fetch(feed)
 
-        # 2^3 * 60 = 480 minutes = 8 hours (with jitter ±25%)
-        expected_min = datetime.now(timezone.utc) + timedelta(minutes=480 * 0.75)
-        expected_max = datetime.now(timezone.utc) + timedelta(minutes=480 * 1.25)
+        # 2^3 * 5 = 40 minutes (with jitter ±25%)
+        expected_min = datetime.now(timezone.utc) + timedelta(minutes=40 * 0.75)
+        expected_max = datetime.now(timezone.utc) + timedelta(minutes=40 * 1.25)
         assert expected_min <= next_fetch <= expected_max
 
     @pytest.mark.asyncio
@@ -249,7 +249,7 @@ class TestNextFetchAtSetOnRefresh:
         async def mock_fetch(*args, **kwargs):
             return {
                 "content": "",
-                "headers": {"ETag": "abc123"},
+                "headers": {"etag": "abc123"},
                 "status_code": 304,
                 "not_modified": True,
                 "error": None,
@@ -321,9 +321,9 @@ class TestNextFetchAtSetOnRefresh:
         await db_session.flush()
         await db_session.refresh(feed)
         assert feed.fetch_error_count == 1
-        # First error: 2^1 * 60 = 120 minutes with jitter
-        expected_min = datetime.now(timezone.utc) + timedelta(minutes=120 * 0.75)
-        expected_max = datetime.now(timezone.utc) + timedelta(minutes=120 * 1.25)
+        # First error: 2^1 * 5 = 10 minutes with jitter
+        expected_min = datetime.now(timezone.utc) + timedelta(minutes=10 * 0.75)
+        expected_max = datetime.now(timezone.utc) + timedelta(minutes=10 * 1.25)
         assert expected_min <= feed.next_fetch_at <= expected_max
 
     @pytest.mark.asyncio
@@ -379,9 +379,9 @@ class TestNextFetchAtSetOnRefresh:
         await db_session.flush()
         await db_session.refresh(feed)
         assert feed.fetch_error_count == 1
-        # First error: 2^1 * 60 = 120 minutes with jitter
-        expected_min = datetime.now(timezone.utc) + timedelta(minutes=120 * 0.75)
-        expected_max = datetime.now(timezone.utc) + timedelta(minutes=120 * 1.25)
+        # First error: 2^1 * 5 = 10 minutes with jitter
+        expected_min = datetime.now(timezone.utc) + timedelta(minutes=10 * 0.75)
+        expected_max = datetime.now(timezone.utc) + timedelta(minutes=10 * 1.25)
         assert expected_min <= feed.next_fetch_at <= expected_max
 
     @pytest.mark.asyncio
@@ -957,8 +957,8 @@ class TestFeedMetadataFields:
             return {
                 "content": mock_rss,
                 "headers": {
-                    "ETag": "test-etag-123",
-                    "Last-Modified": "Mon, 01 Jan 2024 12:00:00 GMT",
+                    "etag": "test-etag-123",
+                    "last-modified": "Mon, 01 Jan 2024 12:00:00 GMT",
                 },
                 "status_code": 200,
                 "not_modified": False,
@@ -1087,9 +1087,9 @@ class TestEndToEndScheduling:
             return {
                 "content": mock_rss,
                 "headers": {
-                    "ETag": "new-etag",
-                    "Last-Modified": "Mon, 01 Jan 2024 12:00:00 GMT",
-                    "Cache-Control": "max-age=7200",  # 2 hours = 120 minutes
+                    "etag": "new-etag",
+                    "last-modified": "Mon, 01 Jan 2024 12:00:00 GMT",
+                    "cache-control": "max-age=7200",  # 2 hours = 120 minutes
                 },
                 "status_code": 200,
                 "not_modified": False,

@@ -50,9 +50,11 @@ export function FeedSearchCommand({
             onCloseSidebar()
         }
 
-        // Close command palette
-        onClose()
-        setSearchValue("")
+        // Close command palette with a small delay to prevent glitches
+        setTimeout(() => {
+            onClose()
+            setSearchValue("")
+        }, 100)
     }
 
     /**

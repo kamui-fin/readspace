@@ -11,6 +11,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import UUID as SQLUUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -34,6 +35,7 @@ class ArticleContent(Base):
     content = Column(Text, nullable=True)
     author = Column(Text, nullable=True)
     image_url = Column(Text, nullable=True)
+    tags = Column(ARRAY(Text), nullable=True)
     created_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

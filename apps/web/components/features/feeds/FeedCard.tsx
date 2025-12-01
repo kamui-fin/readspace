@@ -36,13 +36,15 @@ export function FeedCard({
     const adminDeleteFeed = useAdminDeleteFeed()
     const { isAdmin } = useUserRole()
 
+    console.log(isAdmin)
+
     const handleAdminDelete = () => {
         // Delete immediately without confirmation
         adminDeleteFeed.mutate({ feedId: feed.id })
     }
 
     // Dropdown menu for additional actions
-    const dropdownActions = (showPreviewButton || showSimilarButton) && (
+    const dropdownActions = (showPreviewButton || showSimilarButton || isAdmin) && (
         <>
             {/* Desktop version */}
             <div className="hidden md:block">

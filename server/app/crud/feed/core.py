@@ -59,8 +59,8 @@ def calculate_next_fetch(feed: Feed, ttl: int | None = None) -> datetime:
 
     # 1. Exponential Backoff for Errors (with jitter to prevent thundering herd)
     if feed.fetch_error_count > 0:
-        # 2^error_count * 60 minutes, capped at 12 hours
-        base_backoff = min(pow(2, feed.fetch_error_count) * 60, MAX_BACKOFF_MINUTES)
+        # 2^error_count * 5 minutes, capped at 12 hours
+        base_backoff = min(pow(2, feed.fetch_error_count) * 5, MAX_BACKOFF_MINUTES)
         # Add ±25% jitter
         jitter = random.uniform(0.75, 1.25)  # noqa: S311
         backoff = int(base_backoff * jitter)

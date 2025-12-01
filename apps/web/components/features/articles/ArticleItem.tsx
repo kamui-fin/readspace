@@ -160,7 +160,7 @@ export function ArticleItem({
                             />
 
                             {/* Feed name or domain */}
-                            <span className="text-[10px] text-muted-foreground truncate shrink-0 whitespace-nowrap overflow-hidden">
+                            <span className="text-[10px] text-muted-foreground truncate shrink-0 whitespace-nowrap overflow-hidden max-w-[150px]">
                                 {article.feed_title || "Unknown Feed"}
                             </span>
 

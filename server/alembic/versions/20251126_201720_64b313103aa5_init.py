@@ -77,7 +77,7 @@ def upgrade() -> None:
             id uuid NOT NULL DEFAULT gen_random_uuid(),
             url text NOT NULL,
             title text NOT NULL,
-            description text NOT NULL,
+            description text,
             link text,
             language text NOT NULL,
             image_url text,
@@ -119,6 +119,7 @@ def upgrade() -> None:
             content text,
             author text,
             image_url text,
+            tags text[],
             created_at timestamp with time zone NOT NULL DEFAULT now(),
             
             CONSTRAINT article_contents_pkey PRIMARY KEY (id),

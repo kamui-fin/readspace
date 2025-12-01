@@ -13,6 +13,7 @@ interface UseIsSubscribedResult {
 export function useIsSubscribed(feed: {
   id: string;
   url: string;
+  initialIsSubscribed?: boolean;
 }): UseIsSubscribedResult {
   const { data: feedsData } = useFeeds(
     {},
@@ -42,7 +43,7 @@ export function useIsSubscribed(feed: {
   });
 
   return {
-    isSubscribed: !!subscription,
+    isSubscribed: feed.initialIsSubscribed ?? !!subscription,
     subscription,
   };
 }

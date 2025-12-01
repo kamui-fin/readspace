@@ -1,6 +1,6 @@
 """Article count queries"""
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
 from sqlalchemy import and_, func, or_, select
@@ -30,13 +30,20 @@ async def get_unread_counts_per_feed(
         .outerjoin(
             UserEntry,
             and_(
-                UserEntry.content_id == FeedArticle.content_id,
+                # Match on either content_id or feed_article_id to be safe
+                or_(
+                    UserEntry.content_id == FeedArticle.content_id,
+                    UserEntry.feed_article_id == FeedArticle.id,
+                ),
                 UserEntry.user_id == user_id,
             ),
         )
         .where(
             FeedSubscription.user_id == user_id,
-            FeedArticle.published_at > FeedSubscription.last_read_cutoff,
+            or_(
+                FeedSubscription.last_read_cutoff.is_(None),
+                FeedArticle.published_at > FeedSubscription.last_read_cutoff,
+            ),
             or_(
                 UserEntry.is_read.is_(None),  # Not marked at all
                 ~UserEntry.is_read,  # Explicitly marked unread
@@ -70,9 +77,7 @@ async def count_today_articles(
     user_id: UUID,
 ) -> int:
     """Count articles published today in user's feeds."""
-    today_start = datetime.now(timezone.utc).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
+    today_start = datetime.now(timezone.utc) - timedelta(hours=24)
 
     stmt = (
         select(func.count(FeedArticle.id))
@@ -80,7 +85,10 @@ async def count_today_articles(
         .outerjoin(
             UserEntry,
             and_(
-                UserEntry.content_id == FeedArticle.content_id,
+                or_(
+                    UserEntry.content_id == FeedArticle.content_id,
+                    UserEntry.feed_article_id == FeedArticle.id,
+                ),
                 UserEntry.user_id == user_id,
             ),
         )
@@ -109,9 +117,6 @@ async def count_total_unread_articles(
 ) -> int:
     """
     Count total unread articles across all feeds.
-
-    Uses arithmetic: total articles after cutoff - explicitly marked read.
-    If cutoff is None, all articles in that feed are considered unread.
     """
     # Total articles in subscribed feeds after last_read_cutoff (or all if cutoff is None)
     total_stmt = (

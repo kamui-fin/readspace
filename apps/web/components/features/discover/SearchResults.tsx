@@ -41,6 +41,7 @@ function createPreviewFeedData(
         image_url: previewFeed.image_url ?? null,
         error_count: 0,
         is_preview: true,
+        is_subscribed: previewFeed.is_subscribed,
     }
 }
 
@@ -80,7 +81,7 @@ export function SearchResults({
     }
 
     // Show skeleton while preview is loading
-    if (isPreviewLoading && items.length === 0) {
+    if (isPreviewLoading) {
         return (
             <div className="mb-8">
                 <div className="flex items-center justify-between mb-2 pl-5 pr-2">

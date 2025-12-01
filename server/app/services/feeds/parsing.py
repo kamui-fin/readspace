@@ -4,6 +4,7 @@ Strictly handles CPU-bound parsing and data extraction.
 Zero DB dependencies.
 """
 
+import html
 import re
 from datetime import datetime, timezone
 from time import mktime
@@ -49,10 +50,14 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
     feed: dict[str, Any] = cast(dict[str, Any], parsed.feed)
 
     # Basic metadata
-    title = clean_html_text(feed.get("title", "")) or extract_domain_from_url(url)
+    title = html.unescape(
+        clean_html_text(feed.get("title", "")) or extract_domain_from_url(url)
+    )
 
     # Prefer subtitle over description for the tagline
-    description = clean_html_text(feed.get("subtitle") or feed.get("description") or "")
+    description = html.unescape(
+        clean_html_text(feed.get("subtitle") or feed.get("description") or "")
+    )
 
     # Provide default description if none found
     if not description:
@@ -147,7 +152,7 @@ def _extract_article_data(entry: dict[str, Any], feed_url: str) -> ArticleCreate
     if not link:
         return None
 
-    title = clean_html_text(entry.get("title", "Untitled Article"))[:500]
+    title = html.unescape(clean_html_text(entry.get("title", "Untitled Article"))[:500])
     guid = _extract_guid(entry, fallback_link=link)
     published_at = _extract_published_date(entry)
 
@@ -185,6 +190,13 @@ def _extract_article_data(entry: dict[str, Any], feed_url: str) -> ArticleCreate
         # Resolve relative URLs
         image_url = urljoin(feed_url or link, image_url)
 
+    # Tags extraction
+    tags = []
+    if hasattr(entry, "tags"):
+        tags = [t.term for t in entry.tags if hasattr(t, "term") and t.term]
+    elif hasattr(entry, "categories"):
+        tags = [c for c in entry.categories if isinstance(c, str)]
+
     return ArticleCreate(
         title=title,
         link=link,
@@ -194,6 +206,7 @@ def _extract_article_data(entry: dict[str, Any], feed_url: str) -> ArticleCreate
         author=author,
         guid=guid,
         image_url=image_url,
+        tags=tags,
     )
 
 
@@ -302,11 +315,11 @@ def _sanitize_and_fix_html(html_content: str, base_url: str | None) -> str:
 def _create_summary(entry: dict, clean_html_content: str) -> str:
     raw_summary = entry.get("summary", "")
     if raw_summary:
-        summary = clean_html_text(raw_summary)
+        summary = html.unescape(clean_html_text(raw_summary))
         if len(summary) > 20:
             return summary[:1000]
 
-    text = nh3.clean(clean_html_content, tags=set())
+    text = html.unescape(nh3.clean(clean_html_content, tags=set()))
     text = re.sub(r"\s+", " ", text).strip()
     return text[:300] + "..." if len(text) > 300 else text
 

@@ -12,6 +12,7 @@ export interface FeedBase {
 export interface FeedSummary extends FeedBase {
   id: string;
   error_count: number;
+  is_subscribed?: boolean;
 }
 
 export interface FeedDetail extends FeedSummary {
@@ -82,6 +83,7 @@ export interface FeedDiscoveryResult {
   top_level_category: string;
   popularity_score: number;
   tags?: string[];
+  is_subscribed?: boolean;
 }
 
 export interface FeedsResponse {

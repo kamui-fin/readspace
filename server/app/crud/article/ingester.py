@@ -43,6 +43,7 @@ async def create_articles_batch(
                     "image_url": (
                         str(article_in.image_url) if article_in.image_url else None
                     ),
+                    "tags": article_in.tags,
                 }
             )
             link_to_article[link_str] = article_in

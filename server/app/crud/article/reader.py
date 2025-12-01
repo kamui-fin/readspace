@@ -107,6 +107,7 @@ class ArticleTransformer:
             published_at=feed_article.published_at,
             created_at=feed_article.created_at,
             article_type="feed",
+            tags=content.tags,
         )
 
     def to_entry_detail(
@@ -146,6 +147,7 @@ class ArticleTransformer:
             published_at=feed_article.published_at,
             created_at=feed_article.created_at,
             article_type="feed",
+            tags=content.tags,
         )
 
     def clipped_to_entry_list_item(
@@ -174,6 +176,7 @@ class ArticleTransformer:
             published_at=user_entry.created_at,
             created_at=user_entry.created_at,
             article_type="clipped",
+            tags=content.tags,
         )
 
     def clipped_to_entry_detail(
@@ -202,6 +205,7 @@ class ArticleTransformer:
             published_at=user_entry.created_at,
             created_at=user_entry.created_at,
             article_type="clipped",
+            tags=content.tags,
         )
 
 

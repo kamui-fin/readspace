@@ -54,7 +54,7 @@ export function useArticleVirtualizer({
         getScrollElement: () => parentRef.current,
         estimateSize: (index) => {
             const item = allRows[index]
-            if (!item) return 120 // Loading indicator
+            if (!item) return 80 // Loading indicator (reduced size)
             if ("type" in item && item.type === "header") return 36 // Reasonable header height
             return 120 // Article item height
         },
@@ -97,7 +97,7 @@ export function useArticleVirtualizer({
         }
 
         // Fetch next page when:
-        // 1. We've reached or passed the last item in allRows
+        // 1. We've reached or passed the last item (trigger when end is visible)
         // 2. There are more pages available
         // 3. We're not already fetching
         if (
@@ -112,7 +112,7 @@ export function useArticleVirtualizer({
         fetchNextPage,
         allRows.length,
         isFetchingNextPage,
-        rowVirtualizer,
+        rowVirtualizer.getVirtualItems(),
     ])
 
     return {

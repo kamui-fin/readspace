@@ -37,6 +37,7 @@ from app.typing.feeds import FeedBase, FeedCreateInternal
 from app.typing.subscriptions import SubscriptionCreate
 from app.utils.hashing import calculate_feed_content_hash
 from app.utils.urls import normalize_feed_url
+from urllib.parse import urlparse
 
 logger = structlog.get_logger(__name__)
 
@@ -55,7 +56,26 @@ async def add_feed(
     """
     logger.info("Adding feed", url=url, user_id=user_id)
 
-    # 1. Fetch content directly (let fetcher handle redirects)
+    # 1. Normalize URL first to check for existence
+    # This saves a network request if we already have the feed
+    normalized_url = normalize_feed_url(url)
+
+    async with session_factory() as db:
+        # Check for existing feed
+        existing_feed = await feed_crud.get_feed_by_url(db, url=normalized_url)
+        if existing_feed:
+            logger.info(
+                "Feed already exists, subscribing",
+                url=normalized_url,
+                feed_id=existing_feed.id,
+            )
+            return await _subscribe_to_existing_feed(
+                db, user_id, existing_feed, folder_id, custom_title
+            )
+
+    # 2. Fetch content (let fetcher handle redirects)
+    # We pass the original URL because it might be a redirect that we haven't resolved yet
+    # (normalize_feed_url doesn't resolve redirects, it just cleans the string)
     fetch_result = await fetching.fetch_feed_content(url)
 
     if fetch_result["error"]:
@@ -64,21 +84,29 @@ async def add_feed(
     if not fetch_result["content"]:
         raise FeedParsingError("Empty feed content")
 
-    # 2. Determine canonical URL from fetch result
+    # 3. Determine canonical URL from fetch result
     final_url = fetch_result.get("final_url") or url
-    normalized_url = normalize_feed_url(final_url)
+    final_normalized_url = normalize_feed_url(final_url)
 
     async with session_factory() as db:
         folder = await get_folder(db, folder_id=folder_id, user_id=user_id)
         if not folder:
             raise NotFoundError(f"Folder {folder_id} not found")
 
-        # Check for existing feed
-        existing_feed = await feed_crud.get_feed_by_url(db, url=normalized_url)
-        if existing_feed:
-            return await _subscribe_to_existing_feed(
-                db, user_id, existing_feed, folder_id, custom_title
+        # Check for existing feed AGAIN (in case it was found via redirect resolution)
+        if final_normalized_url != normalized_url:
+            existing_feed = await feed_crud.get_feed_by_url(
+                db, url=final_normalized_url
             )
+            if existing_feed:
+                logger.info(
+                    "Feed already exists (via redirect), subscribing",
+                    url=final_normalized_url,
+                    feed_id=existing_feed.id,
+                )
+                return await _subscribe_to_existing_feed(
+                    db, user_id, existing_feed, folder_id, custom_title
+                )
 
         # Parse Content
         try:
@@ -98,19 +126,28 @@ async def add_feed(
                 description=parsed.description,
                 articles=article_texts,
             )
-            logger.info("Auto-detected language", url=normalized_url, language=language)
+            logger.info(
+                "Auto-detected language", url=final_normalized_url, language=language
+            )
 
         # Ensure language is never None
         if not language:
             language = "en"  # Default to English if detection fails
 
         ttl = parse_ttl_from_headers(fetch_result["headers"])
-        domain_score = get_domain_authority_score(normalized_url)
+        domain_score = get_domain_authority_score(final_normalized_url)
+
+        # Fallback: Use domain as title
+        domain = urlparse(url).netloc
+        # Strip www. if present
+        if domain.startswith("www."):
+            domain = domain[4:]
+        fallback_title = domain
 
         # Prepare Feed Data
         feed_in = FeedCreateInternal(
-            url=normalized_url,
-            title=parsed.title,
+            url=final_normalized_url,
+            title=parsed.title or fallback_title,
             description=parsed.description or "Follow recent articles from this feed",
             link=parsed.link,
             language=language,

@@ -30,7 +30,7 @@ class Feed(Base):
     )
     url = Column(Text, nullable=False, unique=True)
     title = Column(Text, nullable=False)
-    description = Column(Text, nullable=False)
+    description = Column(Text, nullable=True)
     link = Column(Text, nullable=True)
     language = Column(Text, nullable=False)
     image_url = Column(Text, nullable=True)

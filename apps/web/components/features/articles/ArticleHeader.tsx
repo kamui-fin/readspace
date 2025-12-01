@@ -1,6 +1,7 @@
 import type { Article } from "@readspace/shared"
 import { formatDistanceToNow, parseISO } from "date-fns"
 import { FeedIcon } from "@/components/features/feeds/FeedIcon"
+import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { useState } from "react"
 
@@ -12,6 +13,13 @@ interface ArticleHeaderProps {
     isRecentlyReadMode: boolean
     shouldShowPreviewBanner: boolean
     toolbar?: React.ReactNode
+}
+
+function toTitleCase(str: string) {
+    return str.replace(
+        /\b\w/g,
+        (match) => match.toUpperCase()
+    )
 }
 
 export function ArticleHeader({
@@ -40,21 +48,36 @@ export function ArticleHeader({
         <div className="space-y-4 not-prose">
             {/* Feed Link Badge - Show when not in feed-specific view */}
             {shouldShowFeedBadge && (
-                <Link
-                    href={`/feeds/${article.feed_id}/articles`}
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors duration-200 group"
-                >
-                    <FeedIcon
-                        feed={{
-                            title: article.feed_title,
-                            image_url: article.feed_icon,
-                        }}
-                        className="h-4 w-4 shrink-0 rounded"
-                    />
-                    <span className="text-xs font-medium tracking-wider uppercase text-muted-foreground group-hover:text-foreground transition-colors duration-200">
-                        {article.feed_title}
-                    </span>
-                </Link>
+                <div className="flex items-center gap-2 flex-wrap">
+                    <Link
+                        href={`/feeds/${article.feed_id}/articles`}
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors duration-200 group"
+                    >
+                        <FeedIcon
+                            feed={{
+                                title: article.feed_title,
+                                image_url: article.feed_icon,
+                            }}
+                            className="h-4 w-4 shrink-0 rounded"
+                        />
+                        <span className="text-xs font-medium tracking-wider uppercase text-muted-foreground group-hover:text-foreground transition-colors duration-200 truncate max-w-[200px]">
+                            {article.feed_title}
+                        </span>
+                    </Link>
+                    {article.tags && article.tags.length > 0 && (
+                        <div className="flex items-center gap-2">
+                            {article.tags.slice(0, 5).map((tag) => (
+                                <Badge
+                                    key={tag}
+                                    variant="accent"
+                                    className="text-xs font-mono font-medium px-3 py-1"
+                                >
+                                    {tag.toLowerCase()}
+                                </Badge>
+                            ))}
+                        </div>
+                    )}
+                </div>
             )}
 
             <h1 className="text-4xl font-bold leading-tight text-foreground tracking-tight">
