@@ -1,25 +1,21 @@
-import { Text } from '@components/ui/text';
+import { useHtmlStyles } from '@components/screens/article-reader/constants/html-styles';
+import { ArticleFeaturedImage } from '@components/screens/article-reader/ui/article-featured-image';
+import { ArticleHeader } from '@components/screens/article-reader/ui/article-header';
+import { useFavicon } from '@hooks/useFavicon';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { stripHtml } from '@lib/utils/html';
-import { Galeria } from '@nandorojo/galeria';
-import type { Article } from '@readspace/shared';
 import { calculateReadingTime } from '@readspace/shared';
-import Constants from 'expo-constants';
-import { Image as ExpoImage } from 'expo-image';
-import { useRouter } from 'expo-router';
+import type { Article } from '@readspace/shared';
 import { useMemo } from 'react';
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
-  Pressable,
   ScrollView,
   useWindowDimensions,
   View,
 } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 import RenderHTML from 'react-native-render-html';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export interface ArticleReaderProps {
   article: Article;
@@ -34,11 +30,9 @@ export function ArticleReader({
   lastScrollY,
   scrollDirection,
 }: ArticleReaderProps) {
-  const router = useRouter();
   const { width } = useWindowDimensions();
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
-  const insets = useSafeAreaInsets();
 
   // Handle scroll events to track position and direction
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -83,346 +77,13 @@ export function ArticleReader({
   };
 
   // Configure HTML rendering with beautiful typography (EB Garamond for body text)
-  const tagsStyles = useMemo(
-    () => ({
-      // Base body styles
-      body: {
-        fontFamily: 'EBGaramond_400Regular',
-        fontSize: 18,
-        lineHeight: 30,
-        color: textColor,
-      },
-      // Paragraph styles
-      p: {
-        marginBottom: 20,
-        fontFamily: 'EBGaramond_400Regular',
-        fontSize: 18,
-        lineHeight: 30,
-        color: textColor,
-      },
-      // Heading hierarchy with proper spacing and typography
-      h1: {
-        fontFamily: 'EBGaramond_700Bold',
-        fontSize: 32,
-        lineHeight: 40,
-        color: textColor,
-        marginTop: 32,
-        marginBottom: 16,
-      },
-      h2: {
-        fontFamily: 'EBGaramond_700Bold',
-        fontSize: 28,
-        lineHeight: 36,
-        color: textColor,
-        marginTop: 28,
-        marginBottom: 14,
-      },
-      h3: {
-        fontFamily: 'EBGaramond_600SemiBold',
-        fontSize: 24,
-        lineHeight: 32,
-        color: textColor,
-        marginTop: 24,
-        marginBottom: 12,
-      },
-      h4: {
-        fontFamily: 'EBGaramond_600SemiBold',
-        fontSize: 20,
-        lineHeight: 28,
-        color: textColor,
-        marginTop: 20,
-        marginBottom: 10,
-      },
-      h5: {
-        fontFamily: 'EBGaramond_600SemiBold',
-        fontSize: 18,
-        lineHeight: 26,
-        color: textColor,
-        marginTop: 18,
-        marginBottom: 8,
-      },
-      h6: {
-        fontFamily: 'EBGaramond_600SemiBold',
-        fontSize: 16,
-        lineHeight: 24,
-        color: textColor,
-        marginTop: 16,
-        marginBottom: 8,
-      },
-      // Inline text formatting
-      strong: {
-        fontFamily: 'EBGaramond_700Bold',
-        color: textColor,
-      },
-      b: {
-        fontFamily: 'EBGaramond_700Bold',
-        color: textColor,
-      },
-      em: {
-        fontFamily: 'EBGaramond_400Regular_Italic',
-        fontStyle: 'italic' as const,
-      },
-      i: {
-        fontFamily: 'EBGaramond_400Regular_Italic',
-        fontStyle: 'italic' as const,
-      },
-      u: {
-        textDecorationLine: 'underline' as const,
-      },
-      s: {
-        textDecorationLine: 'line-through' as const,
-        color: greyColor,
-      },
-      mark: {
-        backgroundColor: colors.muted_green,
-        color: textColor,
-      },
-      // Links with brand secondary color
-      // Note: When links are inside <em> or <i> tags, react-native-render-html
-      // will merge styles, so the italic font family from parent will be used
-      a: {
-        color: colors.secondary,
-        textDecorationLine: 'underline' as const,
-        fontFamily: 'EBGaramond_500Medium',
-      },
-      // Code elements with monospace font
-      code: {
-        fontFamily: 'GeistMono_400Regular',
-        fontSize: 16,
-        lineHeight: 24,
-        backgroundColor: midGreyColor,
-        color: colors.primary,
-        paddingVertical: 2,
-        paddingHorizontal: 6,
-        borderRadius: 4,
-      },
-      // Pre-formatted code blocks
-      pre: {
-        fontFamily: 'GeistMono_400Regular',
-        fontSize: 14,
-        lineHeight: 22,
-        backgroundColor: midGreyColor,
-        color: textColor,
-        padding: 16,
-        borderRadius: 8,
-        marginTop: 16,
-        marginBottom: 20,
-      },
-      // Blockquotes with left border and muted styling
-      blockquote: {
-        fontFamily: 'EBGaramond_400Regular',
-        fontSize: 18,
-        lineHeight: 30,
-        color: textColor,
-        fontStyle: 'italic' as const,
-        borderLeftWidth: 4,
-        borderLeftColor: colors.secondary,
-        backgroundColor: lightGreyColor,
-        padding: 16,
-        marginTop: 20,
-        marginBottom: 20,
-        marginLeft: 0,
-        marginRight: 0,
-      },
-      // Horizontal rule
-      hr: {
-        backgroundColor: lightGreyColor,
-        height: 1,
-        marginTop: 24,
-        marginBottom: 24,
-        borderWidth: 0,
-      },
-      // Lists - unordered
-      ul: {
-        marginTop: 12,
-        marginBottom: 20,
-        paddingLeft: 24,
-      },
-      // Lists - ordered
-      ol: {
-        marginTop: 12,
-        marginBottom: 20,
-        paddingLeft: 24,
-      },
-      // List items with proper spacing
-      li: {
-        fontFamily: 'EBGaramond_400Regular',
-        fontSize: 18,
-        lineHeight: 30,
-        color: textColor,
-        marginBottom: 8,
-        paddingLeft: 8,
-      },
-      // Tables
-      table: {
-        marginTop: 20,
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: lightGreyColor,
-        borderRadius: 8,
-      },
-      thead: {
-        backgroundColor: midGreyColor,
-      },
-      tbody: {
-        backgroundColor: bgColor,
-      },
-      tr: {
-        borderBottomWidth: 1,
-        borderBottomColor: lightGreyColor,
-      },
-      th: {
-        fontFamily: 'EBGaramond_600SemiBold',
-        fontSize: 16,
-        lineHeight: 24,
-        color: textColor,
-        padding: 12,
-        textAlign: 'left' as const,
-      },
-      td: {
-        fontFamily: 'EBGaramond_400Regular',
-        fontSize: 16,
-        lineHeight: 24,
-        color: textColor,
-        padding: 12,
-      },
-      // Figure and caption
-      figure: {
-        marginTop: 20,
-        marginBottom: 20,
-        marginLeft: 0,
-        marginRight: 0,
-      },
-      figcaption: {
-        fontFamily: 'EBGaramond_400Regular',
-        fontSize: 14,
-        lineHeight: 20,
-        color: greyColor,
-        textAlign: 'center' as const,
-        marginTop: 8,
-      },
-      // Images
-      img: {
-        marginTop: 16,
-        marginBottom: 16,
-      },
-      // Superscript and subscript
-      sup: {
-        fontSize: 14,
-        lineHeight: 14,
-      },
-      sub: {
-        fontSize: 14,
-        lineHeight: 14,
-      },
-      // Small text
-      small: {
-        fontSize: 14,
-        lineHeight: 22,
-        color: greyColor,
-      },
-      // Abbreviation
-      abbr: {
-        textDecorationLine: 'underline' as const,
-        textDecorationStyle: 'dotted' as const,
-      },
-      // Citation
-      cite: {
-        fontFamily: 'EBGaramond_500Medium',
-        fontStyle: 'italic' as const,
-        color: greyColor,
-      },
-      // Keyboard input
-      kbd: {
-        fontFamily: 'GeistMono_500Medium',
-        fontSize: 14,
-        backgroundColor: midGreyColor,
-        color: textColor,
-        paddingVertical: 2,
-        paddingHorizontal: 6,
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: colors.muted_green,
-      },
-      // Sample output
-      samp: {
-        fontFamily: 'GeistMono_400Regular',
-        fontSize: 16,
-        backgroundColor: midGreyColor,
-        color: textColor,
-      },
-      // Variable
-      var: {
-        fontFamily: 'EBGaramond_400Regular',
-        fontStyle: 'italic' as const,
-        color: colors.primary,
-      },
-      // Definition
-      dfn: {
-        fontFamily: 'EBGaramond_600SemiBold',
-      },
-      // Time element
-      time: {
-        fontFamily: 'EBGaramond_400Regular',
-        color: greyColor,
-      },
-    }),
-    [textColor, greyColor, bgColor, lightGreyColor, midGreyColor, colors]
-  );
-
-  const systemFonts = useMemo(
-    () => [
-      'EBGaramond_400Regular',
-      'EBGaramond_500Medium',
-      'EBGaramond_600SemiBold',
-      'EBGaramond_700Bold',
-      'EBGaramond_400Regular_Italic',
-      'EBGaramond_500Medium_Italic',
-      'EBGaramond_600SemiBold_Italic',
-      'EBGaramond_700Bold_Italic',
-      'Geist_400Regular',
-      'Geist_500Medium',
-      'Geist_600SemiBold',
-      'Geist_700Bold',
-      'GeistMono_400Regular',
-      'GeistMono_500Medium',
-      'GeistMono_600SemiBold',
-      'GeistMono_700Bold',
-      'serif',
-      ...Constants.systemFonts,
-    ],
-    []
-  );
-
-  const classesStyles = useMemo(
-    () => ({
-      'list-marker': {
-        marginRight: 8,
-        minWidth: 20,
-      },
-    }),
-    []
-  );
-
-  // Memoize renderersProps to prevent unnecessary rerenders
-  const renderersProps = useMemo(
-    () => ({
-      ul: {
-        markerTextStyle: {
-          fontFamily: 'EBGaramond_400Regular',
-          fontSize: 18,
-          color: textColor,
-        },
-      },
-      ol: {
-        markerTextStyle: {
-          fontFamily: 'EBGaramond_400Regular',
-          fontSize: 18,
-          color: textColor,
-        },
-      },
-    }),
-    [textColor]
+  const { tagsStyles, systemFonts, classesStyles, renderersProps } = useHtmlStyles(
+    textColor,
+    greyColor,
+    bgColor,
+    lightGreyColor,
+    midGreyColor,
+    colors
   );
 
   const feedTitle =
@@ -451,17 +112,12 @@ export function ArticleReader({
       ? new Date(article.published_at).toLocaleDateString()
       : 'Unknown date';
 
-  // Get favicon URL for clipped articles
-  const getFaviconUrl = (url: string): string => {
-    try {
-      const domain = new URL(url).hostname;
-      return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-    } catch {
-      return '';
-    }
-  };
-
-  const displayFaviconUrl = isClipped && article.link ? getFaviconUrl(article.link) : feedImageUrl;
+  const { iconUrl, fallbackComponent } = useFavicon({
+    url: article.link,
+    feedTitle: feedTitle || undefined,
+    feedImage: feedImageUrl || undefined,
+    isClipped: isClipped,
+  });
 
   // Calculate reading time from content with proper CJK support
   const readTimeMinutes = useMemo(() => {
@@ -520,136 +176,19 @@ export function ArticleReader({
       scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}>
       {/* Featured Image with Galeria - Edge-to-edge */}
-      {article.image_url && (
-        <Galeria urls={[article.image_url]}>
-          <Galeria.Image>
-            <View className="w-full bg-black" style={{ height: 240, marginTop: insets.top + 64 }}>
-              <ExpoImage
-                source={{ uri: article.image_url }}
-                style={{ width: '100%', height: '100%' }}
-                contentFit="cover"
-                priority="high"
-                cachePolicy="memory-disk"
-              />
-            </View>
-          </Galeria.Image>
-        </Galeria>
-      )}
+      {article.image_url && <ArticleFeaturedImage imageUrl={article.image_url} />}
 
       {/* Article Header */}
-      <View
-        className="mb-6 border-b border-grey4 px-6 pb-6 dark:border-grey4-dark"
-        style={{ marginTop: article.image_url ? 24 : insets.top + 56 }}>
-        {/* Source */}
-        {!isClipped && feedId ? (
-          <Pressable
-            onPress={() => {
-              // Store current article ID in the navigation params so feed can navigate back correctly
-              router.push({
-                pathname: `/(protected)/(tabs)/discover/feed/${feedId}` as any,
-                params: { returnTo: `/(protected)/articles/${article.id}` },
-              });
-            }}
-            style={{
-              marginBottom: 8,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-              paddingVertical: 4,
-            }}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            {displayFaviconUrl && (
-              <ExpoImage
-                source={{ uri: displayFaviconUrl }}
-                style={{ width: 16, height: 16, borderRadius: 2 }}
-                contentFit="contain"
-              />
-            )}
-            <Text
-              size="sm"
-              fontFamily="geist"
-              className="uppercase tracking-wide text-grey dark:text-grey-dark">
-              {displaySource || 'Unknown Source'}
-            </Text>
-          </Pressable>
-        ) : (
-          <View className="mb-2 flex-row items-center gap-2">
-            {displayFaviconUrl && (
-              <ExpoImage
-                source={{ uri: displayFaviconUrl }}
-                style={{ width: 16, height: 16, borderRadius: 2 }}
-                contentFit="contain"
-              />
-            )}
-            <Text
-              size="sm"
-              fontFamily="geist"
-              className="uppercase tracking-wide text-grey dark:text-grey-dark">
-              {displaySource || 'Unknown Source'}
-            </Text>
-          </View>
-        )}
-
-        {/* Title */}
-        <Text
-          size="lg"
-          fontFamily="geist-bold"
-          className="mb-3 text-primary-foreground dark:text-primary-foreground-dark"
-          style={{ letterSpacing: -0.72, fontSize: 30, lineHeight: 38 }}>
-          {stripHtml(article.title)}
-        </Text>
-
-        {/* Note for clipped articles */}
-        {isClipped && article.note && (
-          <View className="mb-3 rounded-lg border border-grey4 bg-grey6 px-3 py-2 dark:border-grey4-dark dark:bg-grey6-dark">
-            <Text
-              size="sm"
-              fontFamily="geist"
-              className="leading-relaxed text-grey dark:text-grey-dark">
-              {article.note}
-            </Text>
-          </View>
-        )}
-
-        {/* Metadata */}
-        <View className="flex-row flex-wrap items-center gap-2">
-          {article.author && !isClipped && (
-            <>
-              <Text
-                size="sm"
-                fontFamily="geist"
-                className="flex-shrink text-grey dark:text-grey-dark"
-                numberOfLines={1}>
-                By {article.author}
-              </Text>
-              <Text size="sm" fontFamily="geist" className="text-grey dark:text-grey-dark">
-                /
-              </Text>
-            </>
-          )}
-          <Text
-            size="sm"
-            fontFamily="geist"
-            className="flex-shrink text-grey dark:text-grey-dark"
-            numberOfLines={1}>
-            {displayDate}
-          </Text>
-          {readTime && (
-            <Text size="sm" fontFamily="geist" className="text-grey dark:text-grey-dark">
-              /
-            </Text>
-          )}
-          {readTime && (
-            <Text
-              size="sm"
-              fontFamily="geist"
-              className="flex-shrink text-grey dark:text-grey-dark"
-              numberOfLines={1}>
-              {readTime}
-            </Text>
-          )}
-        </View>
-      </View>
+      <ArticleHeader
+        article={article}
+        isClipped={isClipped}
+        feedId={feedId}
+        displayFaviconUrl={iconUrl}
+        fallbackComponent={fallbackComponent}
+        displaySource={displaySource || 'Unknown Source'}
+        displayDate={displayDate}
+        readTime={readTime}
+      />
 
       {/* Article Content - Edge-to-edge with horizontal padding */}
       <View className="px-6">
@@ -684,10 +223,10 @@ export function ArticleReader({
               // Apply italic font if inside italic context
               const linkStyle = isInsideItalic
                 ? {
-                  ...tagsStyles.a,
-                  fontFamily: 'EBGaramond_500Medium_Italic',
-                  fontStyle: 'italic' as const,
-                }
+                    ...tagsStyles.a,
+                    fontFamily: 'EBGaramond_500Medium_Italic',
+                    fontStyle: 'italic' as const,
+                  }
                 : tagsStyles.a;
 
               // Safely access tbaseStyle with null check

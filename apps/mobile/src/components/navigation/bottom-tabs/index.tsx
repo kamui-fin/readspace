@@ -2,7 +2,7 @@ import {
   FeedSwitcherBottomSheet,
   type FeedSwitcherBottomSheetRef,
 } from '@components/bottom-sheets/feed-switcher';
-import { WIDTH } from '@components/navigation/bottom-tabs/constants';
+import { WIDTH } from '@components/navigation/bottom-tabs/constants/animation-values';
 import { AnimatedTab } from '@components/navigation/bottom-tabs/ui/animated-tab';
 import { styles } from '@components/navigation/bottom-tabs/ui/bottom-tab-bar/bottom-tab-bar.styles';
 import { ExpandTab } from '@components/navigation/bottom-tabs/ui/expand-tab';

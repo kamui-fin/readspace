@@ -1,11 +1,6 @@
 import { Platform } from 'react-native';
 import { useKeyboardHandler as useRNKeyboardHandler } from 'react-native-keyboard-controller';
-import {
-  useSharedValue,
-  useDerivedValue,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
+import { useSharedValue, useDerivedValue, withTiming, Easing } from 'react-native-reanimated';
 
 /**
  * A comprehensive hook for handling keyboard interactions.
@@ -51,7 +46,7 @@ export function useKeyboardHandler() {
           height.value = e.height;
           progress.value = e.progress;
         } else {
-           height.value = e.height;
+          height.value = e.height;
         }
       },
     },
@@ -65,4 +60,3 @@ export function useKeyboardHandler() {
     isVisible,
   };
 }
-

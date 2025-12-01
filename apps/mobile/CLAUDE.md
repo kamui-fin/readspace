@@ -7,7 +7,7 @@
 ## 1. Quick links (reference docs)
 
 - Expo docs (fonts, assets, config): [https://docs.expo.dev](https://docs.expo.dev)
-- NativeWind: [https://www.nativewind.dev](https://www.nativewind.dev)
+- Uniwind: [https://uniwind.dev/](https://uniwind.dev/)
 - Legend List: [https://www.legendapp.com/open-source/list/v2/getting-started/](https://www.legendapp.com/open-source/list/v2/getting-started/)
 - Monicons + Solar: [https://github.com/mikaeljorhult/monicons](https://github.com/mikaeljorhult/monicons) and [https://icones.js.org/collection/solar](https://icones.js.org/collection/solar)
 - React Native Reanimated: [https://docs.swmansion.com/react-native-reanimated](https://docs.swmansion.com/react-native-reanimated)
@@ -50,10 +50,10 @@ This file does _not_ authorize any automated pushes to remote repositories. Huma
 
 ## 5. Styling conventions
 
-- Use `nativewind` + `clsx` + `class-variance-authority (cva)` for reusable primitives.
+- Use `uniwind` + `clsx` + `class-variance-authority (cva)` for reusable primitives.
 - Avoid inline style objects unless animated with Reanimated worklets.
 - Extract style variants with `cva` for shared components (button, chip, toast).
-- Dark mode: follow NativeWind's `dark` strategy. Ensure both `light` and `dark` variants are present for UI-critical components.
+- Dark mode: follow uniwind's `dark` strategy. Ensure both `light` and `dark` variants are present for UI-critical components.
 
 **Tailwind config snippet** (already present in repo) should be used as the single source of truth for colors and fonts. Do not duplicate the palette elsewhere — import from a central file when needed.
 
@@ -172,7 +172,7 @@ Ask a human reviewer if any of the following apply:
 ## 18. Dependency & environment notes
 
 The mobile app relies on the following notable packages (partial list):
-`nativewind`, `cva`, `clsx`, `react-native-reanimated`, `@legendapp/list`, `zustand`, `react-native-mmkv`, `@tanstack/react-query`, `expo-router`, `sonner-native`, `@monicon/native`.
+`uniwind`, `cva`, `clsx`, `react-native-reanimated`, `@legendapp/list`, `zustand`, `react-native-mmkv`, `@tanstack/react-query`, `expo-router`, `sonner-native`, `@monicon/native`.
 
 If a dependency needs upgrading, provide a short migration plan and a human must approve.
 

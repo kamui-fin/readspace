@@ -2,10 +2,7 @@ import {
   FolderPickerBottomSheet,
   type FolderPickerBottomSheetRef,
 } from '@components/bottom-sheets/folder-picker';
-import {
-  FolderPickerModal,
-  type FolderPickerModalRef,
-} from '@/components/modals/folder-picker';
+import { FolderPickerModal, type FolderPickerModalRef } from '@/components/modals/folder-picker';
 import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';

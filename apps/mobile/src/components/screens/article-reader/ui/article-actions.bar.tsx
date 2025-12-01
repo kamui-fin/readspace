@@ -147,8 +147,8 @@ export function ArticleActionBar({
           style={
             !isClipped && isBookmarked
               ? {
-                backgroundColor: colors.icon_bg_yellow,
-              }
+                  backgroundColor: colors.icon_bg_yellow,
+                }
               : undefined
           }>
           <Monicon

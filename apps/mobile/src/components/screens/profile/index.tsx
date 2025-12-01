@@ -27,6 +27,7 @@ import { Monicon } from '@monicon/native';
 import { useFeeds, useFolders } from '@readspace/shared';
 import { useSettingsStore } from '@stores/settings';
 import { type Theme, useThemeStore } from '@stores/theme';
+import { useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -51,10 +52,13 @@ export function ProfileScreen() {
   const { data: feeds } = useFeeds();
   const { data: folders } = useFolders();
 
+  const queryClient = useQueryClient();
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
       await signOut();
+      queryClient.clear();
       toast.success('Logged out successfully');
       // Navigation is handled automatically by auth context
     } catch (error) {

@@ -2,6 +2,7 @@ import { CircleCheckIcon } from '@components/icons/circle-check';
 import { CircleErrorIcon } from '@components/icons/circle-error';
 import { CircleInfoIcon } from '@components/icons/circle-info';
 import { Spinner } from '@components/ui/spinner';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { useSegments } from 'expo-router';
@@ -171,24 +172,23 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
     transform: [{ translateX: (1 - textOpacity.value) * -10 }],
   }));
 
+  const isDark = useIsDarkMode();
+  const colors = COLORS[isDark ? 'dark' : 'light'];
+
   const getBackgroundColor = () => {
     if (toast.type === 'custom' && toast.custom?.backgroundColor) {
       return toast.custom.backgroundColor;
     }
     if (toast.type === 'success') {
-      // Lighter solid shade of secondary green
-      return 'rgb(235, 244, 230)'; // Even lighter green
+      return colors.icon_bg_green;
     }
     if (toast.type === 'promise') {
-      // Lighter solid shade of blue
-      return 'rgb(237, 244, 254)'; // Even lighter blue
+      return colors.icon_bg_blue;
     }
     if (toast.type === 'info') {
-      // Lighter solid shade of orange
-      return 'rgb(255, 245, 230)'; // Even lighter orange
+      return colors.icon_bg_yellow;
     }
-    // Lighter solid shade of red
-    return 'rgb(254, 243, 242)'; // Even lighter red
+    return colors.icon_bg_red;
   };
 
   const getTextColor = () => {
@@ -196,15 +196,15 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
       return toast.custom.textColor;
     }
     if (toast.type === 'success') {
-      return COLORS.light.secondary;
+      return colors.secondary;
     }
     if (toast.type === 'promise') {
-      return COLORS.light.blue;
+      return colors.blue;
     }
     if (toast.type === 'info') {
-      return COLORS.light.orange;
+      return colors.orange;
     }
-    return COLORS.light.red;
+    return colors.red;
   };
 
   const renderIcon = () => {
@@ -212,7 +212,7 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
       return toast.custom.icon;
     }
     if (toast.type === 'success') {
-      return <CircleCheckIcon size={20} color={COLORS.light.secondary} />;
+      return <CircleCheckIcon size={20} color={colors.secondary} />;
     }
     if (toast.type === 'promise') {
       return (
@@ -224,14 +224,18 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
             justifyContent: 'center',
             transform: [{ scale: 0.65 }],
           }}>
-          <Spinner size="small" color={COLORS.light.blue} secondaryColor="rgb(190, 213, 252)" />
+          <Spinner
+            size="small"
+            color={colors.blue}
+            secondaryColor={isDark ? 'rgba(35, 107, 239, 0.3)' : 'rgb(190, 213, 252)'}
+          />
         </View>
       );
     }
     if (toast.type === 'info') {
-      return <CircleInfoIcon size={20} color={COLORS.light.orange} />;
+      return <CircleInfoIcon size={20} color={colors.orange} />;
     }
-    return <CircleErrorIcon size={20} color={COLORS.light.red} />;
+    return <CircleErrorIcon size={20} color={colors.red} />;
   };
 
   return (

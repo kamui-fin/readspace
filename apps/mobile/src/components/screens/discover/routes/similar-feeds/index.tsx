@@ -1,8 +1,5 @@
 import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker';
-import {
-  FolderPickerModal,
-  type FolderPickerModalRef,
-} from '@/components/modals/folder-picker';
+import { FolderPickerModal, type FolderPickerModalRef } from '@/components/modals/folder-picker';
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { Skeleton } from '@components/ui/skeleton';
 import { Text } from '@components/ui/text';

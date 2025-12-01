@@ -2,11 +2,11 @@ import { ArticleItemCard } from '@components/screens/following/ui/article-item.c
 import { Text } from '@components/ui/text';
 import { formatRelativeDate } from '@readspace/shared';
 import type { Article } from '@readspace/shared';
+import { useFavicon } from '@hooks/useFavicon';
 import { useRouter, useSegments } from 'expo-router';
 import { useRef } from 'react';
 import { View } from 'react-native';
-
-import type { ListItem } from '../../../../lib/utils/article';
+import type { ListItem } from '@lib/utils/article';
 
 interface ArticleListItemProps {
   item: ListItem;
@@ -16,69 +16,6 @@ interface ArticleListItemProps {
     articleType: 'feed' | 'clipped'
   ) => void;
   onBookmark: (articleId: string, currentlySaved: boolean, articleType: 'feed' | 'clipped') => void;
-}
-
-/**
- * Get favicon URL from domain
- */
-function getFaviconUrl(url: string): string {
-  try {
-    const domain = new URL(url).hostname;
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-  } catch {
-    return '';
-  }
-}
-
-/**
- * Extract feed information from article
- */
-function extractFeedInfo(article: Article) {
-  const feedTitle =
-    typeof article.feed === 'object' && article.feed ? article.feed.title || undefined : undefined;
-
-  const feedImageUrl =
-    typeof article.feed === 'object' && article.feed
-      ? article.feed.image_url || undefined
-      : undefined;
-
-  // Try multiple ways to get the feed ID
-  let feedId: string | undefined;
-  if (typeof article.feed === 'object' && article.feed) {
-    feedId = (article.feed as any).id;
-  } else if (typeof article.feed === 'string') {
-    feedId = article.feed;
-  }
-
-  // Check if there's a feed_id field directly on the article
-  if (!feedId && (article as any).feed_id) {
-    feedId = (article as any).feed_id;
-  }
-
-  return { feedTitle, feedImageUrl, feedId };
-}
-
-/**
- * Get display favicon URL for article
- */
-function getDisplayFaviconUrl(article: Article, feedImageUrl?: string): string | undefined {
-  const isClipped = article.article_type === 'clipped';
-
-  // Use favicon from clipped article domain, or feed image, or fallback to feed domain favicon
-  if (isClipped && article.link) {
-    return getFaviconUrl(article.link);
-  }
-
-  if (feedImageUrl) {
-    return feedImageUrl;
-  }
-
-  if (typeof article.feed === 'object' && article.feed && (article.feed as any).link) {
-    // Fallback: generate favicon from feed's website URL
-    return getFaviconUrl((article.feed as any).link);
-  }
-
-  return undefined;
 }
 
 export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListItemProps) {
@@ -114,7 +51,13 @@ export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListI
     const displayImageUrl = article.image_url || undefined;
 
     const { feedTitle, feedImageUrl } = extractFeedInfo(article);
-    const displayFaviconUrl = getDisplayFaviconUrl(article, feedImageUrl);
+
+    const { iconUrl, fallbackComponent } = useFavicon({
+      url: article.link,
+      feedTitle: feedTitle,
+      feedImage: feedImageUrl,
+      isClipped: isClipped,
+    });
 
     return (
       <ArticleItemCard
@@ -123,7 +66,8 @@ export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListI
         title={article.title}
         description={article.description || undefined}
         timestamp={timestamp}
-        faviconUrl={displayFaviconUrl}
+        faviconUrl={iconUrl}
+        fallbackComponent={fallbackComponent}
         feedName={feedTitle}
         className="px-4"
         showTopDivider={false}
@@ -161,4 +105,7 @@ export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListI
   }
 
   return <View />;
+}
+function extractFeedInfo(article: Article): { feedTitle: any; feedImageUrl: any } {
+  throw new Error('Function not implemented.');
 }

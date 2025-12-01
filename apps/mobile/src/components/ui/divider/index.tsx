@@ -1,5 +1,11 @@
 import type React from 'react';
-import { type DimensionValue, type StyleProp, View, type ViewProps, type ViewStyle } from 'react-native';
+import {
+  type DimensionValue,
+  type StyleProp,
+  View,
+  type ViewProps,
+  type ViewStyle,
+} from 'react-native';
 
 export interface DividerProps extends ViewProps {
   /**  Applies style to the divider. */

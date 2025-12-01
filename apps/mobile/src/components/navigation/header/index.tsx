@@ -1,16 +1,13 @@
-import { ExpandVerticalIcon } from '@components/icons/expand-vertical';
-import type { HeaderProps } from '@components/navigation/header/type';
-import { Tab } from '@components/navigation/tab';
-import { Button } from '@components/ui/button';
+import type { HeaderProps } from '@/components/navigation/header/types';
+import { HeaderForeground } from '@components/navigation/header/ui/header-foreground';
+import { HeaderTabs } from '@components/navigation/header/ui/header-tabs';
+import { headerContainerVariants } from '@/components/navigation/header/constants/header-variants';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { DEVICE_CORNER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
-import { cva } from 'class-variance-authority';
 import clsx from 'clsx';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Text, TouchableOpacity, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, {
   Easing,
   Extrapolation,
@@ -20,80 +17,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-export const buttonConfigs = [
-  { label: 'Today', iconName: 'solar:calendar-bold' },
-  { label: 'Saved', iconName: 'solar:bookmark-bold' },
-  { label: 'All', iconName: 'solar:inbox-bold' },
-];
-
-const headerContainerVariants = cva('w-full bg-background dark:bg-background-dark', {
-  variants: {
-    variant: {
-      static: 'relative', // Static position, not absolute
-      sticky: '',
-      tabbed: '', // Position handled dynamically via animated style
-    },
-  },
-  defaultVariants: {
-    variant: 'sticky',
-  },
-});
-
-const foregroundVariants = cva('flex-row items-center pb-3', {
-  variants: {
-    layout: {
-      default: 'justify-between px-4',
-      centered: 'justify-center',
-    },
-  },
-  defaultVariants: {
-    layout: 'default',
-  },
-});
-
-const titleContainerVariants = cva('', {
-  variants: {
-    layout: {
-      default: 'flex-1 max-w-[70%]',
-      centered: 'items-center',
-    },
-  },
-  defaultVariants: {
-    layout: 'default',
-  },
-});
-
-const titleVariants = cva('leading-8 text-primary-foreground dark:text-primary-foreground-dark', {
-  variants: {
-    fontWeight: {
-      bold: 'font-geist-bold',
-      semibold: 'font-geist-semibold',
-    },
-    size: {
-      default: 'text-3xl',
-      small: 'text-xl',
-    },
-  },
-  defaultVariants: {
-    fontWeight: 'bold',
-    size: 'default',
-  },
-});
-
-const subtitleVariants = cva(
-  'font-geist-medium text-lg text-grey2 dark:text-grey2 mt-1 opacity-80'
-);
-
-const actionsContainerVariants = cva('flex-row items-center gap-3');
-
-const tabsRowVariants = cva(
-  'flex-row justify-between items-center px-4 py-2 gap-3 w-full bg-background dark:bg-background-dark'
-);
-
-const tabsContainerVariants = cva('flex-row items-center justify-between flex-1');
-
-const tabsGroupVariants = cva('flex-row items-center gap-1.5');
 
 export const Header: React.FC<HeaderProps> = (props) => {
   const {
@@ -193,181 +116,6 @@ export const Header: React.FC<HeaderProps> = (props) => {
     },
     [stickyContainerHeight, variant, onHeaderHeightChange]
   );
-
-  // Determine if we should use centered layout (for similar feeds with back button and no actions)
-  const useCenteredLayout = showBackButton && actions.length === 0 && !subtitle;
-  const titleSize = useCenteredLayout ? 'small' : 'default';
-
-  const renderForeground = useCallback(() => {
-    if (useCenteredLayout) {
-      return (
-        <View
-          className="flex-row items-center pb-3 w-full absolute"
-          onLayout={handleForegroundLayout}>
-          {showBackButton && (
-            <View className="absolute left-4 top-0 z-10">
-              <Button onPress={onBackPress} variant="icon" size="small" fullWidth={false}>
-                <Monicon
-                  name="solar:arrow-left-linear"
-                  size={18}
-                  strokeWidth={2.4}
-                  color={colors.grey}
-                />
-              </Button>
-            </View>
-          )}
-
-          <View className="flex-1 items-center px-16">
-            <Text
-              className={clsx(titleVariants({ fontWeight: titleFontWeight, size: titleSize }))}
-              numberOfLines={1}
-              ellipsizeMode="tail">
-              {title}
-            </Text>
-          </View>
-        </View>
-      );
-    }
-
-    return (
-      <View
-        className={clsx(foregroundVariants({ layout: 'default' }))}
-        onLayout={handleForegroundLayout}>
-        {showBackButton && (
-          <Button
-            onPress={onBackPress}
-            variant="icon"
-            size="small"
-            fullWidth={false}
-            className="mr-3">
-            <Monicon
-              name="solar:arrow-left-linear"
-              size={18}
-              strokeWidth={2.4}
-              color={colors.grey}
-            />
-          </Button>
-        )}
-
-        <View className={clsx(titleContainerVariants({ layout: 'default' }))}>
-          {onTitlePress ? (
-            <TouchableOpacity
-              onPress={onTitlePress}
-              className="flex-row items-center gap-0.5 active:opacity-70">
-              <Text
-                className={clsx(
-                  titleVariants({
-                    fontWeight: titleFontWeight,
-                    size: titleSize,
-                  })
-                )}
-                numberOfLines={1}
-                ellipsizeMode="tail">
-                {title}
-              </Text>
-              <View
-                className="justify-center"
-                style={{ marginBottom: Platform.OS === 'ios' ? 6 : 2 }}>
-                <ExpandVerticalIcon size={24} color={colors.black} />
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <Text
-              className={clsx(titleVariants({ fontWeight: titleFontWeight, size: titleSize }))}
-              numberOfLines={1}
-              ellipsizeMode="tail">
-              {title}
-            </Text>
-          )}
-          {subtitle && (
-            <Text className={clsx(subtitleVariants())} numberOfLines={1} ellipsizeMode="tail">
-              {subtitle}
-            </Text>
-          )}
-        </View>
-
-        {actions.length > 0 && (
-          <View className={clsx(actionsContainerVariants())}>
-            {actions.map((action) => (
-              <Button
-                key={action.label}
-                onPress={action.onPress}
-                variant="secondary"
-                size="small"
-                fullWidth={false}
-                disabled={action.disabled}
-                className="bg-transparent px-2 py-2">
-                <Monicon name={action.icon} size={20} color={colors.primary_foreground} />
-              </Button>
-            ))}
-          </View>
-        )}
-      </View>
-    );
-  }, [
-    title,
-    subtitle,
-    colors,
-    onBackPress,
-    showBackButton,
-    actions,
-    handleForegroundLayout,
-    titleFontWeight,
-    useCenteredLayout,
-    titleSize,
-    onTitlePress,
-  ]);
-
-  const renderTabs = useCallback(() => {
-    if (variant !== 'tabbed') return null;
-
-    return (
-      <View className={clsx(tabsRowVariants())} onLayout={handleTabsLayout}>
-        <View className={clsx(tabsContainerVariants())}>
-          <View className={clsx(tabsGroupVariants())}>
-            {buttonConfigs.map((btn, index) => (
-              <Tab
-                key={btn.label}
-                label={btn.label}
-                active={activeTab === index}
-                onPress={() => onTabChange?.(index)}
-                iconName={btn.iconName}
-              />
-            ))}
-          </View>
-
-          <View className="flex-row items-center gap-2">
-            {/* Action button - generic, reusable component */}
-            {actionButton}
-
-            {showSort && (
-              <Button
-                onPress={onSortPress}
-                variant="secondary"
-                size="small"
-                fullWidth={false}
-                className="min-h-9 px-3 py-2"
-                style={{
-                  backgroundColor: colors.grey5,
-                  borderRadius: DEVICE_CORNER_RADIUS - 2,
-                }}>
-                <Monicon name="solar:sort-bold" size={16} color={colors.grey2} />
-              </Button>
-            )}
-          </View>
-        </View>
-      </View>
-    );
-  }, [
-    variant,
-    activeTab,
-    onTabChange,
-    showSort,
-    onSortPress,
-    actionButton,
-    colors,
-    handleTabsLayout,
-  ]);
 
   // Animated styles for tabbed variant
   // Header is always absolutely positioned for smooth transitions
@@ -615,6 +363,35 @@ export const Header: React.FC<HeaderProps> = (props) => {
 
     return {};
   });
+
+  const renderForeground = () => (
+    <HeaderForeground
+      title={title}
+      subtitle={subtitle}
+      showBackButton={showBackButton}
+      onBackPress={onBackPress}
+      actions={actions}
+      titleFontWeight={titleFontWeight}
+      onTitlePress={onTitlePress}
+      colors={colors}
+      onLayout={handleForegroundLayout}
+    />
+  );
+
+  const renderTabs = () => {
+    if (variant !== 'tabbed') return null;
+    return (
+      <HeaderTabs
+        activeTab={activeTab}
+        onTabChange={onTabChange}
+        showSort={showSort}
+        onSortPress={onSortPress}
+        actionButton={actionButton}
+        colors={colors}
+        onLayout={handleTabsLayout}
+      />
+    );
+  };
 
   // Render sticky variant
   if (variant === 'sticky') {

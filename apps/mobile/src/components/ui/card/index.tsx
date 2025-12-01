@@ -27,7 +27,7 @@ const cardVariants = cva('bg-background dark:bg-background-dark', {
 
 export interface CardProps
   extends Omit<PressableProps, 'children'>,
-  VariantProps<typeof cardVariants> {
+    VariantProps<typeof cardVariants> {
   children?: ReactNode;
   className?: string;
   // Feed variant props
@@ -39,6 +39,7 @@ export interface CardProps
   imageUrl?: string;
   timestamp?: string;
   faviconUrl?: string;
+  fallbackComponent?: React.FC<{ size?: number; className?: string }>;
   feedName?: string;
   showTopDivider?: boolean;
   showBottomDivider?: boolean;
@@ -63,6 +64,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
       imageUrl,
       timestamp,
       faviconUrl,
+      fallbackComponent: FallbackComponent,
       feedName,
       showTopDivider = false,
       showBottomDivider = true,
@@ -155,6 +157,8 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                       cachePolicy="memory-disk"
                       transition={150}
                     />
+                  ) : FallbackComponent ? (
+                    <FallbackComponent size={16} className="rounded-sm" />
                   ) : (
                     <View className="h-4 w-4 items-center justify-center rounded-sm bg-orange-100 dark:bg-orange-950">
                       <RssIcon size={12} color={isDark ? '#9a3412' : '#ea580c'} />

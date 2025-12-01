@@ -1,23 +1,17 @@
+import { FolderPickerModal, type FolderPickerModalRef } from '@/components/modals/folder-picker';
 import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker';
-import {
-  FolderPickerModal,
-  type FolderPickerModalRef,
-} from '@/components/modals/folder-picker';
-import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
-import { Button } from '@components/ui/button';
-import { Card } from '@components/ui/card';
-import { Chip } from '@components/ui/chip';
-import { Skeleton } from '@components/ui/skeleton';
+import { FeedInfoHeader } from '@components/screens/discover/ui/feed-info-header';
+import { FeedPreviewSkeleton } from '@components/screens/discover/ui/feed-preview-skeleton';
+import { FeedRecentArticles } from '@components/screens/discover/ui/feed-recent-articles';
+import { FeedSimilarList } from '@components/screens/discover/ui/feed-similar-list';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
 import {
   ApiClient,
   type FeedDiscoveryResult,
-  formatRelativeDate,
   type SimilarFeedsResponse,
   useCreateFeed,
   useDeleteFeed,
@@ -26,23 +20,10 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Dimensions,
-  FlatList,
-  Image,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-} from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const isIOS = Platform.OS === 'ios';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH * 0.7;
-const CARD_SPACING = 16;
 
 interface FeedPreviewScreenProps {
   feedId: string;
@@ -52,7 +33,6 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
   const router = useRouter();
   const segments = useSegments();
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const folderPickerRef = useRef<FolderPickerModalRef>(null);
   const [pendingSimilarFeedUrl, setPendingSimilarFeedUrl] = useState<string | null>(null);
   const [isPreviewRefreshing, setIsPreviewRefreshing] = useState(false);
@@ -187,7 +167,7 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
   const handleBack = useCallback(() => {
     // If we have a returnTo param, navigate there instead of going back
     if (returnTo) {
-      router.push(returnTo);
+      router.push(Array.isArray(returnTo) ? returnTo[0] : returnTo);
     } else {
       router.back();
     }
@@ -247,18 +227,6 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
     [feed, createFeed, pendingSimilarFeedUrl, queryClient]
   );
 
-  const handleUrlPress = useCallback(async () => {
-    if (!feed?.link && !feed?.url) return;
-    const url = feed.link || feed.url;
-    const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-    const supported = await Linking.canOpenURL(fullUrl);
-    if (supported) {
-      await Linking.openURL(fullUrl);
-    } else {
-      toast.error('Cannot open this URL');
-    }
-  }, [feed]);
-
   const handleArticlePress = useCallback(
     (articleId: string) => {
       const articleRoute = `/(protected)/articles/${articleId}`;
@@ -273,10 +241,6 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
     [router, segments]
   );
 
-  const toggleDescription = useCallback(() => {
-    setIsDescriptionExpanded((prev) => !prev);
-  }, []);
-
   const handleShowMoreArticles = useCallback(() => {
     // Navigate to feed articles view
     router.push(`/(protected)/(tabs)/discover/feed/${feedId}/articles`);
@@ -289,29 +253,7 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
 
   // Only show full skeleton during initial feed loading, not during preview refresh
   if (isFeedLoading && !isPreviewRefreshing) {
-    return (
-      <View className="flex-1 bg-white dark:bg-white-dark" style={{ paddingTop: insets.top }}>
-        <ScrollView showsVerticalScrollIndicator={false} className="px-6 pt-2">
-          <View className="mb-6" />
-          <View className="mb-4">
-            <Skeleton variant="circle" width={96} height={96} />
-          </View>
-          <Skeleton variant="text" width="60%" height={28} className="mb-2" />
-          <Skeleton variant="text" width="100%" height={20} className="mb-2" />
-          <Skeleton variant="text" width="80%" height={20} className="mb-4" />
-          <Skeleton variant="rectangle" width="100%" height={48} className="mb-8" />
-
-          <Skeleton variant="text" width="40%" height={24} className="mb-4" />
-          <View className="gap-4 mb-8">
-            {Array.from({ length: 3 }, (_, i) => `article-skeleton-${i}`).map((key) => (
-              <View key={key} className="flex-row gap-3">
-                <Skeleton variant="rectangle" width={280} height={200} />
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-      </View>
-    );
+    return <FeedPreviewSkeleton />;
   }
 
   if (!feed) {
@@ -337,305 +279,35 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
           contentContainerStyle={{
             paddingBottom: BOTTOM_TABBAR_BASE_HEIGHT + 16,
           }}>
-          {/* Header */}
-          <View className="px-4 pb-4 pt-2">
-            <View className="mb-6 flex-row items-center">
-              <Button variant="icon" size="small" fullWidth={false} onPress={handleBack}>
-                <Monicon
-                  name="solar:arrow-left-linear"
-                  size={18}
-                  strokeWidth={2.4}
-                  color={greyColor}
-                />
-              </Button>
-            </View>
+          <FeedInfoHeader
+            feed={feed}
+            isFollowing={isFollowing}
+            isFeedDead={isFeedDead}
+            isFollowLoading={createFeed.isPending || deleteFeed.isPending}
+            onBack={handleBack}
+            onFollow={handleFollowPress}
+            colors={colors}
+            greyColor={greyColor}
+          />
 
-            {/* Feed Icon */}
-            <View className="relative mb-4">
-              <View
-                className="h-24 w-24 items-center justify-center overflow-hidden rounded-3xl"
-                style={{
-                  backgroundColor: colors.white,
-                }}>
-                {feed.image_url ? (
-                  <Image
-                    source={{ uri: feed.image_url }}
-                    className="h-full w-full"
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <Text
-                    size="lg"
-                    fontFamily="geist-bold"
-                    style={{ color: colors.grey, fontSize: 30 }}>
-                    {(feed.title || 'F').charAt(0).toUpperCase()}
-                  </Text>
-                )}
-              </View>
-              {isFeedDead && (
-                <Chip
-                  label="Inactive"
-                  variant="filled"
-                  size="medium"
-                  className="absolute -right-1 -top-1 bg-red"
-                  textClassName="text-white"
-                />
-              )}
-            </View>
+          <FeedRecentArticles
+            articles={articles}
+            isLoading={isArticlesLoading || isPreviewRefreshing || shouldWaitForPreview}
+            feed={feed}
+            onShowMore={handleShowMoreArticles}
+            onArticlePress={handleArticlePress}
+            colors={colors}
+            greyColor={greyColor}
+          />
 
-            {/* Feed Title */}
-            <Text
-              size="2xl"
-              fontFamily="geist-bold"
-              className="mb-2 tracking-heading text-black dark:text-black-dark">
-              {feed.title || 'Untitled Feed'}
-            </Text>
-
-            {/* Feed Description */}
-            {feed.description && (
-              <View className="mb-4">
-                {feed.description.length > 80 ? (
-                  <>
-                    <Text
-                      size="base"
-                      fontFamily="geist"
-                      className="leading-6 text-grey dark:text-grey-dark">
-                      {isDescriptionExpanded
-                        ? feed.description
-                        : `${feed.description.slice(0, 80)}... `}
-                      {!isDescriptionExpanded && (
-                        <Text
-                          size="base"
-                          fontFamily="geist-medium"
-                          onPress={toggleDescription}
-                          className="text-black dark:text-black-dark">
-                          more
-                        </Text>
-                      )}
-                    </Text>
-                    {isDescriptionExpanded && (
-                      <Pressable onPress={toggleDescription}>
-                        <Text
-                          size="base"
-                          fontFamily="geist-medium"
-                          className="mt-1 text-black dark:text-black-dark">
-                          less
-                        </Text>
-                      </Pressable>
-                    )}
-                  </>
-                ) : (
-                  <Text
-                    size="base"
-                    fontFamily="geist"
-                    className="leading-6 text-grey dark:text-grey-dark">
-                    {feed.description}
-                  </Text>
-                )}
-              </View>
-            )}
-
-            {/* Feed URL */}
-            {(feed.link || feed.url) && (
-              <Pressable onPress={handleUrlPress} className="mb-4 flex-row items-center gap-2">
-                <Monicon
-                  name="solar:link-minimalistic-2-bold"
-                  size={20}
-                  strokeWidth={2.4}
-                  color={colors.primary}
-                />
-                <Text
-                  size="sm"
-                  fontFamily="geist"
-                  className="flex-1 flex-shrink underline"
-                  style={{ color: colors.primary }}
-                  numberOfLines={1}>
-                  {feed.link || feed.url}
-                </Text>
-              </Pressable>
-            )}
-
-            {/* Feed Tags */}
-            {feed.tags && feed.tags.length > 0 && (
-              <View className="mb-6 flex-row flex-wrap items-center gap-2">
-                {feed.tags.slice(0, 5).map((tag: string | { name: string }, index: number) => {
-                  const tagName = typeof tag === 'string' ? tag : (tag as any)?.name || 'Tag';
-                  const formattedTag = tagName.replace(/\s+/g, '-');
-                  return (
-                    <View
-                      key={`${tagName}-${index.toString()}`}
-                      className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
-                      style={{ backgroundColor: colors.grey5 }}>
-                      <Text
-                        size="sm"
-                        fontFamily="geist"
-                        style={{ color: colors.grey, fontSize: 12 }}>
-                        #{formattedTag}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-
-            {/* Follow Button */}
-            <Button
-              onPress={handleFollowPress}
-              variant={isFollowing ? 'secondary' : 'primary'}
-              fullWidth
-              disabled={createFeed.isPending || deleteFeed.isPending}
-              loading={createFeed.isPending || deleteFeed.isPending}>
-              {createFeed.isPending
-                ? 'Following...'
-                : deleteFeed.isPending
-                  ? 'Unfollowing...'
-                  : isFollowing
-                    ? 'Unfollow'
-                    : 'Follow'}
-            </Button>
-          </View>
-
-          {/* Recent Articles */}
-          <View className="mb-8 mt-8">
-            <View className="mb-5 flex-row items-center justify-between px-6">
-              <Text
-                className="font-geist-medium tracking-heading text-lg text-black dark:text-black-dark">
-                Recent articles
-              </Text>
-              {articles.length > 0 && (
-                <Button
-                  variant="icon"
-                  size="small"
-                  fullWidth={false}
-                  onPress={handleShowMoreArticles}>
-                  <Monicon
-                    name="solar:alt-arrow-right-linear"
-                    size={18}
-                    strokeWidth={2.4}
-                    color={greyColor}
-                  />
-                </Button>
-              )}
-            </View>
-
-            {isArticlesLoading || isPreviewRefreshing || shouldWaitForPreview ? (
-              <View className="px-6">
-                <View className="flex-row gap-4">
-                  {Array.from({ length: 2 }, (_, i) => `article-load-skeleton-${i}`).map((key) => (
-                    <Skeleton key={key} variant="rectangle" width={CARD_WIDTH} height={200} />
-                  ))}
-                </View>
-              </View>
-            ) : articles.length > 0 ? (
-              <FlatList
-                data={articles}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 24 }}
-                snapToInterval={CARD_WIDTH + CARD_SPACING}
-                snapToAlignment="start"
-                decelerationRate="fast"
-                renderItem={({ item: article }) => (
-                  <Card
-                    variant="image-top"
-                    imageUrl={article.image_url || undefined}
-                    title={article.title}
-                    description={article.description || undefined}
-                    timestamp={
-                      article.published_at
-                        ? formatRelativeDate(new Date(article.published_at))
-                        : 'Unknown date'
-                    }
-                    faviconUrl={feed.image_url || undefined}
-                    feedName={feed.title || undefined}
-                    onPress={() => handleArticlePress(article.id)}
-                    className="mr-4"
-                    style={{ width: CARD_WIDTH }}
-                  />
-                )}
-                keyExtractor={(item) => item.id}
-              />
-            ) : (
-              <View className="px-6 py-8">
-                <Text className="text-center text-grey dark:text-grey-dark">
-                  No recent articles available
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* You might also like */}
-          <View className="px-6 pb-8">
-            <View className="mb-2 flex-row items-center justify-between">
-              <Text
-                className="font-geist-medium tracking-heading text-lg text-black dark:text-black-dark">
-                You might also like
-              </Text>
-              {similarFeeds.length > 0 && (
-                <Button
-                  variant="icon"
-                  size="small"
-                  fullWidth={false}
-                  onPress={handleShowMoreSimilarFeeds}>
-                  <Monicon
-                    name="solar:alt-arrow-right-linear"
-                    size={18}
-                    strokeWidth={2.4}
-                    color={greyColor}
-                  />
-                </Button>
-              )}
-            </View>
-
-            {isSimilarLoading ? (
-              <View className="gap-4">
-                {Array.from({ length: 3 }).map((_, index) => (
-                  <View key={index.toString()} className="flex-row gap-3 py-3">
-                    <View
-                      className="h-14 w-14 rounded-lg"
-                      style={{ backgroundColor: colors.grey5 }}
-                    />
-                    <View className="flex-1 gap-2">
-                      <View
-                        className="h-4 rounded"
-                        style={{
-                          width: '100%',
-                          backgroundColor: colors.grey5,
-                        }}
-                      />
-                      <View
-                        className="h-3 rounded"
-                        style={{
-                          width: '100%',
-                          backgroundColor: colors.grey5,
-                        }}
-                      />
-                    </View>
-                  </View>
-                ))}
-              </View>
-            ) : similarFeeds.length > 0 ? (
-              <View className="gap-2">
-                {similarFeeds.map((similarFeed) => (
-                  <FeedListItem
-                    key={similarFeed.id}
-                    feedId={similarFeed.id}
-                    title={similarFeed.title || 'Untitled Feed'}
-                    description={similarFeed.description || ''}
-                    iconUrl={similarFeed.image_url || undefined}
-                    isFollowing={similarFeed.is_subscribed || false}
-                    isPreview={similarFeed.is_preview}
-                    feedUrl={similarFeed.url}
-                    onFollowRequest={(url) => handleSimilarFeedFollowRequest(url)}
-                  />
-                ))}
-              </View>
-            ) : (
-              <Text className="text-center text-grey dark:text-grey-dark">
-                No similar feeds found
-              </Text>
-            )}
-          </View>
+          <FeedSimilarList
+            similarFeeds={similarFeeds}
+            isLoading={isSimilarLoading}
+            onShowMore={handleShowMoreSimilarFeeds}
+            onFollowRequest={handleSimilarFeedFollowRequest}
+            colors={colors}
+            greyColor={greyColor}
+          />
         </ScrollView>
       </View>
 

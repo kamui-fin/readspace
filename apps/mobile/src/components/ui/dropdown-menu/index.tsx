@@ -99,22 +99,22 @@ const DropdownMenuItemTitle = DropdownMenu.create(
     className?: string;
     size?: TextSize;
     fontFamily?:
-    | 'geist'
-    | 'geist-medium'
-    | 'geist-semibold'
-    | 'geist-bold'
-    | 'mono'
-    | 'mono-medium'
-    | 'mono-semibold'
-    | 'mono-bold'
-    | 'figtree'
-    | 'figtree-medium'
-    | 'figtree-semibold'
-    | 'figtree-bold'
-    | 'garamond'
-    | 'garamond-medium'
-    | 'garamond-semibold'
-    | 'garamond-bold';
+      | 'geist'
+      | 'geist-medium'
+      | 'geist-semibold'
+      | 'geist-bold'
+      | 'mono'
+      | 'mono-medium'
+      | 'mono-semibold'
+      | 'mono-bold'
+      | 'figtree'
+      | 'figtree-medium'
+      | 'figtree-semibold'
+      | 'figtree-bold'
+      | 'garamond'
+      | 'garamond-medium'
+      | 'garamond-semibold'
+      | 'garamond-bold';
   } & ComponentProps<typeof DropdownMenu.ItemTitle>) => {
     // If size or fontFamily props are provided, wrap in Text component
     // Otherwise, pass through to let ItemTitle handle rendering

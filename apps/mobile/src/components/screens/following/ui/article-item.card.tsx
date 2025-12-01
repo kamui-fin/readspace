@@ -16,7 +16,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { Card, type CardProps } from '../../../ui/card/index';
+import { Card, type CardProps } from '@components/ui/card/index';
 
 export interface SwipeAction {
   id: string;
@@ -27,6 +27,7 @@ export interface SwipeAction {
 
 export interface ArticleItemProps extends Omit<CardProps, 'variant'> {
   article?: Article;
+  fallbackComponent?: React.FC<{ size?: number; className?: string }>;
   leftActions?: SwipeAction[]; // Actions revealed when swiping right
   rightActions?: SwipeAction[]; // Actions revealed when swiping left
   // Legacy props for backward compatibility
@@ -51,6 +52,7 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
       showTopDivider = false,
       showBottomDivider = true,
       className,
+      fallbackComponent,
       ...cardProps
     },
     ref
@@ -437,6 +439,7 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
               {...restCardProps}
               className={className}
               onPress={handlePress}
+              fallbackComponent={fallbackComponent}
             />
           </Animated.View>
         </GestureDetector>

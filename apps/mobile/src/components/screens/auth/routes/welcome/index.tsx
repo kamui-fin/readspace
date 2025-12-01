@@ -92,7 +92,9 @@ export function WelcomeScreen() {
   };
 
   return (
-    <View className="dark:bg-screen_background flex-1 bg-background" style={{ paddingTop: insets.top }}>
+    <View
+      className="dark:bg-screen_background flex-1 bg-background"
+      style={{ paddingTop: insets.top }}>
       <View
         className="flex-1 items-start justify-center"
         style={{ paddingHorizontal: horizontalPadding, paddingTop: topPadding }}>
