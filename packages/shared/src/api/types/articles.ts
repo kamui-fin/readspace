@@ -29,7 +29,6 @@ export interface ArticleSummary {
   description: string | null; // Truncated to ~300 chars
   image_url: string | null;
   author: string | null;
-  estimated_read_time_minutes: number | null;
   source_domain: string | null;
 
   // User state
@@ -79,18 +78,18 @@ export interface SaveArticleResponse {
 
 export type CheckArticleSavedResponse =
   | {
-      is_saved: true;
-      article_id: string;
-      title: string | null;
-      note: string | null;
-      priority: Priority | null;
-      is_read: boolean;
-      read_at: string | null;
-    }
+    is_saved: true;
+    article_id: string;
+    title: string | null;
+    note: string | null;
+    priority: Priority | null;
+    is_read: boolean;
+    read_at: string | null;
+  }
   | {
-      is_saved: false;
-      article_id: null;
-    };
+    is_saved: false;
+    article_id: null;
+  };
 
 // ============= API Requests =============
 

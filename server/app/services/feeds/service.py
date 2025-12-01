@@ -33,7 +33,7 @@ from app.services.feeds.http_cache import parse_ttl_from_headers
 from app.services.feeds.language_detection import detect_feed_language
 from app.services.feeds.meilisearch import sync_feed
 from app.typing.entries import ArticleCreate
-from app.typing.feeds import FeedBase
+from app.typing.feeds import FeedBase, FeedCreateInternal
 from app.typing.subscriptions import SubscriptionCreate
 from app.utils.hashing import calculate_feed_content_hash
 from app.utils.urls import normalize_feed_url
@@ -108,18 +108,22 @@ async def add_feed(
         domain_score = get_domain_authority_score(normalized_url)
 
         # Prepare Feed Data
-        feed_in = FeedBase(
+        feed_in = FeedCreateInternal(
             url=normalized_url,
             title=parsed.title,
             description=parsed.description or "Follow recent articles from this feed",
             link=parsed.link,
             language=language,
             image_url=parsed.image_url,
-            author=parsed.author_name,
             last_fetched_at=datetime.now(timezone.utc),
-            last_updated_at=parsed.last_updated_at,
-            last_modified_header=fetch_result["headers"].get("Last-Modified"),
-            etag_header=fetch_result["headers"].get("ETag"),
+            last_updated_at=parsed.last_updated_at
+            or (
+                parsed.articles[0].published_at
+                if parsed.articles and parsed.articles[0].published_at
+                else None
+            ),
+            last_modified_header=fetch_result["headers"].get("last-modified"),
+            etag_header=fetch_result["headers"].get("etag"),
             content_hash=calculate_feed_content_hash(parsed.articles),
             popularity_score=domain_score.score,
             tags=parsed.tags,
@@ -236,10 +240,14 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID) -> None:
             "description": parsed.description,
             # "language": language, # Language should be stable after creation
             "image_url": parsed.image_url,
-            "author": parsed.author_name,
-            "last_updated_at": parsed.last_updated_at,
-            "last_modified": fetch_result["headers"].get("Last-Modified"),
-            "etag": fetch_result["headers"].get("ETag"),
+            "last_updated_at": parsed.last_updated_at
+            or (
+                parsed.articles[0].published_at
+                if parsed.articles and parsed.articles[0].published_at
+                else None
+            ),
+            "last_modified": fetch_result["headers"].get("last-modified"),
+            "etag": fetch_result["headers"].get("etag"),
         }
 
         if fetch_result.get("permanent_redirect") and final_url:

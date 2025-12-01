@@ -41,7 +41,9 @@ async def _fetch_favicons_batch(feed_snapshots: list[Any]) -> list[Any]:
 
 def _get_domain_authority_scores(feed_snapshots: list[Any]) -> dict[str, float]:
     """Calculate domain authority scores for a batch of feeds."""
-    unique_domains = list({snapshot.domain for snapshot in feed_snapshots if snapshot.domain})
+    unique_domains = list(
+        {snapshot.domain for snapshot in feed_snapshots if snapshot.domain}
+    )
     return get_domain_authority_scores_batch(unique_domains)
 
 
@@ -68,7 +70,6 @@ def _build_enriched_feed_documents(
             "title": snapshot.title,
             "link": snapshot.link,
             "image_url": snapshot.image_url,
-            "author": snapshot.author,
             "tags": update_data.get("tags", []),
             "top_level_category": update_data.get("top_level_category"),
             "description": update_data.get("description", snapshot.description),
@@ -90,10 +91,14 @@ async def _sync_feeds_to_meilisearch(
 
     try:
         settings = get_settings()
-        feeds_to_sync = _build_enriched_feed_documents(bulk_update_mappings, feed_snapshot_list)
+        feeds_to_sync = _build_enriched_feed_documents(
+            bulk_update_mappings, feed_snapshot_list
+        )
         if feeds_to_sync:
             await sync_feeds_batch(settings, feeds_to_sync)
-            logger.info("Synced enriched feeds to Meilisearch", count=len(feeds_to_sync))
+            logger.info(
+                "Synced enriched feeds to Meilisearch", count=len(feeds_to_sync)
+            )
     except Exception as e:
         logger.error("Failed to sync feeds to Meilisearch", error=str(e))
 
@@ -107,7 +112,9 @@ async def _process_enrichment_chunk(chunk_feeds: list[Any]) -> tuple[int, int]:
     # 1. Fetch Recent Article Texts (Quick DB Read)
     async with worker_db() as db:
         feed_ids = [feed.id for feed in chunk_feeds]
-        article_texts_by_feed = await fetch_recent_article_texts_for_feeds(db, feed_ids, limit=5)
+        article_texts_by_feed = await fetch_recent_article_texts_for_feeds(
+            db, feed_ids, limit=5
+        )
 
     # 2. Prepare Data (Pure CPU)
     feed_data_list, feed_snapshot_list = prepare_feed_snapshots(
@@ -152,7 +159,9 @@ async def batch_enrich_feeds() -> dict[str, Any]:
 
         # --- PHASE 1: Initial Fetch ---
         async with worker_db() as db:
-            feeds_to_enrich = await get_feeds_needing_enrichment(db, limit=MAX_FEEDS_BATCH_SIZE)
+            feeds_to_enrich = await get_feeds_needing_enrichment(
+                db, limit=MAX_FEEDS_BATCH_SIZE
+            )
 
         if not feeds_to_enrich:
             return {

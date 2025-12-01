@@ -19,7 +19,6 @@ class ExtractionResponse(BaseModel):
     """
 
     content: str | None = None
-    estimated_read_time_minutes: int | None = None
 
     # If extraction failed but we want to return partial data/metadata,
     # we can keep content as None. HTTP 422/500 handles hard failures.
@@ -34,7 +33,10 @@ class SummarizeRequest(BaseModel):
     If `content` is omitted, the backend uses the Entry's stored content.
     """
 
-    content: str | None = Field(None, description="Override content to summarize. If None, uses article content.")
+    content: str | None = Field(
+        None,
+        description="Override content to summarize. If None, uses article content.",
+    )
 
     # Optional: Allow user to specify length/format
     # format: Literal["bullet_points", "paragraph"] = "paragraph"
@@ -63,7 +65,10 @@ class SummarizeResponse(BaseModel):
 
 class TranslateRequest(BaseModel):
     target_language: LanguageCode
-    content: str | None = Field(None, description="Override content to translate. If None, uses article content.")
+    content: str | None = Field(
+        None,
+        description="Override content to translate. If None, uses article content.",
+    )
 
     @field_validator("content")
     @classmethod

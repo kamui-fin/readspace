@@ -306,18 +306,23 @@ def upgrade() -> None:
     """
     )
 
-    # Note: Attempting to attach to auth.users.
-    # This might fail if the migration user does not have permissions on the auth schema.
-    try:
-        op.execute(
-            """
-            CREATE TRIGGER on_auth_user_created
-            AFTER INSERT ON auth.users
-            FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+    op.execute(
         """
-        )
-    except Exception:
-        print("Warning: Could not create trigger on auth.users. Check permissions.")
+        CREATE TRIGGER on_auth_user_created
+        AFTER INSERT ON auth.users
+        FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+    """
+    )
+
+    # 7. Data Migration
+    op.execute(
+        """
+        INSERT INTO public.profiles (id, email, created_at, updated_at)
+        SELECT id, email, created_at, updated_at
+        FROM auth.users
+        ON CONFLICT (id) DO NOTHING;
+    """
+    )
 
 
 def downgrade() -> None:

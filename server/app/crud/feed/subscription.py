@@ -92,6 +92,8 @@ async def create_subscription(
 
     db.add(sub)
 
+    # Increment subscriber count handled by DB trigger
+
     await db.flush()
     await db.refresh(sub, ["feed", "folder"])
     return sub
@@ -121,8 +123,6 @@ async def get_subscriptions_by_user(
     user_id: UUID,
     folder_id: UUID | None = None,
     extended: bool = False,
-    skip: int = 0,
-    limit: int = 100,
 ) -> list[FeedSubscription]:
     stmt = select(FeedSubscription).filter(FeedSubscription.user_id == user_id)
 
@@ -146,7 +146,6 @@ async def get_subscriptions_by_user(
         FeedSubscription.custom_title.asc().nulls_last(),
         FeedSubscription.created_at.desc(),
     )
-    stmt = stmt.offset(skip).limit(limit)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -160,12 +159,7 @@ async def delete_subscription(
 
     await db.delete(sub)
 
-    # Decrement counter
-    await db.execute(
-        update(Feed)
-        .where(Feed.id == sub.feed_id, Feed.subscriber_count > 0)
-        .values(subscriber_count=Feed.subscriber_count - 1)
-    )
+    # Decrement counter handled by DB trigger
     return sub
 
 
@@ -193,14 +187,6 @@ async def bulk_delete_subscriptions(
         FeedSubscription.user_id == user_id,
     )
     await db.execute(delete_stmt)
-
-    # 3. Decrement subscriber counts
-    update_stmt = (
-        update(Feed)
-        .where(Feed.id.in_(valid_feed_ids), Feed.subscriber_count > 0)
-        .values(subscriber_count=Feed.subscriber_count - 1)
-    )
-    await db.execute(update_stmt)
 
     await db.flush()
     return valid_feed_ids

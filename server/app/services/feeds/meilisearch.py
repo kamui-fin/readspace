@@ -66,7 +66,6 @@ def feed_to_document(feed: Feed | dict[str, Any]) -> dict[str, Any]:
                 "tags": feed.tags if feed.tags is not None else [],
                 "top_level_category": feed.top_level_category,
                 "popularity_score": feed.popularity_score,
-                "author": feed.author,
             }
         )
     else:

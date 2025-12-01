@@ -30,7 +30,7 @@ async def _enrich_with_auto_extract(article: EntryDetail) -> EntryDetail:
         if article.link:
             logger.info("Auto-extracting content", article_id=article.id)
 
-            extracted, read_time, error = await scrape.extract_full_content(
+            extracted, error = await scrape.extract_full_content(
                 str(article.link), article.title
             )
 
@@ -39,7 +39,6 @@ async def _enrich_with_auto_extract(article: EntryDetail) -> EntryDetail:
                 return article.model_copy(
                     update={
                         "extracted_content": extracted,
-                        "extracted_read_time": read_time,
                     }
                 )
             else:

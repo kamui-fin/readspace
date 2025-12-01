@@ -93,12 +93,14 @@ async def fetch_feed_content(
 
         return {
             "content": "" if is_error or is_not_modified else response.text,
-            "headers": dict(response.headers),
+            "headers": {k.lower(): v for k, v in response.headers.items()},
             "status_code": response.status_code,
             "not_modified": is_not_modified,
             "error": f"HTTP {response.status_code}" if is_error else None,
             "final_url": str(response.url),
-            "permanent_redirect": any(h.status_code in (301, 308) for h in response.history),
+            "permanent_redirect": any(
+                h.status_code in (301, 308) for h in response.history
+            ),
         }
 
     except httpx.TimeoutException:

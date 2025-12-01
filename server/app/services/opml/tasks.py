@@ -130,6 +130,12 @@ async def list_user_tasks(user_id: str) -> list[OpmlTaskMetadata]:
                     expired_ids.append(task_id)
                 continue
 
+            if state.status == ImportStatus.CANCELLED:
+                # Clean up cancelled tasks immediately if found
+                await tracker.delete()
+                await repo.remove_ownership(task_id, user_id)
+                continue
+
             active_tasks.append(state.to_metadata())
 
         except Exception as e:
@@ -275,9 +281,9 @@ async def cancel_user_task(task_id: str, user_id: str) -> OpmlImportCancelRespon
     # 1. Signal workers to stop
     await tracker.cancel()
 
-    # 2. Update the metadata immediately so UI reflects it
-    # (Previously this was manual JSON manipulation in tasks.py)
-    await tracker.mark_cancelled()
+    # 2. Delete task data immediately
+    await tracker.delete()
+    await repo.remove_ownership(task_id, user_id)
 
     return OpmlImportCancelResponse(
         task_id=task_id,

@@ -57,7 +57,9 @@ def _get_trafilatura_config() -> ConfigParser:
 # ==============================================================================
 
 
-def _remove_duplicate_title_heading(soup: BeautifulSoup, article_title: str | None) -> None:
+def _remove_duplicate_title_heading(
+    soup: BeautifulSoup, article_title: str | None
+) -> None:
     """
     Remove the first heading if it matches the article title.
     Mutates the soup object.
@@ -132,7 +134,9 @@ def _fetch_and_extract(url: str, config: ConfigParser) -> str | None:
         return None
 
     # Extract with images allowed
-    return trafilatura.extract(downloaded, output_format="html", include_images=True, config=config)
+    return trafilatura.extract(
+        downloaded, output_format="html", include_images=True, config=config
+    )
 
 
 async def extract_full_content(
@@ -148,7 +152,7 @@ async def extract_full_content(
     4. Metrics (Read Time)
 
     Returns:
-        (content, read_time, error_message)
+        (content, error_message)
     """
     start_time = time.perf_counter()
     config = _get_trafilatura_config()
@@ -187,24 +191,19 @@ async def extract_full_content(
             url_schemes={"http", "https", "mailto", "data"},
         )
 
-        # 4. Calculate Read Time (on the final visible text)
-        read_time = calculate_reading_time(safe_content, default_wpm=200)
-        read_time = min(read_time, 60)  # Cap at 60m
-
         duration = time.perf_counter() - start_time
         logger.info(
             "Extracted full text",
             url=url,
             content_length=len(safe_content),
-            read_time=read_time,
             duration=round(duration, 3),
         )
 
-        return safe_content, read_time, None
+        return safe_content, None
 
     except asyncio.TimeoutError:
         logger.warning("Extraction timed out", url=url)
-        return None, None, f"Timed out after {CONTENT_EXTRACTION_TIMEOUT}s"
+        return None, f"Timed out after {CONTENT_EXTRACTION_TIMEOUT}s"
     except Exception as e:
         logger.error("Extraction failed", url=url, error=str(e))
-        return None, None, "Unexpected error during extraction"
+        return None, "Unexpected error during extraction"

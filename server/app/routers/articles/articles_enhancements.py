@@ -27,10 +27,15 @@ router = APIRouter()
 
 
 # --- Helpers ---
-async def get_article_or_404(db_factory: SessionFactory, article_id: UUID, user_id: UUID) -> Any:
+async def get_article_or_404(
+    db_factory: SessionFactory, article_id: UUID, user_id: UUID
+) -> Any:
     """Retrieves article details or raises NotFoundError."""
     article = await get_article_details(
-        db_factory=db_factory, article_id=article_id, user_id=user_id, allow_preview=False
+        db_factory=db_factory,
+        article_id=article_id,
+        user_id=user_id,
+        allow_preview=False,
     )
     if not article:
         raise NotFoundError(message="Article not found")
@@ -50,7 +55,9 @@ def resolve_content(request_content: str | None, article: Any) -> str:
 
 # --- Routes ---
 @router.post(
-    "/{article_id}/extract-full-text", response_model=ExtractionResponse, summary="Extract full text from source URL"
+    "/{article_id}/extract-full-text",
+    response_model=ExtractionResponse,
+    summary="Extract full text from source URL",
 )
 async def extract_full_text(
     article_id: UUID,
@@ -69,16 +76,20 @@ async def extract_full_text(
         raise ValidationError(message="Article has no source URL available")
 
     # 2. Extract (Service handles errors/exceptions)
-    content, read_time, error = await extract_full_content(str(article.link), article.title)
+    content, error = await extract_full_content(str(article.link), article.title)
 
     if error:
         # Mapping extraction specific logic error to HTTP 400
         raise ValidationError(message=error)
 
-    return ExtractionResponse(content=content, estimated_read_time_minutes=read_time)
+    return ExtractionResponse(content=content)
 
 
-@router.post("/{article_id}/summarize", response_model=SummarizeResponse, summary="Generate AI summary")
+@router.post(
+    "/{article_id}/summarize",
+    response_model=SummarizeResponse,
+    summary="Generate AI summary",
+)
 async def summarize_article(
     article_id: UUID,
     user: Annotated[TokenData, Depends(get_current_user)],
@@ -104,7 +115,11 @@ async def summarize_article(
     return SummarizeResponse(summary=summary)
 
 
-@router.post("/{article_id}/translate", response_model=TranslateResponse, summary="Translate article content")
+@router.post(
+    "/{article_id}/translate",
+    response_model=TranslateResponse,
+    summary="Translate article content",
+)
 async def translate_article(
     article_id: UUID,
     request: Annotated[TranslateRequest, Body(...)],
@@ -114,7 +129,11 @@ async def translate_article(
     """
     Translate the article content to a target language.
     """
-    logger.bind(article_id=str(article_id), user_id=user.sub, target_lang=str(request.target_language))
+    logger.bind(
+        article_id=str(article_id),
+        user_id=user.sub,
+        target_lang=str(request.target_language),
+    )
 
     # 1. Fetch & Resolve Content
     article = await get_article_or_404(db_factory, article_id, UUID(user.sub))
@@ -122,7 +141,9 @@ async def translate_article(
 
     # 2. Translate
     target_lang_str = (
-        request.target_language.value if hasattr(request.target_language, "value") else str(request.target_language)
+        request.target_language.value
+        if hasattr(request.target_language, "value")
+        else str(request.target_language)
     )
 
     translated_content = await translate_content(

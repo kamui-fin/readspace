@@ -109,11 +109,19 @@ export function useCreateFeed(
       ApiClient.createFeed(feed),
     onSuccess: (newSubscription) => {
       // Update feeds list with new subscription
-      queryClient.setQueryData<Subscription[] | SubscriptionExtended[]>(
+      queryClient.setQueryData<FeedsResponse>(
         queryKeys.feeds(),
         (old) => {
-          if (!old) return [newSubscription];
-          return [...old, newSubscription];
+          if (!old) {
+            return {
+              subscriptions: [newSubscription],
+              folders: [],
+            };
+          }
+          return {
+            ...old,
+            subscriptions: [...old.subscriptions, newSubscription],
+          };
         },
       );
     },

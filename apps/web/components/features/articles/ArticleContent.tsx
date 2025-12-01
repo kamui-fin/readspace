@@ -108,10 +108,8 @@ export function ArticleContent({
             setClientReadTime(estimateReadTime(displayContent))
         } else if (article.description) {
             setClientReadTime(estimateReadTime(article.description))
-        } else {
-            setClientReadTime(article.estimated_read_time_minutes || 0)
         }
-    }, [displayContent, article.description, article.estimated_read_time_minutes])
+    }, [displayContent, article.description])
 
     // Local state for AI summary dismissal
     const [isAiSummaryDismissed, setIsAiSummaryDismissed] = useState(false)

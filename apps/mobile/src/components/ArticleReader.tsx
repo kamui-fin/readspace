@@ -439,8 +439,8 @@ export function ArticleReader({
         if (article.content) {
             return calculateReadingTime(article.content);
         }
-        return article.estimated_read_time_minutes || 1;
-    }, [article.content, article.estimated_read_time_minutes]);
+        return 1;
+    }, [article.content]);
 
     const readTime = `${readTimeMinutes} min read`;
 

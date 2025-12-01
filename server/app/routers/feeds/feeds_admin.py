@@ -35,7 +35,9 @@ router = APIRouter()
 )
 async def admin_update_feed(
     feed_id: UUID,
-    feed_in: Annotated[AdminFeedUpdate, Body(..., description="Global feed properties to update")],
+    feed_in: Annotated[
+        AdminFeedUpdate, Body(..., description="Global feed properties to update")
+    ],
     admin_profile: Annotated[Profile, Depends(get_current_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> FeedDetail:
@@ -46,7 +48,9 @@ async def admin_update_feed(
     feed = await get_feed_by_id(db, feed_id=feed_id)
     if not feed:
         log.warning("Admin attempted to update non-existent feed")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND
+        )
 
     # 3. Perform Update
     try:
@@ -62,7 +66,6 @@ async def admin_update_feed(
             top_level_category=feed_in.top_level_category,
             popularity_score=feed_in.popularity_score,
             tags=feed_in.tags,
-            author=feed_in.author,
         )
 
         # Sync to Meilisearch after admin update
@@ -78,7 +81,9 @@ async def admin_update_feed(
 
     except ValueError as e:
         log.warning("Invalid feed update data", error=str(e))
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
     except Exception as e:
         log.error("Error updating global feed", error=str(e), exc_info=True)
         raise HTTPException(
@@ -111,7 +116,9 @@ async def admin_delete_feed(
     deleted = await crud_delete_feed(db, feed_id=feed_id)
     if not deleted:
         log.warning("Admin attempted to delete non-existent feed")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND
+        )
 
     # 3. Search Index Deletion (Best Effort)
     try:

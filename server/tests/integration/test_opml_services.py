@@ -263,12 +263,14 @@ class TestOpmlServiceIntegration:
         resp = await cancel_user_task(task_id, user_id)
         assert resp.cancelled is True
 
-        # Verify tracker state
-        assert await tracker.is_cancelled()
-
-        # Verify metadata updated
+        # Verify tracker state is gone (deleted)
         state = await tracker.get_state()
-        assert state.status == ImportStatus.CANCELLED
+        assert state is None
+
+        # Verify ownership is gone
+        repo = TaskRepository()
+        owner = await repo.get_owner(task_id)
+        assert owner is None
 
     async def test_cancel_already_completed_task(self, redis_client):
         user_id = f"user-{uuid4()}"

@@ -17,7 +17,6 @@ export interface FeedSummary extends FeedBase {
 export interface FeedDetail extends FeedSummary {
   description: string | null;
   language: string | null;
-  author: string | null;
 
   // Fetching Logic
   last_fetched_at: string | null;

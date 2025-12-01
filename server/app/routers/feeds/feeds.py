@@ -67,7 +67,6 @@ async def list_feeds(
     tag_names: list[str] | None = Query(None, description="Filter by tags (AND logic)"),
     is_favorite: bool | None = Query(None, description="Filter by favorite status"),
     extended: bool = Query(False, description="Return full feed details"),
-    skip: int = Query(0, ge=0),
 ) -> FeedsResponse:
     """
     Retrieve all RSS feeds the user is subscribed to with optional filtering.
@@ -82,8 +81,6 @@ async def list_feeds(
         user_id=user_uuid,
         folder_id=folder_id,
         extended=extended,
-        skip=skip,
-        limit=100,
     )
 
     # 2. Fetch Folders (only if not filtering by specific folder)

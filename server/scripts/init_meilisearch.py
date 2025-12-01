@@ -79,7 +79,11 @@ async def check_index_exists(client: AsyncClient, index_name: str) -> bool:
 
 
 async def configure_meilisearch_index(
-    client: AsyncClient, index_name: str, settings: Settings, force: bool = False, embedders_only: bool = False
+    client: AsyncClient,
+    index_name: str,
+    settings: Settings,
+    force: bool = False,
+    embedders_only: bool = False,
 ) -> None:
     """
     Configure Meilisearch index with all necessary settings.
@@ -101,7 +105,9 @@ async def configure_meilisearch_index(
     if not embedders_only:
         # Check if already configured (unless force is True)
         if not force and await check_index_exists(client, index_name):
-            logger.info("meilisearch_index_already_configured_skipping", index=index_name)
+            logger.info(
+                "meilisearch_index_already_configured_skipping", index=index_name
+            )
             return
 
     # Create or get existing index
@@ -124,7 +130,7 @@ async def configure_meilisearch_index(
         if not settings.ENABLE_AI:
             logger.error("cannot_sync_embeddings_ai_disabled")
             raise RuntimeError("ENABLE_AI must be true to sync embeddings")
-        
+
         settings_dict = {
             "embedders": {
                 "default": {
@@ -151,57 +157,57 @@ async def configure_meilisearch_index(
     else:
         # Base settings configuration
         settings_dict = {
-        # Fields that can be searched with full-text search
-        "searchable_attributes": [
-            "title",
-            "description",
-            "tags",
-            "url",
-            "link",
-        ],
-        # Fields that can be used in filter expressions
-        "filterable_attributes": [
-            "language",
-            "top_level_category",
-        ],
-        # Fields that can be used for sorting
-        "sortable_attributes": [
-            "popularity_score",
-        ],
-        # Fields to return in search results
-        "displayed_attributes": [
-            "id",
-            "url",
-            "title",
-            "description",
-            "link",
-            "language",
-            "image_url",
-            "tags",
-            "top_level_category",
-            "popularity_score",
-        ],
-        # Ranking rules - order matters!
-        "ranking_rules": [
-            "words",  # Number of matched query terms
-            "typo",  # Fewer typos = better rank
-            "proximity",  # Proximity of query terms
-            "attribute",  # Match in important attributes (title > desc)
-            "sort",  # Custom sort criterion
-            "exactness",  # Exact matches ranked higher
-            "popularity_score:desc",  # Custom: Popular feeds ranked higher
-        ],
-        # Enable typo tolerance for better search UX
-        "typo_tolerance": {
-            "enabled": True,
-            "minWordSizeForTypos": {
-                "oneTypo": 4,
-                "twoTypos": 8,
+            # Fields that can be searched with full-text search
+            "searchable_attributes": [
+                "title",
+                "description",
+                "tags",
+                "url",
+                "link",
+            ],
+            # Fields that can be used in filter expressions
+            "filterable_attributes": [
+                "language",
+                "top_level_category",
+            ],
+            # Fields that can be used for sorting
+            "sortable_attributes": [
+                "popularity_score",
+            ],
+            # Fields to return in search results
+            "displayed_attributes": [
+                "id",
+                "url",
+                "title",
+                "description",
+                "link",
+                "language",
+                "image_url",
+                "tags",
+                "top_level_category",
+                "popularity_score",
+            ],
+            # Ranking rules - order matters!
+            "ranking_rules": [
+                "words",  # Number of matched query terms
+                "typo",  # Fewer typos = better rank
+                "proximity",  # Proximity of query terms
+                "attribute",  # Match in important attributes (title > desc)
+                "sort",  # Custom sort criterion
+                "exactness",  # Exact matches ranked higher
+                "popularity_score:desc",  # Custom: Popular feeds ranked higher
+            ],
+            # Enable typo tolerance for better search UX
+            "typo_tolerance": {
+                "enabled": True,
+                "minWordSizeForTypos": {
+                    "oneTypo": 4,
+                    "twoTypos": 8,
+                },
             },
-        },
-        # Pagination settings
-        "pagination": {"maxTotalHits": 500},
-    }
+            # Pagination settings
+            "pagination": {"maxTotalHits": 500},
+        }
 
         # Configure embedders only if AI is enabled
         if settings.ENABLE_AI:
@@ -237,7 +243,7 @@ async def configure_meilisearch_index(
     task = await index.update_settings(settings_config)
     logger.info("update_settings_task_received", task_uid=task.task_uid)
     await client.wait_for_task(task.task_uid)
-    
+
     if embedders_only:
         logger.info("embeddings_sync_complete", index=index_name)
         # Get stats to show indexing progress
@@ -300,7 +306,9 @@ async def sync_embeddings() -> None:
 
     if not settings.ENABLE_AI:
         logger.error("ai_not_enabled")
-        raise RuntimeError("ENABLE_AI must be set to true in your environment to sync embeddings")
+        raise RuntimeError(
+            "ENABLE_AI must be set to true in your environment to sync embeddings"
+        )
 
     client = get_client(settings)
     index_name = settings.MEILISEARCH_INDEX_NAME
@@ -310,11 +318,15 @@ async def sync_embeddings() -> None:
     exists = await check_index_exists(client, index_name)
     if not exists:
         logger.error("index_not_found_cannot_sync")
-        raise RuntimeError("Index must exist before syncing embeddings. Run init first.")
+        raise RuntimeError(
+            "Index must exist before syncing embeddings. Run init first."
+        )
 
     # Update settings to add embedders
-    await configure_meilisearch_index(client, index_name, settings, force=False, embedders_only=True)
-    
+    await configure_meilisearch_index(
+        client, index_name, settings, force=False, embedders_only=True
+    )
+
     logger.info(
         "embeddings_sync_initiated",
         note="Meilisearch will generate embeddings in the background. Check status with --check",
@@ -334,9 +346,7 @@ async def migrate_feeds(batch_size: int = 5) -> None:
     settings = Settings()
 
     # Use synchronous connection string by converting async URL
-    db_url = settings.SUPABASE_DB_CONNECTION.replace(
-        "postgresql+asyncpg://", "postgresql://"
-    )
+    db_url = settings.DATABASE_URL_API.replace("postgresql+asyncpg://", "postgresql://")
 
     client = get_client(settings)
     index_name = settings.MEILISEARCH_INDEX_NAME

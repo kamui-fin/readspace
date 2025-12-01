@@ -49,14 +49,18 @@ async def import_opml(
         total_feeds = len(feeds)
 
         # 3. Init Tracker with metadata
+        # 3. Init Tracker with metadata
         if task_id:
-            await tracker.initialize(
-                user_id=str(user_id),
-                filename=filename or "unknown.opml",
-                total_feeds=total_feeds,
-                opml_title=opml_title,
-                opml_author=opml_author,
-            )
+            # Check if already initialized by API handler to avoid resetting state
+            state = await tracker.get_state()
+            if not state:
+                await tracker.initialize(
+                    user_id=str(user_id),
+                    filename=filename or "unknown.opml",
+                    total_feeds=total_feeds,
+                    opml_title=opml_title,
+                    opml_author=opml_author,
+                )
 
         if not feeds:
             return {"status": ImportStatus.COMPLETED.value, "message": "No feeds found"}

@@ -266,3 +266,13 @@ class OpmlImportTracker:
         )
 
         await r.setex(self.key_meta, self._ttl, orjson.dumps(meta))
+
+    async def delete(self) -> None:
+        """Deletes all Redis keys associated with this task."""
+        async with self._client() as r:
+            async with r.pipeline() as pipe:
+                pipe.delete(self.key_meta)
+                pipe.delete(self.key_counters)
+                pipe.delete(self.key_errors)
+                pipe.delete(self.key_cancel)
+                await pipe.execute()

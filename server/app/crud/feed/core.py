@@ -40,7 +40,9 @@ def normalize_url(url: str) -> str:
         scheme = "https" if parsed.scheme in ("http", "https") else parsed.scheme
         netloc = parsed.netloc.lower()
         path = parsed.path.rstrip("/") if parsed.path else ""
-        return urlunparse((scheme, netloc, path, parsed.params, parsed.query, parsed.fragment))
+        return urlunparse(
+            (scheme, netloc, path, parsed.params, parsed.query, parsed.fragment)
+        )
     except Exception:
         return url
 
@@ -111,7 +113,11 @@ async def create_feed(db: AsyncSession, *, feed_data: FeedBase) -> Feed:
     # Initialize scheduling
     now = datetime.now(timezone.utc)
     db_feed = Feed(**feed_dict)
-    db_feed.last_fetched_at = None
+    # Respect provided last_fetched_at or default to None (though model has server_default=func.now())
+    # If explicitly passed as None in feed_dict, it stays None until flush/refresh if server_default kicks in.
+    # But here we were forcing it to None. Let's respect the input.
+    if "last_fetched_at" not in feed_dict:
+        db_feed.last_fetched_at = None
     db_feed.next_fetch_at = now  # Fetch immediately
 
     db.add(db_feed)
@@ -120,7 +126,9 @@ async def create_feed(db: AsyncSession, *, feed_data: FeedBase) -> Feed:
     return db_feed
 
 
-async def get_recent_article_publication_times(db: AsyncSession, *, feed_id: UUID, limit: int = 30) -> list[datetime]:
+async def get_recent_article_publication_times(
+    db: AsyncSession, *, feed_id: UUID, limit: int = 30
+) -> list[datetime]:
     """
     Get recent article publication times for a feed.
 
@@ -179,16 +187,21 @@ async def update_feed_after_fetch(
     Unified handler for post-fetch state updates.
     Updates metadata AND recalculates the next schedule.
     """
+    # Always update last_fetched_at to reflect the attempt
+    feed.last_fetched_at = datetime.now(timezone.utc)
+
     if success:
         feed.fetch_error_count = 0
         feed.last_error_message = None
-        feed.last_fetched_at = datetime.now(timezone.utc)
 
         if metadata:
             # Update standard fields
             for key in ["title", "description", "link", "language", "image_url"]:
                 if val := metadata.get(key):
                     setattr(feed, key, str(val))
+
+            if val := metadata.get("last_updated_at"):
+                feed.last_updated_at = val
 
             # Update HTTP caching headers
             if "etag" in metadata:
@@ -221,11 +234,15 @@ async def update_feed(db: AsyncSession, *, feed: Feed, update_data: dict) -> Fee
     return feed
 
 
-async def update_enrichment_data(db: AsyncSession, *, feed: Feed, enrichment: dict) -> Feed:
+async def update_enrichment_data(
+    db: AsyncSession, *, feed: Feed, enrichment: dict
+) -> Feed:
     """Update AI-derived metadata (Categories, Tags)."""
     if "top_level_category" in enrichment:
         try:
-            feed.top_level_category = FeedCategory(enrichment["top_level_category"]).value
+            feed.top_level_category = FeedCategory(
+                enrichment["top_level_category"]
+            ).value
         except ValueError:
             pass
 
@@ -252,7 +269,6 @@ async def admin_update_feed(
     top_level_category: str | FeedCategory | None = None,
     popularity_score: float | None = None,
     tags: list[str] | None = None,
-    author: str | None = None,
 ) -> Feed:
     """
     Admin-only function to update global feed properties.
@@ -290,10 +306,6 @@ async def admin_update_feed(
     # Handle tags
     if tags is not None:
         feed.tags = tags
-
-    # Handle author
-    if author is not None:
-        feed.author = author
 
     db.add(feed)
     await db.flush()
@@ -333,7 +345,9 @@ async def get_feeds_needing_enrichment(db: AsyncSession, *, limit: int) -> list[
     return list(result.scalars().all())
 
 
-async def bulk_update_feeds_enrichment(db: AsyncSession, *, update_mappings: list[dict[str, Any]]) -> int:
+async def bulk_update_feeds_enrichment(
+    db: AsyncSession, *, update_mappings: list[dict[str, Any]]
+) -> int:
     """
     Apply bulk updates to feeds for enrichment data.
 

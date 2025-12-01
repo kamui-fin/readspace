@@ -58,7 +58,6 @@ class EntryListItem(ContentFields, UserStateFields, FeedContextFields):
     id: UUID
     source_domain: str | None = None
     created_at: datetime
-    article_type: str = "feed"  # Deprecated: for backward compatibility
 
     # Override to exclude heavy fields in lists
     description: str | None = Field(None, description="Truncated preview")
@@ -76,7 +75,6 @@ class EntryDetail(ContentFields, UserStateFields, FeedContextFields):
     id: UUID
     source_domain: str | None = None
     created_at: datetime
-    article_type: str = "feed"  # Deprecated: for backward compatibility
 
     # Full fields (not truncated)
     description: str | None = None
@@ -84,7 +82,6 @@ class EntryDetail(ContentFields, UserStateFields, FeedContextFields):
 
     # Auto-extraction fields (added by service layer)
     extracted_content: str | None = None
-    extracted_read_time: int | None = None
 
 
 # ================= API Requests =================

@@ -51,6 +51,18 @@ class AdminFeedUpdate(BaseModel):
     tags: list[str] | None = None
 
 
+class FeedCreateInternal(FeedBase):
+    """Internal schema for creating a feed with full metadata."""
+
+    last_fetched_at: datetime | None = None
+    last_updated_at: datetime | None = None
+    last_modified_header: str | None = None
+    etag_header: str | None = None
+    content_hash: str | None = None
+    popularity_score: float = 0.0
+    tags: list[str] = Field(default_factory=list)
+
+
 # ================= Responses =================
 
 

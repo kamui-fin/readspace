@@ -95,7 +95,6 @@ class ArticleTransformer:
             content=None,  # Never in lists
             image_url=content.image_url,
             author=content.author,
-            estimated_read_time_minutes=content.estimated_read_time_minutes,
             source_domain=extract_domain_from_url(content.link),
             is_read=is_read,
             is_saved=user_entry.is_saved if user_entry else False,
@@ -135,7 +134,6 @@ class ArticleTransformer:
             content=content.content,  # Full content
             image_url=content.image_url,
             author=content.author,
-            estimated_read_time_minutes=content.estimated_read_time_minutes,
             source_domain=extract_domain_from_url(content.link),
             is_read=is_read,
             is_saved=user_entry.is_saved if user_entry else False,
@@ -164,7 +162,6 @@ class ArticleTransformer:
             content=None,
             image_url=content.image_url,
             author=content.author,
-            estimated_read_time_minutes=content.estimated_read_time_minutes,
             source_domain=extract_domain_from_url(content.link),
             is_read=user_entry.is_read,
             is_saved=user_entry.is_saved,
@@ -193,7 +190,6 @@ class ArticleTransformer:
             content=content.content,
             image_url=content.image_url,
             author=content.author,
-            estimated_read_time_minutes=content.estimated_read_time_minutes,
             source_domain=extract_domain_from_url(content.link),
             is_read=user_entry.is_read,
             is_saved=user_entry.is_saved,

@@ -43,10 +43,6 @@ async def create_articles_batch(
                     "image_url": (
                         str(article_in.image_url) if article_in.image_url else None
                     ),
-                    "estimated_read_time_minutes": getattr(
-                        article_in, "estimated_read_time_minutes", None
-                    )
-                    or 0,
                 }
             )
             link_to_article[link_str] = article_in
@@ -144,7 +140,6 @@ async def upsert_article_content(
         "content": article_in.content,
         "author": article_in.author,
         "image_url": str(article_in.image_url) if article_in.image_url else None,
-        "estimated_read_time_minutes": article_in.estimated_read_time_minutes or 0,
     }
 
     stmt = pg_insert(ArticleContent).values(values)
@@ -155,7 +150,6 @@ async def upsert_article_content(
             set_={
                 "title": stmt.excluded.title,
                 "image_url": stmt.excluded.image_url,
-                "estimated_read_time_minutes": stmt.excluded.estimated_read_time_minutes,
                 "description": stmt.excluded.description,
                 "content": stmt.excluded.content,
             },
