@@ -63,16 +63,22 @@ export function useArticleAI({
             setContentView(ContentView.Extracted)
         },
         handleSummarize: async () => {
+            const languageKey =
+                contentView === ContentView.Translated && currentTranslation
+                    ? currentTranslation.language
+                    : "original"
+
             await summarizeMutation.mutateAsync({
                 articleId: article.id,
-                content: activeContent || contentForAI,
+                // Content is fetched by backend to save bandwidth
+                languageKey,
             })
         },
         handleTranslate: async (language: string) => {
             const result = await translateMutation.mutateAsync({
                 articleId: article.id,
                 targetLanguage: language,
-                content: contentForAI,
+                // Content is fetched by backend to save bandwidth
             })
             setCurrentTranslation({
                 content: result.translated_content,

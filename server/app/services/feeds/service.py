@@ -50,7 +50,7 @@ async def add_feed(
     url: str,
     folder_id: UUID,
     custom_title: str | None = None,
-) -> Any:
+) -> tuple[Any, bool]:
     """
     Add a new feed, fetch initial content, and subscribe the user.
     """
@@ -183,7 +183,7 @@ async def add_feed(
             db, feed=created_feed, update_data={"next_fetch_at": next_fetch}
         )
 
-        sub = await _subscribe_to_existing_feed(
+        sub, created = await _subscribe_to_existing_feed(
             db, user_id, created_feed, folder_id, custom_title
         )
 
@@ -195,7 +195,7 @@ async def add_feed(
             "Meilisearch sync failed", feed_id=str(created_feed.id), error=str(e)
         )
 
-    return sub
+    return sub, created
 
 
 async def refresh_feed(session_factory: SessionFactory, feed_id: UUID) -> None:
@@ -275,7 +275,6 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID) -> None:
         metadata = {
             "title": parsed.title,
             "description": parsed.description,
-            # "language": language, # Language should be stable after creation
             "image_url": parsed.image_url,
             "last_updated_at": parsed.last_updated_at
             or (
@@ -330,18 +329,19 @@ async def _subscribe_to_existing_feed(
     feed: Feed,
     folder_id: UUID,
     custom_title: str | None,
-) -> Any:
+) -> tuple[Any, bool]:
     existing = await get_subscription_by_feed_id(db, feed_id=feed.id, user_id=user_id)
     if existing:
-        return existing
+        return existing, False
 
     sub_in = SubscriptionCreate(
         url=str(feed.url), folder_id=folder_id, custom_title=custom_title
     )
 
-    return await create_subscription(
+    new_sub = await create_subscription(
         db, subscription_in=sub_in, user_id=user_id, feed_db=feed
     )
+    return new_sub, True
 
 
 async def _save_articles(

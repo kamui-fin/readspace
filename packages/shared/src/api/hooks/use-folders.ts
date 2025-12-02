@@ -1,9 +1,7 @@
 import {
   useMutation,
-  useQuery,
   useQueryClient,
   type UseMutationOptions,
-  type UseQueryOptions,
 } from "@tanstack/react-query";
 import { ApiClient } from "../client";
 import { RSS_QUERY_KEYS, mutationKeys, queryKeys } from "../query-keys";

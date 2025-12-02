@@ -14,6 +14,8 @@ function getManifest(mode: string) {
   return JSON.parse(readFileSync(manifestPath, 'utf-8'))
 }
 
+import tailwindcss from '@tailwindcss/vite'
+
 export default defineConfig(({ mode }) => {
   const isFirefox = mode === 'firefox'
   const manifest = getManifest(mode)
@@ -21,6 +23,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
+      tailwindcss(),
       crx({
         manifest,
       }),

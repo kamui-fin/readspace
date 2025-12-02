@@ -12,6 +12,7 @@ export * from "./types/feeds";
 export * from "./types/articles";
 export * from "./types/folders";
 export * from "./types/opml";
+export * from "../utils/reading-time";
 
 import { ApiClientConfig } from "./core";
 

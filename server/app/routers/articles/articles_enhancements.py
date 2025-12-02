@@ -21,6 +21,7 @@ from app.typing.enhancements import (
     TranslateResponse,
 )
 from app.typing.user import TokenData
+from app.utils.text import is_content_complete
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -44,10 +45,15 @@ async def get_article_or_404(
 
 def resolve_content(request_content: str | None, article: Any) -> str:
     """
-    Resolves content source priority: Request Body > Article Content > Description.
+    Resolves content source priority: Request Body > Extracted > Article Content > Description.
     Raises ValidationError if no content is found.
     """
-    content = request_content or article.content or article.description
+    content = (
+        request_content
+        or getattr(article, "extracted_content", None)
+        or article.content
+        or article.description
+    )
     if not content:
         raise ValidationError(message="No content available to process")
     return content
@@ -105,8 +111,20 @@ async def summarize_article(
     article = await get_article_or_404(db_factory, article_id, UUID(user.sub))
     content_to_use = resolve_content(request.content, article)
 
+    # 1.5. Auto-extract if content is short/incomplete
+    if not is_content_complete(content_to_use) and article.link:
+        logger.info("Auto-extracting for summary", article_id=str(article_id))
+        extracted, error = await extract_full_content(str(article.link), article.title)
+        if extracted and not error:
+            content_to_use = extracted
+
     # 2. Generate Summary
-    summary = await generate_summary(title=article.title or "", content=content_to_use)
+    summary = await generate_summary(
+        title=article.title or "",
+        content=content_to_use,
+        article_id=str(article_id),
+        language_key=request.language_key or "original",
+    )
 
     if not summary:
         raise ValidationError(message="Failed to generate summary")

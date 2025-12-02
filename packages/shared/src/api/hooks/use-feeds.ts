@@ -8,11 +8,8 @@ import {
 import { ApiClient } from "../client";
 import { RSS_QUERY_KEYS, mutationKeys, queryKeys } from "../query-keys";
 import type {
-  ArticleCountsResponse,
   FeedDetail,
-  FeedSummary,
   Subscription,
-  SubscriptionExtended,
   FeedDiscoveryResult,
   FeedsResponse,
 } from "../types";

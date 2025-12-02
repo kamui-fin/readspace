@@ -121,6 +121,13 @@ export interface ContentExtractionResult {
   estimated_read_time: number;
 }
 
+export interface DiscoveredFeed {
+  url: string;
+  title?: string;
+  description?: string;
+  type: "rss" | "atom" | "json";
+}
+
 export interface PageMetadata {
   title?: string;
   description?: string;
@@ -129,12 +136,7 @@ export interface PageMetadata {
   image_url?: string;
   favicon?: string;
   canonical_url?: string;
-  feeds?: Array<{
-    url: string;
-    title?: string;
-    description?: string;
-    type: "rss" | "atom" | "json";
-  }>;
+  feeds?: DiscoveredFeed[];
 }
 
 export interface SaveOptions {
@@ -160,6 +162,7 @@ export type TranslateResponse = {
 
 export type SummarizeRequest = {
   content?: string;
+  language_key?: string;
 };
 
 export type TranslateRequest = {

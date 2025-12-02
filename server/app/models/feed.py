@@ -65,8 +65,12 @@ class Feed(Base):
     last_updated_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
-    articles = relationship("FeedArticle", back_populates="feed")
-    subscriptions = relationship("FeedSubscription", back_populates="feed")
+    articles = relationship(
+        "FeedArticle", back_populates="feed", cascade="all, delete-orphan"
+    )
+    subscriptions = relationship(
+        "FeedSubscription", back_populates="feed", cascade="all, delete-orphan"
+    )
 
 
 class FeedSubscription(Base):

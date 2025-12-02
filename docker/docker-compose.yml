@@ -35,6 +35,9 @@ services:
       timeout: 10s
       retries: 5
       start_period: 10s
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
 
   web:
     build:

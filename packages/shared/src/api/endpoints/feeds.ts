@@ -1,5 +1,5 @@
 import { ApiClient } from "../core";
-import { FeedDetail, Subscription, SubscriptionExtended, FeedsResponse } from "../types/feeds";
+import { FeedDetail, Subscription, FeedsResponse } from "../types/feeds";
 
 export const feeds = {
   getFeeds: (params?: {

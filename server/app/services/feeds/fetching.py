@@ -19,8 +19,8 @@ logger = structlog.get_logger(__name__)
 
 # 30 minutes cache for feed content
 FEED_CACHE_TTL = 1800
-# 2MB limit for feed content
-MAX_FEED_SIZE_BYTES = 2 * 1024 * 1024
+# 50MB limit for feed content
+MAX_FEED_SIZE_BYTES = 50 * 1024 * 1024
 
 
 class FetchResult(TypedDict):

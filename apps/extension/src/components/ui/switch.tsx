@@ -1,6 +1,6 @@
 import * as SwitchPrimitive from '@radix-ui/react-switch'
 import * as React from 'react'
-import { cn } from '@readspace/shared'
+import { cn } from '@/utils/cn'
 
 function Switch({
   className,

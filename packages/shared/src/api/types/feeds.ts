@@ -90,3 +90,6 @@ export interface FeedsResponse {
   subscriptions: Subscription[] | SubscriptionExtended[];
   folders: Folder[];
 }
+
+export type Feed = Subscription;
+

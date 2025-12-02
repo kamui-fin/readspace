@@ -32,7 +32,9 @@ def _get_client() -> genai.Client | None:
     return None
 
 
-async def generate_summary(title: str, content: str) -> str | None:
+async def generate_summary(
+    title: str, content: str, article_id: str, language_key: str = "original"
+) -> str | None:
     """Generate a summary with caching."""
     client = _get_client()
     if not client:
@@ -42,12 +44,19 @@ async def generate_summary(title: str, content: str) -> str | None:
     clean_text = clean_html_text(content)[:MAX_AI_INPUT_CHARS]
 
     # 2. Cache Check
-    cache_key = _make_cache_key("summary", f"{title}:{clean_text}")
+    # Cache key based on article_id and language_key, NOT content hash
+    cache_key = _make_cache_key("summary", f"{article_id}:{language_key}")
     if cached := await redis_cache.get(cache_key):
         return cached
 
     # 3. Generate
-    user_prompt = f"Title: {title}\n\nContent: {clean_text}\n\nProvide a summary in the same language as the content."
+    user_prompt = f"Title: {title}\n\nContent: {clean_text}\n\nProvide a summary."
+
+    if language_key and language_key != "original":
+        target_lang = _get_lang_name(language_key)
+        user_prompt += f" The summary must be in {target_lang}."
+    else:
+        user_prompt += " The summary must be in the same language as the content."
 
     result = await _call_gemini(
         client,
@@ -86,7 +95,9 @@ async def translate_content(content: str, target_lang_code: str) -> str | None:
 
     if result:
         # Cleanup potential markdown fences
-        result = re.sub(r"^```(?:html)?\n|\n```$", "", result.strip(), flags=re.MULTILINE)
+        result = re.sub(
+            r"^```(?:html)?\n|\n```$", "", result.strip(), flags=re.MULTILINE
+        )
         await redis_cache.set(cache_key, result, ttl_seconds=AI_CACHE_TTL)
 
     return result

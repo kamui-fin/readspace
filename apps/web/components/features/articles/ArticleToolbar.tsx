@@ -49,6 +49,8 @@ interface ArticleToolbarProps {
     isReadLaterMode: boolean
     translatedContent: string | null
     translatedLanguage: string | null
+    isSaved?: boolean
+    isRead?: boolean
 }
 
 export function ArticleToolbar({
@@ -68,11 +70,15 @@ export function ArticleToolbar({
     isReadLaterMode,
     translatedContent,
     translatedLanguage,
+    isSaved,
+    isRead,
 }: ArticleToolbarProps) {
     const [showLanguageSelector, setShowLanguageSelector] = useState(false)
     const isMobile = useIsMobile()
 
     const hasTranslatedContent = !!translatedContent
+    const effectiveIsSaved = isSaved ?? article.is_saved
+    const effectiveIsRead = isRead ?? article.is_read
 
     const handleCopyUrl = async () => {
         if (!article.link) {
@@ -188,20 +194,9 @@ export function ArticleToolbar({
                     {/* Bookmark/Save for Later or Mark as Read */}
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110`}
-                                style={{
-                                    backgroundColor:
-                                        isReadLaterMode && article.is_saved
-                                            ? colorTokens.accent.DEFAULT
-                                            : "transparent",
-                                    color:
-                                        isReadLaterMode && article.is_saved
-                                            ? colorTokens.accent.foreground
-                                            : colorTokens.foreground,
-                                }}
+                            <button
+                                type="button"
+                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} flex items-center justify-center p-0 transition-transform duration-200 hover:scale-110 focus:outline-none`}
                                 onClick={
                                     isReadLaterMode
                                         ? handleMarkAsRead
@@ -210,32 +205,32 @@ export function ArticleToolbar({
                             >
                                 {isReadLaterMode ? (
                                     <Check
-                                        className="h-4 w-4 transition-all duration-200 hover:scale-110"
+                                        className="h-4 w-4"
                                         style={{
-                                            color: article.is_saved
+                                            color: effectiveIsSaved
                                                 ? colorTokens.primary.DEFAULT
                                                 : colorTokens.muted.foreground,
                                         }}
                                     />
                                 ) : (
                                     <BookmarkIcon
-                                        className={`h-4 w-4 transition-all duration-200 hover:scale-110 ${article.is_saved ? "scale-110" : ""}`}
+                                        className={`h-4 w-4 ${effectiveIsSaved ? "scale-110" : ""}`}
                                         style={{
-                                            fill: article.is_saved
+                                            fill: effectiveIsSaved
                                                 ? "#eab308"
                                                 : "transparent",
-                                            color: article.is_saved
+                                            color: effectiveIsSaved
                                                 ? "#eab308"
                                                 : colorTokens.foreground,
                                         }}
                                     />
                                 )}
-                            </Button>
+                            </button>
                         </TooltipTrigger>
                         <TooltipContent>
                             {isReadLaterMode
                                 ? "Mark as Read & Remove"
-                                : article.is_saved
+                                : effectiveIsSaved
                                     ? "Remove from Read Later"
                                     : "Save for Later"}
                         </TooltipContent>

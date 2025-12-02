@@ -1,5 +1,5 @@
 import { cookies } from "next/headers"
-import { ArticlesView } from "@/components/features/articles/ArticlesView"
+import { FeedArticlesPageClient } from "./client"
 import { getLayoutFromCookie, LAYOUT_COOKIE_NAME } from "@/lib/cookies"
 
 interface PageProps {
@@ -11,5 +11,5 @@ export default async function FeedArticlesPage({ params }: PageProps) {
     const cookieStore = await cookies()
     const layout = getLayoutFromCookie(cookieStore.get(LAYOUT_COOKIE_NAME)?.value)
 
-    return <ArticlesView feedId={feedId} defaultLayout={layout} />
+    return <FeedArticlesPageClient feedId={feedId} defaultLayout={layout} />
 }

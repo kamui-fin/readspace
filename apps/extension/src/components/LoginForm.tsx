@@ -1,6 +1,6 @@
-import { browser } from '@/lib/browser'
+import browser from 'webextension-polyfill'
 import { useExtensionStore } from '@/store'
-import { useIsCloudProd } from '@/hooks/useIsCloudProd'
+import { useIsCloudProd } from '@/hooks/use-is-cloud-prod'
 import { Loader2 } from 'lucide-react'
 import React, { useState } from 'react'
 import toast from 'react-hot-toast'
@@ -35,17 +35,18 @@ export function LoginForm({ onShowSelfHosted }: LoginFormProps = {}) {
     try {
       // Send message to background script to handle login
       const response = (await browser.runtime.sendMessage({
-        action: 'emailPasswordLogin',
+        action: 'login',
         email: email.trim(),
         password: password.trim(),
-      })) as { success: boolean; error?: string; access_token?: string }
+      })) as { success: boolean; error?: { message: string } | string; access_token?: string }
 
       if (!response.success || !response.access_token) {
-        throw new Error(response.error || 'Failed to sign in')
+        const errorMsg = typeof response.error === 'object' ? response.error.message : (response.error || 'Failed to sign in')
+        throw new Error(errorMsg)
       }
 
-      // Login to the extension store with the access token
-      await login(response.access_token)
+      // Login to the extension store (token is already in storage)
+      await login()
       toast.success('Successfully signed in!', { id: toastId })
     } catch (error) {
       const errorMessage =
@@ -76,8 +77,8 @@ export function LoginForm({ onShowSelfHosted }: LoginFormProps = {}) {
         throw new Error(response.error || 'Failed to authenticate with Google')
       }
 
-      // Login to the extension store with the access token
-      await login(response.access_token)
+      // Login to the extension store (token is already in storage)
+      await login()
       toast.success('Successfully signed in with Google!', { id: toastId })
     } catch (error) {
       const errorMessage =

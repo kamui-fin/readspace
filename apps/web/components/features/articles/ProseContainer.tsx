@@ -17,7 +17,9 @@ export function ProseContainer({
                 "prose-p:text-foreground prose-p:leading-relaxed prose-p:text-xl",
                 "prose-li:text-foreground prose-li:text-xl",
                 "prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:py-3 prose-blockquote:px-4 prose-blockquote:text-xl",
-                "prose-code:bg-muted prose-code:px-1.5 prose-code:py-1 prose-code:rounded prose-code:text-lg prose-code:before:content-none prose-code:after:content-none",
+                // Inline code styling - target code that is NOT inside pre
+                "[&_:not(pre)>code]:bg-muted [&_:not(pre)>code]:px-1.5 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:rounded [&_:not(pre)>code]:text-lg [&_:not(pre)>code]:font-normal",
+                "prose-code:before:content-none prose-code:after:content-none",
                 "prose-pre:bg-muted prose-pre:border prose-pre:text-foreground",
                 "prose-a:text-primary prose-a:no-underline prose-a:hover:underline",
                 "prose-img:rounded-lg prose-img:shadow-sm",

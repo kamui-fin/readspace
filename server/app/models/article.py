@@ -41,8 +41,12 @@ class ArticleContent(Base):
     )
 
     # Relationships
-    feed_articles = relationship("FeedArticle", back_populates="content")
-    user_entries = relationship("UserEntry", back_populates="content")
+    feed_articles = relationship(
+        "FeedArticle", back_populates="content", cascade="all, delete-orphan"
+    )
+    user_entries = relationship(
+        "UserEntry", back_populates="content", cascade="all, delete-orphan"
+    )
 
 
 class FeedArticle(Base):
@@ -72,7 +76,9 @@ class FeedArticle(Base):
     # Relationships
     feed = relationship("Feed", back_populates="articles")
     content = relationship("ArticleContent", back_populates="feed_articles")
-    user_entries = relationship("UserEntry", back_populates="feed_article")
+    user_entries = relationship(
+        "UserEntry", back_populates="feed_article", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         UniqueConstraint(

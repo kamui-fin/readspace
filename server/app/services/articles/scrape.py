@@ -141,7 +141,7 @@ def _fetch_and_extract(url: str, config: ConfigParser) -> str | None:
 
 async def extract_full_content(
     url: str, article_title: str | None = None, main_image_url: str | None = None
-) -> tuple[str | None, int | None, str | None]:
+) -> tuple[str | None, str | None]:
     """
     Extract full text content from the article's original URL.
 
@@ -165,7 +165,7 @@ async def extract_full_content(
         )
 
         if not extracted_html:
-            return None, None, "Could not extract readable content"
+            return None, "Could not extract readable content"
 
         # 2. DOM Manipulation (Cleanup)
         # We use BeautifulSoup for structural changes before sanitizing

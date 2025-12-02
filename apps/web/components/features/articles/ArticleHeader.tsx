@@ -65,7 +65,7 @@ export function ArticleHeader({
                         </span>
                     </Link>
                     {article.tags && article.tags.length > 0 && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             {article.tags.slice(0, 5).map((tag) => (
                                 <Badge
                                     key={tag}
@@ -80,7 +80,7 @@ export function ArticleHeader({
                 </div>
             )}
 
-            <h1 className="text-4xl font-bold leading-tight text-foreground tracking-tight">
+            <h1 className="text-4xl font-bold leading-tight text-foreground leading-tight tracking-tight">
                 {article.title}
             </h1>
 
@@ -92,7 +92,7 @@ export function ArticleHeader({
                             <span className="text-foreground font-medium wrap-break-word">
                                 {article.author}
                             </span>
-                            <span className="hidden sm:inline">•</span>
+                            <span className="hidden sm:inline">/</span>
                         </>
                     )}
                     <span className="whitespace-nowrap">
@@ -100,7 +100,7 @@ export function ArticleHeader({
                     </span>
                     {currentReadTime && (
                         <>
-                            <span className="hidden sm:inline">•</span>
+                            <span className="hidden sm:inline">/</span>
                             <span className="whitespace-nowrap">
                                 {currentReadTime} min read
                             </span>

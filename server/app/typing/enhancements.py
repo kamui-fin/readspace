@@ -40,6 +40,10 @@ class SummarizeRequest(BaseModel):
 
     # Optional: Allow user to specify length/format
     # format: Literal["bullet_points", "paragraph"] = "paragraph"
+    language_key: str | None = Field(
+        None,
+        description="Language key for caching (e.g. 'en', 'original').",
+    )
 
     @field_validator("content")
     @classmethod

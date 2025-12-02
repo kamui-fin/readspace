@@ -74,7 +74,7 @@ async def add_new_feed(
 
     # 4. Service Call (Business Logic)
     # Global Handler catches FeedParsingError, FeedConnectionError, etc.
-    subscription = await add_feed(
+    subscription, _ = await add_feed(
         session_factory=db_factory,
         user_id=user_uuid,
         url=str(feed_in.url),

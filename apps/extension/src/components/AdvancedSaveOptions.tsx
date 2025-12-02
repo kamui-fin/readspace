@@ -20,7 +20,7 @@ export function AdvancedSaveOptions({
 }: AdvancedSaveOptionsProps) {
   const [titleOverride, setTitleOverride] = useState('')
   const [note, setNote] = useState('')
-  const [priority, setPriority] = useState<Priority>('low')
+  const [priority, setPriority] = useState<Priority>('LOW')
 
   const handleSave = async () => {
     const options: Partial<SaveOptions> = {
@@ -81,13 +81,12 @@ export function AdvancedSaveOptions({
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => setPriority('low')}
+              onClick={() => setPriority('LOW')}
               className={`
                 px-3 py-2 rounded text-sm font-medium transition-all
-                ${
-                  priority === 'low'
-                    ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                ${priority === 'LOW'
+                  ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >
@@ -98,13 +97,12 @@ export function AdvancedSaveOptions({
             </button>
             <button
               type="button"
-              onClick={() => setPriority('medium')}
+              onClick={() => setPriority('MEDIUM')}
               className={`
                 px-3 py-2 rounded text-sm font-medium transition-all
-                ${
-                  priority === 'medium'
-                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                ${priority === 'MEDIUM'
+                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >
@@ -115,13 +113,12 @@ export function AdvancedSaveOptions({
             </button>
             <button
               type="button"
-              onClick={() => setPriority('high')}
+              onClick={() => setPriority('HIGH')}
               className={`
                 px-3 py-2 rounded text-sm font-medium transition-all
-                ${
-                  priority === 'high'
-                    ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                ${priority === 'HIGH'
+                  ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >

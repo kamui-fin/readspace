@@ -505,6 +505,72 @@ async def get_read_later_articles(
     )
 
 
+async def get_recently_read_articles_crud(
+    db: AsyncSession,
+    user_id: UUID,
+    params: CursorPaginationParams,
+) -> CursorPaginationResult:
+    """
+    Get recently read articles (explicitly marked as read).
+
+    Only returns articles where UserEntry.is_read is True.
+    Does NOT include articles implicitly read via last_read_cutoff.
+    Ordered by read_at desc (most recently read first).
+    """
+    query = (
+        select(UserEntry)
+        .options(
+            selectinload(UserEntry.content).undefer(ArticleContent.description),
+            selectinload(UserEntry.feed_article).selectinload(FeedArticle.feed),
+        )
+        .where(UserEntry.user_id == user_id, UserEntry.is_read)
+    )
+
+    # Cursor pagination
+    if params.cursor:
+        cursor_ts = _parse_cursor(params.cursor)
+        if cursor_ts:
+            # Use read_at for cursor since we order by it
+            query = query.where(UserEntry.read_at < cursor_ts)
+
+    # Order by read_at desc (when the user actually read it)
+    # Fallback to updated_at if read_at is null (shouldn't happen for is_read=True but safe)
+    query = query.order_by(
+        UserEntry.read_at.desc().nulls_last(), UserEntry.updated_at.desc()
+    )
+    query = query.limit(params.limit + 1)
+
+    result = await db.execute(query)
+    user_entries = list(result.scalars().all())
+
+    has_more = len(user_entries) > params.limit
+    entries_to_process = user_entries[: params.limit] if has_more else user_entries
+
+    # Transform UserEntry objects to response dicts
+    transformer = ArticleTransformer()
+    items = []
+    for entry in entries_to_process:
+        if entry.feed_article:
+            # This is a feed article
+            response = transformer.to_entry_list_item(entry.feed_article, entry)
+            items.append(response.model_dump())
+        else:
+            # This is a clipped article
+            response = transformer.clipped_to_entry_list_item(entry.content, entry)
+            items.append(response.model_dump())
+
+    next_cursor = None
+    if entries_to_process and has_more:
+        last_item = entries_to_process[-1]
+        # Use read_at for cursor
+        cursor_val = last_item.read_at or last_item.updated_at
+        next_cursor = _create_cursor(cursor_val)
+
+    return CursorPaginationResult(
+        items=items, next_cursor=next_cursor, has_more=has_more
+    )
+
+
 async def fetch_recent_article_texts_for_feeds(
     db: AsyncSession,
     feed_ids: list[UUID],

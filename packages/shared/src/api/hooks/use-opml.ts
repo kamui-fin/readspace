@@ -8,7 +8,6 @@ import {
 import { ApiClient } from "../client";
 import { queryKeys } from "../query-keys";
 import type {
-  ImportStatus,
   OpmlImportResponse,
   OpmlTaskMetadata,
   OpmlImportCancelResponse,
@@ -47,7 +46,8 @@ export function useImportTaskStatus(
     enabled: !!taskId && enabled,
     refetchInterval: (query) => {
       const data = query.state.data;
-      if (data && data.status !== "in_progress") {
+      // Stop polling only if terminal state reached
+      if (data && ["completed", "failed", "cancelled"].includes(data.status)) {
         return false;
       }
       return 3000;

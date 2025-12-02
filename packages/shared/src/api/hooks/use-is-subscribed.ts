@@ -42,8 +42,13 @@ export function useIsSubscribed(feed: {
     return normalizeUrl(f.feed.url) === normalizeUrl(feed.url);
   });
 
+  // If we have feeds data, trust it. Otherwise fall back to initial state.
+  const isSubscribed = feedsData
+    ? !!subscription
+    : (feed.initialIsSubscribed ?? !!subscription);
+
   return {
-    isSubscribed: feed.initialIsSubscribed ?? !!subscription,
+    isSubscribed,
     subscription,
   };
 }

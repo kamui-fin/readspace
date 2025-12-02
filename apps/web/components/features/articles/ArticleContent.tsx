@@ -24,14 +24,7 @@ interface ArticleContentProps {
     isLoading?: boolean
 }
 
-function estimateReadTime(text: string): number {
-    if (!text) return 0
-    const wordsPerMinute = 200
-    // Strip HTML tags
-    const cleanText = text.replace(/<[^>]*>/g, "")
-    const words = cleanText.trim().split(/\s+/).length
-    return Math.ceil(words / wordsPerMinute)
-}
+import { estimateReadingTime } from "@readspace/shared"
 
 export function ArticleContent({
     article,
@@ -84,6 +77,8 @@ export function ArticleContent({
         handleToggleReadLater,
         handleScrollMarkAsRead,
         handleContentClickMarkAsRead,
+        optimisticReadLater,
+        optimisticIsRead,
     } = useArticleInteractions({
         article,
         isRecentlyReadMode,
@@ -105,9 +100,9 @@ export function ArticleContent({
 
     useEffect(() => {
         if (displayContent) {
-            setClientReadTime(estimateReadTime(displayContent))
+            setClientReadTime(estimateReadingTime(displayContent.replace(/<[^>]*>/g, "")))
         } else if (article.description) {
-            setClientReadTime(estimateReadTime(article.description))
+            setClientReadTime(estimateReadingTime(article.description.replace(/<[^>]*>/g, "")))
         }
     }, [displayContent, article.description])
 
@@ -152,6 +147,8 @@ export function ArticleContent({
             isReadLaterMode={isReadLaterMode}
             translatedContent={translatedContent}
             translatedLanguage={translatedLanguage}
+            isSaved={optimisticReadLater}
+            isRead={optimisticIsRead}
         />
     )
 

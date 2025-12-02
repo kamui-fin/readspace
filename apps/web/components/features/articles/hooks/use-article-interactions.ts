@@ -39,12 +39,20 @@ export function useArticleInteractions({
             return
         }
 
+        const updateData: { is_read: boolean; is_saved?: boolean } = {
+            is_read: true,
+        }
+
+        // If in Read Later mode, marking as read should also unsave it
+        // This triggers the optimistic removal from the Read Later list
+        if (isReadLaterMode) {
+            updateData.is_saved = false
+        }
+
         updateArticle.mutate(
             {
                 articleId: article.id,
-                data: {
-                    is_read: true,
-                },
+                data: updateData,
             },
             {
                 onSuccess: () => {
@@ -65,12 +73,11 @@ export function useArticleInteractions({
                 articleId: article.id,
                 data: {
                     is_saved: newReadLaterState,
-                    // When saving for later, mark as unread to update sidebar count
-                    is_read: newReadLaterState ? false : article.is_read,
                 },
             },
             {
                 onError: () => {
+                    toast.error("Failed to update read later status")
                 },
             }
         )
@@ -106,9 +113,26 @@ export function useArticleInteractions({
         }
     }
 
+    // Use isPending to show optimistic state immediately while mutation is in flight
+    // This serves as a fallback if the cache update hasn't propagated yet
+    const optimisticReadLater =
+        updateArticle.isPending &&
+            updateArticle.variables?.articleId === article.id &&
+            updateArticle.variables.data.is_saved !== undefined
+            ? updateArticle.variables.data.is_saved
+            : article.is_saved
+
+    const optimisticIsRead =
+        updateArticle.isPending &&
+            updateArticle.variables?.articleId === article.id &&
+            updateArticle.variables.data.is_read !== undefined
+            ? updateArticle.variables.data.is_read
+            : article.is_read
+
     return {
         hasMarkedRead,
-        optimisticReadLater: article.is_saved, // We can just use the article state now as it's optimistically updated by the cache
+        optimisticReadLater,
+        optimisticIsRead,
         handleMarkAsRead,
         handleToggleReadLater,
         handleScrollMarkAsRead,

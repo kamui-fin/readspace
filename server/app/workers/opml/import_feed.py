@@ -37,7 +37,7 @@ async def import_single_feed(
                 resolved_folder_id = default_folder.id
 
         # Service Call (Manages its own sessions via factory)
-        subscription = await add_feed(
+        subscription, created = await add_feed(
             session_factory=worker_db_factory,
             user_id=user_id,
             url=feed_url,
@@ -46,40 +46,37 @@ async def import_single_feed(
         )
 
         if parent_task_id:
-            await OpmlImportTracker(parent_task_id).mark_success(already_exists=False)
+            await OpmlImportTracker(parent_task_id).mark_success(
+                already_exists=not created
+            )
 
         return {
             "success": True,
             "url": feed_url,
             "title": subscription.custom_title or subscription.feed.title,
-            "status": ImportStatus.COMPLETED.value,
+            "status": (ImportStatus.COMPLETED.value if created else "already_exists"),
         }
 
     except Exception as exc:
         error_msg = str(exc)
-        is_duplicate = "Already subscribed" in error_msg
 
         if parent_task_id:
             tracker = OpmlImportTracker(parent_task_id)
-            if is_duplicate:
-                await tracker.mark_success(already_exists=True)
-            else:
-                await tracker.mark_failure(
-                    FeedImportError(
-                        url=feed_url,
-                        title=feed_title or "Unknown",
-                        error=error_msg,
-                        status="failed",
-                    )
+            await tracker.mark_failure(
+                FeedImportError(
+                    url=feed_url,
+                    title=feed_title or "Unknown",
+                    error=error_msg,
+                    status="failed",
                 )
+            )
 
-        if not is_duplicate:
-            logger.error("Feed import failed", url=feed_url, error=error_msg)
+        logger.error("Feed import failed", url=feed_url, error=error_msg)
 
         return {
-            "success": is_duplicate,
+            "success": False,
             "url": feed_url,
             "title": feed_title or "Unknown",
-            "status": "already_exists" if is_duplicate else ImportStatus.FAILED.value,
+            "status": ImportStatus.FAILED.value,
             "error": error_msg,
         }

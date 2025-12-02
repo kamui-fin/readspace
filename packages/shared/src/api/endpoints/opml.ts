@@ -1,6 +1,5 @@
 import { ApiClient } from "../core";
 import {
-  ImportStatus,
   OpmlImportCancelResponse,
   OpmlImportResponse,
   OpmlTaskMetadata,

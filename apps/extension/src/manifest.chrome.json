@@ -9,11 +9,23 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["activeTab", "storage", "notifications", "identity"],
-  "host_permissions": ["http://*/*", "https://*/*"],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "notifications",
+    "identity"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
   "oauth2": {
     "client_id": "618963664803-flhs0b3rd4d974kglkf0gshfhk461rqq.apps.googleusercontent.com",
-    "scopes": ["openid", "email", "profile"]
+    "scopes": [
+      "openid",
+      "email",
+      "profile"
+    ]
   },
   "action": {
     "default_popup": "index.html",
@@ -25,14 +37,24 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["src/content.ts"]
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "src/content.ts"
+      ],
+      "run_at": "document_end"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["assets/readspace.svg"],
-      "matches": ["*://*/*"]
+      "resources": [
+        "assets/readspace.svg"
+      ],
+      "matches": [
+        "*://*/*"
+      ]
     }
   ]
 }

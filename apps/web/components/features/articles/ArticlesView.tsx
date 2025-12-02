@@ -12,11 +12,12 @@ import { ArticlesLayout } from "./ArticlesLayout"
 import { ArticlesSidebar } from "./ArticlesSidebar"
 import { ArticlesDetail } from "./ArticlesDetail"
 import { useArticlesStore } from "./stores/use-articles-store"
-import { useArticlesData } from "./hooks/use-articles-data"
 import { useDeepRefresh } from "./hooks/use-deep-refresh"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 import { useFeed, useUpdateArticle, ArticleFilterMode } from "@readspace/shared"
+import type { Article } from "@readspace/shared"
+import type { UseInfiniteQueryResult } from "@tanstack/react-query"
 
 interface ArticlesViewProps {
     /** Initial title for the sidebar */
@@ -35,6 +36,10 @@ interface ArticlesViewProps {
     onCreateFolder?: () => void
     /** Default layout for the panels */
     defaultLayout?: number[]
+    /** Articles to display */
+    articles: Article[]
+    /** Query result for articles */
+    query: UseInfiniteQueryResult<any, unknown>
 }
 
 /**
@@ -49,6 +54,8 @@ export function ArticlesView({
     publishedUntil,
     mode = ArticleFilterMode.AllArticles,
     defaultLayout = [35, 65],
+    articles,
+    query,
 }: ArticlesViewProps) {
     // Store State
     const {
@@ -82,13 +89,6 @@ export function ArticlesView({
     }, [feedId, folderId, mode, selectArticle, setViewMode])
 
     // Data Hooks
-    const { query: articlesQuery, articles: allArticles } = useArticlesData({
-        mode,
-        feedId,
-        folderId,
-        publishedSince,
-        publishedUntil,
-    })
 
     const {
         data: feedData,
@@ -109,14 +109,14 @@ export function ArticlesView({
 
     const filteredArticles = useMemo(() => {
         if (showUnreadOnly && !isReadLaterMode) {
-            return allArticles.filter((a) => !a.is_read)
+            return articles.filter((a) => !a.is_read)
         }
-        return allArticles
-    }, [allArticles, showUnreadOnly, isReadLaterMode])
+        return articles
+    }, [articles, showUnreadOnly, isReadLaterMode])
 
     const selectedArticle = useMemo(
-        () => allArticles.find((a) => a.id === selectedArticleId),
-        [allArticles, selectedArticleId]
+        () => articles.find((a) => a.id === selectedArticleId),
+        [articles, selectedArticleId]
     )
 
     const shouldShowPreviewBanner = !!(
@@ -135,7 +135,7 @@ export function ArticlesView({
     const handleRefreshWithMessage = async (message: string) => {
         toast.loading(message, { id: "refresh" })
         try {
-            await articlesQuery.refetch()
+            await query.refetch()
             toast.success("Articles refreshed!", { id: "refresh" })
         } catch (error) {
             console.error("Refresh failed:", error)
@@ -144,9 +144,7 @@ export function ArticlesView({
     }
 
     const onDeepRefresh = async () => {
-        await handleDeepRefresh(feedId, async () => {
-            await articlesQuery.refetch()
-        })
+        await handleDeepRefresh(feedId)
     }
 
     const handleMarkAsRead = () => {
@@ -171,13 +169,13 @@ export function ArticlesView({
         if (isMobile) return
 
         if (
-            allArticles.length > 0 &&
+            articles.length > 0 &&
             !selectedArticleId &&
-            !articlesQuery.isLoading &&
-            !articlesQuery.isFetching
+            !query.isLoading &&
+            !query.isFetching
         ) {
             // Sort articles by published date (newest first)
-            const sortedArticles = [...allArticles].sort((a, b) => {
+            const sortedArticles = [...articles].sort((a, b) => {
                 if (!a.published_at) return 1
                 if (!b.published_at) return -1
                 return (
@@ -196,17 +194,17 @@ export function ArticlesView({
             }
         }
     }, [
-        allArticles,
+        articles,
         selectedArticleId,
         isMobile,
         showUnreadOnly,
-        articlesQuery.isLoading,
-        articlesQuery.isFetching,
+        query.isLoading,
+        query.isFetching,
         selectArticle,
     ])
 
     // Render Logic
-    const isInitialLoading = articlesQuery.isLoading && allArticles.length === 0
+    const isInitialLoading = query.isLoading && articles.length === 0
 
     if (isInitialLoading) {
         return <ArticlesViewSkeleton showUnreadBadge={false} layout={panelLayout} />
@@ -224,10 +222,10 @@ export function ArticlesView({
     }
 
     if (
-        !articlesQuery.isLoading &&
-        !articlesQuery.isFetching &&
+        !query.isLoading &&
+        !query.isFetching &&
         filteredArticles.length === 0 &&
-        allArticles.length === 0
+        articles.length === 0
     ) {
         return (
             <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
@@ -245,7 +243,7 @@ export function ArticlesView({
         )
     }
 
-    if (filteredArticles.length === 0 && allArticles.length > 0) {
+    if (filteredArticles.length === 0 && articles.length > 0) {
         return (
             <div className="flex h-full md:h-[calc(100vh-1rem)] w-full bg-background md:rounded-xl md:shadow-sm">
                 <div className="w-full flex flex-col items-center justify-center gap-4">
@@ -274,11 +272,11 @@ export function ArticlesView({
                         mode={mode}
                         initialSidebarTitle={initialSidebarTitle}
                         articles={filteredArticles}
-                        isLoading={articlesQuery.isLoading}
-                        isFetchingNextPage={articlesQuery.isFetchingNextPage}
-                        hasNextPage={articlesQuery.hasNextPage}
+                        isLoading={query.isLoading}
+                        isFetchingNextPage={query.isFetchingNextPage}
+                        hasNextPage={query.hasNextPage}
                         feedData={feedData}
-                        fetchNextPage={articlesQuery.fetchNextPage}
+                        fetchNextPage={query.fetchNextPage}
                         handleDeepRefresh={onDeepRefresh}
                         isDeepRefreshing={isDeepRefreshing}
                         setIsSubscriptionModalOpen={setIsSubscriptionModalOpen}

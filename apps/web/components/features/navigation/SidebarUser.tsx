@@ -76,9 +76,8 @@ export function SidebarUser({
                                                     name={name || email || "User"}
                                                     variant="beam"
                                                     colors={[
-                                                        "#6a994e", // Secondary
-                                                        "#386641", // Primary
-                                                        "#6a994e", // Secondary
+                                                        "#89a38eff",
+                                                        "#386641",
                                                     ]}
                                                     square
                                                 />

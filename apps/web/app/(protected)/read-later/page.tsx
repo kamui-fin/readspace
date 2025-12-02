@@ -1,17 +1,10 @@
 import { cookies } from "next/headers"
-import { ArticlesView } from "@/components/features/articles/ArticlesView"
-import { ArticleFilterMode } from "@readspace/shared"
+import { ReadLaterPageClient } from "./client"
 import { getLayoutFromCookie, LAYOUT_COOKIE_NAME } from "@/lib/cookies"
 
 export default async function ReadLaterPage() {
     const cookieStore = await cookies()
     const layout = getLayoutFromCookie(cookieStore.get(LAYOUT_COOKIE_NAME)?.value)
 
-    return (
-        <ArticlesView
-            mode={ArticleFilterMode.ReadLater}
-            initialSidebarTitle="Read Later"
-            defaultLayout={layout}
-        />
-    )
+    return <ReadLaterPageClient defaultLayout={layout} />
 }

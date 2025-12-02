@@ -209,9 +209,10 @@ export class ApiClient {
       );
     }
 
+    const url = normalizeUrl(this.config.baseUrl, endpoint);
+
     try {
       const headers = await getAuthHeaders(this.config.getAuthToken);
-      const url = normalizeUrl(this.config.baseUrl, endpoint);
 
       return await fetchWithRetry<T>(
         url,
@@ -295,12 +296,12 @@ export class ApiClient {
       throw new Error("ApiClient must be configured before use");
     }
 
+    const url = normalizeUrl(this.config.baseUrl, endpoint);
+
     try {
       const headers = await getAuthHeaders(this.config.getAuthToken);
       // Remove Content-Type header for form data to let the browser set it with the boundary
       const { "Content-Type": _, ...uploadHeaders } = headers;
-
-      const url = normalizeUrl(this.config.baseUrl, endpoint);
 
       const response = await fetch(url, {
         method: "POST",

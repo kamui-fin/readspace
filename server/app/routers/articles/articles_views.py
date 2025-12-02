@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud.article.reader import CursorPaginationParams, get_articles
 from app.crud.article.reader import (
     get_read_later_articles as get_read_later_articles_crud,
+    get_recently_read_articles_crud,
 )
 from app.db.session import get_db
 from app.services.user.auth import get_current_user
@@ -77,11 +78,10 @@ async def get_recently_read_articles(
     """
     logger.bind(user_id=current_user.sub, view="recently_read")
 
-    result = await get_articles(
+    result = await get_recently_read_articles_crud(
         db=db,
         user_id=UUID(current_user.sub),
         params=CursorPaginationParams(limit=limit, cursor=cursor),
-        is_read=True,
     )
 
     return CursorPaginatedResponse(

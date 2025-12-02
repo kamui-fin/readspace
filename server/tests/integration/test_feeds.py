@@ -137,7 +137,9 @@ class TestFeedAdd:
 
         assert response.status_code == 201
         data = response.json()
-        assert data["message"] == "Feed added successfully"
+        assert "id" in data
+        assert "feed" in data
+        assert data["feed"]["url"] == "https://techcrunch.com/feed"
 
     @pytest.mark.asyncio
     async def test_add_feed_with_folder(
@@ -154,7 +156,8 @@ class TestFeedAdd:
 
         assert response.status_code == 201
         data = response.json()
-        assert data["message"] == "Feed added successfully"
+        assert "id" in data
+        assert data["folder"]["id"] == str(test_folder.id)
 
     @pytest.mark.asyncio
     async def test_add_feed_invalid_url(

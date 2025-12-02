@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useExtensionStore } from '@/store'
-import { resetSupabaseClient } from '@/lib/supabase'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -21,6 +20,8 @@ const PRODUCTION_DEFAULTS = {
 
 export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
   const { settings, user, updateSettings, logout } = useExtensionStore()
+
+  // Initialize state with empty strings if matching production defaults
   const [readspaceUrl, setReadspaceUrl] = useState(
     settings.readspace_url === PRODUCTION_DEFAULTS.readspace_url
       ? ''
@@ -44,38 +45,44 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
     settings.supabase_url === PRODUCTION_DEFAULTS.supabase_url &&
     settings.supabase_anon_key === PRODUCTION_DEFAULTS.supabase_anon_key
 
+  const validateSettings = () => {
+    const hasAnyCustomField =
+      readspaceUrl.trim() || supabaseUrl.trim() || supabaseAnonKey.trim()
+
+    if (hasAnyCustomField) {
+      if (
+        !readspaceUrl.trim() ||
+        !supabaseUrl.trim() ||
+        !supabaseAnonKey.trim()
+      ) {
+        return 'For self-hosted configuration, all 3 fields are required'
+      }
+    }
+    return null
+  }
+
+  const getFinalSettings = () => {
+    return {
+      readspace_url: readspaceUrl.trim() || PRODUCTION_DEFAULTS.readspace_url,
+      supabase_url: supabaseUrl.trim() || PRODUCTION_DEFAULTS.supabase_url,
+      supabase_anon_key:
+        supabaseAnonKey.trim() || PRODUCTION_DEFAULTS.supabase_anon_key,
+    }
+  }
+
   const handleSave = async () => {
     setIsSaving(true)
     const toastId = toast.loading('Saving settings...')
 
     try {
-      // Check if user is trying to configure self-hosted settings
-      const hasAnyCustomField =
-        readspaceUrl.trim() || supabaseUrl.trim() || supabaseAnonKey.trim()
-
-      // If any field is filled (indicating self-hosted setup), all 3 fields are required
-      if (hasAnyCustomField) {
-        if (
-          !readspaceUrl.trim() ||
-          !supabaseUrl.trim() ||
-          !supabaseAnonKey.trim()
-        ) {
-          toast.error(
-            'For self-hosted configuration, all 3 fields are required',
-            { id: toastId }
-          )
-          setIsSaving(false)
-          return
-        }
+      const validationError = validateSettings()
+      if (validationError) {
+        toast.error(validationError, { id: toastId })
+        setIsSaving(false)
+        return
       }
 
-      // Use production defaults if fields are empty, otherwise use custom values
-      const finalSettings = {
-        readspace_url: readspaceUrl.trim() || PRODUCTION_DEFAULTS.readspace_url,
-        supabase_url: supabaseUrl.trim() || PRODUCTION_DEFAULTS.supabase_url,
-        supabase_anon_key:
-          supabaseAnonKey.trim() || PRODUCTION_DEFAULTS.supabase_anon_key,
-      }
+      const finalSettings = getFinalSettings()
 
       // Check if switching from cloud to self-hosted or vice versa
       const switchingToSelfHosted =
@@ -83,14 +90,14 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
         (finalSettings.readspace_url !== PRODUCTION_DEFAULTS.readspace_url ||
           finalSettings.supabase_url !== PRODUCTION_DEFAULTS.supabase_url ||
           finalSettings.supabase_anon_key !==
-            PRODUCTION_DEFAULTS.supabase_anon_key)
+          PRODUCTION_DEFAULTS.supabase_anon_key)
 
       const switchingToCloud =
         !isUsingProduction &&
         finalSettings.readspace_url === PRODUCTION_DEFAULTS.readspace_url &&
         finalSettings.supabase_url === PRODUCTION_DEFAULTS.supabase_url &&
         finalSettings.supabase_anon_key ===
-          PRODUCTION_DEFAULTS.supabase_anon_key
+        PRODUCTION_DEFAULTS.supabase_anon_key
 
       // If user is authenticated and switching configurations, log them out first
       if (user && (switchingToSelfHosted || switchingToCloud)) {
@@ -98,9 +105,6 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
       }
 
       updateSettings(finalSettings)
-
-      // Reset Supabase client to use new settings
-      resetSupabaseClient()
 
       if (switchingToSelfHosted || switchingToCloud) {
         toast.success('Settings saved! Please sign in again.', { id: toastId })
@@ -134,9 +138,6 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
       setSupabaseAnonKey('')
 
       updateSettings(PRODUCTION_DEFAULTS)
-
-      // Reset Supabase client to use new settings
-      resetSupabaseClient()
 
       toast.success('Switched to Readspace Cloud! Please sign in.', {
         id: toastId,

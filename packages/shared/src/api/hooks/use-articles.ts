@@ -146,15 +146,11 @@ export function useUpdateArticle(
     },
     onMutate: async ({ articleId, data }) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({
-        queryKey: queryKeys.article(articleId),
-      });
-      await queryClient.cancelQueries({
-        queryKey: [RSS_QUERY_KEYS.ARTICLES],
-      });
-      await queryClient.cancelQueries({
-        queryKey: queryKeys.unreadCounts(),
-      });
+      // await Promise.all([
+      //   queryClient.cancelQueries({ queryKey: queryKeys.article(articleId) }),
+      //   queryClient.cancelQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] }),
+      //   queryClient.cancelQueries({ queryKey: queryKeys.unreadCounts() }),
+      // ]);
 
       // Snapshot the previous value
       const previousArticle = queryClient.getQueryData<Article>(
@@ -162,18 +158,22 @@ export function useUpdateArticle(
       );
 
       // Optimistically update article detail
-      if (previousArticle) {
-        queryClient.setQueryData<Article>(queryKeys.article(articleId), {
-          ...previousArticle,
-          ...data,
-          // Map frontend fields to backend fields for the optimistic update
-          ...(data.note !== undefined && { user_note: data.note }),
-          // Ensure priority is of correct type if provided
-          ...(data.priority && { priority: data.priority as any }),
-        });
-      }
+      queryClient.setQueryData<Article>(
+        queryKeys.article(articleId),
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            ...data,
+            // Map frontend fields to backend fields for the optimistic update
+            ...(data.note !== undefined && { user_note: data.note }),
+            // Ensure priority is of correct type if provided
+            ...(data.priority && { priority: data.priority as any }),
+          };
+        }
+      );
 
-      // Optimistically update infinite lists
+      // Optimistically update all infinite lists (generic update)
       queryClient.setQueriesData(
         { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
         (oldData: any) => {
@@ -188,10 +188,6 @@ export function useUpdateArticle(
                     ...item,
                     ...data,
                     ...(data.priority && { priority: data.priority as any }),
-                    // If marking as read, it might disappear from some lists (like unread only),
-                    // but for optimistic updates, we usually just update the state.
-                    // If we want to remove it, it's more complex.
-                    // For now, just update the properties.
                   }
                   : item,
               ),
@@ -199,6 +195,23 @@ export function useUpdateArticle(
           };
         },
       );
+
+      // Specific handling for Read Later list: Remove item if unsaving
+      if (data.is_saved === false) {
+        queryClient.setQueriesData(
+          { queryKey: queryKeys.infiniteReadLater() },
+          (oldData: any) => {
+            if (!oldData?.pages) return oldData;
+            return {
+              ...oldData,
+              pages: oldData.pages.map((page: any) => ({
+                ...page,
+                items: page.items.filter((item: ArticleSummary) => item.id !== articleId),
+              })),
+            };
+          },
+        );
+      }
 
       // Optimistically update unread counts
       if (data.is_read === true) {
@@ -223,8 +236,6 @@ export function useUpdateArticle(
             return {
               ...old,
               feed_counts: newFeedCounts,
-              // We don't have total_unread in ArticleCountsResponse, so we don't update it.
-              // If the UI relies on derived total, it will recalculate from feed_counts.
             };
           },
         );
@@ -240,9 +251,8 @@ export function useUpdateArticle(
           context.previousArticle,
         );
       }
-      // We can't easily rollback infinite lists perfectly without snapshots of all of them,
-      // but invalidating them in onSettled will fix it eventually.
-      // For now, we rely on onSettled to re-fetch.
+      // Invalidate to be safe
+      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
     },
     onSettled: (_data, _error, { articleId }) => {
       // Invalidate article
@@ -250,8 +260,7 @@ export function useUpdateArticle(
         queryKey: queryKeys.article(articleId),
       });
 
-      // Explicitly invalidate read later list if save status changed
-      // This ensures the list updates immediately when toggling save from other views
+      // Explicitly invalidate read later list
       queryClient.invalidateQueries({
         queryKey: queryKeys.infiniteReadLater(),
       });
@@ -638,10 +647,6 @@ export function useExtractFullTextMutation(
           return {
             ...oldArticle,
             extracted_content: data.content,
-            extracted_read_time: data.estimated_read_time_minutes,
-            estimated_read_time_minutes:
-              data.estimated_read_time_minutes ??
-              oldArticle.estimated_read_time_minutes,
           };
         },
       );
@@ -662,7 +667,7 @@ export function useSummarizeArticleMutation(
   options?: UseMutationOptions<
     SummarizeResponse,
     unknown,
-    { articleId: string; content?: string }
+    { articleId: string; content?: string; languageKey?: string }
   >,
 ) {
   const queryClient = useQueryClient();
@@ -670,15 +675,19 @@ export function useSummarizeArticleMutation(
     mutationFn: async ({
       articleId,
       content,
+      languageKey = "original",
     }: {
       articleId: string;
       content?: string;
+      languageKey?: string;
     }) => {
-      const contentHash = content ? createContentHash(content) : "original";
       return await queryClient.fetchQuery({
-        queryKey: queryKeys.summary(articleId, contentHash),
+        queryKey: queryKeys.summary(articleId, languageKey),
         queryFn: () => {
-          const requestBody: SummarizeRequest = content ? { content } : {};
+          const requestBody: SummarizeRequest = {
+            ...(content && { content }),
+            language_key: languageKey,
+          };
           return ApiClient.summarize(articleId, requestBody);
         },
         staleTime: 30 * 60 * 1000,

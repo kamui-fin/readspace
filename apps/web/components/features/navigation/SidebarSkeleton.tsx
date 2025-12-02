@@ -14,7 +14,7 @@ export function SidebarFeedsSkeleton() {
         <SidebarMenu>
             {/* "All" item skeleton */}
             <SidebarMenuItem>
-                <div className="flex items-center w-full group/item">
+                <div className="flex items-center w-full group/item pointer-events-none">
                     <SidebarLeftMenuButton className="flex-1" asChild>
                         <div className="flex items-center gap-2">
                             <div className="flex h-4 w-4 shrink-0 items-center justify-center">
@@ -32,7 +32,7 @@ export function SidebarFeedsSkeleton() {
 
             {/* Collapsible folder skeleton */}
             <SidebarMenuItem>
-                <div className="flex items-center w-full group/item">
+                <div className="flex items-center w-full group/item pointer-events-none">
                     <div className="flex items-center flex-1">
                         <button
                             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-transform duration-200"
@@ -59,7 +59,7 @@ export function SidebarFeedsSkeleton() {
                 <SidebarMenuSub>
                     {/* First sub-item */}
                     <SidebarMenuSubItem>
-                        <div className="flex items-center w-full group/item">
+                        <div className="flex items-center w-full group/item pointer-events-none">
                             <SidebarLeftMenuSubButton
                                 className="flex-1"
                                 asChild
@@ -78,7 +78,7 @@ export function SidebarFeedsSkeleton() {
 
                     {/* Second sub-item */}
                     <SidebarMenuSubItem>
-                        <div className="flex items-center w-full group/item">
+                        <div className="flex items-center w-full group/item pointer-events-none">
                             <SidebarLeftMenuSubButton
                                 className="flex-1"
                                 asChild
@@ -99,7 +99,7 @@ export function SidebarFeedsSkeleton() {
 
             {/* Regular feed item skeletons (feeds without folder) */}
             <SidebarMenuItem>
-                <div className="flex items-center w-full group/item">
+                <div className="flex items-center w-full group/item pointer-events-none">
                     <SidebarLeftMenuButton className="flex-1" asChild>
                         <div className="flex items-center gap-2">
                             <Skeleton className="h-4 w-4 rounded-sm shrink-0 bg-sidebar-accent" />
@@ -114,7 +114,7 @@ export function SidebarFeedsSkeleton() {
             </SidebarMenuItem>
 
             <SidebarMenuItem>
-                <div className="flex items-center w-full group/item">
+                <div className="flex items-center w-full group/item pointer-events-none">
                     <SidebarLeftMenuButton className="flex-1" asChild>
                         <div className="flex items-center gap-2">
                             <Skeleton className="h-4 w-4 rounded-sm shrink-0 bg-sidebar-accent" />

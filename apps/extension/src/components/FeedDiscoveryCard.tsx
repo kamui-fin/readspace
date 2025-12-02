@@ -1,11 +1,13 @@
 import { Button } from '@/components/ui/button'
-import type { DiscoveredFeed } from '@readspace/shared'
-import { areUrlsEqual } from '@readspace/shared'
+import {
+  areUrlsEqual,
+  DiscoveredFeed,
+} from '@readspace/shared'
+import { useCreateFeed, useDeleteFeed, useFeeds } from '@/hooks/use-feeds'
 import { Rss, Trash2 } from 'lucide-react'
-import { useState, useMemo } from 'react'
-import { FeedSubscriptionModal } from './FeedSubscriptionModal'
-import { useExtensionStore } from '@/store'
+import { useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { FeedSubscriptionModal } from './FeedSubscriptionModal'
 
 interface FeedDiscoveryCardProps {
   feeds?: DiscoveredFeed[]
@@ -40,26 +42,22 @@ export function FeedDiscoveryCard({
   feeds,
   isLoading = false,
 }: FeedDiscoveryCardProps) {
-  // Initialize all hooks first (before any conditional returns)
+  // Initialize hooks
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isUnfollowing, setIsUnfollowing] = useState(false)
-  const [isFollowingFromModal, setIsFollowingFromModal] = useState(false)
-  const userFeeds = useExtensionStore((state) => state.feeds)
-  const { unsubscribeFromFeed } = useExtensionStore()
-  const pendingFollowUrls = useExtensionStore(
-    (state) => state.pendingFollowUrls
-  )
-  const cancelFollow = useExtensionStore((state) => state.cancelFollow)
+  const { data: feedsData } = useFeeds()
+  const userFeeds = feedsData?.subscriptions || []
+
+  const createFeedMutation = useCreateFeed()
+  const deleteFeedMutation = useDeleteFeed()
 
   // Compute following state using useMemo for immediate, accurate state
   // Check ALL discovered feeds against user's subscriptions with normalized URL comparison
-  const { isFollowing, followedFeedId, isPendingFollow } = useMemo(() => {
+  const { isFollowing, followedFeedId } = useMemo(() => {
     // Default state when no feeds available
     if (!feeds || feeds.length === 0) {
       return {
         isFollowing: false,
         followedFeedId: null,
-        isPendingFollow: false,
       }
     }
 
@@ -67,53 +65,33 @@ export function FeedDiscoveryCard({
     // Use normalized URL comparison to catch variations (http/https, www, trailing slash, etc.)
     const followedFeed = userFeeds.find((userFeed) =>
       feeds.some((discoveredFeed) =>
-        areUrlsEqual(userFeed.url, discoveredFeed.url)
+        areUrlsEqual(userFeed.feed.url, discoveredFeed.url)
       )
-    )
-
-    // Check if any discovered feed has a pending follow request
-    const hasPendingFollow = feeds.some((feed) =>
-      pendingFollowUrls.has(feed.url)
     )
 
     return {
       isFollowing: !!followedFeed,
       followedFeedId: followedFeed?.id || null,
-      isPendingFollow: hasPendingFollow,
     }
-  }, [feeds, userFeeds, pendingFollowUrls])
+  }, [feeds, userFeeds])
 
   // Show skeleton while loading (after all hooks are initialized)
   if (isLoading || !feeds || feeds.length === 0) {
     return <FeedDiscoveryCardSkeleton />
   }
 
-  const primaryFeed = feeds[0]
-
   const handleFollowClick = async () => {
     if (isFollowing) {
-      // Check if follow is still pending
-      if (isPendingFollow && primaryFeed) {
-        // Cancel the pending follow
-        cancelFollow(primaryFeed.url)
-        toast.success('Unfollowed')
-        return
-      }
-
       // Unfollow
       if (followedFeedId) {
-        setIsUnfollowing(true)
         try {
-          await unsubscribeFromFeed(followedFeedId)
+          await deleteFeedMutation.mutateAsync({ feedId: followedFeedId })
           toast.success('Unfollowed')
-          // State will update automatically via useMemo when userFeeds changes
         } catch (error) {
           console.error('Failed to unfollow:', error)
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error'
           toast.error(`Failed to unfollow: ${errorMessage}`)
-        } finally {
-          setIsUnfollowing(false)
         }
       } else {
         console.error('Cannot unfollow: followedFeedId is null')
@@ -130,24 +108,24 @@ export function FeedDiscoveryCard({
 
   const handleSubscribeStart = () => {
     // Called when user clicks Subscribe in modal
-    setIsFollowingFromModal(true)
+    // We can rely on mutation state, so maybe nothing needed here
   }
 
   const handleSuccess = () => {
     // No need to manually set isFollowing - it will be computed from userFeeds
-    // which gets updated when loadUserData is called after subscription
-    setIsFollowingFromModal(false)
   }
 
   const handleError = () => {
-    // Reset loading state on error
-    setIsFollowingFromModal(false)
+    // Error handling
   }
 
   const displayDescription =
     feeds.length > 1
       ? `${feeds.length} feeds available`
       : 'Add to your Readspace feed'
+
+  const isPending =
+    createFeedMutation.isPending || deleteFeedMutation.isPending
 
   return (
     <>
@@ -170,44 +148,32 @@ export function FeedDiscoveryCard({
           <div className="flex items-center flex-shrink-0">
             <Button
               onClick={handleFollowClick}
-              disabled={
-                isUnfollowing || isPendingFollow || isFollowingFromModal
-              }
+              disabled={isPending}
               size="sm"
               variant={
-                isFollowing &&
-                !isUnfollowing &&
-                !isPendingFollow &&
-                !isFollowingFromModal
+                isFollowing && !isPending
                   ? 'outline'
-                  : isFollowingFromModal || isPendingFollow || isUnfollowing
+                  : isPending
                     ? 'ghost'
                     : 'default'
               }
-              className={`flex-shrink-0 min-w-[100px] ${
-                isFollowing &&
-                !isUnfollowing &&
-                !isPendingFollow &&
-                !isFollowingFromModal
-                  ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
-                  : isFollowingFromModal || isPendingFollow
-                    ? 'bg-orange-500/90 text-white hover:bg-orange-500/90'
-                    : isUnfollowing
-                      ? 'bg-destructive/90 text-destructive-foreground hover:bg-destructive/90'
-                      : !isFollowing
-                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                        : ''
-              }`}
+              className={`flex-shrink-0 min-w-[100px] ${isFollowing && !isPending
+                ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
+                : isPending
+                  ? 'bg-orange-500/90 text-white hover:bg-orange-500/90'
+                  : !isFollowing
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                    : ''
+                }`}
             >
-              {isPendingFollow || isFollowingFromModal ? (
+              {isPending ? (
                 <div className="flex items-center justify-center overflow-hidden">
                   <div className="w-2.5 h-2.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5 flex-shrink-0" />
-                  <span className="truncate">Following...</span>
-                </div>
-              ) : isUnfollowing ? (
-                <div className="flex items-center justify-center overflow-hidden">
-                  <div className="w-2.5 h-2.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5 flex-shrink-0" />
-                  <span className="truncate">Unfollowing...</span>
+                  <span className="truncate">
+                    {createFeedMutation.isPending
+                      ? 'Following...'
+                      : 'Unfollowing...'}
+                  </span>
                 </div>
               ) : isFollowing ? (
                 <div className="flex items-center justify-center overflow-hidden">

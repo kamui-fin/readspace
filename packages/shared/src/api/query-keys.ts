@@ -85,8 +85,8 @@ export const queryKeys = {
       articleId,
       urlHash,
     ] as const,
-  summary: (articleId: string, contentHash: string) =>
-    [ARTICLE_ENHANCEMENT_QUERY_KEYS.SUMMARY, articleId, contentHash] as const,
+  summary: (articleId: string, languageKey: string) =>
+    [ARTICLE_ENHANCEMENT_QUERY_KEYS.SUMMARY, articleId, languageKey] as const,
   translation: (
     articleId: string,
     targetLanguage: string,
