@@ -46,13 +46,13 @@ export function ArticleHeader({
             {/* Actions */}
             <div className="flex items-center gap-1 flex-shrink-0">
                 <Button
-                    onClick={onSave}
+                    onClick={() => onSave()}
                     disabled={isPending}
                     size="sm"
                     variant={isSaved && !hasUnsavedChanges ? 'outline' : 'default'}
                     className={`flex-shrink-0 w-[100px] ${isSaved && !hasUnsavedChanges
-                            ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
-                            : ''
+                        ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
+                        : ''
                         }`}
                 >
                     {isSaved && !hasUnsavedChanges && !isUnsavePending ? (

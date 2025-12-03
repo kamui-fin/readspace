@@ -1,31 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { sendMessage } from '../shared/messaging'
-import { FeedsResponse } from '@readspace/shared'
-
-export function useFeeds() {
-    const [data, setData] = useState<FeedsResponse | null>(null)
-    const [isLoading, setIsLoading] = useState(true)
-    const [error, setError] = useState<Error | null>(null)
-
-    const refetch = useCallback(async () => {
-        setIsLoading(true)
-        try {
-            const res = await sendMessage({ type: 'fetchFeeds' })
-            setData(res)
-            setError(null)
-        } catch (e) {
-            setError(e as Error)
-        } finally {
-            setIsLoading(false)
-        }
-    }, [])
-
-    useEffect(() => {
-        refetch()
-    }, [refetch])
-
-    return { data, isLoading, error, refetch }
-}
 
 export function useCreateFeed() {
     const [isPending, setIsPending] = useState(false)
@@ -45,7 +19,7 @@ export function useCreateFeed() {
 export function useDeleteFeed() {
     const [isPending, setIsPending] = useState(false)
 
-    const mutateAsync = async (data: { feedId: string }) => {
+    const mutateAsync = async (data: { feedId: string; url?: string }) => {
         setIsPending(true)
         try {
             return await sendMessage({ type: 'deleteFeed', payload: data })
@@ -55,4 +29,31 @@ export function useDeleteFeed() {
     }
 
     return { mutateAsync, isPending }
+}
+
+export function useFolders() {
+    const [data, setData] = useState<any[] | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState<Error | null>(null)
+
+    // Simple fetch on mount
+    // In a real app we'd use react-query or SWR
+    const refetch = async () => {
+        setIsLoading(true)
+        try {
+            const res = await sendMessage({ type: 'fetchFolders' })
+            setData(res)
+        } catch (err) {
+            setError(err as Error)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    // Initial fetch
+    useEffect(() => {
+        refetch()
+    }, [])
+
+    return { data, isLoading, error, refetch }
 }

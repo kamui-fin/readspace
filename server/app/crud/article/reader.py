@@ -444,6 +444,9 @@ async def check_article_saved_by_url(
             & (UserEntry.user_id == user_id),
         )
         .where(ArticleContent.link == url)
+        .order_by(
+            UserEntry.updated_at.desc().nulls_last(), ArticleContent.created_at.desc()
+        )
         .limit(1)
     )
     row = result.first()

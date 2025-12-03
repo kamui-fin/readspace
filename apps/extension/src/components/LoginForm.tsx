@@ -1,4 +1,4 @@
-import browser from 'webextension-polyfill'
+import { sendMessage } from '@/shared/messaging'
 import { useExtensionStore } from '@/store'
 import { useIsCloudProd } from '@/hooks/use-is-cloud-prod'
 import { Loader2 } from 'lucide-react'
@@ -34,15 +34,20 @@ export function LoginForm({ onShowSelfHosted }: LoginFormProps = {}) {
 
     try {
       // Send message to background script to handle login
-      const response = (await browser.runtime.sendMessage({
-        action: 'login',
-        email: email.trim(),
-        password: password.trim(),
-      })) as { success: boolean; error?: { message: string } | string; access_token?: string }
+      const { data, error: authError } = await sendMessage({
+        type: 'login',
+        payload: {
+          email: email.trim(),
+          password: password.trim(),
+        },
+      })
 
-      if (!response.success || !response.access_token) {
-        const errorMsg = typeof response.error === 'object' ? response.error.message : (response.error || 'Failed to sign in')
-        throw new Error(errorMsg)
+      if (authError) {
+        throw new Error(authError.message)
+      }
+
+      if (!data?.session) {
+        throw new Error('No session returned')
       }
 
       // Login to the extension store (token is already in storage)
@@ -63,18 +68,16 @@ export function LoginForm({ onShowSelfHosted }: LoginFormProps = {}) {
       // Send message to background script to handle OAuth flow
       // This ensures the flow completes even if the popup closes
 
-      const response = (await browser.runtime.sendMessage({
-        action: 'startGoogleOAuth',
-      })) as
-        | { success: boolean; error?: string; access_token?: string }
-        | undefined
+      const { data, error: authError } = await sendMessage({
+        type: 'startGoogleOAuth',
+      })
 
-      if (!response) {
-        throw new Error('No response from background script')
+      if (authError) {
+        throw new Error(authError.message)
       }
 
-      if (!response.success || !response.access_token) {
-        throw new Error(response.error || 'Failed to authenticate with Google')
+      if (!data?.session) {
+        throw new Error('Failed to authenticate with Google')
       }
 
       // Login to the extension store (token is already in storage)

@@ -33,6 +33,12 @@ async function handleTabUpdated(
 ) {
     if (changeInfo.status === 'complete' && tab.url && isSupportedUrl(tab.url)) {
         try {
+            // 0. Check cache for instant feedback
+            const cached = await pageCache.get(tab.url)
+            if (cached?.metadata?.feeds) {
+                await updateFeedBadge(tabId, cached.metadata.feeds.length)
+            }
+
             // Give the page a moment to settle
             setTimeout(async () => {
                 try {
@@ -44,6 +50,8 @@ async function handleTabUpdated(
                     const potentialFeeds = metadata?.feeds || []
 
                     // 2. Optimistic Badge Update (High confidence only)
+                    // Only do this if we didn't already show a cached value, 
+                    // or if we want to update the cached value with a "fresh" guess before validation
                     const highConfidenceCount = potentialFeeds.filter(f => f.score >= 5).length
                     if (highConfidenceCount > 0) {
                         await updateFeedBadge(tabId, highConfidenceCount)
@@ -68,6 +76,10 @@ async function handleTabUpdated(
                         await pageCache.setContent(tab.url!, content)
                     }
                 } catch {
+                    // Only clear if we didn't have a cached value? 
+                    // Or clear if extraction failed implies page is broken/no feeds?
+                    // Safer to clear or leave existing if it was just a script error.
+                    // But if extraction fails, we probably can't get feeds.
                     await updateFeedBadge(tabId, 0)
                 }
             }, 500)

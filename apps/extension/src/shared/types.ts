@@ -5,7 +5,7 @@ export type MessageType =
     | 'logout'
     | 'getSession'
     | 'auth-changed'
-    | 'fetchFeeds'
+    | 'fetchFolders'
     | 'saveArticle'
     | 'unsaveArticle'
     | 'updateArticle'
@@ -20,7 +20,10 @@ export type MessageType =
     | 'getCachedPageByUrl'
     | 'extractMetadata'
     | 'extractContent'
-    | 'discoverFeeds';
+    | 'discoverFeeds'
+    | 'startGoogleOAuth'
+    | 'checkFeedFollowed'
+    | 'checkFeedFollowed';
 
 export interface ExtensionMessage<T = any> {
     type: MessageType;

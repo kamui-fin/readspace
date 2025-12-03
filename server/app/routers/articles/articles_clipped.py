@@ -66,12 +66,18 @@ async def save_web_article(
         title=request.title,
         metadata=None,
         note=request.note,
-        priority=request.priority.value if isinstance(request.priority, ArticlePriority) else request.priority,
+        priority=(
+            request.priority.value
+            if isinstance(request.priority, ArticlePriority)
+            else request.priority
+        ),
     )
 
     # 3. Resolve ID safely
     # Handling the complex return type of the service (Entry vs Content)
-    article_id = article.user_entry.id if hasattr(article, "user_entry") else article.content.id
+    article_id = (
+        article.user_entry.id if hasattr(article, "user_entry") else article.content.id
+    )
 
     logger.info("Web article saved successfully", article_id=str(article_id))
 
@@ -109,6 +115,7 @@ async def check_article_saved(
         return ArticleCheckResponse(is_saved=False)
 
     # 4. Return Hit
+    # Always return the UserEntry ID (clipped ID) so the extension can update it directly
     # Pydantic handles the serialization of UUIDs and Enums automatically
     return ArticleCheckResponse(
         article_id=str(user_entry.id),

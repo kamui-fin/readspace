@@ -1,154 +1,134 @@
 import { LRUCache } from 'lru-cache'
 import browser from 'webextension-polyfill'
-import { CachedPageContent, CachedPageMetadata } from '@/types'
+import { normalizeKey } from './normalize'
+import debounce from 'debounce'
+import { CachedPageData } from '../types'
 
-/**
- * Page Cache Utility
- *
- * Manages a cache of the last 5 visited pages with their metadata and content.
- * Uses lru-cache to maintain cache size.
- */
-
-export interface CachedPageData {
-  url: string
-  metadata: CachedPageMetadata | null
-  content: CachedPageContent | null
-  timestamp: number
-}
-
-const MAX_CACHE_SIZE = 5
-const CACHE_STORAGE_KEY = 'readspace-page-cache'
+const MAX_CACHE_SIZE = 200
+const CACHE_STORAGE_KEY_PREFIX = 'readspace-page-cache-v1:'
+const PAGE_CACHE_MAX_ITEMS_PER_DOMAIN = 100
+const PERSIST_DEBOUNCE_MS = 1000
 
 class PageCache {
-  private cache: LRUCache<string, CachedPageData>
+  private cache = new LRUCache<string, CachedPageData>({ max: MAX_CACHE_SIZE })
   private initialized = false
+  private dirty = false
+  private persistDebounced = debounce(() => this.persist(), PERSIST_DEBOUNCE_MS)
 
-  constructor() {
-    this.cache = new LRUCache<string, CachedPageData>({
-      max: MAX_CACHE_SIZE,
-    })
-  }
-
-  /**
-   * Initialize cache from storage
-   */
-  async init(): Promise<void> {
+  async init() {
     if (this.initialized) return
-
-    try {
-      const result = await browser.storage.local.get(CACHE_STORAGE_KEY)
-      const storedCache = result[CACHE_STORAGE_KEY]
-
-      if (storedCache) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        this.cache.load(storedCache as any)
-      }
-    } catch (error) {
-      console.error('Failed to initialize page cache from storage:', error)
-    }
-
     this.initialized = true
   }
 
-  /**
-   * Persist cache to storage
-   */
-  private async persist(): Promise<void> {
+  private domainKey(url: string) {
     try {
-      const dump = this.cache.dump()
-      await browser.storage.local.set({ [CACHE_STORAGE_KEY]: dump })
-    } catch (error) {
-      console.error('Failed to persist page cache to storage:', error)
+      const u = new URL(url)
+      return CACHE_STORAGE_KEY_PREFIX + u.hostname
+    } catch {
+      return CACHE_STORAGE_KEY_PREFIX + 'unknown'
     }
   }
 
-  /**
-   * Get cached data for a URL
-   */
   async get(url: string): Promise<CachedPageData | null> {
-    await this.init()
-    const cached = this.cache.get(url)
+    const key = normalizeKey(url)
+    const cached = this.cache.get(key)
+    if (cached) return cached
 
-    if (cached) {
-      // Update access time in storage (LRU order changed)
-      await this.persist()
+    const dKey = this.domainKey(url)
+    const kv = await browser.storage.local.get(dKey)
+    const domainCache = (kv[dKey] || {}) as Record<string, CachedPageData>
+    const stored = domainCache[key]
+
+    if (stored) {
+      this.cache.set(key, stored)
+      return stored
     }
 
-    return cached || null
+    return null
   }
 
-  /**
-   * Set metadata for a URL
-   */
-  async setMetadata(url: string, metadata: CachedPageMetadata): Promise<void> {
-    await this.init()
+  async set(url: string, data: CachedPageData) {
+    const key = normalizeKey(url)
+    this.cache.set(key, data)
+    this.dirty = true
+    this.persistDebounced()
+  }
 
-    const existing = this.cache.get(url)
+  async setMetadata(url: string, metadata: any) {
+    const existing = await this.get(url)
     const data: CachedPageData = existing || {
       url,
       metadata: null,
       content: null,
-      timestamp: Date.now(),
+      fetchedAt: Date.now()
     }
-
     data.metadata = metadata
-    data.timestamp = Date.now()
-
-    this.cache.set(url, data)
-    await this.persist()
+    data.fetchedAt = Date.now()
+    await this.set(url, data)
   }
 
-  /**
-   * Set content for a URL
-   */
-  async setContent(url: string, content: CachedPageContent): Promise<void> {
-    await this.init()
-
-    const existing = this.cache.get(url)
+  async setContent(url: string, content: any) {
+    const existing = await this.get(url)
     const data: CachedPageData = existing || {
       url,
       metadata: null,
       content: null,
-      timestamp: Date.now(),
+      fetchedAt: Date.now()
     }
-
     data.content = content
-    data.timestamp = Date.now()
-
-    this.cache.set(url, data)
-    await this.persist()
+    data.fetchedAt = Date.now()
+    await this.set(url, data)
   }
 
-  /**
-   * Set both metadata and content for a URL
-   */
-  async set(
-    url: string,
-    metadata: CachedPageMetadata | null,
-    content: CachedPageContent | null
-  ): Promise<void> {
-    await this.init()
+  private async persist() {
+    if (!this.dirty) return
 
-    const data: CachedPageData = {
-      url,
-      metadata,
-      content,
-      timestamp: Date.now(),
+    const updates: Record<string, Record<string, CachedPageData>> = {}
+
+    // Iterate over LRU cache
+    // Using entries() to ensure compatibility
+    for (const [key, value] of this.cache.entries()) {
+      try {
+        const domain = new URL(key).hostname
+        const dKey = CACHE_STORAGE_KEY_PREFIX + domain
+        if (!updates[dKey]) updates[dKey] = {}
+        updates[dKey][key] = value
+      } catch { }
     }
 
-    this.cache.set(url, data)
-    await this.persist()
+    const domainKeys = Object.keys(updates)
+    if (domainKeys.length === 0) return
+
+    const existingData = await browser.storage.local.get(domainKeys)
+
+    const finalUpdates: Record<string, Record<string, CachedPageData>> = {}
+
+    for (const dKey of domainKeys) {
+      const existingDomainCache = (existingData[dKey] || {}) as Record<string, CachedPageData>
+      const newItems = updates[dKey]
+
+      const merged = { ...existingDomainCache, ...newItems }
+
+      const keys = Object.keys(merged)
+      if (keys.length > PAGE_CACHE_MAX_ITEMS_PER_DOMAIN) {
+        keys.sort((a, b) => (merged[a].fetchedAt - merged[b].fetchedAt))
+        const trim = keys.length - PAGE_CACHE_MAX_ITEMS_PER_DOMAIN
+        for (let i = 0; i < trim; i++) delete merged[keys[i]]
+      }
+
+      finalUpdates[dKey] = merged
+    }
+
+    await browser.storage.local.set(finalUpdates)
+    this.dirty = false
   }
 
-  /**
-   * Clear entire cache
-   */
-  async clear(): Promise<void> {
-    await this.init()
-    this.cache.clear()
-    await this.persist()
+  async clear() {
+    this.cache.clear();
+    const all = await browser.storage.local.get(null)
+    const keysToRemove = Object.keys(all).filter(k => k.startsWith(CACHE_STORAGE_KEY_PREFIX))
+    await browser.storage.local.remove(keysToRemove)
   }
 }
 
-// Export singleton instance
 export const pageCache = new PageCache()

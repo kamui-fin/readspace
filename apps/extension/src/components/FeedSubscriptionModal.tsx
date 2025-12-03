@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { FolderList } from '@/components/subscription/FolderList'
-import { DiscoveredFeed } from '@readspace/shared'
+import { DiscoveredFeed, Subscription } from '@readspace/shared'
 import { useCreateFeed } from '@/hooks/use-feeds'
 import { BellPlus, Rss } from 'lucide-react'
 import React, { useState } from 'react'
@@ -21,7 +21,7 @@ interface FeedSubscriptionModalProps {
   isOpen: boolean
   onClose: () => void
   onSubscribeStart?: () => void
-  onSuccess?: () => void
+  onSuccess?: (subscription?: Subscription) => void
   onError?: () => void
 }
 
@@ -66,13 +66,12 @@ export function FeedSubscriptionModal({
     onClose()
 
     // Start the API call
-    // Start the API call
     createFeedMutation.mutateAsync({
       url: feedUrlToSubscribe,
       folder_id: selectedFolderId,
     })
-      .then(() => {
-        onSuccess?.()
+      .then((res) => {
+        onSuccess?.(res)
       })
       .catch((error: Error) => {
         console.error('Failed to subscribe to RSS feed:', error)

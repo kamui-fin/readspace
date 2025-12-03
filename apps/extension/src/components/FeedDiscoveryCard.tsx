@@ -2,10 +2,11 @@ import { Button } from '@/components/ui/button'
 import {
   areUrlsEqual,
   DiscoveredFeed,
+  Subscription,
 } from '@readspace/shared'
-import { useCreateFeed, useDeleteFeed, useFeeds } from '@/hooks/use-feeds'
+import { useCreateFeed, useDeleteFeed } from '@/hooks/use-feeds'
 import { Rss, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { FeedSubscriptionModal } from './FeedSubscriptionModal'
 
@@ -38,42 +39,76 @@ function FeedDiscoveryCardSkeleton() {
   )
 }
 
+import browser from 'webextension-polyfill'
+import { sendMessage } from '@/shared/messaging'
+
+// ... imports
+
 export function FeedDiscoveryCard({
   feeds,
   isLoading = false,
 }: FeedDiscoveryCardProps) {
   // Initialize hooks
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const { data: feedsData } = useFeeds()
-  const userFeeds = feedsData?.subscriptions || []
+  const [optimisticFollow, setOptimisticFollow] = useState<boolean | null>(null)
+  const [optimisticFeedId, setOptimisticFeedId] = useState<string | null>(null)
+  const [optimisticFeedUrl, setOptimisticFeedUrl] = useState<string | null>(null)
 
   const createFeedMutation = useCreateFeed()
   const deleteFeedMutation = useDeleteFeed()
 
-  // Compute following state using useMemo for immediate, accurate state
-  // Check ALL discovered feeds against user's subscriptions with normalized URL comparison
-  const { isFollowing, followedFeedId } = useMemo(() => {
-    // Default state when no feeds available
-    if (!feeds || feeds.length === 0) {
-      return {
-        isFollowing: false,
-        followedFeedId: null,
+  // Check initial status from cache
+  useEffect(() => {
+    if (!feeds || feeds.length === 0) return
+
+    let mounted = true
+
+    const checkStatus = async () => {
+      for (const feed of feeds) {
+        try {
+          const status = await sendMessage({ type: 'checkFeedFollowed', payload: { url: feed.url } })
+          if (!mounted) return
+
+          if (status.followed) {
+            setOptimisticFollow(true)
+            if (status.followId) {
+              setOptimisticFeedId(status.followId)
+            }
+            setOptimisticFeedUrl(feed.url)
+            return // Found one, stop checking
+          }
+        } catch (error) {
+          console.error('Error checking feed status:', error)
+        }
       }
     }
 
-    // Check if any discovered feed is already in user's subscriptions
-    // Use normalized URL comparison to catch variations (http/https, www, trailing slash, etc.)
-    const followedFeed = userFeeds.find((userFeed) =>
-      feeds.some((discoveredFeed) =>
-        areUrlsEqual(userFeed.feed.url, discoveredFeed.url)
-      )
-    )
+    checkStatus()
 
-    return {
-      isFollowing: !!followedFeed,
-      followedFeedId: followedFeed?.id || null,
+    return () => {
+      mounted = false
     }
-  }, [feeds, userFeeds])
+  }, [feeds])
+
+  // Listener for optimistic updates
+  useEffect(() => {
+    const listener = (msg: any) => {
+      if (msg.type === 'follow-changed') {
+        // Check if any feed matches
+        const match = feeds?.some(f => areUrlsEqual(f.url, msg.payload.url))
+        if (match) {
+          setOptimisticFollow(msg.payload.followed)
+          if (msg.payload.id) {
+            setOptimisticFeedId(msg.payload.id)
+          }
+        }
+      }
+    }
+    browser.runtime.onMessage.addListener(listener)
+    return () => browser.runtime.onMessage.removeListener(listener)
+  }, [feeds])
+
+  const isFollowing = optimisticFollow !== null ? optimisticFollow : false
 
   // Show skeleton while loading (after all hooks are initialized)
   if (isLoading || !feeds || feeds.length === 0) {
@@ -83,10 +118,24 @@ export function FeedDiscoveryCard({
   const handleFollowClick = async () => {
     if (isFollowing) {
       // Unfollow
-      if (followedFeedId) {
+      const idToDelete = optimisticFeedId
+      const urlToDelete = optimisticFeedUrl || feeds[0].url
+
+      if (idToDelete) {
         try {
-          await deleteFeedMutation.mutateAsync({ feedId: followedFeedId })
+          // Pass URL for optimistic update in background
+          // We use followedFeedUrl or the first feed url if we matched?
+          // If we are following, followedFeedUrl should be set.
+          // If optimisticFollow is true but we don't have ID yet, we can't delete by ID.
+          // We need to handle that case.
+          await deleteFeedMutation.mutateAsync({
+            feedId: idToDelete,
+            url: urlToDelete
+          })
           toast.success('Unfollowed')
+          setOptimisticFollow(false)
+          setOptimisticFeedId(null)
+          setOptimisticFeedUrl(null)
         } catch (error) {
           console.error('Failed to unfollow:', error)
           const errorMessage =
@@ -94,6 +143,11 @@ export function FeedDiscoveryCard({
           toast.error(`Failed to unfollow: ${errorMessage}`)
         }
       } else {
+        // If we are optimistically following but don't have ID yet
+        if (optimisticFollow) {
+          toast.error('Please wait for subscription to complete...')
+          return
+        }
         console.error('Cannot unfollow: followedFeedId is null')
         toast.error('Unable to unfollow - feed ID not found')
       }
@@ -108,15 +162,21 @@ export function FeedDiscoveryCard({
 
   const handleSubscribeStart = () => {
     // Called when user clicks Subscribe in modal
-    // We can rely on mutation state, so maybe nothing needed here
+    setOptimisticFollow(true)
   }
 
-  const handleSuccess = () => {
+  const handleSuccess = (subscription?: Subscription) => {
     // No need to manually set isFollowing - it will be computed from userFeeds
+    // But we capture the ID for immediate unfollow capability
+    if (subscription) {
+      setOptimisticFeedId(subscription.feed.id)
+      setOptimisticFeedUrl(subscription.feed.url)
+    }
   }
 
   const handleError = () => {
-    // Error handling
+    // Error handling - revert optimistic state
+    setOptimisticFollow(false)
   }
 
   const displayDescription =

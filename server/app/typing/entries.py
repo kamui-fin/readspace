@@ -113,6 +113,7 @@ class EntryUpdate(BaseModel):
     is_saved: bool | None = None
     priority: ArticlePriority | None = None
     user_note: str | None = None
+    title: str | None = None
 
 
 # ================= Internal (Feed Parsing) =================

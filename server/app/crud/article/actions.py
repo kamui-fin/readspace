@@ -54,10 +54,14 @@ async def set_article_state(
         insert_values["user_note"] = user_note
 
     # Prepare update values (exclude user_id, content_id)
-    update_values = {k: v for k, v in insert_values.items() if k not in ("user_id", "content_id")}
+    update_values = {
+        k: v for k, v in insert_values.items() if k not in ("user_id", "content_id")
+    }
 
     stmt = pg_insert(UserEntry).values(insert_values)
-    stmt = stmt.on_conflict_do_update(index_elements=["user_id", "content_id"], set_=update_values).returning(UserEntry)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["user_id", "content_id"], set_=update_values
+    ).returning(UserEntry)
 
     result = await db.execute(stmt)
     user_entry = result.scalar_one()
@@ -88,9 +92,11 @@ async def update_article_status(
         user_entry_result = await db.execute(
             select(UserEntry)
             .options(
-                selectinload(UserEntry.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
+                selectinload(UserEntry.content)
+                .undefer(ArticleContent.description)
+                .undefer(ArticleContent.content),
             )
-            .filter(UserEntry.id == article_id, UserEntry.user_id == user_id, UserEntry.feed_article_id.is_(None))
+            .filter(UserEntry.id == article_id, UserEntry.user_id == user_id)
         )
         user_entry = user_entry_result.scalar_one_or_none()
 
@@ -113,6 +119,8 @@ async def update_article_status(
             user_entry.priority = update_data["priority"]
         if update_data.get("user_note") is not None:
             user_entry.user_note = update_data["user_note"]
+        if update_data.get("title") is not None:
+            user_entry.content.title = update_data["title"]
 
         await db.flush()
 
@@ -123,7 +131,9 @@ async def update_article_status(
         feed_article_result = await db.execute(
             select(FeedArticle)
             .options(
-                selectinload(FeedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
+                selectinload(FeedArticle.content)
+                .undefer(ArticleContent.description)
+                .undefer(ArticleContent.content),
                 selectinload(FeedArticle.feed),
             )
             .filter(FeedArticle.id == article_id)
@@ -187,7 +197,9 @@ async def mark_all_as_read(
         stmt = stmt.where(FeedSubscription.folder_id == folder_id)
 
     # Set last_read_cutoff to the feed's most recent article, or now() if no articles
-    stmt = stmt.values(last_read_cutoff=func.coalesce(latest_article_subquery, func.now()))
+    stmt = stmt.values(
+        last_read_cutoff=func.coalesce(latest_article_subquery, func.now())
+    )
 
     # Execute the single query
     result = await db.execute(stmt)
@@ -196,7 +208,9 @@ async def mark_all_as_read(
     return result.rowcount or 0
 
 
-async def delete_old_article_contents(db: AsyncSession, *, retention_days: int, min_articles_per_feed: int) -> int:
+async def delete_old_article_contents(
+    db: AsyncSession, *, retention_days: int, min_articles_per_feed: int
+) -> int:
     """
     Delete old article_contents that are eligible for cleanup.
 

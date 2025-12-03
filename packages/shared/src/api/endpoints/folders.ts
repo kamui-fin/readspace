@@ -13,4 +13,5 @@ export const folders = {
       folder_id: string;
       updated_subscriptions: number;
     }>(`/api/folders/${folder_id}/read-status`),
+  listFolders: () => ApiClient.get<Folder[]>("/api/folders/"),
 };

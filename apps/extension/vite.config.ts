@@ -7,11 +7,17 @@ import { readFileSync } from 'fs'
 // Load browser-specific manifest
 function getManifest(mode: string) {
   const isFirefox = mode === 'firefox'
-  const manifestPath = isFirefox
+  const baseManifest = JSON.parse(readFileSync(resolve('./src/manifest.base.json'), 'utf-8'))
+  const specificManifestPath = isFirefox
     ? resolve('./src/manifest.firefox.json')
     : resolve('./src/manifest.chrome.json')
 
-  return JSON.parse(readFileSync(manifestPath, 'utf-8'))
+  const specificManifest = JSON.parse(readFileSync(specificManifestPath, 'utf-8'))
+
+  return {
+    ...baseManifest,
+    ...specificManifest,
+  }
 }
 
 import tailwindcss from '@tailwindcss/vite'

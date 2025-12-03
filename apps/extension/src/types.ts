@@ -38,6 +38,13 @@ export interface CachedPageMetadata {
     canonical_url?: string
 }
 
+export interface CachedPageData {
+    url: string
+    metadata: CachedPageMetadata | null // includes feeds[]
+    content: CachedPageContent | null
+    fetchedAt: number // when any piece was computed
+}
+
 export interface MessageRequest {
     action: string
     type?: string

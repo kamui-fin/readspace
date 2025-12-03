@@ -9,17 +9,18 @@ console.log("Readspace Background Service Worker Starting...");
 initTabs();
 
 // Message router
-browser.runtime.onMessage.addListener((msg: any, _sender, sendResponse) => {
+browser.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
     // Return true to indicate we will send a response asynchronously
     (async () => {
         try {
-            const response = await handleMessage(msg);
+            const response = await handleMessage(msg as any);
             // In webextension-polyfill, we return the promise instead of using sendResponse
             // But for compatibility with some patterns, we can still use it or return the value
             return { data: response, error: null };
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error("Message handler error:", e);
-            throw new Error(e.message || e.toString());
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            throw new Error(errorMessage);
         }
     })().then(sendResponse).catch((error) => {
         sendResponse({ data: null, error: error.message });

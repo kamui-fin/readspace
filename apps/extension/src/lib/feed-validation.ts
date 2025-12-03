@@ -30,8 +30,8 @@ export async function validateFeeds(feeds: DetectedFeed[]): Promise<DetectedFeed
             })
             clearTimeout(timeoutId)
 
-            // If HEAD not allowed, try GET (but only for headers)
-            if (response.status === 405) {
+            // If HEAD not allowed or returns 405, try GET
+            if (response.status === 405 || !response.ok) {
                 const getController = new AbortController()
                 const getTimeoutId = setTimeout(() => getController.abort(), 5000)
                 response = await fetch(feed.url, {
@@ -47,13 +47,36 @@ export async function validateFeeds(feeds: DetectedFeed[]): Promise<DetectedFeed
             const contentType = response.headers.get('content-type')?.toLowerCase() || ''
 
             // Check if content type indicates a feed
-            // We are more permissive here since we are not checking the body
-            const isFeedType =
+            let isFeedType =
                 contentType.includes('application/rss+xml') ||
                 contentType.includes('application/atom+xml') ||
                 contentType.includes('application/feed+json') ||
                 contentType.includes('text/xml') ||
                 contentType.includes('application/xml')
+
+            // If Content-Type check failed, peek at the body
+            if (!isFeedType && response.body) {
+                try {
+                    const reader = response.body.getReader()
+                    const { value } = await reader.read()
+                    reader.cancel() // We only need the first chunk
+
+                    if (value) {
+                        const text = new TextDecoder().decode(value)
+                        // Check for common feed signatures
+                        if (
+                            text.includes('<rss') ||
+                            text.includes('<feed') ||
+                            text.includes('<rdf:RDF') ||
+                            text.trim().startsWith('<?xml')
+                        ) {
+                            isFeedType = true
+                        }
+                    }
+                } catch (e) {
+                    // Ignore body read errors
+                }
+            }
 
             if (isFeedType) {
                 if (!uniqueUrls.has(feed.url)) {

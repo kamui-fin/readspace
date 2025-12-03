@@ -15,3 +15,21 @@ export async function sendMessage<T = any>(msg: ExtensionMessage): Promise<T> {
         throw error;
     }
 }
+
+export function sendTabMessage<T>(tabId: number, type: string, timeout = 5000): Promise<T> {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            reject(new Error(`Timeout: ${type} took longer than ${timeout}ms`))
+        }, timeout)
+
+        browser.tabs.sendMessage(tabId, { type })
+            .then((response) => {
+                clearTimeout(timer)
+                resolve(response as T)
+            })
+            .catch((error) => {
+                clearTimeout(timer)
+                reject(error)
+            })
+    })
+}

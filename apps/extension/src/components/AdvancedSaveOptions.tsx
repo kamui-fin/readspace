@@ -7,6 +7,11 @@ import toast from 'react-hot-toast'
 
 interface AdvancedSaveOptionsProps {
   metadata: PageMetadata
+  initialValues?: {
+    title?: string
+    note?: string
+    priority?: Priority
+  }
   onSave: (options: Partial<SaveOptions>) => void
   onCancel: () => void
   isLoading?: boolean
@@ -14,13 +19,14 @@ interface AdvancedSaveOptionsProps {
 
 export function AdvancedSaveOptions({
   metadata,
+  initialValues,
   onSave,
   onCancel,
   isLoading = false,
 }: AdvancedSaveOptionsProps) {
-  const [titleOverride, setTitleOverride] = useState('')
-  const [note, setNote] = useState('')
-  const [priority, setPriority] = useState<Priority>('LOW')
+  const [titleOverride, setTitleOverride] = useState(initialValues?.title || metadata.title || '')
+  const [note, setNote] = useState(initialValues?.note || '')
+  const [priority, setPriority] = useState<Priority>(initialValues?.priority || 'LOW')
 
   const handleSave = async () => {
     const options: Partial<SaveOptions> = {

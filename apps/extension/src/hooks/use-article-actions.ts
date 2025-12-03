@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
-import browser from 'webextension-polyfill'
 import { sendMessage } from '../shared/messaging'
 import { PageMetadata, Priority, CheckArticleSavedResponse } from '@readspace/shared'
 import { useCheckArticleSaved } from './use-check-article-saved'
+import { useArticleForm } from './use-article-form'
+import { extractContentForSave } from '../lib/extraction-utils'
 
 interface UseArticleActionsProps {
     currentUrl?: string
@@ -12,20 +13,7 @@ interface UseArticleActionsProps {
 
 export function useArticleActions({ currentUrl, metadata }: UseArticleActionsProps) {
     const { savedArticle, setSavedArticle } = useCheckArticleSaved(currentUrl)
-
-    // Form State
-    const [form, setForm] = useState({
-        title: '',
-        note: '',
-        priority: 'LOW' as Priority,
-    })
-
-    // Original State (for detecting changes)
-    const [originalForm, setOriginalForm] = useState({
-        title: '',
-        note: '',
-        priority: 'LOW' as Priority,
-    })
+    const { form, setForm, hasUnsavedChanges } = useArticleForm(savedArticle)
 
     const [status, setStatus] = useState({
         isPreparing: false,
@@ -34,148 +22,111 @@ export function useArticleActions({ currentUrl, metadata }: UseArticleActionsPro
         isUpdating: false,
     })
 
-    // Sync form fields with saved article
-    useEffect(() => {
-        if (savedArticle && savedArticle.is_saved) {
-            const newState = {
-                title: savedArticle.title || '',
-                note: savedArticle.note || '',
-                priority: (savedArticle.priority || 'LOW') as Priority,
-            }
-            setForm(newState)
-            setOriginalForm(newState)
-        } else {
-            const defaultState = { title: '', note: '', priority: 'LOW' as Priority }
-            setForm(defaultState)
-            setOriginalForm(defaultState)
-        }
-    }, [savedArticle])
-
-    // Derived State
     const isSaved = (!!savedArticle && savedArticle.is_saved) || status.isSaving || status.isPreparing
-    const hasUnsavedChanges =
-        !!savedArticle &&
-        (form.title !== originalForm.title ||
-            form.note !== originalForm.note ||
-            form.priority !== originalForm.priority)
-
     const isPending = Object.values(status).some(Boolean)
 
-    const handleSave = async () => {
+    const handleSave = async (options?: { title?: string; note?: string; priority?: Priority }) => {
         if (!currentUrl) return
 
-        if (isSaved && savedArticle && savedArticle.is_saved) {
-            // Update existing article
-            if (hasUnsavedChanges) {
-                setStatus(prev => ({ ...prev, isUpdating: true }))
-                try {
-                    await sendMessage({
-                        type: 'updateArticle',
-                        payload: {
-                            articleId: savedArticle.article_id,
-                            data: {
-                                priority: form.priority,
-                                note: form.note || undefined,
-                            },
-                        }
-                    })
-                    toast.success('Article updated')
-                    const updated = await sendMessage<CheckArticleSavedResponse>({ type: 'checkArticleSaved', payload: currentUrl })
-                    setSavedArticle(updated)
-                } catch (error) {
-                    toast.error('Failed to update article')
-                    console.error(error)
-                } finally {
-                    setStatus(prev => ({ ...prev, isUpdating: false }))
-                }
-                return
-            }
+        const titleToUse = options?.title ?? form.title
+        const noteToUse = options?.note ?? form.note
+        const priorityToUse = options?.priority ?? form.priority
 
-            // Unsave article
-            setStatus(prev => ({ ...prev, isUnsaving: true }))
-            try {
-                await sendMessage({
-                    type: 'unsaveArticle',
-                    payload: {
-                        articleId: savedArticle.article_id,
-                        url: currentUrl,
-                    }
+        if (isSaved && savedArticle && savedArticle.is_saved) {
+            // Update or Unsave
+            const effectiveHasChanges = hasUnsavedChanges || !!options
+
+            if (effectiveHasChanges) {
+                await updateArticle(savedArticle.article_id, currentUrl, {
+                    title: titleToUse,
+                    user_note: noteToUse,
+                    priority: priorityToUse
                 })
-                toast.success('Article removed')
-                setSavedArticle(null)
-            } catch (error) {
-                toast.error('Failed to remove article')
-                console.error(error)
-            } finally {
-                setStatus(prev => ({ ...prev, isUnsaving: false }))
+            } else {
+                await unsaveArticle(savedArticle.article_id, currentUrl)
             }
         } else {
-            // Save new article
-            setStatus(prev => ({ ...prev, isPreparing: true, isSaving: true }))
-            toast.success('Article saved') // Optimistic toast
+            // Save New
+            await saveNewArticle(currentUrl, {
+                title: titleToUse,
+                note: noteToUse,
+                priority: priorityToUse
+            }, metadata)
+        }
+    }
 
-            try {
-                // Extract content
-                let extractedContent: any = null
+    const updateArticle = async (articleId: string, url: string, data: any) => {
+        setStatus(prev => ({ ...prev, isUpdating: true }))
+        try {
+            await sendMessage({
+                type: 'updateArticle',
+                payload: { articleId, url, data }
+            })
+            toast.success('Article updated')
+            const updated = await sendMessage<CheckArticleSavedResponse>({ type: 'checkArticleSaved', payload: { url } })
+            setSavedArticle(updated)
+        } catch (error) {
+            toast.error('Failed to update article')
+            console.error(error)
+        } finally {
+            setStatus(prev => ({ ...prev, isUpdating: false }))
+        }
+    }
 
-                // Try cache first
-                try {
-                    const cachedPage = await sendMessage<PageMetadata & { content?: string }>({
-                        type: 'getCachedPageByUrl',
-                        payload: currentUrl,
-                    })
-                    if (cachedPage?.content) {
-                        extractedContent = { ...cachedPage, content: cachedPage.content }
-                    }
-                } catch { }
+    const unsaveArticle = async (articleId: string, url: string) => {
+        setStatus(prev => ({ ...prev, isUnsaving: true }))
+        try {
+            await sendMessage({
+                type: 'unsaveArticle',
+                payload: { articleId, url }
+            })
+            toast.success('Article removed')
+            setSavedArticle(null)
+        } catch (error) {
+            toast.error('Failed to remove article')
+            console.error(error)
+        } finally {
+            setStatus(prev => ({ ...prev, isUnsaving: false }))
+        }
+    }
 
-                // Try page extraction
-                if (!extractedContent) {
-                    try {
-                        const tabs = await browser.tabs.query({ active: true, currentWindow: true })
-                        if (tabs[0]?.id) {
-                            extractedContent = await browser.tabs.sendMessage(tabs[0].id, {
-                                type: 'extractContent',
-                                url: currentUrl,
-                            })
-                        }
-                    } catch (error) {
-                        console.error('Failed to extract content:', error)
-                    }
+    const saveNewArticle = async (url: string, data: any, initialMetadata?: PageMetadata) => {
+        setStatus(prev => ({ ...prev, isPreparing: true, isSaving: true }))
+        toast.success('Article saved')
+
+        try {
+            const extractedContent = await extractContentForSave(url)
+
+            // Build metadata
+            const metadataObj: Record<string, string> = {}
+            const source = extractedContent || initialMetadata || {}
+
+            if (source.description) metadataObj.description = source.description
+            if (source.author) metadataObj.author = source.author
+            if (source.published_at) metadataObj.published_at = source.published_at
+            if (source.image_url) metadataObj.image_url = source.image_url
+            if (initialMetadata?.favicon) metadataObj.favicon = initialMetadata.favicon
+
+            await sendMessage({
+                type: 'saveArticle',
+                payload: {
+                    url,
+                    title: data.title || extractedContent?.title || initialMetadata?.title,
+                    content: extractedContent?.content,
+                    metadata: Object.keys(metadataObj).length > 0 ? metadataObj : undefined,
+                    priority: data.priority,
+                    note: data.note,
                 }
+            })
 
-                // Build metadata
-                const metadataObj: Record<string, string> = {}
-                const source = extractedContent || metadata || {}
+            const updated = await sendMessage<CheckArticleSavedResponse>({ type: 'checkArticleSaved', payload: { url } })
+            setSavedArticle(updated)
 
-                if (source.description) metadataObj.description = source.description
-                if (source.author) metadataObj.author = source.author
-                if (source.published_at) metadataObj.published_at = source.published_at
-                if (source.image_url) metadataObj.image_url = source.image_url
-                if (metadata?.favicon) metadataObj.favicon = metadata.favicon
-
-                // Save
-                await sendMessage({
-                    type: 'saveArticle',
-                    payload: {
-                        url: currentUrl,
-                        title: form.title || extractedContent?.title || metadata?.title,
-                        content: extractedContent?.content,
-                        metadata: Object.keys(metadataObj).length > 0 ? metadataObj : undefined,
-                        priority: form.priority,
-                        note: form.note || undefined,
-                    }
-                })
-
-                const updated = await sendMessage<CheckArticleSavedResponse>({ type: 'checkArticleSaved', payload: currentUrl })
-                setSavedArticle(updated)
-
-            } catch (error) {
-                console.error('Failed to save article:', error)
-                toast.error('Failed to save article')
-            } finally {
-                setStatus(prev => ({ ...prev, isPreparing: false, isSaving: false }))
-            }
+        } catch (error) {
+            console.error('Failed to save article:', error)
+            toast.error('Failed to save article')
+        } finally {
+            setStatus(prev => ({ ...prev, isPreparing: false, isSaving: false }))
         }
     }
 

@@ -103,8 +103,18 @@ export const articles = {
       is_saved?: boolean;
       priority?: string;
       user_note?: string | null;
+      title?: string;
     },
-  ) => ApiClient.put<void>(`/api/articles/${id}`, data),
+    article_type?: string,
+  ) => {
+    const queryParams = new URLSearchParams();
+    if (article_type) queryParams.append("article_type", article_type);
+    const queryString = queryParams.toString();
+    return ApiClient.put<void>(
+      `/api/articles/${id}${queryString ? `?${queryString}` : ""}`,
+      data,
+    );
+  },
 
   getTodaysArticles: (params?: {
     cursor?: string;
