@@ -427,6 +427,32 @@ async def get_article_by_id(
     return cast(tuple[FeedArticle, UserEntry | None], row)
 
 
+async def get_clipped_article_by_id(
+    db: AsyncSession,
+    *,
+    article_id: UUID,
+    user_id: UUID,
+) -> tuple[ArticleContent, UserEntry] | None:
+    """Get single clipped article by ID (UserEntry ID)."""
+    stmt = (
+        select(ArticleContent, UserEntry)
+        .join(
+            UserEntry,
+            and_(
+                UserEntry.content_id == ArticleContent.id,
+                UserEntry.user_id == user_id,
+            ),
+        )
+        .where(UserEntry.id == article_id)
+    )
+
+    result = await db.execute(stmt)
+    row = result.first()
+    if row is None:
+        return None
+    return cast(tuple[ArticleContent, UserEntry], row)
+
+
 async def check_article_saved_by_url(
     db: AsyncSession, *, url: str, user_id: UUID
 ) -> tuple[ArticleContent, UserEntry | None] | None:

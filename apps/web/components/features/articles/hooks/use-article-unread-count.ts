@@ -3,14 +3,14 @@ import { type Subscription, ArticleFilterMode } from "@readspace/shared"
 
 interface UseArticleUnreadCountProps {
     unreadCounts:
-    | {
-        read_later?: number
-        today?: number
-        feed_counts?: Record<string, number>
-        total_unread?: number
-    }
-    | null
-    | undefined
+        | {
+              read_later?: number
+              today?: number
+              feed_counts?: Record<string, number>
+              total_unread?: number
+          }
+        | null
+        | undefined
     feedId?: string
     folderId?: string
     mode?: ArticleFilterMode

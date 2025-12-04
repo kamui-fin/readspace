@@ -54,26 +54,26 @@ class PageCache {
     this.persistDebounced()
   }
 
-  async setMetadata(url: string, metadata: any) {
+  async setMetadata(url: string, metadata: CachedPageData['metadata']) {
     const existing = await this.get(url)
     const data: CachedPageData = existing || {
       url,
       metadata: null,
       content: null,
-      fetchedAt: Date.now()
+      fetchedAt: Date.now(),
     }
     data.metadata = metadata
     data.fetchedAt = Date.now()
     await this.set(url, data)
   }
 
-  async setContent(url: string, content: any) {
+  async setContent(url: string, content: CachedPageData['content']) {
     const existing = await this.get(url)
     const data: CachedPageData = existing || {
       url,
       metadata: null,
       content: null,
-      fetchedAt: Date.now()
+      fetchedAt: Date.now(),
     }
     data.content = content
     data.fetchedAt = Date.now()
@@ -93,7 +93,9 @@ class PageCache {
         const dKey = CACHE_STORAGE_KEY_PREFIX + domain
         if (!updates[dKey]) updates[dKey] = {}
         updates[dKey][key] = value
-      } catch { }
+      } catch {
+        // ignore
+      }
     }
 
     const domainKeys = Object.keys(updates)
@@ -104,14 +106,17 @@ class PageCache {
     const finalUpdates: Record<string, Record<string, CachedPageData>> = {}
 
     for (const dKey of domainKeys) {
-      const existingDomainCache = (existingData[dKey] || {}) as Record<string, CachedPageData>
+      const existingDomainCache = (existingData[dKey] || {}) as Record<
+        string,
+        CachedPageData
+      >
       const newItems = updates[dKey]
 
       const merged = { ...existingDomainCache, ...newItems }
 
       const keys = Object.keys(merged)
       if (keys.length > PAGE_CACHE_MAX_ITEMS_PER_DOMAIN) {
-        keys.sort((a, b) => (merged[a].fetchedAt - merged[b].fetchedAt))
+        keys.sort((a, b) => merged[a].fetchedAt - merged[b].fetchedAt)
         const trim = keys.length - PAGE_CACHE_MAX_ITEMS_PER_DOMAIN
         for (let i = 0; i < trim; i++) delete merged[keys[i]]
       }
@@ -124,9 +129,11 @@ class PageCache {
   }
 
   async clear() {
-    this.cache.clear();
+    this.cache.clear()
     const all = await browser.storage.local.get(null)
-    const keysToRemove = Object.keys(all).filter(k => k.startsWith(CACHE_STORAGE_KEY_PREFIX))
+    const keysToRemove = Object.keys(all).filter((k) =>
+      k.startsWith(CACHE_STORAGE_KEY_PREFIX)
+    )
     await browser.storage.local.remove(keysToRemove)
   }
 }

@@ -1,10 +1,4 @@
-import {
-    fuzzySearch,
-    useFeeds,
-    useUnreadCounts,
-    type Subscription,
-    type Folder,
-} from "@readspace/shared"
+import { fuzzySearch, useFeeds, useUnreadCounts } from "@readspace/shared"
 import { useMemo, useState } from "react"
 
 export function useFeedSearch() {
@@ -12,15 +6,16 @@ export function useFeedSearch() {
 
     // Data queries
     const { data: feedsResponse } = useFeeds()
-    const feeds = feedsResponse?.subscriptions || []
-    const folders = feedsResponse?.folders || []
+    const feeds = useMemo(() => {
+        return feedsResponse?.subscriptions || []
+    }, [feedsResponse])
     const { data: unreadCounts } = useUnreadCounts()
     const feedUnreadCounts = unreadCounts?.feed_counts
 
     // Type-safe folder data
     const typedFolders = useMemo(() => {
-        return folders
-    }, [folders])
+        return feedsResponse?.folders || []
+    }, [feedsResponse])
 
     // Filter feeds with fuzzy search (limit to 100 results for performance)
     const filteredFeeds = useMemo(() => {

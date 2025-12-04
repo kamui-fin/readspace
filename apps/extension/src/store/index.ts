@@ -1,7 +1,7 @@
-
 import { sendMessage } from '@/shared/messaging'
 import browser from 'webextension-polyfill'
 import { ExtensionSettings } from '@/types'
+import { ExtensionMessage } from '@/shared/types'
 import { PageMetadata, User } from '@readspace/shared'
 import { create } from 'zustand'
 import { createJSONStorage, persist, StateStorage } from 'zustand/middleware'
@@ -94,7 +94,9 @@ export const useExtensionStore = create<ExtensionState>()(
         try {
           // Just check if we have a session in storage, which is managed by background
           const result = await browser.storage.local.get('session')
-          const session = result.session as { access_token?: string } | undefined
+          const session = result.session as
+            | { access_token?: string }
+            | undefined
 
           if (session?.access_token) {
             // If we have a token but no user profile, fetch it
@@ -164,21 +166,22 @@ export const useExtensionStore = create<ExtensionState>()(
 )
 
 // Listen for auth changes from background
-browser.runtime.onMessage.addListener((msg: any) => {
-  if (msg.type === "auth-changed") {
-    const session = msg.payload;
-    const store = useExtensionStore.getState();
+browser.runtime.onMessage.addListener((msg: unknown) => {
+  const message = msg as ExtensionMessage
+  if (message.type === 'auth-changed') {
+    const session = message.payload
+    const store = useExtensionStore.getState()
 
     if (session) {
       // If we have a session but aren't authenticated in store, try to login (get profile)
       if (!store.isAuthenticated) {
-        store.login().catch(console.error);
+        store.login().catch(console.error)
       }
     } else {
       // If no session, ensure we are logged out
       if (store.isAuthenticated) {
-        store.logout().catch(console.error);
+        store.logout().catch(console.error)
       }
     }
   }
-});
+})

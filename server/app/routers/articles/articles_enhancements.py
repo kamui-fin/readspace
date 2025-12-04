@@ -4,7 +4,7 @@ from typing import Annotated, Any
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Query
 
 from app.core.custom_exceptions import NotFoundError, ValidationError
 from app.db.session import get_db_factory
@@ -29,7 +29,10 @@ router = APIRouter()
 
 # --- Helpers ---
 async def get_article_or_404(
-    db_factory: SessionFactory, article_id: UUID, user_id: UUID
+    db_factory: SessionFactory,
+    article_id: UUID,
+    user_id: UUID,
+    is_clipped: bool = False,
 ) -> Any:
     """Retrieves article details or raises NotFoundError."""
     article = await get_article_details(
@@ -37,7 +40,20 @@ async def get_article_or_404(
         article_id=article_id,
         user_id=user_id,
         allow_preview=False,
+        is_clipped=is_clipped,
     )
+
+    # Fallback: If not found and we weren't explicitly looking for a clipped article,
+    # try looking for a clipped article.
+    if not article and not is_clipped:
+        article = await get_article_details(
+            db_factory=db_factory,
+            article_id=article_id,
+            user_id=user_id,
+            allow_preview=False,
+            is_clipped=True,
+        )
+
     if not article:
         raise NotFoundError(message="Article not found")
     return article
@@ -69,6 +85,9 @@ async def extract_full_text(
     article_id: UUID,
     user: Annotated[TokenData, Depends(get_current_user)],
     db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
+    clipped: bool = Query(
+        False, description="Whether the article is a clipped article"
+    ),
 ) -> ExtractionResponse:
     """
     Manually trigger full-text extraction for an article.
@@ -76,7 +95,9 @@ async def extract_full_text(
     logger.bind(article_id=str(article_id), user_id=user.sub)
 
     # 1. Verify Article
-    article = await get_article_or_404(db_factory, article_id, UUID(user.sub))
+    article = await get_article_or_404(
+        db_factory, article_id, UUID(user.sub), is_clipped=clipped
+    )
 
     if not article.link:
         raise ValidationError(message="Article has no source URL available")
@@ -101,6 +122,9 @@ async def summarize_article(
     user: Annotated[TokenData, Depends(get_current_user)],
     db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
     request: SummarizeRequest = Body(default_factory=lambda: SummarizeRequest()),
+    clipped: bool = Query(
+        False, description="Whether the article is a clipped article"
+    ),
 ) -> SummarizeResponse:
     """
     Generate an AI summary of the article.
@@ -108,7 +132,9 @@ async def summarize_article(
     logger.bind(article_id=str(article_id), user_id=user.sub)
 
     # 1. Fetch & Resolve Content
-    article = await get_article_or_404(db_factory, article_id, UUID(user.sub))
+    article = await get_article_or_404(
+        db_factory, article_id, UUID(user.sub), is_clipped=clipped
+    )
     content_to_use = resolve_content(request.content, article)
 
     # 1.5. Auto-extract if content is short/incomplete
@@ -143,6 +169,9 @@ async def translate_article(
     request: Annotated[TranslateRequest, Body(...)],
     user: Annotated[TokenData, Depends(get_current_user)],
     db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
+    clipped: bool = Query(
+        False, description="Whether the article is a clipped article"
+    ),
 ) -> TranslateResponse:
     """
     Translate the article content to a target language.
@@ -154,7 +183,9 @@ async def translate_article(
     )
 
     # 1. Fetch & Resolve Content
-    article = await get_article_or_404(db_factory, article_id, UUID(user.sub))
+    article = await get_article_or_404(
+        db_factory, article_id, UUID(user.sub), is_clipped=clipped
+    )
     content_to_use = resolve_content(request.content, article)
 
     # 2. Translate

@@ -45,7 +45,8 @@ async def generate_summary(
 
     # 2. Cache Check
     # Cache key based on article_id and language_key, NOT content hash
-    cache_key = _make_cache_key("summary", f"{article_id}:{language_key}")
+    # Use readable key format: summary:<article_id>:<language_key>
+    cache_key = f"summary:{article_id}:{language_key}"
     if cached := await redis_cache.get(cache_key):
         return cached
 

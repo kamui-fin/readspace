@@ -43,12 +43,6 @@ export function useArticleInteractions({
             is_read: true,
         }
 
-        // If in Read Later mode, marking as read should also unsave it
-        // This triggers the optimistic removal from the Read Later list
-        if (isReadLaterMode) {
-            updateData.is_saved = false
-        }
-
         updateArticle.mutate(
             {
                 articleId: article.id,
@@ -117,15 +111,15 @@ export function useArticleInteractions({
     // This serves as a fallback if the cache update hasn't propagated yet
     const optimisticReadLater =
         updateArticle.isPending &&
-            updateArticle.variables?.articleId === article.id &&
-            updateArticle.variables.data.is_saved !== undefined
+        updateArticle.variables?.articleId === article.id &&
+        updateArticle.variables.data.is_saved !== undefined
             ? updateArticle.variables.data.is_saved
             : article.is_saved
 
     const optimisticIsRead =
         updateArticle.isPending &&
-            updateArticle.variables?.articleId === article.id &&
-            updateArticle.variables.data.is_read !== undefined
+        updateArticle.variables?.articleId === article.id &&
+        updateArticle.variables.data.is_read !== undefined
             ? updateArticle.variables.data.is_read
             : article.is_read
 

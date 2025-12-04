@@ -9,7 +9,8 @@ import './index.css'
 import { useExtensionStore } from './store'
 
 function PopupContent() {
-  const { isAuthenticated, settings, checkExistingSession } = useExtensionStore()
+  const { isAuthenticated, settings, checkExistingSession } =
+    useExtensionStore()
 
   const {
     currentTab,
@@ -20,9 +21,9 @@ function PopupContent() {
     isFeedDataLoading,
   } = useCurrentPage()
 
-  const [currentView, setCurrentView] = useState<'main' | 'settings' | 'login'>(
-    'main'
-  )
+  const [currentView, setCurrentView] = useState<
+    'main' | 'settings' | 'settings-self-hosted' | 'login'
+  >('main')
 
   useEffect(() => {
     // Check for existing session on load
@@ -40,12 +41,7 @@ function PopupContent() {
 
   // Show login form if not authenticated
   if (!isAuthenticated) {
-    return (
-      <LoginView
-        currentView={currentView}
-        onViewChange={setCurrentView}
-      />
-    )
+    return <LoginView currentView={currentView} onViewChange={setCurrentView} />
   }
 
   // Show unsupported page message (only when authenticated)
@@ -73,7 +69,6 @@ function PopupContent() {
     />
   )
 }
-
 
 export function Popup() {
   return <PopupContent />

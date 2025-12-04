@@ -42,15 +42,15 @@ type FormValues = z.infer<typeof formSchema>
 
 interface EditFeedFormProps {
     feed: FeedSummary &
-    Partial<
-        Pick<
-            FeedDetail,
-            | "description"
-            | "language"
-            | "top_level_category"
-            | "popularity_score"
+        Partial<
+            Pick<
+                FeedDetail,
+                | "description"
+                | "language"
+                | "top_level_category"
+                | "popularity_score"
+            >
         >
-    >
     onClose: () => void
 }
 

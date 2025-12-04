@@ -35,10 +35,7 @@ export function ArticlesLayout({
     }
 
     return (
-        <ResizablePanelGroup
-            direction="horizontal"
-            onLayout={onLayoutChange}
-        >
+        <ResizablePanelGroup direction="horizontal" onLayout={onLayoutChange}>
             <ResizablePanel
                 defaultSize={defaultLayout[0]}
                 minSize={25}
@@ -50,7 +47,9 @@ export function ArticlesLayout({
 
             <ResizableHandle />
 
-            <ResizablePanel defaultSize={defaultLayout[1]}>{detail}</ResizablePanel>
+            <ResizablePanel defaultSize={defaultLayout[1]}>
+                {detail}
+            </ResizablePanel>
         </ResizablePanelGroup>
     )
 }

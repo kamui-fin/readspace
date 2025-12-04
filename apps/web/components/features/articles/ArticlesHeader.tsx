@@ -53,82 +53,83 @@ export function ArticlesHeader({
                     </Badge>
                 )}
             </div>
-            {
-                !isPreviewMode && (
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                        {!isReadLaterMode && (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant={
-                                                showUnreadOnly ? "default" : "ghost"
-                                            }
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={toggleShowUnreadOnly}
-                                        >
-                                            {showUnreadOnly ? (
-                                                <Eye className="h-4 w-4" />
-                                            ) : (
-                                                <EyeOff className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        {showUnreadOnly
-                                            ? "Show all articles"
-                                            : "Show unread only"}
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                        {feedId && (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={handleDeepRefresh}
-                                            disabled={isDeepRefreshing}
-                                        >
-                                            <RefreshCw
-                                                className={`h-4 w-4 ${isDeepRefreshing
+            {!isPreviewMode && (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                    {!isReadLaterMode && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant={
+                                            showUnreadOnly ? "default" : "ghost"
+                                        }
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={toggleShowUnreadOnly}
+                                    >
+                                        {showUnreadOnly ? (
+                                            <Eye className="h-4 w-4" />
+                                        ) : (
+                                            <EyeOff className="h-4 w-4" />
+                                        )}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    {showUnreadOnly
+                                        ? "Show all articles"
+                                        : "Show unread only"}
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+                    {feedId && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={handleDeepRefresh}
+                                        disabled={isDeepRefreshing}
+                                    >
+                                        <RefreshCw
+                                            className={`h-4 w-4 ${
+                                                isDeepRefreshing
                                                     ? "animate-spin"
                                                     : ""
-                                                    }`}
-                                            />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        Check for new articles
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                        {(feedId || folderId) && (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={handleMarkAllAsRead}
-                                            disabled={isMarkingAllRead}
-                                        >
-                                            <CheckCheck className="h-4 w-4" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Mark all as read</TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                    </div>
-                )
-            }
-        </div >
+                                            }`}
+                                        />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    Check for new articles
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+                    {(feedId || folderId) && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={handleMarkAllAsRead}
+                                        disabled={isMarkingAllRead}
+                                    >
+                                        <CheckCheck className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    Mark all as read
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+                </div>
+            )}
+        </div>
     )
 }

@@ -1,11 +1,7 @@
 {
   "oauth2": {
     "client_id": "618963664803-flhs0b3rd4d974kglkf0gshfhk461rqq.apps.googleusercontent.com",
-    "scopes": [
-      "openid",
-      "email",
-      "profile"
-    ]
+    "scopes": ["openid", "email", "profile"]
   },
   "background": {
     "service_worker": "src/background.ts",

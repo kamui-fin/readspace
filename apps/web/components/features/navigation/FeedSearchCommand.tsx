@@ -6,7 +6,6 @@ import { Command } from "cmdk"
 import { Search, Star } from "lucide-react"
 import { useFeedSearch } from "./hooks/use-feed-search"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { cn } from "@/lib/utils"
 import { FeedIcon } from "@/components/features/feeds/FeedIcon"
 
 interface FeedSearchCommandProps {
@@ -72,7 +71,11 @@ export function FeedSearchCommand({
             <DialogContent className="p-0 max-w-2xl overflow-hidden shadow-2xl [&>button]:hidden">
                 <DialogTitle className="sr-only">Search Feeds</DialogTitle>
                 <Command className="flex h-full w-full flex-col overflow-hidden rounded-xl bg-background">
-                    <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
+                    <div
+                        className="flex items-center border-b px-3"
+                        // eslint-disable-next-line react/no-unknown-property
+                        cmdk-input-wrapper=""
+                    >
                         <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                         <Command.Input
                             value={searchValue}
@@ -100,21 +103,28 @@ export function FeedSearchCommand({
                                 >
                                     {folderFeeds.map((feed) => {
                                         const unreadCount =
-                                            feedUnreadCounts?.[feed.feed.id] || 0
+                                            feedUnreadCounts?.[feed.feed.id] ||
+                                            0
                                         return (
                                             <Command.Item
                                                 key={feed.id}
                                                 value={`${feed.custom_title || feed.feed.title} ${feed.feed.link || feed.feed.url}`}
                                                 onSelect={() =>
-                                                    handleSelectFeed(feed.feed.id)
+                                                    handleSelectFeed(
+                                                        feed.feed.id
+                                                    )
                                                 }
                                                 className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50"
                                             >
                                                 <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md mr-3">
                                                     <FeedIcon
                                                         feed={{
-                                                            title: feed.custom_title || feed.feed.title,
-                                                            image_url: feed.feed.image_url,
+                                                            title:
+                                                                feed.custom_title ||
+                                                                feed.feed.title,
+                                                            image_url:
+                                                                feed.feed
+                                                                    .image_url,
                                                         }}
                                                         className="h-full w-full rounded-md"
                                                     />
@@ -154,21 +164,28 @@ export function FeedSearchCommand({
                                 >
                                     {groupedFeeds.no_folder.map((feed) => {
                                         const unreadCount =
-                                            feedUnreadCounts?.[feed.feed.id] || 0
+                                            feedUnreadCounts?.[feed.feed.id] ||
+                                            0
                                         return (
                                             <Command.Item
                                                 key={feed.id}
                                                 value={`${feed.custom_title || feed.feed.title} ${feed.feed.link || feed.feed.url}`}
                                                 onSelect={() =>
-                                                    handleSelectFeed(feed.feed.id)
+                                                    handleSelectFeed(
+                                                        feed.feed.id
+                                                    )
                                                 }
                                                 className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50"
                                             >
                                                 <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md mr-3">
                                                     <FeedIcon
                                                         feed={{
-                                                            title: feed.custom_title || feed.feed.title,
-                                                            image_url: feed.feed.image_url,
+                                                            title:
+                                                                feed.custom_title ||
+                                                                feed.feed.title,
+                                                            image_url:
+                                                                feed.feed
+                                                                    .image_url,
                                                         }}
                                                         className="h-full w-full rounded-md"
                                                     />

@@ -52,27 +52,39 @@ async def get_article_details(
     article_id: UUID,
     user_id: UUID,
     allow_preview: bool = False,
+    is_clipped: bool = False,
 ) -> EntryDetail | None:
     """
     Get single article with business logic (Auto-Extraction).
     """
     # 1. Call CRUD
     async with db_factory() as db:
-        row = await reader.get_article_by_id(
-            db,
-            article_id=article_id,
-            user_id=user_id,
-            load_full_content=True,
-            allow_preview=allow_preview,
-        )
+        if is_clipped:
+            row = await reader.get_clipped_article_by_id(
+                db,
+                article_id=article_id,
+                user_id=user_id,
+            )
+        else:
+            row = await reader.get_article_by_id(
+                db,
+                article_id=article_id,
+                user_id=user_id,
+                load_full_content=True,
+                allow_preview=allow_preview,
+            )
 
     if not row:
         return None
 
     # 2. Transform directly to Pydantic
-    feed_article, user_entry = row
     transformer = reader.ArticleTransformer()
-    response = transformer.to_entry_detail(feed_article, user_entry)
+    if is_clipped:
+        content, user_entry = row  # type: ignore
+        response = transformer.clipped_to_entry_detail(content, user_entry)
+    else:
+        feed_article, user_entry = row  # type: ignore
+        response = transformer.to_entry_detail(feed_article, user_entry)
 
     # 3. Apply Business Logic (Auto Extract)
     if AUTO_EXTRACT_ON_FETCH:

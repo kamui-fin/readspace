@@ -65,11 +65,9 @@ export function ArticlesSidebar({
     const { data: unreadCounts } = useUnreadCounts()
     const { data: feedsResponse } = useFeeds()
     const allUserFeeds = feedsResponse?.subscriptions || []
-    const folders = feedsResponse?.folders || []
-
     const allFolders = useMemo(() => {
-        return folders
-    }, [folders])
+        return feedsResponse?.folders || []
+    }, [feedsResponse])
 
     // Mutations
     const markFeedAllRead = useMarkFeedAllRead()

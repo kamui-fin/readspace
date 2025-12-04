@@ -3,7 +3,6 @@ import { formatDistanceToNow, parseISO } from "date-fns"
 import { FeedIcon } from "@/components/features/feeds/FeedIcon"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { useState } from "react"
 
 interface ArticleHeaderProps {
     article: Article
@@ -15,13 +14,6 @@ interface ArticleHeaderProps {
     toolbar?: React.ReactNode
 }
 
-function toTitleCase(str: string) {
-    return str.replace(
-        /\b\w/g,
-        (match) => match.toUpperCase()
-    )
-}
-
 export function ArticleHeader({
     article,
     currentReadTime,
@@ -31,8 +23,6 @@ export function ArticleHeader({
     shouldShowPreviewBanner,
     toolbar,
 }: ArticleHeaderProps) {
-
-
     const publishedAtString = article.published_at
     const readAtString = article.read_at
 
@@ -40,14 +30,14 @@ export function ArticleHeader({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                addSuffix: true,
-            })
+                  addSuffix: true,
+              })
         : "Date unknown"
 
     return (
         <div className="space-y-4 not-prose">
             {/* Feed Link Badge - Show when not in feed-specific view */}
-            {shouldShowFeedBadge && (
+            {shouldShowFeedBadge && article.article_type !== "clipped" && (
                 <div className="flex items-center gap-2 flex-wrap">
                     <Link
                         href={`/feeds/${article.feed_id}/articles`}

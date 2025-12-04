@@ -24,9 +24,13 @@ export function AdvancedSaveOptions({
   onCancel,
   isLoading = false,
 }: AdvancedSaveOptionsProps) {
-  const [titleOverride, setTitleOverride] = useState(initialValues?.title || metadata.title || '')
+  const [titleOverride, setTitleOverride] = useState(
+    initialValues?.title || metadata.title || ''
+  )
   const [note, setNote] = useState(initialValues?.note || '')
-  const [priority, setPriority] = useState<Priority>(initialValues?.priority || 'LOW')
+  const [priority, setPriority] = useState<Priority>(
+    initialValues?.priority || 'LOW'
+  )
 
   const handleSave = async () => {
     const options: Partial<SaveOptions> = {
@@ -74,7 +78,7 @@ export function AdvancedSaveOptions({
             value={titleOverride}
             onChange={(e) => setTitleOverride(e.target.value)}
             placeholder={metadata.title || 'Enter custom title...'}
-            className="w-full px-3 py-2 text-sm bg-transparent border border-primary/20 focus:border-primary/50 rounded outline-none transition-colors"
+            className="w-full px-3 py-2 text-sm bg-transparent border border-primary/20 focus:border-primary/50 rounded outline-none transition-colors placeholder:text-muted-foreground"
           />
         </div>
 
@@ -89,10 +93,11 @@ export function AdvancedSaveOptions({
               type="button"
               onClick={() => setPriority('LOW')}
               className={`
-                px-3 py-2 rounded text-sm font-medium transition-all
-                ${priority === 'LOW'
-                  ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                px-3 py-2 rounded text-sm font-medium transition-all cursor-pointer
+                ${
+                  priority === 'LOW'
+                    ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >
@@ -105,10 +110,11 @@ export function AdvancedSaveOptions({
               type="button"
               onClick={() => setPriority('MEDIUM')}
               className={`
-                px-3 py-2 rounded text-sm font-medium transition-all
-                ${priority === 'MEDIUM'
-                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                px-3 py-2 rounded text-sm font-medium transition-all cursor-pointer
+                ${
+                  priority === 'MEDIUM'
+                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >
@@ -121,10 +127,11 @@ export function AdvancedSaveOptions({
               type="button"
               onClick={() => setPriority('HIGH')}
               className={`
-                px-3 py-2 rounded text-sm font-medium transition-all
-                ${priority === 'HIGH'
-                  ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                px-3 py-2 rounded text-sm font-medium transition-all cursor-pointer
+                ${
+                  priority === 'HIGH'
+                    ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >
@@ -155,7 +162,7 @@ export function AdvancedSaveOptions({
               setNote(e.target.value)
             }
             placeholder="Add your thoughts, why you're saving this, or what to remember..."
-            className="w-full px-3 py-2 text-sm bg-transparent border border-primary/20 focus:border-primary/50 rounded outline-none resize-none min-h-[80px] transition-colors"
+            className="w-full px-3 py-2 text-sm bg-transparent border border-primary/20 focus:border-primary/50 rounded outline-none resize-none min-h-[80px] transition-colors placeholder:text-muted-foreground"
           />
         </div>
       </div>

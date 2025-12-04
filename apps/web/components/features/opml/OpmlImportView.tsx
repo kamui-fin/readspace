@@ -78,10 +78,11 @@ export default function OpmlImportView() {
                         </Card>
                     ) : (
                         <Card
-                            className={`transition-colors duration-200 cursor-pointer ${isDragging
-                                ? "border-primary bg-primary/5"
-                                : "border-dashed border-2"
-                                } ${isUploading ? "opacity-50 pointer-events-none" : ""}`}
+                            className={`transition-colors duration-200 cursor-pointer ${
+                                isDragging
+                                    ? "border-primary bg-primary/5"
+                                    : "border-dashed border-2"
+                            } ${isUploading ? "opacity-50 pointer-events-none" : ""}`}
                             onDrop={handleDrop}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
@@ -115,8 +116,8 @@ export default function OpmlImportView() {
                                             {isUploading
                                                 ? "Uploading..."
                                                 : isDragging
-                                                    ? "Drop your OPML file here"
-                                                    : "Upload OPML File"}
+                                                  ? "Drop your OPML file here"
+                                                  : "Upload OPML File"}
                                         </h3>
                                         <p className="text-sm text-muted-foreground leading-relaxed">
                                             {isUploading

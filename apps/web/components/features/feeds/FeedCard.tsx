@@ -44,7 +44,9 @@ export function FeedCard({
     }
 
     // Dropdown menu for additional actions
-    const dropdownActions = (showPreviewButton || showSimilarButton || isAdmin) && (
+    const dropdownActions = (showPreviewButton ||
+        showSimilarButton ||
+        isAdmin) && (
         <>
             {/* Desktop version */}
             <div className="hidden md:block">
@@ -107,15 +109,15 @@ export function FeedCard({
         "error_count" in feed
             ? (feed as FeedSummary & { description?: string | null })
             : {
-                // FeedDiscoveryResult -> FeedSummary conversion
-                id: feed.id,
-                url: feed.url,
-                title: feed.title,
-                link: feed.link ?? null,
-                image_url: feed.image_url ?? null,
-                error_count: 0,
-                description: (feed as FeedDiscoveryResult).description,
-            }
+                  // FeedDiscoveryResult -> FeedSummary conversion
+                  id: feed.id,
+                  url: feed.url,
+                  title: feed.title,
+                  link: feed.link ?? null,
+                  image_url: feed.image_url ?? null,
+                  error_count: 0,
+                  description: (feed as FeedDiscoveryResult).description,
+              }
 
     return (
         <>

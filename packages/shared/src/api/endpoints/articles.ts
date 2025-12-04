@@ -94,7 +94,12 @@ export const articles = {
   getUnreadCounts: () =>
     ApiClient.get<ArticleCountsResponse>("/api/articles/counts"),
 
-  getArticle: (id: string) => ApiClient.get<Article>(`/api/articles/${id}`),
+  getArticle: (id: string, article_type?: string) => {
+    const queryParams = new URLSearchParams();
+    if (article_type === "clipped") queryParams.append("clipped", "true");
+    const queryString = queryParams.toString();
+    return ApiClient.get<Article>(`/api/articles/${id}${queryString ? `?${queryString}` : ""}`);
+  },
 
   updateArticle: (
     id: string,
@@ -153,14 +158,32 @@ export const articles = {
     );
   },
 
-  extractFullText: (id: string) =>
-    ApiClient.post<ExtractFullTextResponse>(
-      `/api/articles/${id}/extract-full-text`,
-    ),
+  extractFullText: (id: string, article_type?: string) => {
+    const queryParams = new URLSearchParams();
+    if (article_type === "clipped") queryParams.append("clipped", "true");
+    const queryString = queryParams.toString();
+    return ApiClient.post<ExtractFullTextResponse>(
+      `/api/articles/${id}/extract-full-text${queryString ? `?${queryString}` : ""}`,
+    );
+  },
 
-  summarize: (id: string, data: SummarizeRequest) =>
-    ApiClient.post<SummarizeResponse>(`/api/articles/${id}/summarize`, data),
+  summarize: (id: string, data: SummarizeRequest, article_type?: string) => {
+    const queryParams = new URLSearchParams();
+    if (article_type === "clipped") queryParams.append("clipped", "true");
+    const queryString = queryParams.toString();
+    return ApiClient.post<SummarizeResponse>(
+      `/api/articles/${id}/summarize${queryString ? `?${queryString}` : ""}`,
+      data,
+    );
+  },
 
-  translate: (id: string, data: TranslateRequest) =>
-    ApiClient.post<TranslateResponse>(`/api/articles/${id}/translate`, data),
+  translate: (id: string, data: TranslateRequest, article_type?: string) => {
+    const queryParams = new URLSearchParams();
+    if (article_type === "clipped") queryParams.append("clipped", "true");
+    const queryString = queryParams.toString();
+    return ApiClient.post<TranslateResponse>(
+      `/api/articles/${id}/translate${queryString ? `?${queryString}` : ""}`,
+      data,
+    );
+  },
 };

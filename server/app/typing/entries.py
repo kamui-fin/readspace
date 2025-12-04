@@ -59,6 +59,7 @@ class EntryListItem(ContentFields, UserStateFields, FeedContextFields):
     id: UUID
     source_domain: str | None = None
     created_at: datetime
+    article_type: str = "feed"
 
     # Override to exclude heavy fields in lists
     description: str | None = Field(None, description="Truncated preview")
@@ -76,6 +77,7 @@ class EntryDetail(ContentFields, UserStateFields, FeedContextFields):
     id: UUID
     source_domain: str | None = None
     created_at: datetime
+    article_type: str = "feed"
 
     # Full fields (not truncated)
     description: str | None = None

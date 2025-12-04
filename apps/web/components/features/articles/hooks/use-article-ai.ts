@@ -5,7 +5,8 @@ import {
     useTranslateArticleMutation,
     type Article,
 } from "@readspace/shared"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { toast } from "react-hot-toast"
 
 interface UseArticleAIProps {
     article: Article
@@ -22,6 +23,8 @@ export function useArticleAI({
         content: string
         language: string
     } | null>(null)
+    const [currentSummaryLanguage, setCurrentSummaryLanguage] =
+        useState("original")
 
     // Use mutation hooks from shared package
     const extractMutation = useExtractFullTextMutation()
@@ -34,13 +37,41 @@ export function useArticleAI({
             return currentTranslation.content
         }
         if (contentView === ContentView.Extracted) {
-            return article.extracted_content || extractMutation.data?.content || null
+            return (
+                article.extracted_content ||
+                extractMutation.data?.content ||
+                null
+            )
         }
         return article.content || article.description || ""
     }, [contentView, article, currentTranslation, extractMutation.data])
 
-    // Content to pass to AI operations
-    const contentForAI = article.extracted_content || extractMutation.data?.content || article.content || ""
+    // Sync summary language with content view
+    useEffect(() => {
+        if (!summarizeMutation.data) return
+
+        const targetLanguage =
+            contentView === ContentView.Translated && currentTranslation
+                ? currentTranslation.language
+                : "original"
+
+        if (targetLanguage !== currentSummaryLanguage) {
+            setCurrentSummaryLanguage(targetLanguage)
+            summarizeMutation.mutate({
+                articleId: article.id,
+                languageKey: targetLanguage,
+                articleType: article.article_type,
+            })
+        }
+    }, [
+        contentView,
+        currentTranslation,
+        summarizeMutation.data,
+        currentSummaryLanguage,
+        article.id,
+        article.article_type,
+        summarizeMutation,
+    ])
 
     return {
         // Data
@@ -56,11 +87,18 @@ export function useArticleAI({
 
         // Actions
         handleExtractContent: async () => {
-            await extractMutation.mutateAsync({
-                articleId: article.id,
-                articleUrl: article.link,
-            })
-            setContentView(ContentView.Extracted)
+            try {
+                await extractMutation.mutateAsync({
+                    articleId: article.id,
+                    articleUrl: article.link,
+                    articleType: article.article_type,
+                })
+                setContentView(ContentView.Extracted)
+            } catch {
+                toast.error("Failed to extract article content", {
+                    id: "extract-error",
+                })
+            }
         },
         handleSummarize: async () => {
             const languageKey =
@@ -68,10 +106,12 @@ export function useArticleAI({
                     ? currentTranslation.language
                     : "original"
 
+            setCurrentSummaryLanguage(languageKey)
             await summarizeMutation.mutateAsync({
                 articleId: article.id,
                 // Content is fetched by backend to save bandwidth
                 languageKey,
+                articleType: article.article_type,
             })
         },
         handleTranslate: async (language: string) => {
@@ -79,6 +119,7 @@ export function useArticleAI({
                 articleId: article.id,
                 targetLanguage: language,
                 // Content is fetched by backend to save bandwidth
+                articleType: article.article_type,
             })
             setCurrentTranslation({
                 content: result.translated_content,

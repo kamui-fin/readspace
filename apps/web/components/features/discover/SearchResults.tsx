@@ -10,10 +10,7 @@ import { FeedCard } from "@/components/features/feeds/FeedCard"
 import { FeedCardSkeleton } from "@/components/features/feeds/FeedCardSkeleton"
 import { FeedPreviewCard } from "@/components/features/feeds/FeedPreviewCard"
 import { Button } from "@/components/ui/button"
-import {
-    type FeedDiscoveryResult,
-    type FeedSummary,
-} from "@readspace/shared"
+import { type FeedDiscoveryResult, type FeedSummary } from "@readspace/shared"
 
 import { Pagination } from "./Pagination"
 
@@ -58,7 +55,6 @@ export function SearchResults({
     previewFeed,
     isPreviewLoading,
     previewError,
-    isPreviewError,
 }: SearchResultsProps) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { hits: items } = useInfiniteHits({} as any)
@@ -73,8 +69,8 @@ export function SearchResults({
     // Prepare preview feed data if available
     let previewFeedData:
         | (FeedSummary & {
-            is_preview: true
-        })
+              is_preview: true
+          })
         | null = null
     if (previewFeed && !isPreviewLoading && !previewError) {
         previewFeedData = createPreviewFeedData(previewFeed)
@@ -93,8 +89,6 @@ export function SearchResults({
             </div>
         )
     }
-
-
 
     return (
         <>
@@ -154,7 +148,8 @@ export function SearchResults({
                 <>
                     <div className="flex flex-col divide-y divide-border/40">
                         {items.map((hit) => {
-                            const hitData = hit as unknown as FeedDiscoveryResult
+                            const hitData =
+                                hit as unknown as FeedDiscoveryResult
                             const discoveryResult: FeedDiscoveryResult = {
                                 id: hitData.id || "",
                                 url: hitData.url,

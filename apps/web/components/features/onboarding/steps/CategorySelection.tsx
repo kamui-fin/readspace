@@ -56,10 +56,11 @@ const CategorySelectionStep: React.FC = () => {
                                 onClick={() =>
                                     handleCategoryToggle(category.name)
                                 }
-                                className={`w-full p-5 h-[110px] rounded-xl border transition-all duration-200 text-left group hover:scale-[1.02] hover:shadow-sm ${isSelected
+                                className={`w-full p-5 h-[110px] rounded-xl border transition-all duration-200 text-left group hover:scale-[1.02] hover:shadow-sm ${
+                                    isSelected
                                         ? "border-primary bg-primary/5 text-primary"
                                         : "border-border bg-background hover:border-border/60 hover:shadow-md text-foreground"
-                                    }`}
+                                }`}
                             >
                                 <div className="flex items-start gap-4 h-full">
                                     <div
@@ -67,10 +68,11 @@ const CategorySelectionStep: React.FC = () => {
                                     >
                                         <IconComponent
                                             size={20}
-                                            className={`${isSelected
+                                            className={`${
+                                                isSelected
                                                     ? "text-primary"
                                                     : "text-muted-foreground group-hover:text-foreground"
-                                                }`}
+                                            }`}
                                         />
                                     </div>
                                     <div className="flex-1 min-w-0 flex flex-col justify-between h-full py-1">
@@ -79,20 +81,22 @@ const CategorySelectionStep: React.FC = () => {
                                                 {category.shortName}
                                             </div>
                                             <div
-                                                className={`text-sm leading-snug transition-colors line-clamp-2 ${isSelected
+                                                className={`text-sm leading-snug transition-colors line-clamp-2 ${
+                                                    isSelected
                                                         ? "text-primary/70"
                                                         : "text-muted-foreground group-hover:text-foreground/80"
-                                                    }`}
+                                                }`}
                                             >
                                                 {category.description}
                                             </div>
                                         </div>
                                     </div>
                                     <div
-                                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 flex-shrink-0 ${isSelected
+                                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
+                                            isSelected
                                                 ? "border-primary bg-primary"
                                                 : "border-muted-foreground/30 group-hover:border-muted-foreground/50"
-                                            }`}
+                                        }`}
                                     >
                                         {isSelected && (
                                             <svg

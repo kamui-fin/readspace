@@ -66,7 +66,11 @@ export function ArticlesViewSkeleton({
             {/* Desktop: Resizable panels */}
             <div className="hidden md:flex w-full">
                 <ResizablePanelGroup direction="horizontal">
-                    <ResizablePanel defaultSize={layout[0]} minSize={15} maxSize={60}>
+                    <ResizablePanel
+                        defaultSize={layout[0]}
+                        minSize={15}
+                        maxSize={60}
+                    >
                         <div className="flex h-full flex-col border-r">
                             <div className="flex h-14 items-center justify-between border-b px-4">
                                 <div className="flex items-center space-x-2 min-w-0 flex-1">

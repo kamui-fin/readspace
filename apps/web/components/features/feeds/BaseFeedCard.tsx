@@ -10,12 +10,12 @@ import { FeedUnsubscribeDialog } from "./FeedUnsubscribeDialog"
 interface BaseFeedCardProps {
     /** The feed to display */
     feed:
-    | (FeedSummary & { description?: string | null })
-    | (FeedSummary & {
-        is_preview: true
+        | (FeedSummary & { description?: string | null })
+        | (FeedSummary & {
+              is_preview: true
 
-        description?: string | null
-    })
+              description?: string | null
+          })
     /** Variant for styling */
     variant?: "default" | "preview"
     /** Additional className */
@@ -48,7 +48,6 @@ export function BaseFeedCard({
     const [isUnsubscribeModalOpen, setIsUnsubscribeModalOpen] = useState(false)
 
     // Check if this feed is in the user's subscription list
-    const isPreviewFeed = "is_preview" in feed && feed.is_preview === true
     const feedUrl = feed.url
 
     const { isSubscribed: isFollowed, subscription: subscribedFeed } =
@@ -78,7 +77,7 @@ export function BaseFeedCard({
             className={cn(
                 "w-full",
                 isPreview &&
-                "p-4 border-2 border-dashed border-primary bg-primary/5 dark:bg-primary/10 rounded-lg",
+                    "p-4 border-2 border-dashed border-primary bg-primary/5 dark:bg-primary/10 rounded-lg",
                 className
             )}
         >
@@ -114,8 +113,8 @@ export function BaseFeedCard({
                                         isFollowed
                                             ? "outline"
                                             : isPreview
-                                                ? "default"
-                                                : "secondary"
+                                              ? "default"
+                                              : "secondary"
                                     }
                                     onClick={handleFollowClick}
                                     className={cn(
@@ -123,7 +122,7 @@ export function BaseFeedCard({
                                         isFollowed
                                             ? "text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/10"
                                             : isPreview &&
-                                            "bg-primary hover:bg-primary/90 text-primary-foreground"
+                                                  "bg-primary hover:bg-primary/90 text-primary-foreground"
                                     )}
                                 >
                                     {isFollowed && (

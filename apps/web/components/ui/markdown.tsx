@@ -23,9 +23,7 @@ export function Markdown({ content, className }: MarkdownProps) {
                 components={{
                     // Container wrapper with styling
                     div: ({ children }) => (
-                        <div
-                            className="whitespace-pre-wrap leading-relaxed"
-                        >
+                        <div className="whitespace-pre-wrap leading-relaxed">
                             {children}
                         </div>
                     ),

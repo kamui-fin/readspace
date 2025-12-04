@@ -18,15 +18,23 @@ export function ArticlesDetail({
     shouldShowPreviewBanner,
     onMarkAsRead,
     onBack,
-    feedId,
 }: ArticlesDetailProps) {
-    const { data: fullArticle, isFetching } = useArticle(initialArticle?.id || "", {
-        enabled: !!initialArticle?.id,
-        initialData: initialArticle,
-    })
+    const { data: fullArticle, isFetching } = useArticle(
+        initialArticle?.id || "",
+        {
+            enabled: !!initialArticle?.id,
+            initialData: initialArticle,
+            // Treat initial data (summary) as stale immediately to ensure we fetch the full content
+            initialDataUpdatedAt: 0,
+            // Cache the full article for 5 minutes once fetched
+            staleTime: 5 * 60 * 1000,
+            articleType: initialArticle?.article_type,
+        }
+    )
 
     const article = fullArticle || initialArticle
-    const isContentLoading = isFetching && !article?.content && !article?.extracted_content
+    const isContentLoading =
+        isFetching && !article?.content && !article?.extracted_content
 
     if (!article) {
         return (
@@ -52,7 +60,7 @@ export function ArticlesDetail({
             shouldShowPreviewBanner={shouldShowPreviewBanner}
             shouldShowFeedBadge={true}
             onMarkAsRead={onMarkAsRead}
-            onArticleRemoved={() => { }}
+            onArticleRemoved={() => {}}
             onBack={onBack}
             isLoading={isContentLoading}
         />

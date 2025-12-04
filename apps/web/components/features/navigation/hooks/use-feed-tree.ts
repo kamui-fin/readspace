@@ -1,9 +1,4 @@
-import {
-    useFeeds,
-    useUnreadCounts,
-    type Folder,
-    type Subscription,
-} from "@readspace/shared"
+import { useFeeds, useUnreadCounts, type Subscription } from "@readspace/shared"
 import { usePathname } from "next/navigation"
 import { useMemo } from "react"
 import type { CollapsibleFeedItemData } from "../items/CollapsibleFeedItem"
@@ -19,32 +14,28 @@ export function useFeedTree() {
     const { data: unreadCounts } = useUnreadCounts()
     const pathname = usePathname()
 
-    const feeds = feedsResponse?.subscriptions || []
-    const folders = feedsResponse?.folders || []
-
     // Memoized type-safe data transformations
     const typedFolders = useMemo(() => {
-        return folders
-    }, [folders])
+        return feedsResponse?.folders || []
+    }, [feedsResponse])
 
-    const typedFeeds = useMemo(
-        () =>
-            ((feeds as unknown as Subscription[]) || []).map(
-                (subscription) => ({
-                    id: subscription.feed.id,
-                    title: subscription.custom_title || subscription.feed.title,
-                    url: subscription.feed.url,
-                    folder_id: subscription.folder?.id || null,
-                    image_url: subscription.feed.image_url || undefined,
-                    is_favorite: subscription.is_favorite,
-                    unread_count:
-                        unreadCounts?.feed_counts[subscription.feed.id] ?? 0,
-                    // Keep the subscription ID for operations that need it
-                    subscription_id: subscription.id,
-                })
-            ),
-        [feeds, unreadCounts]
-    )
+    const typedFeeds = useMemo(() => {
+        const feeds = feedsResponse?.subscriptions || []
+        return ((feeds as unknown as Subscription[]) || []).map(
+            (subscription) => ({
+                id: subscription.feed.id,
+                title: subscription.custom_title || subscription.feed.title,
+                url: subscription.feed.url,
+                folder_id: subscription.folder?.id || null,
+                image_url: subscription.feed.image_url || undefined,
+                is_favorite: subscription.is_favorite,
+                unread_count:
+                    unreadCounts?.feed_counts[subscription.feed.id] ?? 0,
+                // Keep the subscription ID for operations that need it
+                subscription_id: subscription.id,
+            })
+        )
+    }, [feedsResponse, unreadCounts])
 
     const typedUnreadCounts = useMemo(() => {
         const counts =

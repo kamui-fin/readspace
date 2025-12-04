@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useCallback } from "react"
 import type { Article } from "@readspace/shared"
 
 interface UseArticleReadingProps {
@@ -10,15 +10,6 @@ export function useArticleReading({
     article,
     onMarkAsRead,
 }: UseArticleReadingProps) {
-    const [currentReadTime, setCurrentReadTime] = useState(0)
-
-    // Update read time when article changes
-    useEffect(() => {
-        if (article) {
-            setCurrentReadTime(article.estimated_read_time_minutes || 0)
-        }
-    }, [article])
-
     // Scroll tracking for marking as read
     const handleScroll = useCallback(
         (scrollTop: number, scrollHeight: number, clientHeight: number) => {
@@ -34,7 +25,6 @@ export function useArticleReading({
     )
 
     return {
-        currentReadTime,
         handleScroll,
     }
 }

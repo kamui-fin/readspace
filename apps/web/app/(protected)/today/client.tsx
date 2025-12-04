@@ -16,7 +16,9 @@ export function TodayPageClient({ defaultLayout }: TodayPageClientProps) {
 
     const articles = useMemo(() => {
         if (!query.data?.pages) return []
-        return query.data.pages.flatMap((page: any) => page.items) as Article[]
+        return query.data.pages.flatMap(
+            (page: { items: unknown[] }) => page.items
+        ) as Article[]
     }, [query.data])
 
     return (

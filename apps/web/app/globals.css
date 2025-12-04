@@ -34,8 +34,6 @@
     }
 }
 
-
-
 /* Toast styles */
 .toast {
     @apply rounded-lg shadow-lg;
@@ -133,8 +131,8 @@ pre {
     overflow-wrap: break-word;
     font-size: 0.85rem;
     font-family:
-        ui-monospace, SFMono-Regular, "SF Mono", Consolas,
-        "Liberation Mono", Menlo, monospace;
+        ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono",
+        Menlo, monospace;
 }
 
 .article-content table {

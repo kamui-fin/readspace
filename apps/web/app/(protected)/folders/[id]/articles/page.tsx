@@ -9,7 +9,11 @@ interface PageProps {
 export default async function FolderArticlesPage({ params }: PageProps) {
     const { id: folderId } = await params
     const cookieStore = await cookies()
-    const layout = getLayoutFromCookie(cookieStore.get(LAYOUT_COOKIE_NAME)?.value)
+    const layout = getLayoutFromCookie(
+        cookieStore.get(LAYOUT_COOKIE_NAME)?.value
+    )
 
-    return <FolderArticlesPageClient folderId={folderId} defaultLayout={layout} />
+    return (
+        <FolderArticlesPageClient folderId={folderId} defaultLayout={layout} />
+    )
 }

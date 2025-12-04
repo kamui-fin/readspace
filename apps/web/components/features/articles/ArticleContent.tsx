@@ -100,9 +100,13 @@ export function ArticleContent({
 
     useEffect(() => {
         if (displayContent) {
-            setClientReadTime(estimateReadingTime(displayContent.replace(/<[^>]*>/g, "")))
+            setClientReadTime(
+                estimateReadingTime(displayContent.replace(/<[^>]*>/g, ""))
+            )
         } else if (article.description) {
-            setClientReadTime(estimateReadingTime(article.description.replace(/<[^>]*>/g, "")))
+            setClientReadTime(
+                estimateReadingTime(article.description.replace(/<[^>]*>/g, ""))
+            )
         }
     }, [displayContent, article.description])
 

@@ -34,7 +34,6 @@ export function FeedUnsubscribeDialog({
         try {
             await deleteFeed.mutateAsync({ feedId })
             onClose()
-
         } catch {
             // Error toast is handled by the mutation
         } finally {

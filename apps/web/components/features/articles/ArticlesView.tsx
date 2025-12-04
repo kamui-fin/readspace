@@ -39,7 +39,8 @@ interface ArticlesViewProps {
     /** Articles to display */
     articles: Article[]
     /** Query result for articles */
-    query: UseInfiniteQueryResult<any, unknown>
+    /** Query result for articles */
+    query: UseInfiniteQueryResult<unknown, unknown>
 }
 
 /**
@@ -50,8 +51,6 @@ export function ArticlesView({
     initialSidebarTitle,
     feedId,
     folderId,
-    publishedSince,
-    publishedUntil,
     mode = ArticleFilterMode.AllArticles,
     defaultLayout = [35, 65],
     articles,
@@ -168,22 +167,26 @@ export function ArticlesView({
     useEffect(() => {
         if (isMobile) return
 
+        // Sort articles by published date (newest first)
+        const sortedArticles = [...articles].sort((a, b) => {
+            if (!a.published_at) return 1
+            if (!b.published_at) return -1
+            return (
+                new Date(b.published_at).getTime() -
+                new Date(a.published_at).getTime()
+            )
+        })
+
+        // Check if currently selected article is still in the list
+        const isSelectedArticleInList =
+            selectedArticleId &&
+            sortedArticles.some((a) => a.id === selectedArticleId)
+
         if (
             articles.length > 0 &&
-            !selectedArticleId &&
-            !query.isLoading &&
-            !query.isFetching
+            (!selectedArticleId || !isSelectedArticleInList) &&
+            !query.isLoading
         ) {
-            // Sort articles by published date (newest first)
-            const sortedArticles = [...articles].sort((a, b) => {
-                if (!a.published_at) return 1
-                if (!b.published_at) return -1
-                return (
-                    new Date(b.published_at).getTime() -
-                    new Date(a.published_at).getTime()
-                )
-            })
-
             // Select first article (or first unread if filter is on)
             const firstArticle = showUnreadOnly
                 ? sortedArticles.find((a) => !a.is_read) || sortedArticles[0]
@@ -199,7 +202,6 @@ export function ArticlesView({
         isMobile,
         showUnreadOnly,
         query.isLoading,
-        query.isFetching,
         selectArticle,
     ])
 
@@ -207,7 +209,12 @@ export function ArticlesView({
     const isInitialLoading = query.isLoading && articles.length === 0
 
     if (isInitialLoading) {
-        return <ArticlesViewSkeleton showUnreadBadge={false} layout={panelLayout} />
+        return (
+            <ArticlesViewSkeleton
+                showUnreadBadge={false}
+                layout={panelLayout}
+            />
+        )
     }
 
     if (feedId && feedError && !isFeedLoading) {

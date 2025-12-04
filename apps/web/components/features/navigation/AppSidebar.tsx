@@ -79,7 +79,9 @@ export function AppSidebar({
 
     const avatar = user?.user_metadata.avatar_url
     const name =
-        user?.user_metadata?.full_name || user?.user_metadata?.display_name || null
+        user?.user_metadata?.full_name ||
+        user?.user_metadata?.display_name ||
+        null
     const email = user?.email || null
     return (
         <>

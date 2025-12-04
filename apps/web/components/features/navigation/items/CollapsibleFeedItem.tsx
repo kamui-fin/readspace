@@ -166,10 +166,7 @@ export function CollapsibleFeedItem({
     return (
         <Collapsible open={isOpen} onOpenChange={toggle}>
             <FeedItemRoot>
-                <FeedItemToggle
-                    isOpen={isOpen}
-                    title={feed.title}
-                />
+                <FeedItemToggle isOpen={isOpen} title={feed.title} />
                 <FeedItemButton
                     onClick={handleNavigate}
                     isActive={isActive}

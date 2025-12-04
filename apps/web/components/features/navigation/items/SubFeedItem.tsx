@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useState } from "react"
+import { memo } from "react"
 import Link from "next/link"
 import { FeedIcon } from "@/components/features/feeds/FeedIcon"
 import { motion } from "framer-motion"
@@ -48,8 +48,6 @@ const SubFeedItemComponent = ({
     index,
     disableAnimation = false,
 }: SubFeedItemProps) => {
-
-
     const content = (
         <SidebarMenuSubItem>
             <div className="flex items-center w-full group/item">

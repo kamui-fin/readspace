@@ -98,6 +98,9 @@ async def get_article(
     article_id: UUID,
     db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
+    clipped: bool = Query(
+        False, description="Whether the article is a clipped article"
+    ),
 ) -> EntryDetail:
     """
     Retrieve a specific article with full content and metadata.
@@ -108,6 +111,7 @@ async def get_article(
         article_id=article_id,
         user_id=UUID(current_user.sub),
         allow_preview=True,
+        is_clipped=clipped,
     )
 
     if not article:

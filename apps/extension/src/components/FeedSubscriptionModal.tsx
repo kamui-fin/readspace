@@ -66,10 +66,11 @@ export function FeedSubscriptionModal({
     onClose()
 
     // Start the API call
-    createFeedMutation.mutateAsync({
-      url: feedUrlToSubscribe,
-      folder_id: selectedFolderId,
-    })
+    createFeedMutation
+      .mutateAsync({
+        url: feedUrlToSubscribe,
+        folder_id: selectedFolderId,
+      })
       .then((res) => {
         onSuccess?.(res)
       })
@@ -110,6 +111,9 @@ export function FeedSubscriptionModal({
                 {selectedFeed.description}
               </p>
             )}
+            <p className="text-xs text-muted-foreground/70 line-clamp-1 mt-1 font-mono">
+              {selectedFeed.url}
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

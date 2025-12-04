@@ -1,25 +1,28 @@
 // Content script for Readspace extension
 import browser from 'webextension-polyfill'
-import {
-  extractArticleContent,
-} from './lib/content-extractor'
+import { extractArticleContent } from './lib/content-extractor'
 import { scanForFeeds } from './lib/feed-discovery'
+import { ExtensionMessage } from './shared/types'
 
 // Message listener for popup and background script requests
-browser.runtime.onMessage.addListener((request: any, _sender: any) => {
-  const action = request.type || request.action;
+browser.runtime.onMessage.addListener((request: unknown) => {
+  const message = request as ExtensionMessage
+  const action = message.type
 
   switch (action) {
     case 'extractMetadata':
       // Fast extraction - discover feeds in background
-      return extractPageMetadataFast()
-        .catch((error) => ({ error: error.message }))
+      return extractPageMetadataFast().catch((error) => ({
+        error: error.message,
+      }))
     case 'extractContent':
-      return extractArticleContent()
-        .catch((error) => ({ error: error.message }))
+      return extractArticleContent().catch((error) => ({
+        error: error.message,
+      }))
     case 'discoverFeeds':
-      return Promise.resolve(scanForFeeds())
-        .catch((error) => ({ error: error.message }))
+      return Promise.resolve(scanForFeeds()).catch((error) => ({
+        error: error.message,
+      }))
   }
 })
 
@@ -38,4 +41,3 @@ async function extractPageMetadataFast() {
     feeds,
   }
 }
-

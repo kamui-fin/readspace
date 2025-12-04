@@ -68,12 +68,10 @@ export function ArticlePreview({
   readingTime,
   currentUrl,
 }: ArticlePreviewProps) {
-  const {
-    savedArticle,
-    formState,
-    status,
-    actions,
-  } = useArticleActions({ currentUrl, metadata })
+  const { savedArticle, formState, status, actions } = useArticleActions({
+    currentUrl,
+    metadata,
+  })
 
   // Show skeleton while loading metadata
   if (isMetadataLoading || !metadata) {

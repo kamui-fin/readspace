@@ -1,9 +1,5 @@
 import { Button } from '@/components/ui/button'
-import {
-  areUrlsEqual,
-  DiscoveredFeed,
-  Subscription,
-} from '@readspace/shared'
+import { areUrlsEqual, DiscoveredFeed, Subscription } from '@readspace/shared'
 import { useCreateFeed, useDeleteFeed } from '@/hooks/use-feeds'
 import { Rss, Trash2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -41,6 +37,7 @@ function FeedDiscoveryCardSkeleton() {
 
 import browser from 'webextension-polyfill'
 import { sendMessage } from '@/shared/messaging'
+import { ExtensionMessage } from '@/shared/types'
 
 // ... imports
 
@@ -52,7 +49,9 @@ export function FeedDiscoveryCard({
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [optimisticFollow, setOptimisticFollow] = useState<boolean | null>(null)
   const [optimisticFeedId, setOptimisticFeedId] = useState<string | null>(null)
-  const [optimisticFeedUrl, setOptimisticFeedUrl] = useState<string | null>(null)
+  const [optimisticFeedUrl, setOptimisticFeedUrl] = useState<string | null>(
+    null
+  )
 
   const createFeedMutation = useCreateFeed()
   const deleteFeedMutation = useDeleteFeed()
@@ -66,7 +65,10 @@ export function FeedDiscoveryCard({
     const checkStatus = async () => {
       for (const feed of feeds) {
         try {
-          const status = await sendMessage({ type: 'checkFeedFollowed', payload: { url: feed.url } })
+          const status = await sendMessage({
+            type: 'checkFeedFollowed',
+            payload: { url: feed.url },
+          })
           if (!mounted) return
 
           if (status.followed) {
@@ -92,14 +94,15 @@ export function FeedDiscoveryCard({
 
   // Listener for optimistic updates
   useEffect(() => {
-    const listener = (msg: any) => {
-      if (msg.type === 'follow-changed') {
+    const listener = (msg: unknown) => {
+      const message = msg as ExtensionMessage
+      if (message.type === 'follow-changed') {
         // Check if any feed matches
-        const match = feeds?.some(f => areUrlsEqual(f.url, msg.payload.url))
+        const match = feeds?.some((f) => areUrlsEqual(f.url, message.payload.url))
         if (match) {
-          setOptimisticFollow(msg.payload.followed)
-          if (msg.payload.id) {
-            setOptimisticFeedId(msg.payload.id)
+          setOptimisticFollow(message.payload.followed)
+          if (message.payload.id) {
+            setOptimisticFeedId(message.payload.id)
           }
         }
       }
@@ -130,7 +133,7 @@ export function FeedDiscoveryCard({
           // We need to handle that case.
           await deleteFeedMutation.mutateAsync({
             feedId: idToDelete,
-            url: urlToDelete
+            url: urlToDelete,
           })
           toast.success('Unfollowed')
           setOptimisticFollow(false)
@@ -184,8 +187,7 @@ export function FeedDiscoveryCard({
       ? `${feeds.length} feeds available`
       : 'Add to your Readspace feed'
 
-  const isPending =
-    createFeedMutation.isPending || deleteFeedMutation.isPending
+  const isPending = createFeedMutation.isPending || deleteFeedMutation.isPending
 
   return (
     <>
@@ -218,12 +220,12 @@ export function FeedDiscoveryCard({
                     : 'default'
               }
               className={`flex-shrink-0 min-w-[100px] ${isFollowing && !isPending
-                ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
-                : isPending
-                  ? 'bg-orange-500/90 text-white hover:bg-orange-500/90'
-                  : !isFollowing
-                    ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                    : ''
+                  ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
+                  : isPending
+                    ? 'bg-orange-500/90 text-white hover:bg-orange-500/90'
+                    : !isFollowing
+                      ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                      : ''
                 }`}
             >
               {isPending ? (

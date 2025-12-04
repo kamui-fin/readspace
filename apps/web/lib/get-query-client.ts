@@ -5,8 +5,6 @@ function makeQueryClient() {
         defaultOptions: {
             queries: {
                 retry: 1,
-                // Prevent redundant requests during navigation
-                refetchOnMount: false,
                 refetchOnWindowFocus: false,
                 // Only refetch on reconnect if data is stale
                 refetchOnReconnect: false,

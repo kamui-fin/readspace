@@ -9,7 +9,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { useFeeds, type Subscription, type Folder } from "@readspace/shared"
+import { useFeeds } from "@readspace/shared"
 import { Loader2, Rss } from "lucide-react"
 import { FolderSelect } from "./FolderSelect"
 import { FeedIcon } from "./FeedIcon"
@@ -37,7 +37,6 @@ export function FeedSubscriptionModal({
     onSuccess,
 }: FeedSubscriptionModalProps) {
     const { data: feedsResponse, isLoading: feedsLoading } = useFeeds({})
-    const folders = feedsResponse?.folders || []
 
     const {
         selectedFolderId,
@@ -55,8 +54,8 @@ export function FeedSubscriptionModal({
     })
 
     const typedFolders = useMemo(() => {
-        return folders
-    }, [folders])
+        return feedsResponse?.folders || []
+    }, [feedsResponse])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -103,7 +102,7 @@ export function FeedSubscriptionModal({
                                     {feed.title ||
                                         (feed.link
                                             ? new URL(feed.link).pathname ||
-                                            "/rss"
+                                              "/rss"
                                             : "Untitled Feed")}
                                 </h3>
                             </div>

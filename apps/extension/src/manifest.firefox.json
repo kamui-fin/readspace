@@ -1,8 +1,6 @@
 {
   "background": {
-    "scripts": [
-      "src/background.ts"
-    ],
+    "scripts": ["src/background.ts"],
     "persistent": false,
     "type": "module"
   },

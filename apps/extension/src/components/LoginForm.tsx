@@ -191,9 +191,11 @@ export function LoginForm({ onShowSelfHosted }: LoginFormProps = {}) {
         <div className="text-center pt-2">
           <button
             onClick={onShowSelfHosted}
-            className="text-xs text-muted-foreground hover:text-foreground underline"
+            className="text-xs text-muted-foreground hover:text-foreground underline cursor-pointer"
           >
-            Using a self-hosted server?
+            {isCloudProd
+              ? 'Using a self-hosted server?'
+              : 'Switch to cloud hosting'}
           </button>
         </div>
       )}

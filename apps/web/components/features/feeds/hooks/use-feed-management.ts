@@ -10,12 +10,8 @@ export function useFeedManagement() {
     const { feeds, folders, isLoading, error } = useFeedData()
 
     // 2. Filter Data
-    const {
-
-        filterFolderId,
-        setFilterFolderId,
-        filteredFeeds,
-    } = useFeedFilters(feeds)
+    const { filterFolderId, setFilterFolderId, filteredFeeds } =
+        useFeedFilters(feeds)
 
     // 3. Handle Selection & Actions
     const {

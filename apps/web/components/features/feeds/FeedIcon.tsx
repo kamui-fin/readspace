@@ -11,8 +11,6 @@ interface FeedIconProps {
 }
 
 export function FeedIcon({ feed, className }: FeedIconProps) {
-
-
     // Deterministic color based on title length or char code
     const getBgColor = () => {
         const colors = [

@@ -73,7 +73,9 @@ export function SidebarUser({
                                             <AvatarFallback className="rounded-lg bg-transparent">
                                                 <BoringAvatar
                                                     size={32}
-                                                    name={name || email || "User"}
+                                                    name={
+                                                        name || email || "User"
+                                                    }
                                                     variant="beam"
                                                     colors={[
                                                         "#89a38eff",

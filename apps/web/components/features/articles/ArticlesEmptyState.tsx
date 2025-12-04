@@ -3,12 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { SidebarLeftTrigger } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/use-mobile"
-import {
-    useFeeds,
-    ArticleFilterMode,
-    type Subscription,
-    type Folder,
-} from "@readspace/shared"
+import { useFeeds, ArticleFilterMode } from "@readspace/shared"
 import { AlertTriangle, BookOpen, RefreshCw, Rss, Upload } from "lucide-react"
 import { useDeepRefresh } from "./hooks/use-deep-refresh"
 import Link from "next/link"
@@ -79,11 +74,10 @@ export function ArticlesEmptyState({
         }
     )
     const feeds = feedsResponse?.subscriptions || []
-    const folders = feedsResponse?.folders || []
 
     const typedFolders = useMemo(() => {
-        return folders
-    }, [folders])
+        return feedsResponse?.folders || []
+    }, [feedsResponse])
 
     const subscribedFeeds = (feeds || []).map((sub) => ({
         id: sub.feed.id,
@@ -286,15 +280,15 @@ export function ArticlesEmptyState({
                         {feedId
                             ? "No articles in this feed"
                             : folderId
-                                ? "No articles in this folder"
-                                : "No articles found"}
+                              ? "No articles in this folder"
+                              : "No articles found"}
                     </h3>
                     <p className="text-sm text-muted-foreground/80 dark:text-muted-foreground leading-relaxed">
                         {feedId
                             ? "This feed hasn't published any articles yet, or they may not have loaded"
                             : folderId
-                                ? "No feeds in this folder have published articles yet"
-                                : "Try refreshing or check back later for new content"}
+                              ? "No feeds in this folder have published articles yet"
+                              : "Try refreshing or check back later for new content"}
                     </p>
                 </div>
                 {onRefresh && feedId && (

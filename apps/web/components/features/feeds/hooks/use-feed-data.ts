@@ -1,8 +1,4 @@
-import {
-    useFeeds,
-    type SubscriptionExtended,
-    type Folder,
-} from "@readspace/shared"
+import { useFeeds, type SubscriptionExtended } from "@readspace/shared"
 import { useMemo } from "react"
 
 export interface FeedRowData {
@@ -26,11 +22,9 @@ export function useFeedData() {
         error: feedsError,
     } = useFeeds({ extended: true })
 
-    const subscriptions = feedsResponse?.subscriptions || []
-    const foldersResponse = feedsResponse?.folders || []
-
     // Map subscriptions to flat Feed objects
     const feeds: FeedRowData[] = useMemo(() => {
+        const subscriptions = feedsResponse?.subscriptions || []
         return (subscriptions as unknown as SubscriptionExtended[]).map(
             (sub) => ({
                 id: sub.feed.id,
@@ -45,12 +39,12 @@ export function useFeedData() {
                 last_error_message: sub.feed.last_error_message,
             })
         )
-    }, [subscriptions])
+    }, [feedsResponse])
 
     // Derive folders from subscriptions
     const folders = useMemo(() => {
-        return foldersResponse
-    }, [foldersResponse])
+        return feedsResponse?.folders || []
+    }, [feedsResponse])
 
     return {
         feeds,

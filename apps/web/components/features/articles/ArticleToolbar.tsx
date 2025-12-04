@@ -71,14 +71,12 @@ export function ArticleToolbar({
     translatedContent,
     translatedLanguage,
     isSaved,
-    isRead,
 }: ArticleToolbarProps) {
     const [showLanguageSelector, setShowLanguageSelector] = useState(false)
     const isMobile = useIsMobile()
 
     const hasTranslatedContent = !!translatedContent
     const effectiveIsSaved = isSaved ?? article.is_saved
-    const effectiveIsRead = isRead ?? article.is_read
 
     const handleCopyUrl = async () => {
         if (!article.link) {
@@ -138,58 +136,66 @@ export function ArticleToolbar({
                 className={`flex items-center ${isMobile ? "gap-1" : "gap-1"}`}
             >
                 {/* Content Source Tabs - Show when link is available */}
-                {article.link && setContentView && (
-                    <div className="mr-2">
-                        <Tabs
-                            value={contentView}
-                            onValueChange={(value) => {
-                                const newView = value as ContentView
-                                // Always update the content source state for immediate tab feedback
-                                setContentView(newView)
+                {article.link &&
+                    setContentView &&
+                    (article.article_type !== "clipped" ||
+                        hasTranslatedContent) && (
+                        <div className="mr-2">
+                            <Tabs
+                                value={contentView}
+                                onValueChange={(value) => {
+                                    const newView = value as ContentView
 
-                                // If switching to extracted and no content exists yet, trigger extraction
-                                if (
-                                    newView === ContentView.Extracted &&
-                                    !article.extracted_content
-                                ) {
-                                    handleExtractContent()
-                                }
-                            }}
-                            className="w-auto inline-block"
-                        >
-                            <TabsList className="h-8">
-                                <TabsTrigger
-                                    value={ContentView.Original}
-                                    title="Original RSS content"
-                                    className="h-7 px-2"
-                                >
-                                    <FileText className="h-4 w-4" />
-                                </TabsTrigger>
-                                <TabsTrigger
-                                    value={ContentView.Extracted}
-                                    title="Full article content"
-                                    className="h-7 px-2"
-                                    disabled={isExtracting}
-                                >
-                                    {isExtracting ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Globe className="h-4 w-4" />
-                                    )}
-                                </TabsTrigger>
-                                {hasTranslatedContent && (
+                                    // If switching to extracted and no content exists yet, trigger extraction
+                                    // and let the handler switch the view on success
+                                    if (
+                                        newView === ContentView.Extracted &&
+                                        !article.extracted_content
+                                    ) {
+                                        handleExtractContent()
+                                        return
+                                    }
+
+                                    // Otherwise switch immediately
+                                    setContentView(newView)
+                                }}
+                                className="w-auto inline-block"
+                            >
+                                <TabsList className="h-8">
                                     <TabsTrigger
-                                        value={ContentView.Translated}
-                                        title={`Translated content${translatedLanguage ? ` (${translatedLanguage})` : ""}`}
+                                        value={ContentView.Original}
+                                        title="Original RSS content"
                                         className="h-7 px-2"
                                     >
-                                        <Languages className="h-4 w-4" />
+                                        <FileText className="h-4 w-4" />
                                     </TabsTrigger>
-                                )}
-                            </TabsList>
-                        </Tabs>
-                    </div>
-                )}
+                                    {article.article_type !== "clipped" && (
+                                        <TabsTrigger
+                                            value={ContentView.Extracted}
+                                            title="Full article content"
+                                            className="h-7 px-2"
+                                            disabled={isExtracting}
+                                        >
+                                            {isExtracting ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Globe className="h-4 w-4" />
+                                            )}
+                                        </TabsTrigger>
+                                    )}
+                                    {hasTranslatedContent && (
+                                        <TabsTrigger
+                                            value={ContentView.Translated}
+                                            title={`Translated content${translatedLanguage ? ` (${translatedLanguage})` : ""}`}
+                                            className="h-7 px-2"
+                                        >
+                                            <Languages className="h-4 w-4" />
+                                        </TabsTrigger>
+                                    )}
+                                </TabsList>
+                            </Tabs>
+                        </div>
+                    )}
                 <TooltipProvider>
                     {/* Bookmark/Save for Later or Mark as Read */}
                     <Tooltip>
@@ -231,8 +237,8 @@ export function ArticleToolbar({
                             {isReadLaterMode
                                 ? "Mark as Read & Remove"
                                 : effectiveIsSaved
-                                    ? "Remove from Read Later"
-                                    : "Save for Later"}
+                                  ? "Remove from Read Later"
+                                  : "Save for Later"}
                         </TooltipContent>
                     </Tooltip>
 

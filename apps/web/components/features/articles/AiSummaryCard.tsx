@@ -13,7 +13,11 @@ interface AiSummaryCardProps {
     onDismiss: () => void
 }
 
-export function AiSummaryCard({ summary, className, onDismiss }: AiSummaryCardProps) {
+export function AiSummaryCard({
+    summary,
+    className,
+    onDismiss,
+}: AiSummaryCardProps) {
     return (
         <motion.div
             initial={{ opacity: 0, y: -20, height: 0 }}

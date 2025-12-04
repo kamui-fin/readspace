@@ -1,10 +1,13 @@
 export const LAYOUT_COOKIE_NAME = "react-resizable-panels:layout"
 
-export function getLayoutFromCookie(cookieValue: string | undefined, defaultValue: number[] = [35, 65]): number[] {
+export function getLayoutFromCookie(
+    cookieValue: string | undefined,
+    defaultValue: number[] = [35, 65]
+): number[] {
     if (!cookieValue) return defaultValue
     try {
         return JSON.parse(cookieValue)
-    } catch (error) {
+    } catch {
         return defaultValue
     }
 }

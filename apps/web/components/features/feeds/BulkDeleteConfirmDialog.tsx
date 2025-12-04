@@ -29,7 +29,8 @@ export function BulkDeleteConfirmDialog({
                 <DialogHeader>
                     <DialogTitle>Delete {count} Feeds</DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to delete {count} selected feed(s)? This action cannot be undone.
+                        Are you sure you want to delete {count} selected
+                        feed(s)? This action cannot be undone.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>

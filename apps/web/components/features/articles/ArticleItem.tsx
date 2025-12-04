@@ -36,7 +36,6 @@ export function ArticleItem({
     isRecentlyReadMode = false,
     onClick,
 }: ArticleItemProps) {
-
     const [articleImageError, setArticleImageError] = useState(false)
 
     const publishedAtString = article.published_at
@@ -46,8 +45,8 @@ export function ArticleItem({
         ? isRecentlyReadMode && readAtString
             ? `${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                addSuffix: true,
-            })
+                  addSuffix: true,
+              })
         : "Date unknown"
 
     /**
@@ -79,17 +78,6 @@ export function ArticleItem({
         return (
             priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase()
         )
-    }
-
-    /**
-     * Extract domain from URL for display
-     */
-    const extractDomain = (url: string): string => {
-        try {
-            return new URL(url).hostname
-        } catch {
-            return url
-        }
     }
 
     /**
@@ -139,7 +127,7 @@ export function ArticleItem({
                             {/* Priority badge for clipped articles */}
                             {article.article_type === "clipped" && (
                                 <div
-                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border flex-shrink-0 ${getPriorityColor(priority || "default")}`}
+                                    className={`inline-flex items-center gap-1 mr-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border flex-shrink-0 ${getPriorityColor(priority || "default")}`}
                                 >
                                     <Paperclip className="h-2.5 w-2.5" />
                                     <span>
@@ -153,15 +141,25 @@ export function ArticleItem({
                             {/* Feed favicon */}
                             <FeedIcon
                                 feed={{
-                                    title: article.feed_title,
-                                    image_url: article.feed_icon,
+                                    title:
+                                        article.article_type === "clipped"
+                                            ? article.source_domain
+                                            : article.feed_title ||
+                                              "Unknown Feed",
+                                    image_url:
+                                        article.article_type === "clipped" &&
+                                        article.source_domain
+                                            ? `https://www.google.com/s2/favicons?domain=${article.source_domain}&sz=64`
+                                            : article.feed_icon,
                                 }}
                                 className="h-3 w-3 shrink-0 rounded"
                             />
 
                             {/* Feed name or domain */}
                             <span className="text-[10px] text-muted-foreground truncate shrink-0 whitespace-nowrap overflow-hidden max-w-[150px]">
-                                {article.feed_title || "Unknown Feed"}
+                                {article.article_type === "clipped"
+                                    ? article.source_domain
+                                    : article.feed_title || "Unknown Feed"}
                             </span>
 
                             {/* Time display with clock icon */}
@@ -176,10 +174,11 @@ export function ArticleItem({
 
                     {/* Article title */}
                     <h3
-                        className={`text-sm font-medium leading-snug line-clamp-2 ${article.is_read
-                            ? "text-muted-foreground"
-                            : "text-foreground"
-                            }`}
+                        className={`text-sm font-medium leading-snug line-clamp-2 ${
+                            article.is_read
+                                ? "text-muted-foreground"
+                                : "text-foreground"
+                        }`}
                         style={{
                             wordBreak: "break-word",
                             overflowWrap: "break-word",
@@ -192,10 +191,11 @@ export function ArticleItem({
                     {/* Article description/content preview */}
                     {displayText && (
                         <p
-                            className={`text-xs leading-relaxed line-clamp-2 ${article.is_read
-                                ? "text-muted-foreground/70"
-                                : "text-muted-foreground"
-                                }`}
+                            className={`text-xs leading-relaxed line-clamp-2 ${
+                                article.is_read
+                                    ? "text-muted-foreground/70"
+                                    : "text-muted-foreground"
+                            }`}
                             style={{
                                 wordBreak: "break-word",
                                 overflowWrap: "break-word",

@@ -87,9 +87,10 @@ export function useArticleVirtualizer({
 
     // Infinite scroll: automatically fetch next page when last item is visible
     // This follows the TanStack Virtual + React Query pattern
+    const virtualItems = rowVirtualizer.getVirtualItems()
+
     useEffect(() => {
         // Get the last virtual item from the virtualizer
-        const virtualItems = rowVirtualizer.getVirtualItems()
         const [lastItem] = [...virtualItems].reverse()
 
         if (!lastItem) {
@@ -112,7 +113,7 @@ export function useArticleVirtualizer({
         fetchNextPage,
         allRows.length,
         isFetchingNextPage,
-        rowVirtualizer.getVirtualItems(),
+        virtualItems,
     ])
 
     return {

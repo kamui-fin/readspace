@@ -2,7 +2,6 @@
 
 import { Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
     Select,
     SelectContent,
@@ -12,7 +11,6 @@ import {
 } from "@/components/ui/select"
 
 interface FeedFiltersPanelProps {
-
     /** Current filter folder ID */
     filterFolderId: string | "all"
     /** Callback when folder filter changes */
@@ -36,7 +34,6 @@ interface FeedFiltersPanelProps {
  * Provides a clean interface for filtering feeds and performing bulk operations.
  */
 export function FeedFiltersPanel({
-
     filterFolderId,
     onFolderFilterChange,
     folders,
@@ -48,8 +45,6 @@ export function FeedFiltersPanel({
 }: FeedFiltersPanelProps) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-
-
             {/* Folder filter and export */}
             <div className="md:col-span-1 flex gap-2 items-center">
                 <Select

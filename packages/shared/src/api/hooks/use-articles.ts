@@ -92,13 +92,14 @@ export function useArticle(
       ReturnType<typeof queryKeys.article>
     >,
     "queryKey" | "queryFn"
-  >,
+  > & { articleType?: string },
 ) {
+  const { articleType, ...queryOptions } = options || {};
   return useQuery({
     queryKey: queryKeys.article(articleId),
-    queryFn: () => ApiClient.getArticle(articleId),
+    queryFn: () => ApiClient.getArticle(articleId, articleType),
     enabled: !!articleId,
-    ...options,
+    ...queryOptions,
   });
 }
 
@@ -114,8 +115,12 @@ export function useUpdateArticle(
         priority?: string;
         note?: string | null;
       };
+      articleType?: string;
     },
-    { previousArticle: Article | undefined }
+    {
+      previousArticle: Article | undefined;
+      previousUnreadCounts: ArticleCountsResponse | undefined;
+    }
   >,
 ) {
   const queryClient = useQueryClient();
@@ -124,6 +129,7 @@ export function useUpdateArticle(
     mutationFn: async ({
       articleId,
       data,
+      articleType,
     }: {
       articleId: string;
       data: {
@@ -132,6 +138,7 @@ export function useUpdateArticle(
         priority?: string;
         note?: string | null;
       };
+      articleType?: string;
     }): Promise<void> => {
       // Map frontend fields to backend fields
       const updateData: any = { ...data };
@@ -142,19 +149,23 @@ export function useUpdateArticle(
         delete updateData.note;
       }
 
-      await ApiClient.updateArticle(articleId, updateData);
+      await ApiClient.updateArticle(articleId, updateData, articleType);
     },
     onMutate: async ({ articleId, data }) => {
-      // Cancel any outgoing refetches
-      // await Promise.all([
-      //   queryClient.cancelQueries({ queryKey: queryKeys.article(articleId) }),
-      //   queryClient.cancelQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] }),
-      //   queryClient.cancelQueries({ queryKey: queryKeys.unreadCounts() }),
-      // ]);
+      // Cancel any outgoing refetches to avoid race conditions
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: queryKeys.article(articleId) }),
+        queryClient.cancelQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] }),
+        queryClient.cancelQueries({ queryKey: queryKeys.unreadCounts() }),
+        queryClient.cancelQueries({ queryKey: queryKeys.infiniteReadLater() }),
+      ]);
 
-      // Snapshot the previous value
+      // Snapshot the previous values
       const previousArticle = queryClient.getQueryData<Article>(
         queryKeys.article(articleId),
+      );
+      const previousUnreadCounts = queryClient.getQueryData<ArticleCountsResponse>(
+        queryKeys.unreadCounts(),
       );
 
       // Optimistically update article detail
@@ -214,34 +225,48 @@ export function useUpdateArticle(
       }
 
       // Optimistically update unread counts
-      if (data.is_read === true) {
-        queryClient.setQueryData<ArticleCountsResponse>(
-          queryKeys.unreadCounts(),
-          (old) => {
-            if (!old) return old;
+      queryClient.setQueryData<ArticleCountsResponse>(
+        queryKeys.unreadCounts(),
+        (old) => {
+          if (!old) return old;
 
-            let newFeedCounts = old.feed_counts;
+          const newFeedCounts = { ...old.feed_counts };
+          let newReadLater = old.read_later;
 
-            // Try to update specific feed count if we know the feed ID
-            if (previousArticle && !previousArticle.is_read) {
-              const feedId = previousArticle.feed_id;
-              if (feedId && old.feed_counts[feedId]) {
-                newFeedCounts = {
-                  ...old.feed_counts,
-                  [feedId]: Math.max(0, old.feed_counts[feedId] - 1),
-                };
+          // Handle is_read changes
+          if (data.is_read !== undefined) {
+            // We need the feedId to update specific feed counts
+            // If we don't have previousArticle (e.g. from list view without detail),
+            // we can't reliably update the specific feed count, so we skip it.
+            const feedId = previousArticle?.feed_id;
+
+            if (feedId && newFeedCounts[feedId] !== undefined) {
+              if (data.is_read === true && (!previousArticle || !previousArticle.is_read)) {
+                newFeedCounts[feedId] = Math.max(0, newFeedCounts[feedId] - 1);
+              } else if (data.is_read === false && (!previousArticle || previousArticle.is_read)) {
+                newFeedCounts[feedId] = newFeedCounts[feedId] + 1;
               }
             }
+          }
 
-            return {
-              ...old,
-              feed_counts: newFeedCounts,
-            };
-          },
-        );
-      }
+          // Handle is_saved changes
+          if (data.is_saved !== undefined) {
+            if (data.is_saved === true && (!previousArticle || !previousArticle.is_saved)) {
+              newReadLater++;
+            } else if (data.is_saved === false && (!previousArticle || previousArticle.is_saved)) {
+              newReadLater = Math.max(0, newReadLater - 1);
+            }
+          }
 
-      return { previousArticle };
+          return {
+            ...old,
+            feed_counts: newFeedCounts,
+            read_later: newReadLater,
+          };
+        },
+      );
+
+      return { previousArticle, previousUnreadCounts };
     },
     onError: (_err, { articleId }, context) => {
       // Rollback
@@ -251,8 +276,17 @@ export function useUpdateArticle(
           context.previousArticle,
         );
       }
+      if (context?.previousUnreadCounts) {
+        queryClient.setQueryData(
+          queryKeys.unreadCounts(),
+          context.previousUnreadCounts,
+        );
+      }
+
       // Invalidate to be safe
       queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.infiniteReadLater() });
     },
     onSettled: (_data, _error, { articleId }) => {
       // Invalidate article
@@ -583,6 +617,7 @@ export async function fetchTranslation(
   articleId: string,
   targetLanguage: string,
   content?: string,
+  articleType?: string,
 ): Promise<TranslateResponse> {
   const isValidArticleId =
     articleId && articleId !== "skip" && articleId.length > 0;
@@ -604,10 +639,11 @@ export async function fetchTranslation(
         target_language: targetLanguage,
         ...(content && { content }),
       };
-      return ApiClient.translate(articleId, requestBody);
+      return ApiClient.translate(articleId, requestBody, articleType);
     },
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
+    retry: 0,
   });
 }
 
@@ -618,7 +654,7 @@ export function useExtractFullTextMutation(
   options?: UseMutationOptions<
     ExtractFullTextResponse,
     unknown,
-    { articleId: string; articleUrl: string }
+    { articleId: string; articleUrl: string; articleType?: string }
   >,
 ) {
   const queryClient = useQueryClient();
@@ -626,16 +662,19 @@ export function useExtractFullTextMutation(
     mutationFn: async ({
       articleId,
       articleUrl,
+      articleType,
     }: {
       articleId: string;
       articleUrl: string;
+      articleType?: string;
     }) => {
       const urlHash = createContentHash(articleUrl);
       return await queryClient.fetchQuery({
         queryKey: queryKeys.extractedContent(articleId, urlHash),
-        queryFn: () => ApiClient.extractFullText(articleId),
+        queryFn: () => ApiClient.extractFullText(articleId, articleType),
         staleTime: 30 * 60 * 1000,
         gcTime: 60 * 60 * 1000,
+        retry: 0,
       });
     },
     onSuccess: (data, variables) => {
@@ -667,7 +706,7 @@ export function useSummarizeArticleMutation(
   options?: UseMutationOptions<
     SummarizeResponse,
     unknown,
-    { articleId: string; content?: string; languageKey?: string }
+    { articleId: string; content?: string; languageKey?: string; articleType?: string }
   >,
 ) {
   const queryClient = useQueryClient();
@@ -676,10 +715,12 @@ export function useSummarizeArticleMutation(
       articleId,
       content,
       languageKey = "original",
+      articleType,
     }: {
       articleId: string;
       content?: string;
       languageKey?: string;
+      articleType?: string;
     }) => {
       return await queryClient.fetchQuery({
         queryKey: queryKeys.summary(articleId, languageKey),
@@ -688,10 +729,11 @@ export function useSummarizeArticleMutation(
             ...(content && { content }),
             language_key: languageKey,
           };
-          return ApiClient.summarize(articleId, requestBody);
+          return ApiClient.summarize(articleId, requestBody, articleType);
         },
         staleTime: 30 * 60 * 1000,
         gcTime: 60 * 60 * 1000,
+        retry: 0,
       });
     },
     ...options,
@@ -705,7 +747,7 @@ export function useTranslateArticleMutation(
   options?: UseMutationOptions<
     TranslateResponse,
     unknown,
-    { articleId: string; targetLanguage: string; content?: string }
+    { articleId: string; targetLanguage: string; content?: string; articleType?: string }
   >,
 ) {
   const queryClient = useQueryClient();
@@ -714,16 +756,19 @@ export function useTranslateArticleMutation(
       articleId,
       targetLanguage,
       content,
+      articleType,
     }: {
       articleId: string;
       targetLanguage: string;
       content?: string;
+      articleType?: string;
     }) => {
       return await fetchTranslation(
         queryClient,
         articleId,
         targetLanguage,
         content,
+        articleType,
       );
     },
     ...options,

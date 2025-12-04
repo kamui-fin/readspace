@@ -9,7 +9,9 @@ interface PageProps {
 export default async function FeedArticlesPage({ params }: PageProps) {
     const { id: feedId } = await params
     const cookieStore = await cookies()
-    const layout = getLayoutFromCookie(cookieStore.get(LAYOUT_COOKIE_NAME)?.value)
+    const layout = getLayoutFromCookie(
+        cookieStore.get(LAYOUT_COOKIE_NAME)?.value
+    )
 
     return <FeedArticlesPageClient feedId={feedId} defaultLayout={layout} />
 }
