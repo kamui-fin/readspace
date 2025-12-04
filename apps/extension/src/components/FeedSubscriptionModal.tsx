@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge'
+import { CopyUrlButton } from './CopyUrlButton'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -103,9 +103,7 @@ export function FeedSubscriptionModal({
               <h3 className="font-medium text-sm truncate flex-1">
                 {getFeedDisplayName(selectedFeed)}
               </h3>
-              <Badge variant="outline" className="text-xs">
-                {selectedFeed?.type.toUpperCase()}
-              </Badge>
+              <CopyUrlButton url={selectedFeed.url} />
             </div>
             {selectedFeed?.description && (
               <p className="text-xs text-muted-foreground line-clamp-2 mt-2">

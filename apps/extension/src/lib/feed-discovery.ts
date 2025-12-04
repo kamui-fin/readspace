@@ -121,6 +121,7 @@ export function scanForFeeds(): DetectedFeed[] {
         })
     })
 
+
     // Sort by confidence score
     return feeds.sort((a, b) => b.score - a.score)
 }

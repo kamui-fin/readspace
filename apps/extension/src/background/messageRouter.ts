@@ -17,6 +17,7 @@ export async function handleMessage(msg: ExtensionMessage) {
             return supabase.auth.signInWithPassword(msg.payload);
 
         case "logout":
+            await stateStore.clear();
             return supabase.auth.signOut();
 
         case "getSession":
@@ -40,12 +41,6 @@ export async function handleMessage(msg: ExtensionMessage) {
 
         case "checkFeedFollowed":
             return FeedHandlers.handleCheckFeedFollowed(msg.payload);
-
-        case "follow":
-            return FeedHandlers.handleFollow(msg.payload);
-
-        case "unfollow":
-            return FeedHandlers.handleUnfollow(msg.payload);
 
         case "getProfile":
             return ApiClient.getProfile();

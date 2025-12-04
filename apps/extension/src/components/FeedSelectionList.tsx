@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge'
+import { CopyUrlButton } from './CopyUrlButton'
 import { DiscoveredFeed } from '@readspace/shared'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
@@ -54,9 +54,7 @@ export function FeedSelectionList({
                                     <span className="text-sm font-medium truncate">
                                         {getFeedDisplayName(feed)}
                                     </span>
-                                    <Badge variant="outline" className="text-xs">
-                                        {feed.type}
-                                    </Badge>
+                                    <CopyUrlButton url={feed.url} />
                                 </div>
                                 {feed.description && (
                                     <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">

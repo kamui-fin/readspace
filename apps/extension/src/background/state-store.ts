@@ -105,6 +105,12 @@ class StateStore {
         const obj = Object.fromEntries(this.save)
         await browser.storage.local.set({ [SAVE_KEY]: obj })
     }
+
+    async clear() {
+        this.follow.clear()
+        this.save.clear()
+        await browser.storage.local.remove([FOLLOW_KEY, SAVE_KEY])
+    }
 }
 
 export const stateStore = new StateStore()

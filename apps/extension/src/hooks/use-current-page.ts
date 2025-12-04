@@ -1,4 +1,5 @@
 import { useExtensionStore } from '@/store'
+import browser from 'webextension-polyfill'
 import { sendMessage, sendTabMessage } from '@/shared/messaging'
 import { PageMetadata } from '@readspace/shared'
 import { useCallback, useEffect, useState } from 'react'
@@ -34,7 +35,14 @@ export function useCurrentPage() {
                 3000
             )
             if (metadata) {
-                setCurrentPageMetadata(metadata)
+                // Filter out low confidence feeds (unvalidated guesses)
+                // They will be added back if validated by background script
+                const filteredFeeds = metadata.feeds?.filter((f: any) => f.score >= 5) || []
+
+                setCurrentPageMetadata({
+                    ...metadata,
+                    feeds: filteredFeeds
+                })
                 if (metadata.estimated_read_time) setReadingTime(metadata.estimated_read_time)
             }
         } catch { }
@@ -78,6 +86,19 @@ export function useCurrentPage() {
             }
         })
     }, [extractPageMetadata])
+
+    // Listen for cache updates from background script (feed validation)
+    useEffect(() => {
+        const listener = (message: any) => {
+            if (message.type === 'page-cache-updated' && currentTab?.url) {
+                if (message.payload?.url === currentTab.url) {
+                    checkCache(currentTab.url)
+                }
+            }
+        }
+        browser.runtime.onMessage.addListener(listener)
+        return () => browser.runtime.onMessage.removeListener(listener)
+    }, [currentTab])
 
     return {
         currentTab,

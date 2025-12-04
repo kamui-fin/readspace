@@ -64,6 +64,14 @@ async function handleTabUpdated(
                     const updatedMetadata = { ...metadata, feeds: validFeeds }
                     await pageCache.setMetadata(tab.url!, updatedMetadata)
 
+                    // Notify popup that cache is updated
+                    browser.runtime.sendMessage({
+                        type: 'page-cache-updated',
+                        payload: { url: tab.url }
+                    }).catch(() => {
+                        // Ignore error if no popup is open
+                    })
+
                     // 5. Final Badge Update
                     await updateFeedBadge(tabId, validFeeds.length)
 
