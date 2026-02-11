@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
-from app.models.enums import FeedCategory
+from app.models.enums import ContentType, FeedCategory
 from app.typing.common import response_config
 from app.typing.entries import ArticleCreate
 
@@ -21,6 +21,9 @@ class FeedBase(BaseModel):
     link: str | None = None
     language: str = "en"
     image_url: str | None = None
+    author: str | None = None
+    content_type: ContentType | None = None
+    tags_native: list[str] = Field(default_factory=list)
 
     @classmethod
     def empty_str_to_none(cls, v):
@@ -49,6 +52,9 @@ class AdminFeedUpdate(BaseModel):
     top_level_category: FeedCategory | None = None
     popularity_score: float | None = None
     tags: list[str] | None = None
+    tags_native: list[str] | None = None
+    author: str | None = None
+    content_type: ContentType | None = None
 
 
 class FeedCreateInternal(FeedBase):
@@ -166,6 +172,10 @@ class FeedScoringData(BaseModel):
     image_url: str | None = None
     language: str | None = None
     domain: str | None = None
+    tags: list[str] = Field(default_factory=list)
+    tags_native: list[str] = Field(default_factory=list)
+    author: str | None = None
+    content_type: ContentType | None = None
 
 
 class FeedEnrichmentSnapshot(FeedScoringData):
@@ -189,10 +199,13 @@ class MeilisearchFeedDocument(BaseModel):
     language: str | None = None
     image_url: str | None = None
     tags: list[str] = Field(default_factory=list)
+    tags_native: list[str] = Field(default_factory=list)
+    author: str | None = None
+    content_type: str | None = None
     top_level_category: str | None = None
     popularity_score: float = 0.0
 
-    @field_validator("top_level_category", mode="before")
+    @field_validator("top_level_category", "content_type", mode="before")
     @classmethod
     def convert_enum_to_str(cls, v):
         if hasattr(v, "value"):
@@ -213,8 +226,11 @@ class ParsedFeed(BaseModel):
     link: str | None = None
     language: str | None = None
     image_url: str | None = None
+    author: str | None = None
+    content_type: str | None = None
     last_updated_at: datetime | None = None
     tags: list[str] = Field(default_factory=list)
+    tags_native: list[str] = Field(default_factory=list)
     articles: list["ArticleCreate"] = Field(default_factory=list)
     is_subscribed: bool = False
 

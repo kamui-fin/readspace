@@ -269,6 +269,9 @@ async def admin_update_feed(
     top_level_category: str | FeedCategory | None = None,
     popularity_score: float | None = None,
     tags: list[str] | None = None,
+    tags_native: list[str] | None = None,
+    author: str | None = None,
+    content_type: str | Any | None = None,
 ) -> Feed:
     """
     Admin-only function to update global feed properties.
@@ -287,6 +290,8 @@ async def admin_update_feed(
         feed.language = language
     if image_url is not None:
         feed.image_url = image_url
+    if author is not None:
+        feed.author = author
 
     # Handle URL update with normalization
     if url is not None:
@@ -306,6 +311,15 @@ async def admin_update_feed(
     # Handle tags
     if tags is not None:
         feed.tags = tags
+    if tags_native is not None:
+        feed.tags_native = tags_native
+
+    # Handle content_type
+    if content_type is not None:
+        if hasattr(content_type, "value"):
+            feed.content_type = content_type.value
+        else:
+            feed.content_type = content_type
 
     db.add(feed)
     await db.flush()

@@ -17,7 +17,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
-from app.models.enums import FeedCategory
+from app.models.enums import ContentType, FeedCategory
 
 
 class Feed(Base):
@@ -51,10 +51,15 @@ class Feed(Base):
 
     # Metadata
     tags = Column(ARRAY(Text), nullable=True)
+    tags_native = Column(ARRAY(Text), nullable=True)
+    author = Column(Text, nullable=True)
+    content_type = Column(
+        Text, nullable=True
+    )  # Store enum value as string for flexibility
     top_level_category = Column(
         SQLEnum(FeedCategory, name="feedcategory"),
         nullable=False,
-        server_default="MISCELLANEOUS",
+        server_default="miscellaneous",
     )
     popularity_score = Column(Float, nullable=False, default=0.0)
     subscriber_count = Column(Integer, nullable=False, default=0)

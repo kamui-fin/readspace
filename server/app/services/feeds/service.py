@@ -164,6 +164,9 @@ async def add_feed(
             content_hash=calculate_feed_content_hash(parsed.articles),
             popularity_score=domain_score.score,
             tags=parsed.tags,
+            tags_native=parsed.tags_native,
+            author=parsed.author,
+            content_type=parsed.content_type,
         )
 
         created_feed = await feed_crud.create_feed(db, feed_data=feed_in)

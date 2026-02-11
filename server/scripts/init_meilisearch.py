@@ -169,6 +169,8 @@ async def configure_meilisearch_index(
             "filterable_attributes": [
                 "language",
                 "top_level_category",
+                "content_type",
+                "author",
             ],
             # Fields that can be used for sorting
             "sortable_attributes": [
@@ -184,7 +186,10 @@ async def configure_meilisearch_index(
                 "language",
                 "image_url",
                 "tags",
+                "tags_native",
                 "top_level_category",
+                "content_type",
+                "author",
                 "popularity_score",
             ],
             # Ranking rules - order matters!

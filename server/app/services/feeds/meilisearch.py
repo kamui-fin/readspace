@@ -64,6 +64,9 @@ def feed_to_document(feed: Feed | dict[str, Any]) -> dict[str, Any]:
                 "language": feed.language,
                 "image_url": feed.image_url,
                 "tags": feed.tags if feed.tags is not None else [],
+                "tags_native": feed.tags_native if feed.tags_native is not None else [],
+                "author": feed.author,
+                "content_type": feed.content_type,
                 "top_level_category": feed.top_level_category,
                 "popularity_score": feed.popularity_score,
             }
@@ -75,6 +78,8 @@ def feed_to_document(feed: Feed | dict[str, Any]) -> dict[str, Any]:
             feed_dict["id"] = str(feed_dict["id"])
         if feed_dict.get("tags") is None:
             feed_dict["tags"] = []
+        if feed_dict.get("tags_native") is None:
+            feed_dict["tags_native"] = []
         doc = MeilisearchFeedDocument.model_validate(feed_dict)
 
     return doc.model_dump(mode="json")
