@@ -1,0 +1,173 @@
+@import "tailwindcss";
+@import "uniwind";
+
+@theme {
+  /* Font Families - Single font per variant (no fallbacks for React Native) */
+  --font-geist-regular: "Geist_400Regular";
+  --font-geist-medium: "Geist_500Medium";
+  --font-geist-semibold: "Geist_600SemiBold";
+  --font-geist-bold: "Geist_700Bold";
+  --font-geist-mono: "GeistMono_400Regular";
+  --font-geist-mono-medium: "GeistMono_500Medium";
+  --font-geist-mono-semibold: "GeistMono_600SemiBold";
+  --font-geist-mono-bold: "GeistMono_700Bold";
+  --font-figtree-regular: "Figtree_400Regular";
+  --font-figtree-medium: "Figtree_500Medium";
+  --font-figtree-semibold: "Figtree_600SemiBold";
+  --font-figtree-bold: "Figtree_700Bold";
+  --font-garamond-regular: "EBGaramond_400Regular";
+  --font-garamond-medium: "EBGaramond_500Medium";
+  --font-garamond-semibold: "EBGaramond_600SemiBold";
+  --font-garamond-bold: "EBGaramond_700Bold";
+
+  /* Letter Spacing */
+  --letter-spacing-heading: -0.02em;
+  --tracking-heading: -0.02em;
+
+  /* Border Radius */
+  --radius-none: 0;
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+  --radius-full: 9999px;
+
+  /* Colors - Base values (will be overridden by variants) */
+  --color-primary: #386641;
+  --color-primary-light: rgba(56, 102, 65, 0.1);
+  --color-primary-foreground: #232222;
+  --color-secondary: #6a994e;
+  --color-secondary-foreground: rgb(47, 68, 34);
+  --color-grey6: rgb(247, 247, 247);
+  --color-grey5: rgb(237, 237, 237);
+  --color-grey4: rgb(226, 227, 227);
+  --color-grey3: rgb(211, 212, 211);
+  --color-grey2: rgb(180, 182, 180);
+  --color-grey: rgb(159, 162, 160);
+  --color-background: rgb(255, 255, 255);
+  --color-screen: rgb(255, 255, 255);
+  --color-root: rgb(245, 246, 245);
+  --color-card: rgb(245, 246, 245);
+  --color-card-foreground: rgb(245, 246, 245);
+  --color-muted: rgb(228, 236, 223);
+  --color-muted-green: #d1dbcd;
+  --color-muted-foreground: rgb(72, 96, 57);
+  --color-destructive: rgb(255, 56, 43);
+  --color-red: #ea4335;
+  --color-blue: #236bef;
+  --color-white: #ffffff;
+  --color-black: #232222;
+  --color-unified: #f5f5f5;
+  --color-tab-border: #e0e0e0;
+  --color-divider: #f9f9f9;
+  --color-tint-active: black;
+  --color-tint-inactive: grey;
+  --color-icon-blue: rgb(230, 240, 255);
+  --color-icon-green: rgb(230, 255, 235);
+  --color-icon-red: rgb(255, 230, 230);
+  --color-icon-yellow: rgb(255, 245, 230);
+  --color-icon-purple: rgb(240, 230, 255);
+  --color-icon-grey: rgb(230, 230, 230);
+
+  /* Colors - Orange scale */
+  --color-orange-50: #fff7ed;
+  --color-orange-100: #ffedd5;
+  --color-orange-200: #fed7aa;
+  --color-orange-300: #fdba74;
+  --color-orange-400: #fb923c;
+  --color-orange-500: #f97316;
+  --color-orange-600: #ea580c;
+  --color-orange-700: #c2410c;
+  --color-orange-800: #9a3412;
+  --color-orange-900: #7c2d12;
+  --color-orange-950: #431407;
+}
+
+@layer theme {
+  :root {
+    @variant light {
+      --color-primary: #386641;
+      --color-primary-light: rgba(56, 102, 65, 0.1);
+      --color-primary-foreground: #232222;
+      --color-secondary: #6a994e;
+      --color-secondary-foreground: rgb(47, 68, 34);
+      --color-grey6: rgb(247, 247, 247);
+      --color-grey5: rgb(237, 237, 237);
+      --color-grey4: rgb(226, 227, 227);
+      --color-grey3: rgb(211, 212, 211);
+      --color-grey2: rgb(180, 182, 180);
+      --color-grey: rgb(159, 162, 160);
+      --color-background: rgb(255, 255, 255);
+      --color-screen: rgb(255, 255, 255);
+      --color-root: rgb(245, 246, 245);
+      --color-card: rgb(245, 246, 245);
+      --color-card-foreground: rgb(245, 246, 245);
+      --color-muted: rgb(228, 236, 223);
+      --color-muted-green: #d1dbcd;
+      --color-muted-foreground: rgb(72, 96, 57);
+      --color-destructive: rgb(255, 56, 43);
+      --color-red: #ea4335;
+      --color-blue: #236bef;
+      --color-white: #ffffff;
+      --color-black: #232222;
+      --color-unified: #f5f5f5;
+      --color-tab-border: #e0e0e0;
+      --color-divider: #f9f9f9;
+      --color-tint-active: black;
+      --color-tint-inactive: grey;
+      --color-icon-blue: rgb(230, 240, 255);
+      --color-icon-green: rgb(230, 255, 235);
+      --color-icon-red: rgb(255, 230, 230);
+      --color-icon-yellow: rgb(255, 245, 230);
+      --color-icon-purple: rgb(240, 230, 255);
+      --color-icon-grey: rgb(230, 230, 230);
+    }
+
+    @variant dark {
+      --color-primary: #386641;
+      --color-primary-light: rgba(56, 102, 65, 0.1);
+      --color-primary-foreground: #ffffff;
+      --color-secondary: #6a994e;
+      --color-secondary-foreground: rgb(228, 236, 223);
+      --color-grey6: rgb(12, 13, 12);
+      --color-grey5: rgb(45, 47, 46);
+      --color-grey4: rgb(58, 60, 58);
+      --color-grey3: rgb(78, 80, 78);
+      --color-grey2: rgb(121, 124, 121);
+      --color-grey: rgb(159, 162, 160);
+      --color-background: rgb(2, 4, 2);
+      --color-screen: rgb(27, 28, 27);
+      --color-root: rgb(2, 4, 2);
+      --color-card: rgb(2, 4, 2);
+      --color-card-foreground: rgb(2, 4, 2);
+      --color-muted: rgb(228, 236, 223);
+      --color-muted-green: #d1dbcd;
+      --color-muted-foreground: rgb(72, 96, 57);
+      --color-destructive: rgb(254, 67, 54);
+      --color-red: #ea4335;
+      --color-blue: #236bef;
+      --color-white: #0a0a0a;
+      --color-black: #ffffff;
+      --color-unified: #121212;
+      --color-tab-border: #2a2a2a;
+      --color-divider: #1a1a1a;
+      --color-tint-active: #e5e5e5;
+      --color-tint-inactive: #888888;
+      --color-icon-blue: rgb(25, 35, 45);
+      --color-icon-green: rgb(25, 45, 35);
+      --color-icon-red: rgb(45, 25, 25);
+      --color-icon-yellow: rgb(45, 40, 25);
+      --color-icon-purple: rgb(35, 25, 45);
+      --color-icon-grey: rgb(45, 45, 45);
+    }
+  }
+}
+
+@layer utilities {
+  .tracking-heading {
+    letter-spacing: -0.02em; /* -2% letter spacing for headers */
+  }
+}

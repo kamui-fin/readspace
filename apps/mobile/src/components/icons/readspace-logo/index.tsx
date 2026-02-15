@@ -1,0 +1,28 @@
+import Svg, { Defs, LinearGradient, Path, Stop, type SvgProps } from 'react-native-svg';
+
+interface ReadspaceLogoProps extends SvgProps {
+  size?: number;
+}
+
+export function ReadspaceLogo({ size = 24, ...props }: ReadspaceLogoProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 480 480" fill="none" {...props}>
+      <Path
+        d="M164.404 106C188.376 106 207.809 125.419 207.809 149.373C207.809 152.526 207.471 155.6 206.832 158.561L285.865 207.411C293.633 200.111 304.091 195.638 315.596 195.638C339.567 195.638 359 215.057 359 239.011C359 262.965 339.567 282.384 315.596 282.384C304.722 282.384 294.782 278.388 287.166 271.786L206.832 321.439C207.471 324.4 207.809 327.474 207.809 330.627C207.809 354.581 188.376 374 164.404 374C140.433 374 121 354.581 121 330.627C121 306.673 140.433 287.254 164.404 287.254C175.572 287.254 185.753 291.469 193.445 298.393L273.35 249.004C272.593 245.796 272.191 242.45 272.191 239.011C272.191 236.191 272.461 233.434 272.975 230.764L193.445 181.607C185.753 188.531 175.572 192.746 164.404 192.746C140.433 192.746 121 173.327 121 149.373C121 125.419 140.433 106 164.404 106Z"
+        fill="url(#paint0_linear_255_13)"
+      />
+      <Defs>
+        <LinearGradient
+          id="paint0_linear_255_13"
+          x1="155"
+          y1="315.739"
+          x2="212.872"
+          y2="315.739"
+          gradientUnits="userSpaceOnUse">
+          <Stop offset="0.4" stopColor="#E5EDE0" />
+          <Stop offset="1" stopColor="#6A994E" />
+        </LinearGradient>
+      </Defs>
+    </Svg>
+  );
+}
