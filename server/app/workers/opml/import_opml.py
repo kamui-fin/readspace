@@ -18,9 +18,7 @@ from app.workers.opml.progress import OpmlImportTracker
 logger = structlog.get_logger(__name__)
 
 # Type definition for session factory
-SessionFactory = Callable[
-    [], Coroutine[Any, Any, AsyncSession]
-]  # Simplified for brevity
+SessionFactory = Callable[[], Coroutine[Any, Any, AsyncSession]]  # Simplified for brevity
 
 
 async def import_opml(
@@ -116,11 +114,7 @@ async def _process_opml_import(
                     folder_name = folder_name[0] if folder_name else None
                 if folder_name:
                     folder_names.add(folder_name)
-        folder_map = (
-            await crud_folder.upsert_batch(db, list(folder_names), user_id)
-            if folder_names
-            else {}
-        )
+        folder_map = await crud_folder.upsert_batch(db, list(folder_names), user_id) if folder_names else {}
 
     # Dispatch Tasks
     task_ids = []

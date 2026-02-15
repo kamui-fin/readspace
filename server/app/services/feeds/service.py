@@ -7,6 +7,7 @@ Follows the 'Surgical Session' pattern: DB -> IO -> DB.
 from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlparse
 from uuid import UUID
 
 import structlog
@@ -29,15 +30,15 @@ from app.crud.folder import get_by_id as get_folder
 from app.models.feed import Feed
 from app.services.feeds import fetching, parsing, scheduling
 from app.services.feeds.domain_authority import get_domain_authority_score
+from app.services.feeds.favicon import extract_favicon_and_canonical_url
 from app.services.feeds.http_cache import parse_ttl_from_headers
 from app.services.feeds.language_detection import detect_feed_language
 from app.services.feeds.meilisearch import sync_feed
 from app.typing.entries import ArticleCreate
-from app.typing.feeds import FeedBase, FeedCreateInternal
+from app.typing.feeds import FeedCreateInternal
 from app.typing.subscriptions import SubscriptionCreate
 from app.utils.hashing import calculate_feed_content_hash
 from app.utils.urls import normalize_feed_url
-from urllib.parse import urlparse
 
 logger = structlog.get_logger(__name__)
 
@@ -69,9 +70,7 @@ async def add_feed(
                 url=normalized_url,
                 feed_id=existing_feed.id,
             )
-            return await _subscribe_to_existing_feed(
-                db, user_id, existing_feed, folder_id, custom_title
-            )
+            return await _subscribe_to_existing_feed(db, user_id, existing_feed, folder_id, custom_title)
 
     # 2. Fetch content (let fetcher handle redirects)
     # We pass the original URL because it might be a redirect that we haven't resolved yet
@@ -95,18 +94,14 @@ async def add_feed(
 
         # Check for existing feed AGAIN (in case it was found via redirect resolution)
         if final_normalized_url != normalized_url:
-            existing_feed = await feed_crud.get_feed_by_url(
-                db, url=final_normalized_url
-            )
+            existing_feed = await feed_crud.get_feed_by_url(db, url=final_normalized_url)
             if existing_feed:
                 logger.info(
                     "Feed already exists (via redirect), subscribing",
                     url=final_normalized_url,
                     feed_id=existing_feed.id,
                 )
-                return await _subscribe_to_existing_feed(
-                    db, user_id, existing_feed, folder_id, custom_title
-                )
+                return await _subscribe_to_existing_feed(db, user_id, existing_feed, folder_id, custom_title)
 
         # Parse Content
         try:
@@ -114,21 +109,26 @@ async def add_feed(
         except Exception as e:
             raise FeedParsingError(f"Failed to parse feed: {e}") from e
 
+        # Extract Favicon / Key Image
+        try:
+            # Prefer the website link, fall back to feed URL
+            target_url = parsed.link or final_url
+            favicon_result = await extract_favicon_and_canonical_url(target_url)
+            if favicon_result.image_url:
+                parsed.image_url = favicon_result.image_url
+        except Exception as e:
+            logger.warning("Favicon extraction failed", url=final_url, error=str(e))
+
         # Detect Language if missing
         language = parsed.language
         if not language:
-            article_texts = [
-                f"{a.title or ''} {a.description or ''}".strip()
-                for a in parsed.articles
-            ]
+            article_texts = [f"{a.title or ''} {a.description or ''}".strip() for a in parsed.articles]
             language = detect_feed_language(
                 title=parsed.title,
                 description=parsed.description,
                 articles=article_texts,
             )
-            logger.info(
-                "Auto-detected language", url=final_normalized_url, language=language
-            )
+            logger.info("Auto-detected language", url=final_normalized_url, language=language)
 
         # Ensure language is never None
         if not language:
@@ -154,11 +154,7 @@ async def add_feed(
             image_url=parsed.image_url,
             last_fetched_at=datetime.now(timezone.utc),
             last_updated_at=parsed.last_updated_at
-            or (
-                parsed.articles[0].published_at
-                if parsed.articles and parsed.articles[0].published_at
-                else None
-            ),
+            or (parsed.articles[0].published_at if parsed.articles and parsed.articles[0].published_at else None),
             last_modified_header=fetch_result["headers"].get("last-modified"),
             etag_header=fetch_result["headers"].get("etag"),
             content_hash=calculate_feed_content_hash(parsed.articles),
@@ -182,21 +178,15 @@ async def add_feed(
 
         # Recalculate next_fetch with the new interval and ttl
         next_fetch = feed_crud.calculate_next_fetch(created_feed, ttl=ttl)
-        await feed_crud.update_feed(
-            db, feed=created_feed, update_data={"next_fetch_at": next_fetch}
-        )
+        await feed_crud.update_feed(db, feed=created_feed, update_data={"next_fetch_at": next_fetch})
 
-        sub, created = await _subscribe_to_existing_feed(
-            db, user_id, created_feed, folder_id, custom_title
-        )
+        sub, created = await _subscribe_to_existing_feed(db, user_id, created_feed, folder_id, custom_title)
 
     # Sync to search engine
     try:
         await sync_feed(get_settings(), created_feed)
     except Exception as e:
-        logger.warning(
-            "Meilisearch sync failed", feed_id=str(created_feed.id), error=str(e)
-        )
+        logger.warning("Meilisearch sync failed", feed_id=str(created_feed.id), error=str(e))
 
     return sub, created
 
@@ -217,20 +207,14 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID) -> None:
         current_hash = feed.content_hash
 
     # Conditional Fetch
-    fetch_result = await fetching.fetch_feed_content(
-        url, etag=etag, last_modified=last_modified
-    )
+    fetch_result = await fetching.fetch_feed_content(url, etag=etag, last_modified=last_modified)
 
     # Case: Error
     if fetch_result["error"]:
-        logger.error(
-            "Feed refresh failed", feed_id=feed_id, error=fetch_result["error"]
-        )
+        logger.error("Feed refresh failed", feed_id=feed_id, error=fetch_result["error"])
         async with session_factory() as db:
             if feed := await feed_crud.get_feed_by_id(db, feed_id=feed_id):
-                await update_feed_after_fetch(
-                    db, feed=feed, success=False, error_msg=fetch_result["error"]
-                )
+                await update_feed_after_fetch(db, feed=feed, success=False, error_msg=fetch_result["error"])
         return
 
     # Case: 304 Not Modified
@@ -249,9 +233,7 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID) -> None:
         logger.error("Feed parse failed", feed_id=feed_id, error=str(e))
         async with session_factory() as db:
             if feed := await feed_crud.get_feed_by_id(db, feed_id=feed_id):
-                await update_feed_after_fetch(
-                    db, feed=feed, success=False, error_msg=f"Parse error: {str(e)}"
-                )
+                await update_feed_after_fetch(db, feed=feed, success=False, error_msg=f"Parse error: {str(e)}")
         return
 
     # Hash Check (if not 304 but content still identical)
@@ -271,20 +253,14 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID) -> None:
 
         final_url = fetch_result.get("final_url")
         if fetch_result.get("permanent_redirect") and final_url:
-            logger.info(
-                "Permanent redirect during refresh", feed_id=feed_id, new_url=final_url
-            )
+            logger.info("Permanent redirect during refresh", feed_id=feed_id, new_url=final_url)
 
         metadata = {
             "title": parsed.title,
             "description": parsed.description,
             "image_url": parsed.image_url,
             "last_updated_at": parsed.last_updated_at
-            or (
-                parsed.articles[0].published_at
-                if parsed.articles and parsed.articles[0].published_at
-                else None
-            ),
+            or (parsed.articles[0].published_at if parsed.articles and parsed.articles[0].published_at else None),
             "last_modified": fetch_result["headers"].get("last-modified"),
             "etag": fetch_result["headers"].get("etag"),
         }
@@ -298,9 +274,7 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID) -> None:
         feed.content_hash = new_hash
         ttl = parse_ttl_from_headers(fetch_result["headers"])
 
-        await update_feed_after_fetch(
-            db, feed=feed, success=True, metadata=metadata, ttl=ttl
-        )
+        await update_feed_after_fetch(db, feed=feed, success=True, metadata=metadata, ttl=ttl)
 
         # Recalculate Interval
         if feed := await feed_crud.get_feed_by_id(db, feed_id=feed_id):
@@ -313,17 +287,13 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID) -> None:
                 )
                 # Update next_fetch_at with new interval
                 next_fetch = feed_crud.calculate_next_fetch(feed, ttl=ttl)
-                await feed_crud.update_feed(
-                    db, feed=feed, update_data={"next_fetch_at": next_fetch}
-                )
+                await feed_crud.update_feed(db, feed=feed, update_data={"next_fetch_at": next_fetch})
 
             # Sync
             try:
                 await sync_feed(get_settings(), feed)
             except Exception as e:
-                logger.warning(
-                    "Meilisearch sync failed", feed_id=str(feed.id), error=str(e)
-                )
+                logger.warning("Meilisearch sync failed", feed_id=str(feed.id), error=str(e))
 
 
 async def _subscribe_to_existing_feed(
@@ -337,19 +307,13 @@ async def _subscribe_to_existing_feed(
     if existing:
         return existing, False
 
-    sub_in = SubscriptionCreate(
-        url=str(feed.url), folder_id=folder_id, custom_title=custom_title
-    )
+    sub_in = SubscriptionCreate(url=str(feed.url), folder_id=folder_id, custom_title=custom_title)
 
-    new_sub = await create_subscription(
-        db, subscription_in=sub_in, user_id=user_id, feed_db=feed
-    )
+    new_sub = await create_subscription(db, subscription_in=sub_in, user_id=user_id, feed_db=feed)
     return new_sub, True
 
 
-async def _save_articles(
-    db: AsyncSession, feed: Feed, articles: list[ArticleCreate]
-) -> int:
+async def _save_articles(db: AsyncSession, feed: Feed, articles: list[ArticleCreate]) -> int:
     if not articles:
         return 0
 

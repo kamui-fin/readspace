@@ -4,18 +4,17 @@ Note: Search functionality has been migrated to Meilisearch with direct frontend
 The frontend now uses React InstantSearch to query Meilisearch directly.
 """
 
-import structlog
 from uuid import UUID
+
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlmodel import Session
 
-from app.db.session import get_db_factory
-from app.typing.user import TokenData
 from app.core.dependencies import get_current_user
-from app.services.feeds import fetching, parsing, service
 from app.crud.feed.subscription import get_subscription_by_feed_id
+from app.db.session import get_db_factory
+from app.services.feeds import fetching, parsing, service
 from app.typing.feeds import ParsedFeed
-
+from app.typing.user import TokenData
 from app.utils.urls import normalize_feed_url
 
 logger = structlog.get_logger(__name__)
@@ -53,9 +52,7 @@ async def get_feed_preview(
 
         # Check if feed exists and if user is subscribed
         async with db_factory() as db:
-            existing_feed = await service.feed_crud.get_feed_by_url(
-                db, url=final_normalized_url
-            )
+            existing_feed = await service.feed_crud.get_feed_by_url(db, url=final_normalized_url)
             if existing_feed:
                 parsed.id = str(existing_feed.id)
                 subscription = await get_subscription_by_feed_id(

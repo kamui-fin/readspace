@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
+from app.core.config import get_settings
 from app.models.enums import ContentType, FeedCategory
 from app.typing.common import response_config
 from app.typing.entries import ArticleCreate
@@ -82,6 +83,17 @@ class FeedSummary(FeedBase):
 
     id: UUID
 
+    @field_validator("image_url", mode="before")
+    @classmethod
+    def resolve_image_url(cls, v: str | None) -> str | None:
+        """Resolve relative image paths to full Supabase Storage URLs."""
+        if v and not v.startswith(("http://", "https://", "data:")):
+            settings = get_settings()
+            # Ensure no double slashes if v starts with /
+            path = v.lstrip("/")
+            return f"{settings.SUPABASE_URL}/storage/v1/object/public/favicons/{path}"
+        return v
+
 
 class FeedDetail(FeedSummary):
     """
@@ -127,6 +139,9 @@ class FeedEnrichmentResponse(BaseModel):
 
     enhanced_description: str | None = None
     tags: list[str] = Field(default_factory=list)
+    tags_native: list[str] = Field(default_factory=list)
+    author: str | None = None
+    content_type: str | None = None
     category: str
     popularity_estimate: int = Field(ge=1, le=100)
 
@@ -210,6 +225,16 @@ class MeilisearchFeedDocument(BaseModel):
     def convert_enum_to_str(cls, v):
         if hasattr(v, "value"):
             return v.value
+        return v
+
+    @field_validator("image_url", mode="before")
+    @classmethod
+    def resolve_image_url(cls, v: str | None) -> str | None:
+        """Resolve relative image paths to full Supabase Storage URLs."""
+        if v and not v.startswith(("http://", "https://", "data:")):
+            settings = get_settings()
+            path = v.lstrip("/")
+            return f"{settings.SUPABASE_URL}/storage/v1/object/public/favicons/{path}"
         return v
 
 

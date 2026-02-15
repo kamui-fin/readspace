@@ -76,9 +76,7 @@ async def import_opml_task(
     context: Context = TaskiqDepends(),
 ) -> dict[str, Any]:
     """Import OPML file (Orchestrator Wrapper)."""
-    task_id = (
-        context.message.task_id if context and hasattr(context, "message") else None
-    )
+    task_id = context.message.task_id if context and hasattr(context, "message") else None
 
     logger.info("Task wrapper called", task_id=task_id, has_context=bool(context))
 

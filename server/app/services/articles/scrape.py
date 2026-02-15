@@ -23,7 +23,6 @@ from app.core.constants import (
     ALLOWED_TAGS,
     CONTENT_EXTRACTION_TIMEOUT,
 )
-from app.utils.text import calculate_reading_time
 from app.utils.urls import urls_match
 
 logger = structlog.get_logger(__name__)
@@ -57,9 +56,7 @@ def _get_trafilatura_config() -> ConfigParser:
 # ==============================================================================
 
 
-def _remove_duplicate_title_heading(
-    soup: BeautifulSoup, article_title: str | None
-) -> None:
+def _remove_duplicate_title_heading(soup: BeautifulSoup, article_title: str | None) -> None:
     """
     Remove the first heading if it matches the article title.
     Mutates the soup object.
@@ -134,9 +131,7 @@ def _fetch_and_extract(url: str, config: ConfigParser) -> str | None:
         return None
 
     # Extract with images allowed
-    return trafilatura.extract(
-        downloaded, output_format="html", include_images=True, config=config
-    )
+    return trafilatura.extract(downloaded, output_format="html", include_images=True, config=config)
 
 
 async def extract_full_content(

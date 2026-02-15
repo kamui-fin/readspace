@@ -52,7 +52,7 @@ pydantic-settings = "^2.8.1"
 python-dotenv = "^1.0.1"
 python-jose = "^3.3.0"
 requests = "^2.31.0"
-httpx = "^0.28.1"
+aiohttp = "^3.10.0"
 iso639-lang = "^2.3.1"
 ebooklib = "^0.18"
 supabase = "^2.15.0"
@@ -92,6 +92,7 @@ sqlmodel = "^0.0.27"
 listparser = {extras = ["lxml"], version = "^0.20"}
 langcodes = "^3.5.0"
 url-normalize = "^2.2.1"
+google-cloud-storage = "^3.9.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"
@@ -109,6 +110,7 @@ pylint = "^4.0.2"
 pytest-asyncio = "^1.2.0"
 vulture = "^2.14"
 pyflakes = "^3.4.0"
+httpx = "^0.28.1"
 
 [tool.ruff]
 target-version = "py310"

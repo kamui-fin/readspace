@@ -17,9 +17,7 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.get(
-    "/profile", response_model=ProfileResponse, summary="Get current user profile"
-)
+@router.get("/profile", response_model=ProfileResponse, summary="Get current user profile")
 async def get_profile(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],

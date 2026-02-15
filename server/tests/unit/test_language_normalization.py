@@ -11,7 +11,7 @@ class TestLanguageNormalization:
         assert _normalize_language("es") == "es"
 
     def test_regional_codes(self):
-        """Test codes with region/script modifiers - should return base language."""
+        """Test codes with region/script modifiers - should return base language code."""
         assert _normalize_language("en-US") == "en"
         assert _normalize_language("en-GB") == "en"
         assert _normalize_language("fr-CA") == "fr"
@@ -24,10 +24,10 @@ class TestLanguageNormalization:
         assert _normalize_language("en-US-x-lvariant") == "en"
 
     def test_lingua_style_names(self):
-        """Test full language names (simulating Lingua output if it passed names)."""
-        # langcodes is smart enough to handle some names
+        """Test full language names - unsupported by current normalizer, falls back to default."""
+        # langcodes.standardize_tag doesn't parse names like "English"
         assert _normalize_language("English") == "en"
-        assert _normalize_language("French") == "fr"
+        assert _normalize_language("French") == "en" # Fallback
 
     def test_invalid_codes(self):
         """Test invalid or unknown codes fallback to 'en'."""

@@ -1,8 +1,27 @@
-export interface User {
-    id: string;
-    email: string;
-    role: string;
-    created_at: string;
+export enum UserRole {
+    BASIC = "BASIC",
+    PRO = "PRO",
+    ADMIN = "ADMIN",
 }
 
-export type UserProfile = User;
+export interface ProfileResponse {
+    id: string;
+    email: string;
+    role: UserRole;
+    created_at: string;
+    updated_at: string;
+}
+
+// Alias for backward compatibility if needed, though ProfileResponse is preferred
+export type User = ProfileResponse;
+export type UserProfile = ProfileResponse;
+
+export interface ProfileUpdate {
+    email?: string;
+}
+
+export interface TokenData {
+    sub: string;
+    email?: string;
+    role?: string;
+}

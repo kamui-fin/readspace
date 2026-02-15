@@ -41,6 +41,8 @@ async def test_add_feed_persists_metadata(db_session, test_user):
     mock_parsed.last_updated_at = datetime(2025, 12, 1, 2, 11, 30, tzinfo=timezone.utc)
     mock_parsed.articles = []
     mock_parsed.tags = []
+    mock_parsed.author = None
+    mock_parsed.content_type = None
 
     with patch(
         "app.services.feeds.service.fetching.fetch_feed_content", new_callable=AsyncMock

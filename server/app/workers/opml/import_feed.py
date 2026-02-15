@@ -46,9 +46,7 @@ async def import_single_feed(
         )
 
         if parent_task_id:
-            await OpmlImportTracker(parent_task_id).mark_success(
-                already_exists=not created
-            )
+            await OpmlImportTracker(parent_task_id).mark_success(already_exists=not created)
 
         return {
             "success": True,

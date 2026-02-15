@@ -66,18 +66,12 @@ async def save_web_article(
         title=request.title,
         metadata=None,
         note=request.note,
-        priority=(
-            request.priority.value
-            if isinstance(request.priority, ArticlePriority)
-            else request.priority
-        ),
+        priority=(request.priority.value if isinstance(request.priority, ArticlePriority) else request.priority),
     )
 
     # 3. Resolve ID safely
     # Handling the complex return type of the service (Entry vs Content)
-    article_id = (
-        article.user_entry.id if hasattr(article, "user_entry") else article.content.id
-    )
+    article_id = article.user_entry.id if hasattr(article, "user_entry") else article.content.id
 
     logger.info("Web article saved successfully", article_id=str(article_id))
 

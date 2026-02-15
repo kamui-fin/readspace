@@ -9,11 +9,12 @@ logger = structlog.get_logger(__name__)
 @lru_cache(maxsize=1)
 def _get_detector():
     """Cached loader for the heavy LanguageDetector object."""
-    # Assuming 'from_all_languages' is desired for a generic feed reader
+    # Build detector only for common languages to save memory/startup time if desired
+    # For now, using all spoken languages as general purpose
     return LanguageDetectorBuilder.from_all_spoken_languages().build()
 
 
-def detect_language(text: str, min_confidence: float = 0.7) -> str | None:
+def detect_language(text: str, min_confidence: float = 0.1) -> str | None:
     """Detects ISO 639-1 code from text if confidence threshold is met."""
     if not text or len(text) < 10:
         return None

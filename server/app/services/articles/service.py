@@ -9,7 +9,6 @@ Handles business logic that sits on top of CRUD:
 from uuid import UUID
 
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import AUTO_EXTRACT_ON_FETCH, MIN_CONTENT_LENGTH
 from app.crud.article import reader
@@ -30,9 +29,7 @@ async def _enrich_with_auto_extract(article: EntryDetail) -> EntryDetail:
         if article.link:
             logger.info("Auto-extracting content", article_id=article.id)
 
-            extracted, error = await scrape.extract_full_content(
-                str(article.link), article.title
-            )
+            extracted, error = await scrape.extract_full_content(str(article.link), article.title)
 
             if extracted and not error:
                 # Return new object with updates
@@ -83,8 +80,8 @@ async def get_article_details(
         content, user_entry = row  # type: ignore
         response = transformer.clipped_to_entry_detail(content, user_entry)
     else:
-        feed_article, user_entry = row  # type: ignore
-        response = transformer.to_entry_detail(feed_article, user_entry)
+        feed_article, user_entry, subscription = row  # type: ignore
+        response = transformer.to_entry_detail(feed_article, user_entry, subscription=subscription)
 
     # 3. Apply Business Logic (Auto Extract)
     if AUTO_EXTRACT_ON_FETCH:

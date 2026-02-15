@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 from app.models.enums import ArticlePriority
 from app.typing.common import response_config
+from app.core.config import get_settings
 
 # ================= Base Field Bundles =================
 
@@ -43,6 +44,16 @@ class FeedContextFields(BaseModel):
     feed_title: str | None = None
     feed_icon: str | None = None
     published_at: datetime | None = None
+
+    @field_validator("feed_icon", mode="before")
+    @classmethod
+    def resolve_feed_icon(cls, v: str | None) -> str | None:
+        """Resolve relative image paths to full Supabase Storage URLs."""
+        if v and not v.startswith(("http://", "https://", "data:")):
+            settings = get_settings()
+            path = v.lstrip("/")
+            return f"{settings.SUPABASE_URL}/storage/v1/object/public/favicons/{path}"
+        return v
 
 
 # ================= API Responses =================

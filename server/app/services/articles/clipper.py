@@ -51,9 +51,7 @@ async def save_article_from_url(
 
     # 2. Delegate to CRUD: Content
     # This handles the "Check if exists, if not create, if yes update title" logic strictly in DB layer
-    article_content = await upsert_article_content(
-        db, article_in=content_in, update_title_if_changed=True
-    )
+    article_content = await upsert_article_content(db, article_in=content_in, update_title_if_changed=True)
 
     # 3. Delegate to CRUD: User State
     # This handles the "Mark as Read Later" logic

@@ -86,9 +86,7 @@ def calculate_hybrid_popularity_score(
 
     # Hybrid score: weighted combination
     # 40% LLM estimate, 30% domain authority, 30% quality
-    popularity_score = (
-        (llm_score * 0.4) + (domain_authority_score * 0.3) + (quality_score * 0.3)
-    )
+    popularity_score = (llm_score * 0.4) + (domain_authority_score * 0.3) + (quality_score * 0.3)
 
     return {
         "popularity_score": popularity_score,

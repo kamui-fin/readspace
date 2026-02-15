@@ -7,6 +7,8 @@ import { CustomSearchBox } from "./CustomSearchBox"
 import { DiscoverLayout } from "./DiscoverLayout"
 import { SearchResults } from "./SearchResults"
 import { useDiscoverController } from "@/components/features/discover/hooks/use-discover-controller"
+import { CATEGORY_CONFIG } from "@/lib/categories"
+import { FeedCategory } from "@readspace/shared"
 
 interface DiscoverContentProps {
     /** Initial language preference (not currently used) */
@@ -53,7 +55,11 @@ export function DiscoverContent({ onAiSettingsChange }: DiscoverContentProps) {
                     <div className="flex flex-col items-center">
                         {hasActiveSearch ? (
                             <h1 className="pt-4 mb-6 text-2xl md:text-4xl font-semibold text-foreground dark:text-foreground tracking-tight">
-                                {activeCategory || "Search Feeds"}
+                                {activeCategory
+                                    ? CATEGORY_CONFIG[
+                                        activeCategory as FeedCategory
+                                    ]?.name || activeCategory
+                                    : "Search Feeds"}
                             </h1>
                         ) : (
                             <div className="flex items-center gap-4 mb-8 md:mb-12">

@@ -58,8 +58,17 @@ export function useFeedPreview(query: string): UseFeedPreviewResult {
         return message
     }, [error])
 
+    const enrichedPreviewFeed = useMemo(() => {
+        if (!previewFeed) return null
+        return {
+            ...previewFeed,
+            // Ensure URL is present, falling back to the query if the API response is missing it
+            url: previewFeed.url || trimmedQuery,
+        }
+    }, [previewFeed, trimmedQuery])
+
     return {
-        previewFeed: previewFeed ?? null,
+        previewFeed: enrichedPreviewFeed,
         isLoading,
         error: errorMessage,
         isUrlQuery,

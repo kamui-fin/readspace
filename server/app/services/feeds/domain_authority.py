@@ -29,9 +29,8 @@ def _get_tranco_list():
     try:
         # Force download if cache is corrupted or empty
         t = Tranco(cache=True, cache_dir=".tranco")
-        # Trigger list load to ensure it works
-        t.list()
-        return t
+        # Return the actual list object so it's cached in memory
+        return t.list()
     except Exception as e:
         logger.error("Failed to load Tranco list", error=str(e))
         return None
@@ -39,11 +38,14 @@ def _get_tranco_list():
 
 def get_domain_authority_score(domain: str) -> DomainScore:
     """Calculates domain authority (0.0-1.0) using Tranco rank."""
-    if not domain or not (tranco := _get_tranco_list()):
+    if not domain:
+        return DomainScore(score=0.0)
+
+    t_list = _get_tranco_list()
+    if not t_list:
         return DomainScore(score=0.0)
 
     # formatting: ensure clean domain
-    t_list = tranco.list()
     rank = t_list.rank(domain)
 
     # Fallback: if not found, try the parent domain (e.g., blog.google.com -> google.com)

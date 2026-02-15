@@ -42,9 +42,6 @@ def upgrade() -> None:
         "feeds", sa.Column("content_type", sa.Enum(name="contenttype"), nullable=True)
     )
 
-    # 3. Rename image_url to icon_url
-    op.alter_column("feeds", "image_url", new_column_name="icon_url")
-
     # 4. Update FeedCategory Enum
     # Drop default dependency first
     op.execute("ALTER TABLE feeds ALTER COLUMN top_level_category DROP DEFAULT")
@@ -102,9 +99,6 @@ def downgrade() -> None:
     op.execute(
         "ALTER TABLE feeds ALTER COLUMN top_level_category SET DEFAULT 'MISCELLANEOUS'::public.feedcategory"
     )
-
-    # 2. Rename icon_url back to image_url
-    op.alter_column("feeds", "icon_url", new_column_name="image_url")
 
     # 3. Remove columns
     op.drop_column("feeds", "content_type")

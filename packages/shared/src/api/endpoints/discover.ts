@@ -1,5 +1,5 @@
 import { ApiClient } from "../core";
-import { FeedDiscoveryResult } from "../types/feeds";
+import { FeedDiscoveryResult } from "../types";
 
 export const discover = {
   previewFeed: (url: string) => {

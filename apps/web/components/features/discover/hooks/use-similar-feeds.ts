@@ -23,8 +23,12 @@ function convertHitToFeed(hit: MeilisearchHit): FeedSummary {
         title: hit.title,
         link: hit.link ?? null,
         image_url: hit.image_url ?? null,
-        error_count: 0,
-    }
+        language: hit.language ?? "en",
+        author: null, // Meili might have author? MeilisearchHit definition below needs check
+        content_type: null,
+        tags_native: [],
+        description: hit.description ?? null,
+    } as FeedSummary // Warning: casting or ensure all fields
 }
 
 export function useSimilarFeeds(feedId: string) {

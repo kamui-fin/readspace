@@ -416,6 +416,8 @@ async def test_feed(db_session: AsyncSession) -> Feed:
         description="Hacker News newest stories",
         link="https://news.ycombinator.com",
         language="en",
+        tags=[],
+        tags_native=[],
     )
     db_session.add(feed)
     await db_session.flush()

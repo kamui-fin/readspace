@@ -27,9 +27,7 @@ router = APIRouter()
 
 
 # --- Helpers ---
-async def resolve_target_folder(
-    db: AsyncSession, user_id: UUID, folder_id_input: UUID | str | None
-) -> UUID:
+async def resolve_target_folder(db: AsyncSession, user_id: UUID, folder_id_input: UUID | str | None) -> UUID:
     """Resolves 'default' string or None to the user's default folder UUID."""
     if folder_id_input is None or folder_id_input == "default":
         default_folder = await ensure_default_folder(db, user_id)

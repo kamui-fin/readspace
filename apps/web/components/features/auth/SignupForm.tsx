@@ -61,7 +61,6 @@ export function SignupForm({
     type SignUpFormValues = z.infer<typeof schema>
 
     const form = useForm<SignUpFormValues>({
-        // @ts-expect-error - zodResolver type mismatch
         resolver: zodResolver(schema),
         defaultValues: {
             email: "",

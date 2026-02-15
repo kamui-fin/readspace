@@ -25,9 +25,7 @@ class Feed(Base):
 
     __tablename__ = "feeds"
 
-    id = Column(
-        SQLUUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
-    )
+    id = Column(SQLUUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     url = Column(Text, nullable=False, unique=True)
     title = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
@@ -36,12 +34,8 @@ class Feed(Base):
     image_url = Column(Text, nullable=True)
 
     # Fetching Logic
-    last_fetched_at = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    next_fetch_at = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    last_fetched_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    next_fetch_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     adaptive_fetch_interval_minutes = Column(Integer, nullable=True)
     fetch_error_count = Column(Integer, nullable=False, default=0)
     last_error_message = Column(Text, nullable=True)
@@ -54,28 +48,24 @@ class Feed(Base):
     tags_native = Column(ARRAY(Text), nullable=True)
     author = Column(Text, nullable=True)
     content_type = Column(
-        Text, nullable=True
-    )  # Store enum value as string for flexibility
+        SQLEnum(ContentType, name="contenttype", values_callable=lambda x: [e.value for e in x]),
+        nullable=True,
+    )
     top_level_category = Column(
-        SQLEnum(FeedCategory, name="feedcategory"),
+        SQLEnum(FeedCategory, name="feedcategory", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         server_default="miscellaneous",
+        default=FeedCategory.MISCELLANEOUS,
     )
     popularity_score = Column(Float, nullable=False, default=0.0)
     subscriber_count = Column(Integer, nullable=False, default=0)
 
-    created_at = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     last_updated_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
-    articles = relationship(
-        "FeedArticle", back_populates="feed", cascade="all, delete-orphan"
-    )
-    subscriptions = relationship(
-        "FeedSubscription", back_populates="feed", cascade="all, delete-orphan"
-    )
+    articles = relationship("FeedArticle", back_populates="feed", cascade="all, delete-orphan")
+    subscriptions = relationship("FeedSubscription", back_populates="feed", cascade="all, delete-orphan")
 
 
 class FeedSubscription(Base):
@@ -83,9 +73,7 @@ class FeedSubscription(Base):
 
     __tablename__ = "feed_subscriptions"
 
-    id = Column(
-        SQLUUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
-    )
+    id = Column(SQLUUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     user_id = Column(
         SQLUUID(as_uuid=True),
         ForeignKey("profiles.id", ondelete="CASCADE"),
@@ -106,9 +94,7 @@ class FeedSubscription(Base):
     custom_title = Column(Text, nullable=True)
     last_read_cutoff = Column(DateTime(timezone=True), nullable=True)
 
-    created_at = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # Relationships
     user = relationship("Profile", back_populates="subscriptions")

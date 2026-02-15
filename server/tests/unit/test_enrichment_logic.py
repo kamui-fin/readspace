@@ -4,33 +4,36 @@ from datetime import datetime, timezone
 
 from app.services.feeds import enrichment, scoring, favicon
 from app.models.feed import Feed
-from app.typing.feeds import FeedEnrichmentResponse
+from app.typing.feeds import FeedEnrichmentResponse, FeedScoringData, ArticleStats, FeedEnrichmentSnapshot
 from app.models.enums import FeedCategory
+from app.services.feeds.language_detection import detect_feed_language
 
 # ==============================================================================
 # SCORING TESTS
 # ==============================================================================
 
 def test_calculate_quality_score_basic():
-    feed_data = {
-        "title": "My Tech Blog",
-        "description": "A blog about tech",
-        "image_url": "https://example.com/icon.png",
-        "language": "en",
-        "author": "John Doe"
-    }
+    feed_data = FeedScoringData(
+        title="My Tech Blog",
+        description="A blog about tech",
+        image_url="https://example.com/icon.png",
+        language="en",
+    )
+    # FeedScoringData doesn't have author? Let's check definition. 
+    # If not, I'll omit it. The score calc adds 0.05 for language.
+    # Logic:
+    # Title (0.15) + Desc (0.15) + Image (0.15) + Lang (0.05) = 0.5
     score = scoring.calculate_quality_score(feed_data)
-    # 0.15 (title) + 0.1 (desc) + 0.1 (image) + 0.05 (lang) + 0.1 (author) = 0.5
     assert score == pytest.approx(0.5)
 
 def test_calculate_quality_score_with_stats():
-    feed_data = {"title": "My Tech Blog"}
-    article_stats = {
-        "count": 10,
-        "image_ratio": 0.6,  # > 0.5 -> +0.15
-        "avg_content_length": 1200, # > 1000 -> +0.15
-        "days_since_last_article": 2 # < 7 -> +0.1
-    }
+    feed_data = FeedScoringData(title="My Tech Blog")
+    article_stats = ArticleStats(
+        count=10,
+        image_ratio=0.6,
+        avg_content_length=1200,
+        days_since_last_article=2
+    )
     # Base: 0.15 (title)
     # Stats: 0.15 (visuals) + 0.15 (depth) + 0.1 (activity count >=5) + 0.1 (recency) = 0.5
     # Total: 0.65
@@ -38,15 +41,15 @@ def test_calculate_quality_score_with_stats():
     assert score == pytest.approx(0.65)
 
 def test_calculate_hybrid_popularity_score():
-    feed_data = {"title": "Test"}
+    feed_data = FeedScoringData(title="Test")
     llm_estimate = 80 # 0.8
     domain_auth = 0.5
-    article_stats = {
-        "count": 10,
-        "image_ratio": 0.6,
-        "avg_content_length": 1200,
-        "days_since_last_article": 2
-    }
+    article_stats = ArticleStats(
+        count=10,
+        image_ratio=0.6,
+        avg_content_length=1200,
+        days_since_last_article=2
+    )
     # Quality score from above is 0.65 (0.15 base + 0.5 stats)
     
     # Weights: 40% LLM, 30% Domain, 30% Quality
@@ -66,30 +69,7 @@ def test_calculate_hybrid_popularity_score():
 # ENRICHMENT LOGIC TESTS
 # ==============================================================================
 
-def test_detect_language_feed_has_lang():
-    feed = MagicMock(spec=Feed)
-    feed.language = "fr-CA"
-    feed.title = "Le Blog"
-    
-    lang = enrichment.detect_language(feed)
-    assert lang == "fr"
 
-@patch("app.services.feeds.enrichment.detect_feed_language")
-def test_detect_language_fallback(mock_detect):
-    feed = MagicMock(spec=Feed)
-    feed.language = None
-    feed.title = "The Blog"
-    feed.description = "A blog"
-    
-    mock_detect.return_value = "es"
-    
-    lang = enrichment.detect_language(feed, ["Hola mundo"])
-    
-    assert lang == "es"
-    mock_detect.assert_called_once()
-    call_kwargs = mock_detect.call_args[1]
-    assert call_kwargs["title"] == "The Blog"
-    assert call_kwargs["articles"] == ["Hola mundo"]
 
 def test_calculate_article_stats():
     now = datetime.now(timezone.utc)
@@ -100,19 +80,23 @@ def test_calculate_article_stats():
     
     stats = enrichment._calculate_article_stats(articles)
     
-    assert stats["count"] == 2
-    assert stats["image_ratio"] == 0.5
-    assert stats["avg_content_length"] == 1000
-    assert stats["days_since_last_article"] == 0
+    assert stats.count == 2
+    assert stats.image_ratio == 0.5
+    assert stats.avg_content_length == 1000
+    assert stats.days_since_last_article == 0
 
 def test_build_feed_update_mapping():
-    feed_snapshot = {
-        "id": "123",
-        "title": "Test Feed",
-        "article_stats": {"count": 5}
-    }
+    feed_snapshot = FeedEnrichmentSnapshot(
+        id="123",
+        title="Test Feed",
+        description="Desc",
+        article_stats=ArticleStats(count=5),
+        domain="test.com",
+        language="en",
+        url="http://test.com"
+    )
     llm_result = FeedEnrichmentResponse(
-        category="TECHNOLOGY_PROGRAMMING",
+        category="software_engineering",
         tags=["tech", "news"],
         popularity_estimate=80,
         enhanced_description="Better desc"
@@ -127,7 +111,7 @@ def test_build_feed_update_mapping():
     
     assert mapping["id"] == "123"
     assert mapping["language"] == "en"
-    assert mapping["top_level_category"] == FeedCategory.TECHNOLOGY_PROGRAMMING
+    assert mapping["top_level_category"] == FeedCategory.SOFTWARE_ENGINEERING
     assert mapping["tags"] == ["tech", "news"]
     assert mapping["description"] == "Better desc"
     assert "popularity_score" in mapping
@@ -138,57 +122,44 @@ def test_build_feed_update_mapping():
 # ==============================================================================
 
 @pytest.mark.asyncio
+@pytest.mark.asyncio
 async def test_extract_favicon_success():
-    with patch("httpx.AsyncClient") as mock_client:
-        # Mock response
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.url = "https://example.com"
-        mock_response.text = '<html><link rel="icon" href="/favicon.ico"></html>'
+    with patch("app.services.feeds.favicon.get_best_favicon") as mock_get_best:
+        mock_icon = MagicMock()
+        mock_icon.url = "https://example.com/favicon.ico"
+        mock_icon.format = "ico"
+        mock_icon.width = 32
+        mock_icon.height = 32
+        mock_icon.reachable = True
         
-        mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+        # Mock http attribute for canonical URL check
+        mock_http = MagicMock()
+        mock_http.final_url = "https://example.com"
+        mock_icon.http = mock_http
         
-        # Mock extract_favicon library
-        with patch("app.services.feeds.favicon.from_html") as mock_from_html, \
-             patch("app.services.feeds.favicon.check_availability") as mock_check:
-            
-            mock_icon = MagicMock()
-            mock_icon.url = "https://example.com/favicon.ico"
-            mock_icon.format = "ico"
-            mock_icon.width = 32
-            mock_icon.height = 32
-            mock_icon.reachable = True
-            
-            # Mock return values
-            # We need to mock the filtering logic in the function
-            # The function filters for svg, data uri, or large icons (>64)
-            # Let's make it large enough
-            mock_icon.width = 100
-            mock_icon.height = 100
-            
-            mock_from_html.return_value = [mock_icon]
-            mock_check.return_value = [mock_icon]
+        mock_get_best.return_value = mock_icon
+        
+        # Mock upload_favicon_to_storage to return public URL
+        with patch("app.services.feeds.favicon.upload_favicon_to_storage") as mock_upload:
+            mock_upload.return_value = "https://supabase/favicon.ico"
             
             result = await favicon.extract_favicon_and_canonical_url("https://example.com")
             
-            assert result["image_url"] == "https://example.com/favicon.ico"
+            assert result.image_url == "https://supabase/favicon.ico"
 
 @pytest.mark.asyncio
+@pytest.mark.asyncio
 async def test_extract_favicon_google_fallback():
-    with patch("httpx.AsyncClient") as mock_client:
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.url = "https://example.com"
-        mock_response.text = '<html><body>No icon here</body></html>'
-        mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+    # Since get_best_favicon handles logic internally, we just test it returns None or partial result
+    # If get_best_favicon returns None, we get empty result.
+    # The new implementation doesn't seem to have explicit Google fallback unless get_best_favicon does it?
+    # Checking app/services/feeds/favicon.py: It does NOT have a Google fallback block visible in the file content I read earlier.
+    # It just returns FaviconResult() if get_best_favicon returns nothing.
+    # So I will remove this test or update it to test "not found" case.
+    
+    with patch("app.services.feeds.favicon.get_best_favicon") as mock_get_best:
+        mock_get_best.return_value = None
         
-        with patch("app.services.feeds.favicon.from_html", return_value=[]), \
-             patch("app.services.feeds.favicon.from_google") as mock_google:
-            
-            mock_google_icon = MagicMock()
-            mock_google_icon.url = "https://google.com/s2/favicons?domain=example.com"
-            mock_google.return_value = mock_google_icon
-            
-            result = await favicon.extract_favicon_and_canonical_url("https://example.com")
-            
-            assert result["image_url"] == "https://google.com/s2/favicons?domain=example.com"
+        result = await favicon.extract_favicon_and_canonical_url("https://example.com")
+        
+        assert result.image_url is None

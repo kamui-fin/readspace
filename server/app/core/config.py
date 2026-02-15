@@ -34,7 +34,7 @@ class Settings(BaseSettings):
 
     # Gemini Configuration (Primary AI service)
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash-lite"  # For text generation
+    GEMINI_MODEL: str = "gemini-3-flash-preview"  # For text generation
     GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"  # For embeddings
 
     # RSShub Configuration (validated URL)
@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     MEILISEARCH_URL: str = "http://localhost:7700"
     MEILISEARCH_MASTER_KEY: SecretStr
     MEILISEARCH_INDEX_NAME: str = "feeds"
+
+    # Google Cloud / Vertex AI Configuration
+    # Google Cloud / Vertex AI Configuration
+    # Removed as we reverted to standard Gemini API
+    # GOOGLE_CLOUD_PROJECT: str | None = None
+    # GOOGLE_CLOUD_LOCATION: str = "us-central1"
+    # GCS_BUCKET: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

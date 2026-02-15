@@ -5,6 +5,7 @@ Zero DB dependencies.
 """
 
 import html
+import json
 import re
 from datetime import datetime, timezone
 from time import mktime
@@ -21,7 +22,6 @@ from dateutil import parser as date_parser
 from app.typing.entries import ArticleCreate
 from app.typing.feeds import ParsedFeed
 from app.utils.text import clean_html_text
-from app.utils.urls import extract_domain_from_url
 
 logger = structlog.get_logger(__name__)
 
@@ -29,61 +29,178 @@ logger = structlog.get_logger(__name__)
 # CONFIGURATION
 # ==============================================================================
 # HTML sanitization is handled by feedparser's built-in sanitizer
-# We only use nh3 for stripping HTML tags to create plain text summaries
+# We use BeautifulSoup/markdownify for text/markdown conversion
+
+
+# ArticleCreate and ParsedFeed are imported from app.typing
+
+
+def _normalize_language(lang_code: str) -> str:
+    try:
+        return langcodes.Language.get(lang_code).language
+    except Exception:
+        return "en"
+
+
+def find_feed_icon(feed: Any) -> str | None:
+    # Atom Icon
+    if hasattr(feed, "icon"):
+        return feed.icon
+    # Atom Logo
+    if hasattr(feed, "logo"):
+        return feed.logo
+    # RSS Image
+    if hasattr(feed, "image") and hasattr(feed.image, "href"):
+        return feed.image.href
+    return None
+
+
+def _parse_json_feed(content: str, url: str) -> ParsedFeed:
+    """Parse JSON Feed format (v1.0/v1.1)."""
+    data = json.loads(content)
+
+    if not isinstance(data, dict):
+        # Could be a list or primitive, invalid for JSON Feed
+        raise json.JSONDecodeError("JSON root is not an object", content, 0)
+
+    # Basic metadata extraction
+    title = clean_html_text(data.get("title", ""))
+    home_page_url = data.get("home_page_url", url)
+
+    description = clean_html_text(data.get("description", ""))
+    language = _normalize_language(data.get("language", "en"))
+    icon = data.get("icon") or data.get("favicon")
+
+    # Author
+    author_data = data.get("author", {})
+    author_name = str(author_data.get("name")) if isinstance(author_data, dict) and author_data.get("name") else None
+
+    articles: list[ArticleCreate] = []
+    items = data.get("items", [])
+
+    if isinstance(items, list):
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+
+            link = item.get("url", "")
+            if not link:
+                continue
+
+            item_title = clean_html_text(item.get("title", "Untitled"))
+            content_html = item.get("content_html", "")
+            summary = item.get("summary", "")
+
+            # Fallback content
+            if not content_html:
+                content_html = item.get("content_text", "") or summary
+
+            published_at = datetime.now(timezone.utc)
+            date_str = item.get("date_published")
+            if date_str and isinstance(date_str, str):
+                try:
+                    dt = date_parser.parse(date_str)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    published_at = dt
+                except (ValueError, TypeError):
+                    pass
+
+            item_author = item.get("author", {})
+            item_author_name = None
+            if isinstance(item_author, dict) and item_author.get("name"):
+                item_author_name = str(item_author.get("name"))
+
+            articles.append(
+                ArticleCreate(
+                    title=item_title,
+                    link=link,
+                    description=clean_html_text(summary)[:1000],
+                    content=str(content_html),
+                    published_at=published_at,
+                    author=item_author_name or author_name,
+                    guid=str(item.get("id", link)),
+                    image_url=item.get("image"),
+                    tags=item.get("tags", []),
+                )
+            )
+
+    return ParsedFeed(
+        title=title,
+        description=description,
+        link=home_page_url,
+        language=language,
+        image_url=icon,
+        last_updated_at=None,
+        articles=articles,
+        tags=[],
+        author=author_name,
+    )
 
 
 def parse_feed_content(content: str, url: str) -> ParsedFeed:
     """
     Parse raw feed content into a structured format.
-    Handles RSS/Atom normalization with comprehensive field extraction.
-    Uses feedparser's built-in sanitization for security.
+    Handles RSS/Atom/JSON normalization with comprehensive field extraction.
     """
 
+    # 1. JSON Feed Support
+    if isinstance(content, bytes):
+        content = content.decode("utf-8", errors="ignore")
+    content = content.strip()
+    if content.startswith("{"):
+        try:
+            # logger.info(f"Attempting JSON parse for {url}")
+            return _parse_json_feed(content, url)
+        except json.JSONDecodeError as e:
+            logger.warning(f"JSON decode failed for {url}: {e}")
+            pass  # Continue to XML parsing
+
+    # 2. XML (RSS/Atom) parsing
+    # logger.info(f"Attempting XML parse for {url}")
     # Enable feedparser's built-in HTML sanitization
     parsed = feedparser.parse(content, sanitize_html=True)
 
+    logger.info(f"Feedparser entries found: {len(parsed.entries)}")
+
     if parsed.bozo:
-        logger.warning(
-            "Feed parsed with errors", url=url, error=str(parsed.bozo_exception)
-        )
+        logger.warning(f"Feed parsed with errors url={url} error={parsed.bozo_exception}")
 
     feed: dict[str, Any] = cast(dict[str, Any], parsed.feed)
 
     # Basic metadata
-    title = html.unescape(
-        clean_html_text(feed.get("title", "")) or extract_domain_from_url(url)
-    )
+    title = html.unescape(clean_html_text(feed.get("title", "")))
 
     # Prefer subtitle over description for the tagline
-    description = html.unescape(
-        clean_html_text(feed.get("subtitle") or feed.get("description") or "")
-    )
-
-    # Provide default description if none found
-    if not description:
-        domain = extract_domain_from_url(url)
-        description = f"Recent articles from {domain}"
+    description = html.unescape(clean_html_text(feed.get("subtitle") or feed.get("description") or ""))
 
     link = feed.get("link") or url
-    language = _normalize_language(feed.get("language", "en"))
+    language = _normalize_language(feed.get("language", None))
 
     # Rich UI images
     image_url = find_feed_icon(feed)
 
-    # Last updated timestamp (from feed.updated_parsed)
+    # Feed Author
+    feed_author = feed.get("author")
+    if not feed_author:
+        contributors = feed.get("contributors")
+        if contributors and isinstance(contributors, list):
+            # Try to get the first contributor's name
+            for c in contributors:
+                if isinstance(c, dict) and c.get("name"):
+                    feed_author = c.get("name")
+                    break
+
+    # Last updated timestamp
     last_updated_at = None
     if hasattr(feed, "updated_parsed") and feed.updated_parsed:
         try:
-            last_updated_at = datetime.fromtimestamp(
-                mktime(feed.updated_parsed), tz=timezone.utc
-            )
+            last_updated_at = datetime.fromtimestamp(mktime(feed.updated_parsed), tz=timezone.utc)
         except (ValueError, TypeError, OverflowError):
             pass
     elif hasattr(feed, "published_parsed") and feed.published_parsed:
         try:
-            last_updated_at = datetime.fromtimestamp(
-                mktime(feed.published_parsed), tz=timezone.utc
-            )
+            last_updated_at = datetime.fromtimestamp(mktime(feed.published_parsed), tz=timezone.utc)
         except (ValueError, TypeError, OverflowError):
             pass
 
@@ -98,43 +215,30 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
 
     for entry in parsed.entries:
         try:
-            article = _extract_article_data(entry, feed_url=url)
+            article = _extract_article_data(entry, url)
             if article:
                 articles.append(article)
         except Exception as e:
-            logger.warning("Failed to extract article", error=str(e))
+            logger.warning(
+                f"Failed to parse article in {url}: {e}",
+                entry_id=entry.get("id", "unknown"),
+            )
+            continue
 
-    return ParsedFeed(
+    parsed_feed = ParsedFeed(
         title=title,
-        id=url,  # Use URL as temporary ID for preview
-        url=url,
         description=description,
         link=link,
         language=language,
         image_url=image_url,
         last_updated_at=last_updated_at,
-        tags=tags,
         articles=articles,
+        tags=tags,
+        author=feed_author,
+        # content_type will be None/default as we don't extract it from XML
     )
 
-
-def _normalize_language(language_code: str) -> str:
-    """
-    Normalize language code to 2-letter ISO code.
-    Uses langcodes library for robust parsing.
-    """
-    try:
-        # First try standard parsing
-        lang = langcodes.Language.get(language_code)
-        return lang.language if lang.language else "en"
-    except langcodes.LanguageTagError:
-        try:
-            # Fallback: try finding best match
-            lang = langcodes.find(language_code)
-            return lang.language if lang.language else "en"
-        except (langcodes.LanguageTagError, LookupError):
-            # Final fallback
-            return "en"
+    return parsed_feed
 
 
 # ==============================================================================
@@ -288,20 +392,12 @@ def _sanitize_and_fix_html(html_content: str, base_url: str | None) -> str:
                     continue
                 if tag.has_attr("href"):
                     val = tag.get("href")
-                    if (
-                        val
-                        and isinstance(val, str)
-                        and not (val.startswith("data:") or val.startswith("mailto:"))
-                    ):
+                    if val and isinstance(val, str) and not (val.startswith("data:") or val.startswith("mailto:")):
                         tag["href"] = urljoin(base_url, val)
                         has_changes = True
                 if tag.has_attr("src"):
                     val = tag.get("src")
-                    if (
-                        val
-                        and isinstance(val, str)
-                        and not (val.startswith("data:") or val.startswith("mailto:"))
-                    ):
+                    if val and isinstance(val, str) and not (val.startswith("data:") or val.startswith("mailto:")):
                         tag["src"] = urljoin(base_url, val)
                         has_changes = True
             if has_changes:
@@ -388,38 +484,9 @@ def find_best_article_image(entry: Any) -> tuple[str | None, str]:
                 src = img.get("src")
                 if src and isinstance(src, str):
                     # Skip common tracking pixels and icons
-                    if (
-                        "icon" not in src.lower()
-                        and "emoji" not in src.lower()
-                        and "pixel" not in src.lower()
-                    ):
+                    if "icon" not in src.lower() and "emoji" not in src.lower() and "pixel" not in src.lower():
                         return src, "html_parse"
         except Exception as e:
             logger.debug("Failed to extract image from HTML", error=str(e))
 
     return None, "none"
-
-
-def find_feed_icon(feed: Any) -> str | None:
-    """
-    Extract the feed icon (small square image for avatars/favicons).
-
-    Args:
-        feed: feedparser feed object
-
-    Returns:
-        Icon URL or None
-    """
-    # Atom spec: feed.icon is a small image with 1:1 aspect ratio
-    if hasattr(feed, "icon"):
-        return feed.icon
-
-    # Atom spec: feed.logo is a larger image with 2:1 aspect ratio
-    if hasattr(feed, "logo"):
-        return feed.logo  # TODO: not sure if this is appropriate to return
-
-    # RSS spec: feed.image usually contains url (href), title, width, and height
-    if hasattr(feed, "image") and hasattr(feed.image, "href"):
-        return feed.image.href
-
-    return None

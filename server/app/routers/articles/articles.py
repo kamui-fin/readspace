@@ -98,9 +98,7 @@ async def get_article(
     article_id: UUID,
     db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-    clipped: bool = Query(
-        False, description="Whether the article is a clipped article"
-    ),
+    clipped: bool = Query(False, description="Whether the article is a clipped article"),
 ) -> EntryDetail:
     """
     Retrieve a specific article with full content and metadata.
@@ -115,9 +113,7 @@ async def get_article(
     )
 
     if not article:
-        logger.warning(
-            "Article not found", article_id=str(article_id), user_id=current_user.sub
-        )
+        logger.warning("Article not found", article_id=str(article_id), user_id=current_user.sub)
         raise NotFoundError(message="Article not found")
 
     return article

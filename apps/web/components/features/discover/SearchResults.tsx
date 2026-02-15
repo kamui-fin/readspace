@@ -10,7 +10,13 @@ import { FeedCard } from "@/components/features/feeds/FeedCard"
 import { FeedCardSkeleton } from "@/components/features/feeds/FeedCardSkeleton"
 import { FeedPreviewCard } from "@/components/features/feeds/FeedPreviewCard"
 import { Button } from "@/components/ui/button"
-import { type FeedDiscoveryResult, type FeedSummary } from "@readspace/shared"
+import {
+    type FeedDiscoveryResult,
+    type FeedSummary,
+    type MeilisearchFeedDocument,
+    FeedCategory,
+    ContentType,
+} from "@readspace/shared"
 
 import { Pagination } from "./Pagination"
 
@@ -31,14 +37,18 @@ function createPreviewFeedData(
     previewFeed: FeedDiscoveryResult
 ): FeedSummary & { is_preview: true } {
     return {
-        id: previewFeed.id,
-        url: previewFeed.url,
+        id: previewFeed.id ?? "",
+        url: previewFeed.url ?? "",
         title: previewFeed.title,
         link: previewFeed.link ?? null,
         image_url: previewFeed.image_url ?? null,
-        error_count: 0,
         is_preview: true,
         is_subscribed: previewFeed.is_subscribed,
+        language: previewFeed.language ?? "en",
+        author: previewFeed.author ?? null,
+        content_type: (previewFeed.content_type as ContentType) ?? null,
+        tags_native: previewFeed.tags_native ?? [],
+        description: previewFeed.description,
     }
 }
 
@@ -50,6 +60,7 @@ function createPreviewFeedData(
  *
  * When a preview feed is provided (URL detected), displays the preview card instead.
  */
+
 export function SearchResults({
     onClearSearch,
     previewFeed,
@@ -69,8 +80,8 @@ export function SearchResults({
     // Prepare preview feed data if available
     let previewFeedData:
         | (FeedSummary & {
-              is_preview: true
-          })
+            is_preview: true
+        })
         | null = null
     if (previewFeed && !isPreviewLoading && !previewError) {
         previewFeedData = createPreviewFeedData(previewFeed)
@@ -149,24 +160,28 @@ export function SearchResults({
                     <div className="flex flex-col divide-y divide-border/40">
                         {items.map((hit) => {
                             const hitData =
-                                hit as unknown as FeedDiscoveryResult
-                            const discoveryResult: FeedDiscoveryResult = {
-                                id: hitData.id || "",
+                                hit as unknown as MeilisearchFeedDocument
+
+                            const feedSummary: FeedSummary = {
+                                id: hitData.id,
                                 url: hitData.url,
-                                title: hitData.title,
-                                description: hitData.description,
-                                link: hitData.link,
-                                language: hitData.language,
-                                image_url: hitData.image_url,
-                                tags: hitData.tags || [],
-                                top_level_category: hitData.top_level_category,
+                                title: hitData.title || "Untitled",
+                                description: hitData.description ?? null,
+                                link: hitData.link ?? null,
+                                language: hitData.language || "en",
+                                image_url: hitData.image_url ?? null,
+                                author: hitData.author ?? null,
+                                content_type: (hitData.content_type as ContentType) ?? null,
+                                tags_native: hitData.tags_native ?? [],
+                                top_level_category: hitData.top_level_category ? (hitData.top_level_category as FeedCategory) : null,
                                 popularity_score: hitData.popularity_score,
+                                is_subscribed: false,
                             }
 
                             return (
                                 <FeedCard
                                     key={hitData.id}
-                                    feed={discoveryResult}
+                                    feed={feedSummary}
                                     className="py-8"
                                 />
                             )

@@ -15,7 +15,7 @@ from app.crud.feed.core import (
 from app.services.ai.batch import enrich_feeds_batch
 from app.services.feeds.domain_authority import get_domain_authority_scores_batch
 from app.services.feeds.enrichment import prepare_bulk_updates, prepare_feed_snapshots
-from app.services.feeds.favicon import extract_favicon_and_canonical_url
+
 from app.services.feeds.meilisearch import sync_feeds_batch
 from app.workers.common import worker_db
 
@@ -23,28 +23,6 @@ logger = structlog.get_logger(__name__)
 
 # Configuration
 CHUNK_SIZE = 500
-FAVICON_CONCURRENCY = 20
-
-
-async def _fetch_favicons_batch(feed_snapshots: list[Any]) -> list[Any]:
-    """Fetch favicons for a batch of feeds with concurrency control."""
-    semaphore = asyncio.Semaphore(FAVICON_CONCURRENCY)
-
-    async def _fetch_safe(url: str) -> Any:
-        async with semaphore:
-            return await extract_favicon_and_canonical_url(url)
-
-    logger.info("Starting batch favicon extraction", count=len(feed_snapshots))
-    tasks = [_fetch_safe(feed.link or str(feed.url)) for feed in feed_snapshots]
-    return await asyncio.gather(*tasks)
-
-
-def _get_domain_authority_scores(feed_snapshots: list[Any]) -> dict[str, float]:
-    """Calculate domain authority scores for a batch of feeds."""
-    unique_domains = list(
-        {snapshot.domain for snapshot in feed_snapshots if snapshot.domain}
-    )
-    return get_domain_authority_scores_batch(unique_domains)
 
 
 def _build_enriched_feed_documents(
@@ -71,7 +49,10 @@ def _build_enriched_feed_documents(
             "link": snapshot.link,
             "image_url": snapshot.image_url,
             "tags": update_data.get("tags", []),
+            "tags_native": update_data.get("tags_native", []),
             "top_level_category": update_data.get("top_level_category"),
+            "content_type": update_data.get("content_type"),
+            "author": update_data.get("author", snapshot.author),
             "description": update_data.get("description", snapshot.description),
             "language": update_data.get("language", snapshot.language),
             "popularity_score": update_data.get("popularity_score", 0.5),
@@ -91,14 +72,10 @@ async def _sync_feeds_to_meilisearch(
 
     try:
         settings = get_settings()
-        feeds_to_sync = _build_enriched_feed_documents(
-            bulk_update_mappings, feed_snapshot_list
-        )
+        feeds_to_sync = _build_enriched_feed_documents(bulk_update_mappings, feed_snapshot_list)
         if feeds_to_sync:
             await sync_feeds_batch(settings, feeds_to_sync)
-            logger.info(
-                "Synced enriched feeds to Meilisearch", count=len(feeds_to_sync)
-            )
+            logger.info("Synced enriched feeds to Meilisearch", count=len(feeds_to_sync))
     except Exception as e:
         logger.error("Failed to sync feeds to Meilisearch", error=str(e))
 
@@ -112,9 +89,7 @@ async def _process_enrichment_chunk(chunk_feeds: list[Any]) -> tuple[int, int]:
     # 1. Fetch Recent Article Texts (Quick DB Read)
     async with worker_db() as db:
         feed_ids = [feed.id for feed in chunk_feeds]
-        article_texts_by_feed = await fetch_recent_article_texts_for_feeds(
-            db, feed_ids, limit=5
-        )
+        article_texts_by_feed = await fetch_recent_article_texts_for_feeds(db, feed_ids, limit=5)
 
     # 2. Prepare Data (Pure CPU)
     feed_data_list, feed_snapshot_list = prepare_feed_snapshots(
@@ -123,8 +98,6 @@ async def _process_enrichment_chunk(chunk_feeds: list[Any]) -> tuple[int, int]:
     )
 
     # 3. External API / Enrichment (IO + CPU)
-    favicon_results = await _fetch_favicons_batch(feed_snapshot_list)
-    domain_authority_scores = _get_domain_authority_scores(feed_snapshot_list)
 
     logger.info("Starting batch LLM enrichment", batch_size=len(feed_data_list))
     llm_results = await enrich_feeds_batch(feed_data_list)
@@ -134,8 +107,6 @@ async def _process_enrichment_chunk(chunk_feeds: list[Any]) -> tuple[int, int]:
         feed_snapshot_list=feed_snapshot_list,
         feed_data_list=feed_data_list,
         llm_results=llm_results,
-        domain_authority_scores=domain_authority_scores,
-        favicon_results=favicon_results,
     )
 
     # 5. Persist Updates (Quick DB Write)
@@ -159,9 +130,7 @@ async def batch_enrich_feeds() -> dict[str, Any]:
 
         # --- PHASE 1: Initial Fetch ---
         async with worker_db() as db:
-            feeds_to_enrich = await get_feeds_needing_enrichment(
-                db, limit=MAX_FEEDS_BATCH_SIZE
-            )
+            feeds_to_enrich = await get_feeds_needing_enrichment(db, limit=MAX_FEEDS_BATCH_SIZE)
 
         if not feeds_to_enrich:
             return {

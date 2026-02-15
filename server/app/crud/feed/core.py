@@ -14,7 +14,7 @@ from urllib.parse import urlparse, urlunparse
 from uuid import UUID
 
 import structlog
-from sqlalchemy import desc, select, update
+from sqlalchemy import desc, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.article import FeedArticle
@@ -40,9 +40,7 @@ def normalize_url(url: str) -> str:
         scheme = "https" if parsed.scheme in ("http", "https") else parsed.scheme
         netloc = parsed.netloc.lower()
         path = parsed.path.rstrip("/") if parsed.path else ""
-        return urlunparse(
-            (scheme, netloc, path, parsed.params, parsed.query, parsed.fragment)
-        )
+        return urlunparse((scheme, netloc, path, parsed.params, parsed.query, parsed.fragment))
     except Exception:
         return url
 
@@ -126,9 +124,7 @@ async def create_feed(db: AsyncSession, *, feed_data: FeedBase) -> Feed:
     return db_feed
 
 
-async def get_recent_article_publication_times(
-    db: AsyncSession, *, feed_id: UUID, limit: int = 30
-) -> list[datetime]:
+async def get_recent_article_publication_times(db: AsyncSession, *, feed_id: UUID, limit: int = 30) -> list[datetime]:
     """
     Get recent article publication times for a feed.
 
@@ -234,15 +230,11 @@ async def update_feed(db: AsyncSession, *, feed: Feed, update_data: dict) -> Fee
     return feed
 
 
-async def update_enrichment_data(
-    db: AsyncSession, *, feed: Feed, enrichment: dict
-) -> Feed:
+async def update_enrichment_data(db: AsyncSession, *, feed: Feed, enrichment: dict) -> Feed:
     """Update AI-derived metadata (Categories, Tags)."""
     if "top_level_category" in enrichment:
         try:
-            feed.top_level_category = FeedCategory(
-                enrichment["top_level_category"]
-            ).value
+            feed.top_level_category = FeedCategory(enrichment["top_level_category"]).value
         except ValueError:
             pass
 
@@ -354,14 +346,22 @@ async def get_feeds_needing_enrichment(db: AsyncSession, *, limit: int) -> list[
     Returns:
         List of Feed ORM objects needing enrichment
     """
-    stmt = select(Feed).where(Feed.tags.is_(None)).limit(limit)
+    stmt = (
+        select(Feed)
+        .where(
+            or_(
+                Feed.tags.is_(None),
+                Feed.tags == {},  # Empty Postgres Array
+                Feed.content_type.is_(None),  # Missing Content Type (Enrichment signal)
+            )
+        )
+        .limit(limit)
+    )
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
 
-async def bulk_update_feeds_enrichment(
-    db: AsyncSession, *, update_mappings: list[dict[str, Any]]
-) -> int:
+async def bulk_update_feeds_enrichment(db: AsyncSession, *, update_mappings: list[dict[str, Any]]) -> int:
     """
     Apply bulk updates to feeds for enrichment data.
 

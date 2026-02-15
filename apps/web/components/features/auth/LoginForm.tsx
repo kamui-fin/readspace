@@ -37,7 +37,6 @@ export function LoginForm({
     const isProd = isCloudProd()
 
     const form = useForm<LoginFormValues>({
-        // @ts-expect-error - zodResolver type mismatch
         resolver: zodResolver(loginSchema),
         defaultValues: {
             email: "",

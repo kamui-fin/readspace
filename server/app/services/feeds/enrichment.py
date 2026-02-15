@@ -160,8 +160,6 @@ def build_feed_update_mapping(
     feed_snapshot: FeedEnrichmentSnapshot,
     language: str | None,
     llm_result: FeedEnrichmentResponse | None,
-    domain_authority_score: float = 0.0,
-    favicon_result: FaviconResult | None = None,
 ) -> dict[str, Any]:
     """Build update mapping for a single feed from enrichment results.
 
@@ -169,8 +167,6 @@ def build_feed_update_mapping(
         feed_snapshot: Feed data snapshot
         language: Detected language
         llm_result: LLM enrichment result
-        domain_authority_score: Domain authority score (0.0-1.0) from Tranco rankings
-        favicon_result: Optional favicon extraction result
     """
     update_mapping = {
         "id": feed_snapshot.id,
@@ -181,15 +177,12 @@ def build_feed_update_mapping(
     if language:
         update_mapping["language"] = language
 
-    # Add Favicon
-    if favicon_result and favicon_result.image_url:
-        update_mapping["image_url"] = favicon_result.image_url
-        # Update snapshot for scoring accuracy
-        feed_snapshot.image_url = favicon_result.image_url
 
     # Add LLM enrichment data
     if llm_result:
         update_mapping["tags"] = llm_result.tags
+        update_mapping["tags_native"] = llm_result.tags_native
+        update_mapping["author"] = llm_result.author
 
         # Convert category string to enum
         try:
@@ -202,6 +195,20 @@ def build_feed_update_mapping(
                 feed_id=feed_snapshot.id,
             )
             update_mapping["top_level_category"] = FeedCategory.MISCELLANEOUS
+
+        # Convert content_type string to enum
+        if llm_result.content_type:
+            try:
+                # Assuming ContentType enum exists and matches values
+                from app.models.enums import ContentType
+
+                update_mapping["content_type"] = ContentType(llm_result.content_type)
+            except ValueError:
+                logger.warning(
+                    "Invalid content_type",
+                    content_type=llm_result.content_type,
+                    feed_id=feed_snapshot.id,
+                )
 
         if llm_result.enhanced_description:
             update_mapping["description"] = llm_result.enhanced_description
@@ -223,8 +230,6 @@ def prepare_bulk_updates(
     feed_snapshot_list: list[FeedEnrichmentSnapshot],
     feed_data_list: list[FeedEnrichmentInput],
     llm_results: list[FeedEnrichmentResponse | None],
-    domain_authority_scores: dict[str, float] | None = None,
-    favicon_results: list[FaviconResult | None] | None = None,
 ) -> tuple[list[dict[str, Any]], int, int]:
     """Prepare bulk update mappings from enrichment results.
 
@@ -232,8 +237,6 @@ def prepare_bulk_updates(
         feed_snapshot_list: List of feed data snapshots
         feed_data_list: List of feed data for AI (for language lookup)
         llm_results: List of LLM enrichment results
-        domain_authority_scores: Optional dict mapping domain to authority score (0.0-1.0)
-        favicon_results: Optional list of favicon extraction results
 
     Returns:
         Tuple of (bulk_update_mappings, enriched_count, failed_count)
@@ -258,23 +261,10 @@ def prepare_bulk_updates(
 
             language = feed_data_list[i].language
 
-            # Get domain authority score if available
-            domain_authority = 0.0
-            if domain_authority_scores:
-                domain = feed_snapshot.domain or ""
-                domain_authority = domain_authority_scores.get(domain, 0.0)
-
-            # Get favicon result if available
-            favicon_result = None
-            if favicon_results and i < len(favicon_results):
-                favicon_result = favicon_results[i]
-
             update_mapping = build_feed_update_mapping(
                 feed_snapshot=feed_snapshot,
                 language=language,
                 llm_result=llm_result,
-                domain_authority_score=domain_authority,
-                favicon_result=favicon_result,
             )
 
             bulk_update_mappings.append(update_mapping)

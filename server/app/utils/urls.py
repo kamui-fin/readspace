@@ -1,6 +1,7 @@
+import ssl
 from urllib.parse import urlparse, urlunparse
 
-import httpx
+import aiohttp
 import structlog
 from url_normalize import url_normalize
 
@@ -73,28 +74,23 @@ def extract_domain_from_url(url: str | None) -> str:
         return ""
 
 
-def _is_head_response_bad(resp: httpx.Response) -> bool:
+def _is_head_response_bad(resp: aiohttp.ClientResponse) -> bool:
     """
     Check if a HEAD response is unreliable and requires a GET fallback.
     """
     # Status codes that indicate HEAD is unreliable
-    if resp.status_code in (400, 403, 404, 405):
+    if resp.status in (400, 403, 404, 405):
         return True
 
     # HEAD redirect but no Location header
-    if resp.status_code in (301, 302, 303, 307, 308) and "location" not in resp.headers:
+    if resp.status in (301, 302, 303, 307, 308) and "location" not in resp.headers:
         return True
 
     # Wrong content-type on 200
     # Some servers return 200 for HEAD but it's actually an error page or generic HTML
-    if resp.status_code == 200:
+    if resp.status == 200:
         ct = resp.headers.get("content-type", "").lower()
-        if (
-            not ct
-            or "text/html" in ct
-            or "application/octet-stream" in ct
-            or "text/plain" in ct
-        ):
+        if not ct or "text/html" in ct or "application/octet-stream" in ct or "text/plain" in ct:
             # If it claims to be generic HTML/text, it might be a splash page or error.
             # Real feeds usually have xml/rss/atom types.
             # However, we must be careful not to discard valid feeds served as text/html.
@@ -106,8 +102,8 @@ def _is_head_response_bad(resp: httpx.Response) -> bool:
     # httpx handles this internally usually, but if we see content-length > 0 and it actually sent bytes...
     # Actually, Content-Length IS expected in HEAD (it describes what GET would return).
     # But if the connection actually received body bytes, that's a protocol violation.
-    # httpx.head() doesn't download body by default, so we can't easily check 'bodyLength'.
-    # We'll skip the body check for now as it requires reading the stream.
+    # aiohttp also handles HEAD request without reading body unless requested.
+    # We'll skip the body check for now.
 
     # Cloudflare/Incapsula often break HEAD
     server = resp.headers.get("server", "").lower()
@@ -133,33 +129,36 @@ async def resolve_canonical_url(url: str, timeout: int = 10) -> str:
     if not url.lower().startswith(("http://", "https://")):
         return normalize_feed_url(url)
 
-    client_kwargs = {
-        "follow_redirects": True,
-        "timeout": timeout,
-        "verify": False,  # Risky but necessary for many feeds
-        "headers": {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        },
+    # Setup SSL context for verify=False
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
+    connector = aiohttp.TCPConnector(ssl=ssl_context)
+    timeout_config = aiohttp.ClientTimeout(total=timeout)
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
 
     try:
-        async with httpx.AsyncClient(**client_kwargs) as client:
+        async with aiohttp.ClientSession(connector=connector, timeout=timeout_config, headers=headers) as session:
             # 1. Try HEAD first
             try:
-                resp = await client.head(url)
+                async with session.head(url, allow_redirects=True) as resp:
+                    if _is_head_response_bad(resp):
+                        logger.debug(
+                            "HEAD response unreliable, using original URL",
+                            url=url,
+                            status=resp.status,
+                        )
+                        # Don't fallback to GET here, let the fetcher handle it
+                        return normalize_feed_url(url)
 
-                if _is_head_response_bad(resp):
-                    logger.debug(
-                        "HEAD response unreliable, using original URL",
-                        url=url,
-                        status=resp.status_code,
-                    )
-                    # Don't fallback to GET here, let the fetcher handle it
-                    return normalize_feed_url(url)
+                    return normalize_feed_url(str(resp.url))
 
-                return normalize_feed_url(str(resp.url))
-
-            except httpx.RequestError:
+            except aiohttp.ClientError:
                 # Network error on HEAD, assume original URL is fine for now
                 return normalize_feed_url(url)
 

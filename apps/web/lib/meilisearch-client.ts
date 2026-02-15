@@ -182,7 +182,7 @@ function createEmptyResult() {
  */
 export function createSearchClient(
     getHybridConfig?: () => HybridSearchConfig | undefined
-) {
+): any {
     const config: Record<string, unknown> = {
         primaryKey: "id",
         placeholderSearch: true,
@@ -237,7 +237,7 @@ export function createSearchClient(
  * Default search client without hybrid search.
  * Use createSearchClient() with hybrid config for AI-powered search.
  */
-export const { searchClient } = createSearchClient()
+export const { searchClient }: { searchClient: any } = createSearchClient()
 
 /**
  * Direct Meilisearch client for advanced operations like similar documents.

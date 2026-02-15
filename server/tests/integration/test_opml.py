@@ -166,10 +166,19 @@ class TestOpmlImportEagerMode:
 
     @pytest.mark.asyncio
     async def test_import_opml_full_workflow(
-        self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
+        self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession, monkeypatch
     ):
         """Test complete OPML import workflow by calling async functions directly."""
         from app.workers.opml.import_opml import import_opml
+        from app.workers.opml_tasks import import_single_feed_task
+        from types import SimpleNamespace
+
+        # Patch .kiq to run synchronously
+        async def sync_kiq(**kwargs):
+            await import_single_feed_task(**kwargs)
+            return SimpleNamespace(task_id=f"sync-{kwargs.get('feed_url')}")
+
+        monkeypatch.setattr(import_single_feed_task, "kiq", sync_kiq)
 
         # Call the async function directly in test mode (no Celery)
         result = await import_opml(
@@ -195,10 +204,19 @@ class TestOpmlImportEagerMode:
 
     @pytest.mark.asyncio
     async def test_import_opml_with_folders(
-        self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
+        self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession, monkeypatch
     ):
         """Test OPML import creates folders correctly."""
         from app.workers.opml.import_opml import import_opml
+        from app.workers.opml_tasks import import_single_feed_task
+        from types import SimpleNamespace
+
+        # Patch .kiq to run synchronously
+        async def sync_kiq(**kwargs):
+            await import_single_feed_task(**kwargs)
+            return SimpleNamespace(task_id=f"sync-{kwargs.get('feed_url')}")
+
+        monkeypatch.setattr(import_single_feed_task, "kiq", sync_kiq)
 
         # Call the async function directly in test mode (no Celery)
         result = await import_opml(

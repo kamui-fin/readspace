@@ -64,12 +64,7 @@ def resolve_content(request_content: str | None, article: Any) -> str:
     Resolves content source priority: Request Body > Extracted > Article Content > Description.
     Raises ValidationError if no content is found.
     """
-    content = (
-        request_content
-        or getattr(article, "extracted_content", None)
-        or article.content
-        or article.description
-    )
+    content = request_content or getattr(article, "extracted_content", None) or article.content or article.description
     if not content:
         raise ValidationError(message="No content available to process")
     return content
@@ -85,9 +80,7 @@ async def extract_full_text(
     article_id: UUID,
     user: Annotated[TokenData, Depends(get_current_user)],
     db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
-    clipped: bool = Query(
-        False, description="Whether the article is a clipped article"
-    ),
+    clipped: bool = Query(False, description="Whether the article is a clipped article"),
 ) -> ExtractionResponse:
     """
     Manually trigger full-text extraction for an article.
@@ -95,9 +88,7 @@ async def extract_full_text(
     logger.bind(article_id=str(article_id), user_id=user.sub)
 
     # 1. Verify Article
-    article = await get_article_or_404(
-        db_factory, article_id, UUID(user.sub), is_clipped=clipped
-    )
+    article = await get_article_or_404(db_factory, article_id, UUID(user.sub), is_clipped=clipped)
 
     if not article.link:
         raise ValidationError(message="Article has no source URL available")
@@ -122,9 +113,7 @@ async def summarize_article(
     user: Annotated[TokenData, Depends(get_current_user)],
     db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
     request: SummarizeRequest = Body(default_factory=lambda: SummarizeRequest()),
-    clipped: bool = Query(
-        False, description="Whether the article is a clipped article"
-    ),
+    clipped: bool = Query(False, description="Whether the article is a clipped article"),
 ) -> SummarizeResponse:
     """
     Generate an AI summary of the article.
@@ -132,9 +121,7 @@ async def summarize_article(
     logger.bind(article_id=str(article_id), user_id=user.sub)
 
     # 1. Fetch & Resolve Content
-    article = await get_article_or_404(
-        db_factory, article_id, UUID(user.sub), is_clipped=clipped
-    )
+    article = await get_article_or_404(db_factory, article_id, UUID(user.sub), is_clipped=clipped)
     content_to_use = resolve_content(request.content, article)
 
     # 1.5. Auto-extract if content is short/incomplete
@@ -169,9 +156,7 @@ async def translate_article(
     request: Annotated[TranslateRequest, Body(...)],
     user: Annotated[TokenData, Depends(get_current_user)],
     db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
-    clipped: bool = Query(
-        False, description="Whether the article is a clipped article"
-    ),
+    clipped: bool = Query(False, description="Whether the article is a clipped article"),
 ) -> TranslateResponse:
     """
     Translate the article content to a target language.
@@ -183,16 +168,12 @@ async def translate_article(
     )
 
     # 1. Fetch & Resolve Content
-    article = await get_article_or_404(
-        db_factory, article_id, UUID(user.sub), is_clipped=clipped
-    )
+    article = await get_article_or_404(db_factory, article_id, UUID(user.sub), is_clipped=clipped)
     content_to_use = resolve_content(request.content, article)
 
     # 2. Translate
     target_lang_str = (
-        request.target_language.value
-        if hasattr(request.target_language, "value")
-        else str(request.target_language)
+        request.target_language.value if hasattr(request.target_language, "value") else str(request.target_language)
     )
 
     translated_content = await translate_content(

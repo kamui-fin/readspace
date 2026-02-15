@@ -5,7 +5,6 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Body, Depends, Query, status
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import ERROR_FEED_NOT_FOUND
@@ -13,21 +12,22 @@ from app.core.custom_exceptions import NotFoundError
 from app.crud.article.actions import mark_all_as_read
 from app.crud.feed.core import get_feed_by_id
 from app.crud.feed.subscription import (
+    create_subscription,
     delete_subscription,
     get_subscription_by_feed_id,
     get_subscriptions_by_user,
     update_subscription,
 )
 from app.db.session import get_db, get_db_factory
-
 from app.models.feed import FeedSubscription
 from app.services import folder as folder_service
-from app.services.feeds.service import SessionFactory, refresh_feed
+from app.services.feeds.service import SessionFactory
 from app.services.user.auth import get_current_user
 from app.typing.common import MessageResponse
 from app.typing.feeds import FeedDetail
 from app.typing.responses import FeedsResponse
 from app.typing.subscriptions import (
+    SubscriptionCreateByFeedId,
     SubscriptionResponse,
     SubscriptionResponseExtended,
     SubscriptionUpdate,
@@ -39,18 +39,53 @@ router = APIRouter()
 
 
 # --- Helpers ---
-async def get_subscription_or_404(
-    db: AsyncSession, feed_id: UUID, user_id: UUID
-) -> FeedSubscription:
+async def get_subscription_or_404(db: AsyncSession, feed_id: UUID, user_id: UUID) -> FeedSubscription:
     """
     Retrieves a user's subscription or raises NotFoundError.
     """
-    subscription = await get_subscription_by_feed_id(
-        db, feed_id=feed_id, user_id=user_id
-    )
+    subscription = await get_subscription_by_feed_id(db, feed_id=feed_id, user_id=user_id)
     if not subscription:
         raise NotFoundError(message=ERROR_FEED_NOT_FOUND)
     return subscription
+
+
+@router.post(
+    "/{feed_id}/subscribe",
+    response_model=MessageResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Subscribe to an existing feed",
+)
+async def subscribe_to_feed(
+    feed_id: UUID,
+    payload: SubscriptionCreateByFeedId,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[TokenData, Depends(get_current_user)],
+) -> MessageResponse:
+    """
+    Subscribe to a feed that already exists in the system.
+    """
+    logger.bind(feed_id=str(feed_id), user_id=current_user.sub)
+    user_uuid = UUID(current_user.sub)
+
+    # 1. Verify Feed Exists
+    feed = await get_feed_by_id(db, feed_id=feed_id)
+    if not feed:
+        raise NotFoundError(message=ERROR_FEED_NOT_FOUND)
+
+    # 2. Create Subscription
+    # Note: We pass the payload as is. create_subscription handles folder creation if needed.
+    # We must cast payload to SubscriptionCreate (structurally compatible for used fields)
+    # or update create_subscription typing.
+    # For now, we rely on the fact that if feed_db is passed, url is ignored.
+    await create_subscription(
+        db=db,
+        user_id=user_uuid,
+        subscription_in=payload,  # type: ignore
+        feed_db=feed,
+    )
+
+    logger.info("Subscribed to feed successfully")
+    return MessageResponse(message="Subscribed to feed successfully")
 
 
 # --- Routes ---
@@ -91,13 +126,9 @@ async def list_feeds(
     # 3. Construct Response
     subs_response = []
     if extended:
-        subs_response = [
-            SubscriptionResponseExtended.model_validate(sub) for sub in subscriptions
-        ]
+        subs_response = [SubscriptionResponseExtended.model_validate(sub) for sub in subscriptions]
     else:
-        subs_response = [
-            SubscriptionResponse.model_validate(sub) for sub in subscriptions
-        ]
+        subs_response = [SubscriptionResponse.model_validate(sub) for sub in subscriptions]
 
     return FeedsResponse(subscriptions=subs_response, folders=folders)
 
@@ -125,13 +156,13 @@ async def get_feed(
         raise NotFoundError(message=ERROR_FEED_NOT_FOUND)
 
     # 2. Check Subscription Status
-    subscription = await get_subscription_by_feed_id(
-        db, feed_id=feed_id, user_id=UUID(current_user.sub)
-    )
+    subscription = await get_subscription_by_feed_id(db, feed_id=feed_id, user_id=UUID(current_user.sub))
 
     # 5. Merge Data
     feed_detail = FeedDetail.model_validate(feed, from_attributes=True)
     feed_detail.is_subscribed = subscription is not None
+    if subscription and subscription.custom_title:
+        feed_detail.title = subscription.custom_title
 
     return feed_detail
 
@@ -190,9 +221,7 @@ async def delete_feed(
     subscription = await get_subscription_or_404(db, feed_id, user_uuid)
 
     # 2. Delete
-    success = await delete_subscription(
-        db=db, subscription_id=subscription.id, user_id=user_uuid
-    )
+    success = await delete_subscription(db=db, subscription_id=subscription.id, user_id=user_uuid)
 
     if not success:
         # Should rarely happen if get_subscription_or_404 passed, but safe to check

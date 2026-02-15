@@ -17,7 +17,7 @@ def parse_cache_control_max_age(headers: Mapping[str, str]) -> int | None:
     Returns:
         max-age value in minutes, or None if not present
     """
-    # Handle case-sensitivity if raw dict is passed, though httpx.Headers is case-insensitive
+    # Handle case-sensitivity if raw dict is passed, though headers are usually case-insensitive in frameworks like aiohttp
     val = headers.get("Cache-Control") or headers.get("cache-control")
     if not val:
         return None

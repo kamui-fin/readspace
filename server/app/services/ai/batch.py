@@ -129,8 +129,11 @@ async def _start_batch_job(client: genai.Client, file_name: str) -> Any:
 async def _poll_job(client: genai.Client, job_name: str, timeout_seconds: int = 86400) -> Any:
     """Poll until done or timeout."""
     start = time.time()
+    last_log_time = 0
+
     while (time.time() - start) < timeout_seconds:
         job = client.batches.get(name=job_name)
+
         if (
             job
             and job.state
@@ -143,6 +146,39 @@ async def _poll_job(client: genai.Client, job_name: str, timeout_seconds: int = 
             )
         ):
             return job
+
+        # Log progress every 30 seconds
+        current_time = time.time()
+        if current_time - last_log_time >= 30:
+            stats_str = ""
+            # Try to extract completion stats safely
+            try:
+                stats = getattr(job, "completion_stats", None)
+                if stats:
+                    # Handle both object and dict (just in case)
+                    if isinstance(stats, dict):
+                        success = stats.get("successful_count", 0)
+                        failed = stats.get("failed_count", 0)
+                        incomplete = stats.get("incomplete_count", 0)
+                    else:
+                        success = getattr(stats, "successful_count", 0)
+                        failed = getattr(stats, "failed_count", 0)
+                        incomplete = getattr(stats, "incomplete_count", 0)
+                    
+                    total = success + failed + incomplete
+                    if total > 0:
+                        stats_str = f"Processed: {success}/{total} (Failed: {failed})"
+            except Exception:
+                pass  # Ignore stat extraction errors
+
+            logger.info(
+                "Batch job running",
+                job=job_name.split("/")[-1],
+                state=getattr(job.state, "name", "UNKNOWN"),
+                stats=stats_str,
+            )
+            last_log_time = current_time
+
         await asyncio.sleep(10)
     raise TimeoutError("Batch job timed out")
 

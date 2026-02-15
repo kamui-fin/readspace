@@ -46,6 +46,13 @@ export function useOpmlImport() {
                         toast.error(error.message)
                         return
                     }
+
+                    // Handle cryptic "result is undefined" error which usually means parsing failed
+                    if (error instanceof Error && error.message.includes("result is undefined")) {
+                        toast.error("Failed to parse OPML file. Please ensure it is a valid XML/OPML format.")
+                        return
+                    }
+
                     toast.error("Failed to import OPML file. Please try again.")
                 },
             })

@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from app.models.feed import Feed
 from app.models.enums import FeedCategory
+from app.models.enums import FeedCategory, ContentType
 from app.typing.feeds import FeedEnrichmentResponse
 from app.models.feed import Feed
 from app.models.enums import FeedCategory
@@ -40,19 +41,16 @@ async def test_batch_enrichment_flow(db_session):
     # Mock Settings
     with patch("app.workers.feed.enrichment.get_settings") as mock_settings, patch(
         "app.workers.feed.enrichment.get_domain_authority_scores_batch"
-    ) as mock_da, patch(
-        "app.workers.feed.enrichment.extract_favicon_and_canonical_url"
-    ) as mock_favicon:
+    ) as mock_da:
 
         mock_settings.return_value.ENABLE_AI = True
         mock_da.return_value = {"example.com": 0.7}
-        mock_favicon.return_value = None
 
         # Mock LLM Batch Service
         with patch("app.workers.feed.enrichment.enrich_feeds_batch") as mock_batch:
             # Return a fake result for our feed
             mock_result = FeedEnrichmentResponse(
-                category="TECHNOLOGY_PROGRAMMING",
+                category="software_engineering",
                 tags=["example", "tech"],
                 popularity_estimate=85,
                 enhanced_description="An enhanced description about examples.",
@@ -72,7 +70,7 @@ async def test_batch_enrichment_flow(db_session):
                 # 5. Verify DB Updates
                 await db_session.refresh(feed)
 
-                assert feed.top_level_category == FeedCategory.TECHNOLOGY_PROGRAMMING
+                assert feed.top_level_category == FeedCategory.SOFTWARE_ENGINEERING
                 assert feed.tags == ["example", "tech"]
                 assert feed.description == "An enhanced description about examples."
 
@@ -92,6 +90,65 @@ async def test_batch_enrichment_flow(db_session):
                 # Verify Mocks Called
                 mock_batch.assert_called_once()
                 mock_sync.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_batch_enrichment_empty_tags(db_session):
+    """Verify that feeds with empty tags [] are also picked up for enrichment."""
+    from app.workers.feed.enrichment import batch_enrich_feeds
+    from app.models.feed import Feed
+
+    # 1. Setup Data with EMPTY tags list (not None)
+    feed = Feed(
+        id=uuid4(),
+        url="https://example.com/feed-empty-tags",
+        title="Empty Tags Feed",
+        description="A feed with empty tags list",
+        link="https://example.com",
+        language="en",
+        popularity_score=0.0,
+        top_level_category=FeedCategory.MISCELLANEOUS,
+        tags=[],  # Explicitly empty list
+        tags_native=[],
+    )
+    db_session.add(feed)
+    await db_session.commit()
+
+    # 2. Mock Dependencies
+    with patch("app.workers.feed.enrichment.get_settings") as mock_settings, patch(
+        "app.workers.feed.enrichment.get_domain_authority_scores_batch"
+    ) as mock_da:
+
+        mock_settings.return_value.ENABLE_AI = True
+        mock_da.return_value = {}
+
+        with patch("app.workers.feed.enrichment.enrich_feeds_batch") as mock_batch, \
+             patch("app.workers.feed.enrichment.sync_feeds_batch") as mock_sync:
+
+            # Mock successful enrichment
+            mock_result = FeedEnrichmentResponse(
+                category="TECHNOLOGY_PROGRAMMING",
+                tags=["new", "tags"],
+                popularity_estimate=50,
+                content_type="indie_blog",
+                author="John Doe",
+                tags_native=["nativo"],
+            )
+            mock_batch.return_value = [mock_result]
+
+            # 3. Run Worker
+            result = await batch_enrich_feeds()
+
+            # 4. Verify Result
+            assert result["success"] is True
+            assert result["enriched_count"] == 1
+
+            # 5. Verify DB Updates
+            await db_session.refresh(feed)
+            assert feed.tags == ["new", "tags"]
+            assert feed.tags_native == ["nativo"]
+            assert feed.author == "John Doe"
+            assert feed.content_type == ContentType.INDIE_BLOG
 
 
 @pytest.mark.asyncio

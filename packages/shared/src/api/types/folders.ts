@@ -1,13 +1,15 @@
-export type Folder = {
+export interface FolderResponse {
   id: string;
   name: string;
   created_at: string;
-};
+}
 
-export type FolderCreate = {
+export type Folder = FolderResponse;
+
+export interface FolderCreate {
   name: string;
-};
+}
 
-export type FolderUpdate = {
+export interface FolderUpdate {
   name?: string;
-};
+}

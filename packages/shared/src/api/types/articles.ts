@@ -1,6 +1,13 @@
 import { PaginatedResponse } from "./common";
 
-export type Priority = "HIGH" | "MEDIUM" | "LOW";
+export enum ArticlePriority {
+  LOW = "LOW",
+  MEDIUM = "MEDIUM",
+  HIGH = "HIGH",
+}
+
+// Alias for backward compatibility
+export type Priority = ArticlePriority;
 
 export enum ArticleFilterMode {
   AllArticles = "allArticles",
@@ -17,37 +24,48 @@ export enum ContentView {
 
 // ============= Core Types =============
 
-/**
- * Lightweight article for lists - no heavy content
- */
-export interface ArticleSummary {
-  id: string;
-
-  // Content fields
+export interface ContentFields {
   title: string | null;
   link: string;
-  description: string | null; // Truncated to ~300 chars
+  description: string | null;
+  content: string | null;
   image_url: string | null;
   author: string | null;
-  tags?: string[] | null;
-  source_domain: string | null;
+  tags: string[] | null;
+}
 
-  // User state
+export interface UserStateFields {
   is_read: boolean;
   is_saved: boolean;
-  priority: Priority;
+  priority: ArticlePriority;
   user_note: string | null;
   read_at: string | null;
+}
 
-  // Feed context (denormalized, no nested object)
+export interface FeedContextFields {
   feed_id: string | null;
   feed_title: string | null;
   feed_icon: string | null;
   published_at: string | null;
+}
 
-  // Metadata
-  article_type?: "feed" | "clipped"; // Deprecated: use !feed_id to detect clipped
+/**
+ * Lightweight article for lists - no heavy content
+ */
+export interface ArticleSummary extends UserStateFields, FeedContextFields {
+  id: string;
+  source_domain: string | null;
   created_at: string;
+  article_type: string; // "feed" or "clipped"
+
+  // Content fields (subset/overridden)
+  title: string | null;
+  link: string;
+  image_url: string | null;
+  author: string | null;
+  tags: string[] | null;
+  description: string | null; // Truncated preview
+  // content is excluded in list view
 }
 
 /**
@@ -57,9 +75,8 @@ export interface Article extends ArticleSummary {
   content: string | null; // Full HTML content
   description: string | null; // Full description (not truncated)
 
-  // Auto-extraction fields (from backend service)
+  // Auto-extraction fields (added by service layer)
   extracted_content?: string | null;
-  extracted_read_time?: number | null;
 }
 
 // ============= API Responses =============
@@ -83,7 +100,7 @@ export type CheckArticleSavedResponse =
     article_id: string;
     title: string | null;
     note: string | null;
-    priority: Priority | null;
+    priority: ArticlePriority | null;
     is_read: boolean;
     read_at: string | null;
   }
@@ -98,15 +115,16 @@ export interface SaveArticleRequest {
   url: string;
   title?: string;
   content?: string;
-  priority?: Priority;
+  priority?: ArticlePriority;
   note?: string;
 }
 
 export interface UpdateArticleRequest {
   is_read?: boolean;
   is_saved?: boolean;
-  priority?: Priority;
+  priority?: ArticlePriority;
   user_note?: string | null;
+  title?: string | null;
 }
 
 // ============= Enhancement Types =============
@@ -140,7 +158,7 @@ export interface PageMetadata {
 }
 
 export interface SaveOptions {
-  priority: Priority;
+  priority: ArticlePriority;
   folder_id?: string;
   note?: string;
   title?: string;

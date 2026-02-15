@@ -187,7 +187,9 @@ class TestFeedList:
         response = await async_client.get("/api/feeds/")
 
         assert response.status_code == 200
-        assert response.json() == []
+        data = response.json()
+        assert data["subscriptions"] == []
+        assert all(f.get("name") == "My Feeds" for f in data["folders"])
 
     @pytest.mark.asyncio
     async def test_list_feeds_with_subscriptions(
@@ -210,9 +212,9 @@ class TestFeedList:
 
         assert response.status_code == 200
         data = response.json()
-        assert len(data) >= 1
+        assert len(data["subscriptions"]) >= 1
         # Check if any subscription has the test feed
-        feed_ids = [sub["feed"]["id"] for sub in data]
+        feed_ids = [sub["feed"]["id"] for sub in data["subscriptions"]]
         assert str(test_feed.id) in feed_ids
 
     @pytest.mark.asyncio
@@ -236,8 +238,8 @@ class TestFeedList:
 
         assert response.status_code == 200
         data = response.json()
-        assert len(data) >= 1
-        assert all(sub["folder"]["id"] == str(test_folder.id) for sub in data)
+        assert len(data["subscriptions"]) >= 1
+        assert all(sub["folder"]["id"] == str(test_folder.id) for sub in data["subscriptions"])
 
     @pytest.mark.asyncio
     async def test_list_feeds_filter_by_favorite(
@@ -263,7 +265,7 @@ class TestFeedList:
 
         assert response.status_code == 200
         data = response.json()
-        assert all(sub["is_favorite"] is True for sub in data)
+        assert all(sub["is_favorite"] is True for sub in data["subscriptions"])
 
     @pytest.mark.asyncio
     async def test_list_feeds_search(
@@ -287,7 +289,7 @@ class TestFeedList:
 
         assert response.status_code == 200
         data = response.json()
-        assert len(data) >= 1
+        assert len(data["subscriptions"]) >= 1
 
     @pytest.mark.asyncio
     async def test_list_feeds_pagination(self, async_client: AsyncClient):
@@ -296,7 +298,9 @@ class TestFeedList:
 
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, list)
+        assert isinstance(data, dict)
+        assert "subscriptions" in data
+        assert isinstance(data["subscriptions"], list)
 
 
 class TestFeedGet:

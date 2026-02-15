@@ -65,7 +65,7 @@ async def upload_favicon(
     local_file_path = FAVICONS_DIR / filename
 
     if not local_file_path.exists():
-        print(f"Warning: Favicon file not found: {local_file_path}")
+        # print(f"Warning: Favicon file not found: {local_file_path}")
         return None
 
     try:

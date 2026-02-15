@@ -1,4 +1,6 @@
+import html
 import re
+from typing import Any
 
 import nh3
 import structlog
@@ -17,16 +19,44 @@ PUNCTUATION_PATTERN = re.compile(r"[^\w\s]")
 LANG_CODE_PATTERN = re.compile(r"^([a-z]{2,3})(?:[-_][a-z0-9]+)?$", re.IGNORECASE)
 
 
+def tag_visible(element: Any) -> bool:
+    if element.parent.name in [
+        "style",
+        "script",
+        "head",
+        "title",
+        "meta",
+        "[document]",
+    ]:
+        return False
+    from bs4 import Comment
+
+    if isinstance(element, Comment):
+        return False
+    return True
+
+
 def clean_html_text(text: str | None) -> str:
     """
     Clean HTML text to plain text.
+    Strips tags, scripts, styles, and unescapes entities.
     """
     if not text:
         return ""
-    # Use nh3 to strip all tags
-    text = nh3.clean(str(text), tags=set())
-    # Collapse whitespace
-    return re.sub(r"\s+", " ", text).strip()
+    try:
+        soup = BeautifulSoup(str(text), "html.parser")
+        texts = soup.findAll(text=True)
+        visible_texts = filter(tag_visible, texts)
+        clean = " ".join(t.strip() for t in visible_texts).strip()
+
+        # If soup extraction yielded nothing but we had content, fallback to nh3
+        if not clean and str(text).strip():
+            return html.unescape(nh3.clean(str(text), tags=set()))
+
+        return html.unescape(clean)
+    except Exception as e:
+        logger.warning(f"Error cleaning HTML text: {e}")
+        return html.unescape(nh3.clean(str(text), tags=set()))
 
 
 def is_content_complete(content: str | None, threshold: int = 500) -> bool:

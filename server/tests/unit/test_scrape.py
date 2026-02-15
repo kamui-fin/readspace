@@ -11,20 +11,20 @@ async def test_extract_full_content_success():
             "<html><body><h1>Title</h1><p>Content</p></body></html>"
         )
 
-        content, read_time, error = await scrape.extract_full_content(
+        # extract_full_content returns (content, error)
+        content, error = await scrape.extract_full_content(
             "http://example.com"
         )
 
         assert content is not None
         assert "Content" in content
-        assert read_time is not None
         assert error is None
 
 
 @pytest.mark.asyncio
 async def test_extract_full_content_timeout():
     with patch("asyncio.wait_for", side_effect=TimeoutError):
-        content, read_time, error = await scrape.extract_full_content(
+        content, error = await scrape.extract_full_content(
             "http://example.com"
         )
         assert content is None
@@ -37,7 +37,7 @@ async def test_extract_full_content_failure():
     with patch("app.services.articles.scrape._fetch_and_extract") as mock_fetch:
         mock_fetch.return_value = None
 
-        content, read_time, error = await scrape.extract_full_content(
+        content, error = await scrape.extract_full_content(
             "http://example.com"
         )
 

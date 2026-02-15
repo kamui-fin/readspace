@@ -8,6 +8,13 @@ import type { SubFeedItemData } from "../items/SubFeedItem"
 // Combined feed item type for rendering
 export type FeedItem = CollapsibleFeedItemData | RegularFeedItemData
 
+function formatFolderName(name: string): string {
+    return name
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ")
+}
+
 export function useFeedTree() {
     // Data queries - using global defaults for caching
     const { data: feedsResponse, isLoading: isFeedsLoading } = useFeeds()
@@ -152,7 +159,7 @@ export function useFeedTree() {
 
             items.push({
                 id: folder.id,
-                title: folder.name,
+                title: formatFolderName(folder.name),
                 url: `/folders/${folder.id}/articles`,
                 count: folderUnreadCount,
                 icon: null,
