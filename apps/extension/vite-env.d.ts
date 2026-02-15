@@ -10,4 +10,4 @@ declare namespace chrome {
 
 declare namespace browser {
   // Browser API types (handled by webextension-polyfill)
-} 
+}

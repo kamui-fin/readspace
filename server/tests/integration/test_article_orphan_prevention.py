@@ -8,9 +8,10 @@ import pytest
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import ArticleContent, ClippedArticle, Feed, FeedArticle
-from app.services.feeds.feed import FeedService
-from app.services.feeds.feed_parser import FeedParsingService
+from app.crud.article.ingester import create_articles_batch
+from app.models.article import ArticleContent, FeedArticle, UserEntry
+from app.models.feed import Feed
+from app.services.feeds.parsing import parse_feed_content
 
 
 @pytest.fixture
@@ -75,16 +76,16 @@ class TestOrphanPrevention:
         self, db_session: AsyncSession, test_feed: Feed, sample_feed_xml: str
     ):
         """Test that successful article ingestion creates no orphans."""
-        feed_service = FeedService(db=db_session)
-        parser = FeedParsingService()
-
         # Parse and create articles
-        parsed_feed = parser.parse_feed_data(sample_feed_xml, str(test_feed.url))
-        await feed_service._create_new_articles(test_feed, parsed_feed.entries)
+        parsed_feed = parse_feed_content(sample_feed_xml, str(test_feed.url))
+        # Set feed_id on articles
+        for article in parsed_feed.articles:
+            article.feed_id = test_feed.id
+        await create_articles_batch(db_session, articles_data=parsed_feed.articles)
         await db_session.commit()
 
         # Count total article_contents
-        total_contents_result = await db_session.execute(select(func.count()).select_from(ArticleContent))
+        total_contents_result = await db_session.execute(select(func.count(ArticleContent.id)))
         total_contents = total_contents_result.scalar()
 
         # Count orphaned contents (no references from feed_articles or clipped_articles)
@@ -95,18 +96,18 @@ class TestOrphanPrevention:
                 SELECT 1 FROM feed_articles fa WHERE fa.content_id = ac.id
             )
             AND NOT EXISTS (
-                SELECT 1 FROM clipped_articles ca WHERE ca.content_id = ac.id
+                SELECT 1 FROM user_entries ue WHERE ue.content_id = ac.id AND ue.feed_article_id IS NULL
             )
         """)
         orphan_result = await db_session.execute(orphan_query)
-        orphan_count = orphan_result.scalar()
+        orphan_count = orphan_result.scalar() or 0
 
         # Assert no orphans
         assert orphan_count == 0, f"Found {orphan_count} orphaned article_contents out of {total_contents}"
 
         # Verify expected number of articles created
         feed_articles_result = await db_session.execute(
-            select(func.count()).select_from(FeedArticle).where(FeedArticle.feed_id == test_feed.id)
+            select(func.count(FeedArticle.id)).where(FeedArticle.feed_id == test_feed.id)
         )
         feed_articles_count = feed_articles_result.scalar()
         assert feed_articles_count == 2  # Two articles in the feed
@@ -116,19 +117,17 @@ class TestOrphanPrevention:
         self, db_session: AsyncSession, test_feed: Feed, duplicate_article_feed_xml: str
     ):
         """Test that articles with the same link reuse the same article_content row."""
-        feed_service = FeedService(db=db_session)
-        parser = FeedParsingService()
-
         # Parse and create articles
-        parsed_feed = parser.parse_feed_data(duplicate_article_feed_xml, str(test_feed.url))
-        await feed_service._create_new_articles(test_feed, parsed_feed.entries)
+        parsed_feed = parse_feed_content(duplicate_article_feed_xml, str(test_feed.url))
+        # Set feed_id on articles
+        for article in parsed_feed.articles:
+            article.feed_id = test_feed.id
+        await create_articles_batch(db_session, articles_data=parsed_feed.articles)
         await db_session.commit()
 
         # Count article_contents for the duplicate link
         content_count_result = await db_session.execute(
-            select(func.count())
-            .select_from(ArticleContent)
-            .where(ArticleContent.link == "https://example.com/same-article")
+            select(func.count(ArticleContent.id)).where(ArticleContent.link == "https://example.com/same-article")
         )
         content_count = content_count_result.scalar()
 
@@ -142,7 +141,7 @@ class TestOrphanPrevention:
         content_id = content_result.scalar()
 
         feed_article_count_result = await db_session.execute(
-            select(func.count()).select_from(FeedArticle).where(FeedArticle.content_id == content_id)
+            select(func.count(FeedArticle.id)).where(FeedArticle.content_id == content_id)
         )
         feed_article_count = feed_article_count_result.scalar()
 
@@ -159,7 +158,7 @@ class TestOrphanPrevention:
                 SELECT 1 FROM feed_articles fa WHERE fa.content_id = ac.id
             )
             AND NOT EXISTS (
-                SELECT 1 FROM clipped_articles ca WHERE ca.content_id = ac.id
+                SELECT 1 FROM user_entries ue WHERE ue.content_id = ac.id AND ue.feed_article_id IS NULL
             )
         """)
         orphan_result = await db_session.execute(orphan_query)
@@ -172,12 +171,12 @@ class TestOrphanPrevention:
         self, db_session: AsyncSession, test_feed: Feed, test_user, sample_feed_xml: str
     ):
         """Test that content is NOT deleted if it's still referenced by a clipped_article."""
-        feed_service = FeedService(db=db_session)
-        parser = FeedParsingService()
-
         # Create feed articles
-        parsed_feed = parser.parse_feed_data(sample_feed_xml, str(test_feed.url))
-        await feed_service._create_new_articles(test_feed, parsed_feed.entries)
+        parsed_feed = parse_feed_content(sample_feed_xml, str(test_feed.url))
+        # Set feed_id on articles
+        for article in parsed_feed.articles:
+            article.feed_id = test_feed.id
+        await create_articles_batch(db_session, articles_data=parsed_feed.articles)
         await db_session.commit()
 
         # Get first content from our test feed
@@ -190,12 +189,12 @@ class TestOrphanPrevention:
         content = content_result.scalar_one()
 
         # Create a clipped_article referencing the same content
-        clipped = ClippedArticle(
+        clipped = UserEntry(
             content_id=content.id,
             user_id=test_user.id,
+            feed_article_id=None,
             is_read=False,
-            is_read_later=True,
-            is_favorite=False,
+            is_saved=True,
         )
         db_session.add(clipped)
         await db_session.commit()
@@ -217,7 +216,7 @@ class TestOrphanPrevention:
                 SELECT 1 FROM feed_articles fa WHERE fa.content_id = ac.id
             )
             AND NOT EXISTS (
-                SELECT 1 FROM clipped_articles ca WHERE ca.content_id = ac.id
+                SELECT 1 FROM user_entries ue WHERE ue.content_id = ac.id AND ue.feed_article_id IS NULL
             )
         """)
         orphan_result = await db_session.execute(orphan_query, {"content_id": content.id})
@@ -230,25 +229,23 @@ class TestOrphanPrevention:
         self, db_session: AsyncSession, test_feed: Feed, duplicate_article_feed_xml: str
     ):
         """Test that concurrent ingestion of articles with same link doesn't create duplicates."""
-        feed_service = FeedService(db=db_session)
-        parser = FeedParsingService()
-
-        # Simulate concurrent ingestion by calling _create_new_articles multiple times
-        parsed_feed = parser.parse_feed_data(duplicate_article_feed_xml, str(test_feed.url))
+        # Simulate concurrent ingestion by calling create_articles_batch multiple times
+        parsed_feed = parse_feed_content(duplicate_article_feed_xml, str(test_feed.url))
+        # Set feed_id on articles
+        for article in parsed_feed.articles:
+            article.feed_id = test_feed.id
 
         # First ingestion
-        await feed_service._create_new_articles(test_feed, parsed_feed.entries)
+        await create_articles_batch(db_session, articles_data=parsed_feed.articles)
         await db_session.commit()
 
         # Second ingestion (simulating concurrent/retry scenario)
-        await feed_service._create_new_articles(test_feed, parsed_feed.entries)
+        await create_articles_batch(db_session, articles_data=parsed_feed.articles)
         await db_session.commit()
 
         # Count article_contents for the duplicate link
         content_count_result = await db_session.execute(
-            select(func.count())
-            .select_from(ArticleContent)
-            .where(ArticleContent.link == "https://example.com/same-article")
+            select(func.count(ArticleContent.id)).where(ArticleContent.link == "https://example.com/same-article")
         )
         content_count = content_count_result.scalar()
 
@@ -265,7 +262,7 @@ class TestOrphanPrevention:
                 SELECT 1 FROM feed_articles fa WHERE fa.content_id = ac.id
             )
             AND NOT EXISTS (
-                SELECT 1 FROM clipped_articles ca WHERE ca.content_id = ac.id
+                SELECT 1 FROM user_entries ue WHERE ue.content_id = ac.id AND ue.feed_article_id IS NULL
             )
         """)
         orphan_result = await db_session.execute(orphan_query)

@@ -15,7 +15,10 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: SecretStr
 
     # Database Configuration
-    SUPABASE_DB_CONNECTION: str
+    # API uses Session Mode (port 5432) with QueuePool for persistent connections
+    # Workers use Transaction Mode (port 6543) with NullPool for surgical transactions
+    DATABASE_URL_API: str
+    DATABASE_URL_WORKER: str
 
     # CORS Configuration
     CORS_ORIGIN: str = "*"
@@ -31,13 +34,25 @@ class Settings(BaseSettings):
 
     # Gemini Configuration (Primary AI service)
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash-lite"  # For text generation
+    GEMINI_MODEL: str = "gemini-3-flash-preview"  # For text generation
     GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"  # For embeddings
 
     # RSShub Configuration (validated URL)
     RSSHUB_URL: str = "http://localhost:1200"  # Default RSShub instance URL
 
-    model_config = SettingsConfigDict(env_file=".env")
+    # Meilisearch Configuration
+    MEILISEARCH_URL: str = "http://localhost:7700"
+    MEILISEARCH_MASTER_KEY: SecretStr
+    MEILISEARCH_INDEX_NAME: str = "feeds"
+
+    # Google Cloud / Vertex AI Configuration
+    # Google Cloud / Vertex AI Configuration
+    # Removed as we reverted to standard Gemini API
+    # GOOGLE_CLOUD_PROJECT: str | None = None
+    # GOOGLE_CLOUD_LOCATION: str = "us-central1"
+    # GCS_BUCKET: str | None = None
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @field_validator("GEMINI_API_KEY")
     @classmethod
@@ -47,14 +62,24 @@ class Settings(BaseSettings):
             raise ValueError("GEMINI_API_KEY is required when ENABLE_AI is True")
         return v
 
-    @field_validator("SUPABASE_DB_CONNECTION")
+    @field_validator("DATABASE_URL_API")
     @classmethod
-    def validate_db_connection(cls, v: str) -> str:
-        """Validate database connection string format."""
+    def validate_api_db_connection(cls, v: str) -> str:
+        """Validate API database connection string format."""
         if not v:
-            raise ValueError("SUPABASE_DB_CONNECTION is required")
+            raise ValueError("DATABASE_URL_API is required")
         if not v.startswith("postgresql"):
-            raise ValueError("SUPABASE_DB_CONNECTION must be a valid PostgreSQL connection string")
+            raise ValueError("DATABASE_URL_API must be a valid PostgreSQL connection string")
+        return v
+
+    @field_validator("DATABASE_URL_WORKER")
+    @classmethod
+    def validate_worker_db_connection(cls, v: str) -> str:
+        """Validate Worker database connection string format."""
+        if not v:
+            raise ValueError("DATABASE_URL_WORKER is required")
+        if not v.startswith("postgresql"):
+            raise ValueError("DATABASE_URL_WORKER must be a valid PostgreSQL connection string")
         return v
 
     @field_validator("REDIS_URL")
@@ -94,7 +119,7 @@ class Settings(BaseSettings):
     @property
     def is_supabase_cloud(self) -> bool:
         """Detect if using Supabase Cloud by URL pattern."""
-        return ".pooler.supabase.com" in self.SUPABASE_DB_CONNECTION or ".supabase.co" in self.SUPABASE_DB_CONNECTION
+        return ".pooler.supabase.com" in self.DATABASE_URL_API or ".supabase.co" in self.DATABASE_URL_API
 
 
 @cache

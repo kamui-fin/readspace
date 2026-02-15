@@ -1,0 +1,99 @@
+"use client"
+
+import {
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbLink,
+    BreadcrumbList,
+    BreadcrumbPage,
+    BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import { Separator } from "@/components/ui/separator"
+import { SidebarLeftTrigger } from "@/components/ui/sidebar"
+import { motion } from "framer-motion"
+import React from "react"
+
+interface AppHeaderProps {
+    // Ensure href is optional as the last item might not have one
+    breadcrumbItems: { label: string; href?: string }[]
+    children?: React.ReactNode
+    classAttributes?: string
+    rightContent?: React.ReactNode
+}
+
+const container = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1,
+        },
+    },
+}
+
+const breadcrumbItem = {
+    hidden: { opacity: 0, y: -10 },
+    show: { opacity: 1, y: 0 },
+}
+
+const AppHeader: React.FC<AppHeaderProps> = ({
+    classAttributes = "",
+    children,
+    rightContent,
+    breadcrumbItems,
+}) => {
+    return (
+        <header
+            className={`${classAttributes} relative z-30 flex h-12 max-w-full shrink-0 items-center justify-between gap-2 bg-background/100 pr-2 transition-all supports-[backdrop-filter]:bg-background/100`}
+        >
+            <div className="flex flex-1 items-center gap-2 min-w-0 pl-4">
+                <SidebarLeftTrigger className="-ml-1" />
+                {breadcrumbItems.length > 0 && (
+                    <Separator orientation="vertical" className="h-4" />
+                )}
+                <Breadcrumb className="overflow-hidden whitespace-nowrap">
+                    <BreadcrumbList>
+                        <motion.div
+                            variants={container}
+                            initial="hidden"
+                            animate="show"
+                            className="flex items-center gap-3"
+                        >
+                            {breadcrumbItems.map((breadcrumb, index) => (
+                                <React.Fragment key={index}>
+                                    {index > 0 && (
+                                        <motion.div variants={breadcrumbItem}>
+                                            <BreadcrumbSeparator />
+                                        </motion.div>
+                                    )}
+                                    <motion.div variants={breadcrumbItem}>
+                                        <BreadcrumbItem>
+                                            {index ===
+                                            breadcrumbItems.length - 1 ? (
+                                                <BreadcrumbPage className="block truncate">
+                                                    {breadcrumb.label}
+                                                </BreadcrumbPage>
+                                            ) : (
+                                                <BreadcrumbLink
+                                                    href={breadcrumb.href}
+                                                >
+                                                    {breadcrumb.label}
+                                                </BreadcrumbLink>
+                                            )}
+                                        </BreadcrumbItem>
+                                    </motion.div>
+                                </React.Fragment>
+                            ))}
+                        </motion.div>
+                    </BreadcrumbList>
+                </Breadcrumb>
+            </div>
+            <div className="flex items-center gap-4 pl-3">
+                {rightContent}
+                {children}
+            </div>
+        </header>
+    )
+}
+
+export default AppHeader

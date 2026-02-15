@@ -1,0 +1,42 @@
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE SCHEMA IF NOT EXISTS auth;
+
+CREATE TABLE IF NOT EXISTS auth.users (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    instance_id uuid,
+    id_alias uuid,
+    aud varchar(255),
+    role varchar(255),
+    email varchar(255) UNIQUE,
+    encrypted_password varchar(255),
+    email_confirmed_at timestamptz,
+    invited_at timestamptz,
+    confirmation_token varchar(255),
+    confirmation_sent_at timestamptz,
+    recovery_token varchar(255),
+    recovery_sent_at timestamptz,
+    email_change_token_new varchar(255),
+    email_change varchar(255),
+    email_change_sent_at timestamptz,
+    last_sign_in_at timestamptz,
+    raw_app_meta_data jsonb DEFAULT '{}'::jsonb,
+    raw_user_meta_data jsonb DEFAULT '{}'::jsonb,
+    is_super_admin boolean DEFAULT false,
+    is_sso_user boolean DEFAULT false NOT NULL,
+    is_anonymous boolean DEFAULT false NOT NULL,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now(),
+    phone varchar(32),
+    phone_confirmed_at timestamptz,
+    phone_change varchar(32),
+    phone_change_token varchar(255),
+    phone_change_sent_at timestamptz,
+    confirmed_at timestamptz,
+    email_change_token_current varchar(255),
+    email_change_confirm_status smallint,
+    banned_until timestamptz,
+    reauthentication_token varchar(255),
+    reauthentication_sent_at timestamptz,
+    deleted_at timestamptz
+);

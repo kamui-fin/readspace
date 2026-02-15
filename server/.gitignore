@@ -7,3 +7,4 @@ celerybeat-schedule*
 htmlcov
 coverage.xml
 .python-version
+.tranco

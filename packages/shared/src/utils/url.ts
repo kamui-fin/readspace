@@ -11,24 +11,24 @@
  */
 export function normalizeUrl(url: string): string {
   try {
-    const urlObj = new URL(url)
+    const urlObj = new URL(url);
 
     // Normalize protocol to https (most feeds use https)
-    urlObj.protocol = 'https:'
+    urlObj.protocol = "https:";
 
     // Remove www prefix from hostname
-    urlObj.hostname = urlObj.hostname.replace(/^www\./, '')
+    urlObj.hostname = urlObj.hostname.replace(/^www\./, "");
 
     // Remove trailing slash from pathname
-    urlObj.pathname = urlObj.pathname.replace(/\/$/, '') || '/'
+    urlObj.pathname = urlObj.pathname.replace(/\/$/, "") || "/";
 
     // Sort query parameters for consistent comparison
-    urlObj.searchParams.sort()
+    urlObj.searchParams.sort();
 
-    return urlObj.toString()
+    return urlObj.toString();
   } catch {
     // If URL parsing fails, return the original URL trimmed
-    return url.trim()
+    return url.trim();
   }
 }
 
@@ -43,5 +43,5 @@ export function normalizeUrl(url: string): string {
  * areUrlsEqual('https://example.com/feed/', 'http://www.example.com/feed') // true
  */
 export function areUrlsEqual(url1: string, url2: string): boolean {
-  return normalizeUrl(url1) === normalizeUrl(url2)
+  return normalizeUrl(url1) === normalizeUrl(url2);
 }

@@ -9,7 +9,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 function Slider({
     className,

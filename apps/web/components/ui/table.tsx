@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
     return (

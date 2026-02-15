@@ -1,270 +1,141 @@
-/**
- * Page Cache Utility
- *
- * Manages a cache of the last 5 visited pages with their metadata and content.
- * Uses an LRU (Least Recently Used) strategy to maintain cache size.
- */
+import { LRUCache } from 'lru-cache'
+import browser from 'webextension-polyfill'
+import { normalizeKey } from './normalize'
+import debounce from 'debounce'
+import { CachedPageData } from '../types'
 
-export interface CachedPageMetadata {
-  title?: string
-  description?: string
-  author?: string
-  published_at?: string
-  image_url?: string
-  favicon?: string
-  canonical_url?: string
-  feeds?: Array<{ url: string; title?: string; type: string }>
-}
-
-export interface CachedPageContent {
-  content?: string
-  title?: string
-  description?: string
-  author?: string
-  published_at?: string
-  image_url?: string
-  estimated_read_time?: number
-}
-
-export interface CachedPageData {
-  url: string
-  metadata: CachedPageMetadata | null
-  content: CachedPageContent | null
-  timestamp: number
-}
-
-const MAX_CACHE_SIZE = 5
-const CACHE_STORAGE_KEY = 'readspace-page-cache'
+const MAX_CACHE_SIZE = 200
+const CACHE_STORAGE_KEY_PREFIX = 'readspace-page-cache-v1:'
+const PAGE_CACHE_MAX_ITEMS_PER_DOMAIN = 100
+const PERSIST_DEBOUNCE_MS = 1000
 
 class PageCache {
-  private cache: Map<string, CachedPageData> = new Map()
+  private cache = new LRUCache<string, CachedPageData>({ max: MAX_CACHE_SIZE })
   private initialized = false
+  private dirty = false
+  private persistDebounced = debounce(() => this.persist(), PERSIST_DEBOUNCE_MS)
 
-  /**
-   * Initialize cache from storage
-   */
-  async init(): Promise<void> {
+  async init() {
     if (this.initialized) return
-
-    try {
-      const result = await chrome.storage.local.get(CACHE_STORAGE_KEY)
-      const storedCache = result[CACHE_STORAGE_KEY] as
-        | Array<[string, CachedPageData]>
-        | undefined
-
-      if (storedCache && Array.isArray(storedCache)) {
-        this.cache = new Map(storedCache)
-      }
-    } catch (error) {
-      console.error('Failed to initialize page cache from storage:', error)
-    }
-
     this.initialized = true
   }
 
-  /**
-   * Persist cache to storage
-   */
-  private async persist(): Promise<void> {
+  private domainKey(url: string) {
     try {
-      const cacheArray = Array.from(this.cache.entries())
-      await chrome.storage.local.set({ [CACHE_STORAGE_KEY]: cacheArray })
-    } catch (error) {
-      console.error('Failed to persist page cache to storage:', error)
-    }
-  }
-
-  /**
-   * Get normalized URL for cache key (removes hash and some query params)
-   */
-  private normalizeUrl(url: string): string {
-    try {
-      const urlObj = new URL(url)
-      // Remove hash fragment
-      urlObj.hash = ''
-      // Remove common tracking parameters but keep important ones
-      const paramsToRemove = [
-        'utm_source',
-        'utm_medium',
-        'utm_campaign',
-        'utm_content',
-        'utm_term',
-        'fbclid',
-        'gclid',
-      ]
-      paramsToRemove.forEach((param) => urlObj.searchParams.delete(param))
-      return urlObj.href
+      const u = new URL(url)
+      return CACHE_STORAGE_KEY_PREFIX + u.hostname
     } catch {
-      return url
+      return CACHE_STORAGE_KEY_PREFIX + 'unknown'
     }
   }
 
-  /**
-   * Get cached data for a URL
-   */
   async get(url: string): Promise<CachedPageData | null> {
-    await this.init()
-    const normalizedUrl = this.normalizeUrl(url)
-    const cached = this.cache.get(normalizedUrl)
+    const key = normalizeKey(url)
+    const cached = this.cache.get(key)
+    if (cached) return cached
 
-    if (cached) {
-      // Update access time (move to end for LRU)
-      this.cache.delete(normalizedUrl)
-      this.cache.set(normalizedUrl, cached)
-      await this.persist()
+    const dKey = this.domainKey(url)
+    const kv = await browser.storage.local.get(dKey)
+    const domainCache = (kv[dKey] || {}) as Record<string, CachedPageData>
+    const stored = domainCache[key]
+
+    if (stored) {
+      this.cache.set(key, stored)
+      return stored
     }
 
-    return cached || null
+    return null
   }
 
-  /**
-   * Get only metadata for a URL
-   */
-  async getMetadata(url: string): Promise<CachedPageMetadata | null> {
-    const cached = await this.get(url)
-    return cached?.metadata || null
+  async set(url: string, data: CachedPageData) {
+    const key = normalizeKey(url)
+    this.cache.set(key, data)
+    this.dirty = true
+    this.persistDebounced()
   }
 
-  /**
-   * Get only content for a URL
-   */
-  async getContent(url: string): Promise<CachedPageContent | null> {
-    const cached = await this.get(url)
-    return cached?.content || null
+  async setMetadata(url: string, metadata: CachedPageData['metadata']) {
+    const existing = await this.get(url)
+    const data: CachedPageData = existing || {
+      url,
+      metadata: null,
+      content: null,
+      fetchedAt: Date.now(),
+    }
+    data.metadata = metadata
+    data.fetchedAt = Date.now()
+    await this.set(url, data)
   }
 
-  /**
-   * Set metadata for a URL
-   */
-  async setMetadata(url: string, metadata: CachedPageMetadata): Promise<void> {
-    await this.init()
-    const normalizedUrl = this.normalizeUrl(url)
+  async setContent(url: string, content: CachedPageData['content']) {
+    const existing = await this.get(url)
+    const data: CachedPageData = existing || {
+      url,
+      metadata: null,
+      content: null,
+      fetchedAt: Date.now(),
+    }
+    data.content = content
+    data.fetchedAt = Date.now()
+    await this.set(url, data)
+  }
 
-    // Get existing cached data or create new
-    let cached = this.cache.get(normalizedUrl)
-    if (!cached) {
-      cached = {
-        url: normalizedUrl,
-        metadata: null,
-        content: null,
-        timestamp: Date.now(),
+  private async persist() {
+    if (!this.dirty) return
+
+    const updates: Record<string, Record<string, CachedPageData>> = {}
+
+    // Iterate over LRU cache
+    // Using entries() to ensure compatibility
+    for (const [key, value] of this.cache.entries()) {
+      try {
+        const domain = new URL(key).hostname
+        const dKey = CACHE_STORAGE_KEY_PREFIX + domain
+        if (!updates[dKey]) updates[dKey] = {}
+        updates[dKey][key] = value
+      } catch {
+        // ignore
       }
     }
 
-    // Update metadata and timestamp
-    cached.metadata = metadata
-    cached.timestamp = Date.now()
+    const domainKeys = Object.keys(updates)
+    if (domainKeys.length === 0) return
 
-    // Remove oldest if we're at capacity and this is a new entry
-    if (!this.cache.has(normalizedUrl) && this.cache.size >= MAX_CACHE_SIZE) {
-      const firstKey = this.cache.keys().next().value
-      if (firstKey) {
-        this.cache.delete(firstKey)
+    const existingData = await browser.storage.local.get(domainKeys)
+
+    const finalUpdates: Record<string, Record<string, CachedPageData>> = {}
+
+    for (const dKey of domainKeys) {
+      const existingDomainCache = (existingData[dKey] || {}) as Record<
+        string,
+        CachedPageData
+      >
+      const newItems = updates[dKey]
+
+      const merged = { ...existingDomainCache, ...newItems }
+
+      const keys = Object.keys(merged)
+      if (keys.length > PAGE_CACHE_MAX_ITEMS_PER_DOMAIN) {
+        keys.sort((a, b) => merged[a].fetchedAt - merged[b].fetchedAt)
+        const trim = keys.length - PAGE_CACHE_MAX_ITEMS_PER_DOMAIN
+        for (let i = 0; i < trim; i++) delete merged[keys[i]]
       }
+
+      finalUpdates[dKey] = merged
     }
 
-    // Add/update in cache (will be at end for LRU)
-    this.cache.delete(normalizedUrl)
-    this.cache.set(normalizedUrl, cached)
-
-    await this.persist()
+    await browser.storage.local.set(finalUpdates)
+    this.dirty = false
   }
 
-  /**
-   * Set content for a URL
-   */
-  async setContent(url: string, content: CachedPageContent): Promise<void> {
-    await this.init()
-    const normalizedUrl = this.normalizeUrl(url)
-
-    // Get existing cached data or create new
-    let cached = this.cache.get(normalizedUrl)
-    if (!cached) {
-      cached = {
-        url: normalizedUrl,
-        metadata: null,
-        content: null,
-        timestamp: Date.now(),
-      }
-    }
-
-    // Update content and timestamp
-    cached.content = content
-    cached.timestamp = Date.now()
-
-    // Remove oldest if we're at capacity and this is a new entry
-    if (!this.cache.has(normalizedUrl) && this.cache.size >= MAX_CACHE_SIZE) {
-      const firstKey = this.cache.keys().next().value
-      if (firstKey) {
-        this.cache.delete(firstKey)
-      }
-    }
-
-    // Add/update in cache (will be at end for LRU)
-    this.cache.delete(normalizedUrl)
-    this.cache.set(normalizedUrl, cached)
-
-    await this.persist()
-  }
-
-  /**
-   * Set both metadata and content for a URL
-   */
-  async set(
-    url: string,
-    metadata: CachedPageMetadata | null,
-    content: CachedPageContent | null
-  ): Promise<void> {
-    await this.init()
-    const normalizedUrl = this.normalizeUrl(url)
-
-    const cached: CachedPageData = {
-      url: normalizedUrl,
-      metadata,
-      content,
-      timestamp: Date.now(),
-    }
-
-    // Remove oldest if we're at capacity and this is a new entry
-    if (!this.cache.has(normalizedUrl) && this.cache.size >= MAX_CACHE_SIZE) {
-      const firstKey = this.cache.keys().next().value
-      if (firstKey) {
-        this.cache.delete(firstKey)
-      }
-    }
-
-    // Add/update in cache (will be at end for LRU)
-    this.cache.delete(normalizedUrl)
-    this.cache.set(normalizedUrl, cached)
-
-    await this.persist()
-  }
-
-  /**
-   * Clear entire cache
-   */
-  async clear(): Promise<void> {
-    await this.init()
+  async clear() {
     this.cache.clear()
-    await this.persist()
-  }
-
-  /**
-   * Get cache size
-   */
-  async size(): Promise<number> {
-    await this.init()
-    return this.cache.size
-  }
-
-  /**
-   * Get all cached URLs
-   */
-  async getCachedUrls(): Promise<string[]> {
-    await this.init()
-    return Array.from(this.cache.keys())
+    const all = await browser.storage.local.get(null)
+    const keysToRemove = Object.keys(all).filter((k) =>
+      k.startsWith(CACHE_STORAGE_KEY_PREFIX)
+    )
+    await browser.storage.local.remove(keysToRemove)
   }
 }
 
-// Export singleton instance
 export const pageCache = new PageCache()

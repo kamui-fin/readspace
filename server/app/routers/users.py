@@ -1,115 +1,36 @@
-"""User and profile endpoints."""
+"""User management routes."""
 
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import structlog
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud import crud_profile
+from app.core.custom_exceptions import NotFoundError
+from app.crud import profile as crud_profile
 from app.db.session import get_db
-from app.schemas.user import ProfileResponse
-from app.services.user.auth import TokenData, get_current_user
+from app.services.user.auth import get_current_user
+from app.typing.user import ProfileResponse, TokenData
 
+logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.get(
-    "/profile",
-    response_model=ProfileResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Get Current User Profile",
-    description="Retrieve the authenticated user's profile information including email, role, and timestamps.",
-    responses={
-        200: {
-            "description": "User profile retrieved successfully",
-            "model": ProfileResponse,
-            "content": {
-                "application/json": {
-                    "example": {
-                        "id": "123e4567-e89b-12d3-a456-426614174000",
-                        "email": "user@example.com",
-                        "role": "user",
-                        "created_at": "2024-01-01T00:00:00Z",
-                        "updated_at": "2024-01-01T00:00:00Z",
-                    }
-                }
-            },
-        },
-        401: {
-            "description": "Authentication failed - invalid or missing token",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "missing_token": {
-                            "summary": "Missing authentication token",
-                            "value": {"detail": "Not authenticated"},
-                        },
-                        "invalid_token": {
-                            "summary": "Invalid or expired token",
-                            "value": {"detail": "Could not validate credentials"},
-                        },
-                    }
-                }
-            },
-        },
-        404: {
-            "description": "User profile not found in database",
-            "content": {"application/json": {"example": {"detail": "User profile not found"}}},
-        },
-        422: {
-            "description": "Validation error in request parameters",
-            "content": {
-                "application/json": {"example": {"detail": [{"loc": ["string"], "msg": "string", "type": "string"}]}}
-            },
-        },
-    },
-)
-async def get_current_user_profile(
-    current_user: TokenData = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+@router.get("/profile", response_model=ProfileResponse, summary="Get current user profile")
+async def get_profile(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[TokenData, Depends(get_current_user)],
 ) -> ProfileResponse:
     """
-    Retrieve the authenticated user's profile information.
-
-    This endpoint returns the complete profile information for the currently
-    authenticated user, including their unique identifier, email address,
-    assigned role, and account creation/modification timestamps.
-
-    Args:
-        current_user: The authenticated user's token data, automatically
-                     extracted from the Authorization header
-        db: Database session dependency for data access
-
-    Returns:
-        ProfileResponse: Complete user profile information including:
-            - id: Unique user identifier (UUID)
-            - email: User's email address
-            - role: User's role in the system (e.g., 'user', 'admin')
-            - created_at: Account creation timestamp
-            - updated_at: Last profile modification timestamp
-
-    Raises:
-        HTTPException:
-            - 401: If authentication token is missing, invalid, or expired
-            - 404: If the user profile is not found in the database
-            - 422: If request validation fails
-
-    Example:
-        ```python
-        # Request headers
-        Authorization: Bearer <jwt_token>
-
-        # Response
-        {
-            "id": "123e4567-e89b-12d3-a456-426614174000",
-            "email": "user@example.com",
-            "role": "user",
-            "created_at": "2024-01-01T00:00:00Z",
-            "updated_at": "2024-01-01T00:00:00Z"
-        }
-        ```
+    Get the current user's profile.
     """
-    profile = await crud_profile.get_by_id(db, user_id=UUID(current_user.sub))
+    logger.bind(user_id=current_user.sub)
+
+    profile = await crud_profile.get_profile_by_id(db, user_id=UUID(current_user.sub))
     if not profile:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
+        # This should theoretically not happen if get_current_user succeeds,
+        # but good to handle safely.
+        raise NotFoundError(message="Profile not found")
+
     return profile

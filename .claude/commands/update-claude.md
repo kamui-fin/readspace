@@ -33,17 +33,18 @@ cross-project memory that is merged into every session under your home directory
 **Instructions:**
 If during your session:
 
-* You learned something new about the project
-* I corrected you on a specific implementation detail
-* I corrected source code you generated
-* You struggled to find specific information and had to infer details about the project
-* You lost track of the project structure and had to look up information in the source code
+- You learned something new about the project
+- I corrected you on a specific implementation detail
+- I corrected source code you generated
+- You struggled to find specific information and had to infer details about the project
+- You lost track of the project structure and had to look up information in the source code
 
 ...that is relevant, was not known initially, and should be persisted, add it to the appropriate `CLAUDE.md` (for shared context) or
 `CLAUDE.local.md` (for private notes) file. If the information is relevant for a subdirectory only,
 place or update it in the `CLAUDE.md` file within that subdirectory.
 When specific information belongs to a particular subcomponent, ensure you place it in the CLAUDE file for that component.
 For example:
-* Information A belongs exclusively to the `web` component → put it in `web/CLAUDE.md`
-* Information B belongs exclusively to the `api` component → put it in `api/CLAUDE.md`
-This ensures important knowledge is retained and available in future sessions.
+
+- Information A belongs exclusively to the `web` component → put it in `web/CLAUDE.md`
+- Information B belongs exclusively to the `api` component → put it in `api/CLAUDE.md`
+  This ensures important knowledge is retained and available in future sessions.

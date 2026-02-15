@@ -1,4 +1,4 @@
-import { LoginForm } from "@/app/(auth)/login/login-form"
+import { LoginForm } from "@/components/features/auth/LoginForm"
 import { createClient } from "@/lib/supabase/server"
 import Image from "next/image"
 import { redirect } from "next/navigation"
@@ -22,7 +22,7 @@ export default async function LoginPage() {
             <div className="flex w-full max-w-sm flex-col gap-6">
                 <a
                     href="#"
-                    className="flex items-center gap-2 self-center font-medium font-logo text-black"
+                    className="flex items-center gap-2 self-center font-medium font-logo text-foreground"
                 >
                     <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
                         <Image
@@ -32,7 +32,7 @@ export default async function LoginPage() {
                             alt="Logo"
                         />
                     </div>
-                    Readspace
+                    readspace
                 </a>
                 <LoginForm />
             </div>

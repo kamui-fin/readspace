@@ -1,7 +1,7 @@
 // Base grid styles
 // This project uses a 12-column grid system.
 
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 export const grid = "grid grid-cols-12 gap-x-6 items-start"
 export const baseGrid = cn(grid, "px-2 md:px-0")

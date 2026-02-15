@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
             "All your reading in one place — a privacy-friendly inbox for RSS, newsletters, threads, and books.",
         start_url: "/today",
         display: "standalone",
-        background_color: "#ffffff",
-        theme_color: "#6A994E",
+        background_color: "#ffffff", // Matches --background
+        theme_color: "#6A994E", // Matches --primary
         scope: "/",
         icons: [
             {

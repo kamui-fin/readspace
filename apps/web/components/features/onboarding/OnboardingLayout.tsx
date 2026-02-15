@@ -1,0 +1,64 @@
+"use client"
+
+import { useCurrentUser } from "@/hooks/use-current-user"
+import { useOnboardingStore } from "@/stores/onboarding"
+import { useRouter } from "next/navigation"
+import React, { ReactNode } from "react"
+import OnboardingProgress from "./OnboardingProgress"
+
+interface OnboardingLayoutProps {
+    children: ReactNode
+    title: string
+    subtitle?: string
+}
+
+const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
+    children,
+    title,
+    subtitle,
+}) => {
+    const { currentStep, totalSteps } = useOnboardingStore()
+    const { user } = useCurrentUser()
+    const router = useRouter()
+
+    const skipOnboarding = async () => {
+        if (!user) return
+        router.push("/")
+    }
+
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-muted px-4 py-8 animate-fade-in">
+            <div className="w-full max-w-5xl">
+                <OnboardingProgress />
+
+                <div className="text-center mb-8 px-4">
+                    <h1 className="text-3xl font-bold text-foreground mb-3 leading-tight">
+                        {title}
+                    </h1>
+                    {subtitle && (
+                        <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                            {subtitle}
+                        </p>
+                    )}
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                    {children}
+                </div>
+
+                {currentStep !== totalSteps && (
+                    <div className="text-center mt-8">
+                        <button
+                            onClick={skipOnboarding}
+                            className="text-muted-foreground text-sm hover:text-foreground transition-colors px-4 py-2 rounded-lg hover:bg-gray-100/50"
+                        >
+                            Skip for now
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+export default OnboardingLayout

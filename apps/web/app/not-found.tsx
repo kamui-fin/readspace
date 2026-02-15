@@ -1,7 +1,7 @@
 import Link from "next/link"
 
 import { buttonVariants } from "@/components/ui/button"
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 export default function NotFound() {
     return (

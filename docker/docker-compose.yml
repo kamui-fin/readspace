@@ -16,6 +16,29 @@ services:
       retries: 5
       start_period: 5s
 
+  meilisearch:
+    image: getmeili/meilisearch:v1.16
+    container_name: readspace_meilisearch
+    restart: always
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilisearch-data:/meili_data
+    environment:
+      - MEILI_ENV=development
+      - MEILI_MASTER_KEY=${MEILISEARCH_MASTER_KEY}
+      - MEILI_HTTP_ADDR=0.0.0.0:7700
+      - MEILI_MASTER_KEY=readspace_master_key_change_in_production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
   web:
     build:
       context: ..
@@ -30,8 +53,11 @@ services:
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}
       - NEXT_PUBLIC_SUPABASE_URL=http://localhost:18000
       - NEXT_PUBLIC_API_BASE_URL=http://localhost:18008
+      - NEXT_PUBLIC_MEILISEARCH_URL=http://localhost:7700
+      - NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY=${MEILISEARCH_SEARCH_KEY}
     depends_on:
       - api
+      - meilisearch
 
   api:
     build:
@@ -40,6 +66,7 @@ services:
     container_name: readspace_api
     command: >
       sh -c "alembic upgrade head &&
+             python scripts/init_meilisearch.py &&
              uvicorn app.main:app --host 0.0.0.0 --port 8008"
     ports:
       - "18008:8008"
@@ -47,6 +74,8 @@ services:
       redis:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      meilisearch:
         condition: service_healthy
     volumes:
       - ../server:/app
@@ -62,6 +91,9 @@ services:
       - SUPABASE_URL=http://kong:8000
       - SUPABASE_DB_CONNECTION=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - MEILISEARCH_URL=http://meilisearch:7700
+      - MEILISEARCH_MASTER_KEY=${MEILISEARCH_MASTER_KEY}
+      - MEILISEARCH_INDEX_NAME=feeds
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
     logging:
@@ -95,17 +127,15 @@ services:
       context: ../server
       dockerfile: Dockerfile.taskiq
     container_name: readspace_worker
-    # Increased from 50 to 200 after optimizing DB connection usage
-    # With new I/O-separated pattern, connections are held <500ms vs 30s before
-    # This allows much higher concurrency with same connection pool (100 connections)
-    # Expected throughput: 1000+ feeds/minute = 60K+ feeds/hour per worker
-    command: taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-pattern "app/workers/*.py" --max-async-tasks=200
+    command: taskiq worker app.core.taskiq_app:broker app.workers.registry --max-async-tasks 200
     volumes:
       - ../server:/app
     depends_on:
       redis:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      meilisearch:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -118,6 +148,9 @@ services:
       - SUPABASE_JWT_SECRET=${JWT_SECRET}
       - SUPABASE_URL=http://kong:8000
       - SUPABASE_DB_CONNECTION=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
+      - MEILISEARCH_URL=http://meilisearch:7700
+      - MEILISEARCH_MASTER_KEY=${MEILISEARCH_MASTER_KEY}
+      - MEILISEARCH_INDEX_NAME=feeds
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
 
@@ -126,7 +159,7 @@ services:
       context: ../server
       dockerfile: Dockerfile.taskiq
     container_name: readspace_scheduler
-    command: taskiq scheduler app.core.taskiq_app:scheduler --fs-discover --tasks-pattern "app/workers/*.py"
+    command: taskiq scheduler app.core.taskiq_app:scheduler app.workers.registry 
     volumes:
       - ../server:/app
     depends_on:
@@ -148,36 +181,67 @@ services:
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
 
-  loki:
-    image: grafana/loki:3.5
-    command: -config.file=/etc/loki/loki-config.yaml
-    volumes:
-      - ./loki-config.yaml:/etc/loki/loki-config.yaml
-      # - ./loki-data:/loki
-    ports:
-      - "3100:3100"
+  # loki:
+  #   image: grafana/loki:3.5
+  #   command: -config.file=/etc/loki/loki-config.yaml
+  #   volumes:
+  #     - ./loki-config.yaml:/etc/loki/loki-config.yaml
+  #     # - ./loki-data:/loki
+  #   ports:
+  #     - "3100:3100"
 
-  alloy:
-    image: grafana/alloy:latest
-    command: ["run", "/etc/alloy/alloy.alloy"]
-    volumes:
-      - ./alloy.alloy:/etc/alloy/alloy.alloy
-      - /run/docker.sock:/var/run/docker.sock:ro
-    depends_on:
-      - loki
+  # alloy:
+  #   image: grafana/alloy:latest
+  #   command: ["run", "/etc/alloy/alloy.alloy"]
+  #   volumes:
+  #     - ./alloy.alloy:/etc/alloy/alloy.alloy
+  #     - /run/docker.sock:/var/run/docker.sock:ro
+  #   depends_on:
+  #     - loki
 
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    depends_on:
-      - loki
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: readspace_prometheus
+  #   command:
+  #     - "--config.file=/etc/prometheus/prometheus.yml"
+  #     - "--storage.tsdb.path=/prometheus"
+  #     - "--web.console.libraries=/etc/prometheus/console_libraries"
+  #     - "--web.console.templates=/etc/prometheus/consoles"
+  #     - "--web.enable-lifecycle"
+  #   volumes:
+  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  #     - prometheus-data:/prometheus
+  #   ports:
+  #     - "9090:9090" # Prometheus UI
+  #   networks:
+  #     - default
+  #   restart: unless-stopped
+
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: readspace_grafana
+  #   user: "472" # Grafana user ID
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin
+  #     - GF_PLUGINS_GRAFANA_PIECHART_PANEL=grafana-piechart-panel
+  #     - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+  #     - GF_SECURITY_ALLOW_EMBEDDING=true
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #     - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+  #   depends_on:
+  #     - loki
+  #     - prometheus
+  #   restart: unless-stopped
 
 volumes:
   redis-data:
   rabbitmq-data:
+  meilisearch-data:
+  prometheus-data:
+  grafana-data:
 
 networks:
   default:

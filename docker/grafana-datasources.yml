@@ -1,0 +1,13 @@
+# Grafana datasources configuration
+# Auto-provisions Prometheus and Loki as data sources
+
+apiVersion: 1
+
+datasources:
+  # Loki datasource for logs
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+    version: 1

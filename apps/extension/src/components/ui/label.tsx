@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { cn } from '@readspace/shared'
+import { cn } from '@/utils/cn'
 
 export type LabelProps = React.LabelHTMLAttributes<HTMLLabelElement>
 

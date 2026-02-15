@@ -6,7 +6,7 @@ authors = [
     {name = "Kamui",email = "fin-kamui@pm.me"}
 ]
 readme = "README.md"
-requires-python = ">=3.10,<=3.13.9"
+requires-python = ">=3.10,<4.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -27,15 +27,15 @@ packages = [
 [tool.poe.tasks]
 start = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8008"
 test = "pytest tests/"
-test-unit = "pytest tests/unit/ -m unit"
+test-unit = "pytest tests/unit/"
 test-integration = "pytest -c pytest.integration.ini"
 # Coverage commands
 test-coverage = "pytest tests/ --cov=app --cov-report=html:htmlcov --cov-report=term-missing"
-test-coverage-unit = "pytest tests/unit/ -m unit --cov=app --cov-report=html:htmlcov/unit --cov-report=term-missing"
-test-coverage-integration = "pytest tests/integration/ -m integration --cov=app --cov-report=html:htmlcov/integration --cov-report=term-missing"
+test-coverage-unit = "pytest tests/unit/ --cov=app --cov-report=html:htmlcov/unit --cov-report=term-missing"
+test-coverage-integration = "pytest tests/integration/ --cov=app --cov-report=html:htmlcov/integration --cov-report=term-missing"
 # Taskiq commands
-worker = "taskiq worker app.core.taskiq_startup:broker"
-scheduler = "taskiq scheduler app.core.taskiq_startup:scheduler"
+worker = "taskiq worker app.core.taskiq_app:broker app.workers.registry"
+scheduler = "taskiq scheduler app.core.taskiq_app:scheduler app.workers.registry"
 # Other commands
 type-check = "mypy app/"
 lint = "ruff check app --fix"
@@ -52,7 +52,7 @@ pydantic-settings = "^2.8.1"
 python-dotenv = "^1.0.1"
 python-jose = "^3.3.0"
 requests = "^2.31.0"
-httpx = "^0.28.1"
+aiohttp = "^3.10.0"
 iso639-lang = "^2.3.1"
 ebooklib = "^0.18"
 supabase = "^2.15.0"
@@ -63,7 +63,6 @@ sqlalchemy = {extras = ["asyncio"], version = "^2.0.28"}
 alembic = "^1.13.1"
 opml = "^0.5"
 feedparser = "^6.0.11"
-taskiq = {extras = ["reload"], version = "^0.11.20"}
 taskiq-redis = "^1.0.2"
 pytest = "^8.3.5"
 pytest-cov = "^6.1.1"
@@ -76,12 +75,24 @@ openai = "^1.106.1"
 extract-favicon = "^0.5.3"
 lingua-language-detector = "^2.1.1"
 pgvector = "^0.4.1"
+tranco = "^0.7.0"
 google-genai = "^1.35.0"
 trafilatura = "^1.12.2"
 defusedxml = "^0.7.1"
 brotli = "^1.1.0"
 taskiq-aio-pika = "^0.4.4"
 python-json-logger = "^4.0.0"
+prometheus-fastapi-instrumentator = "^7.1.0"
+taskiq = {extras = ["metrics", "reload"], version = "^0.11.20"}
+meilisearch-python-sdk = "^5.4.0"
+python-dateutil = "^2.9.0.post0"
+nh3 = "^0.3.2"
+cryptography = "^46.0.3"
+sqlmodel = "^0.0.27"
+listparser = {extras = ["lxml"], version = "^0.20"}
+langcodes = "^3.5.0"
+url-normalize = "^2.2.1"
+google-cloud-storage = "^3.9.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"
@@ -97,6 +108,9 @@ types-python-jose = "^3.5.0.20250531"
 pytest-mock = "^3.15.1"
 pylint = "^4.0.2"
 pytest-asyncio = "^1.2.0"
+vulture = "^2.14"
+pyflakes = "^3.4.0"
+httpx = "^0.28.1"
 
 [tool.ruff]
 target-version = "py310"
@@ -124,6 +138,10 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*" = ["S101", "S106", "S113"]  # Allow assert, hardcoded secrets in tests
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
 
 [tool.mypy]
 python_version = "3.10"

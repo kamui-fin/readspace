@@ -15,7 +15,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 export interface OnboardingStep {
     title: string

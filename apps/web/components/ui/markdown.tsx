@@ -1,110 +1,70 @@
-import { cn } from "@readspace/shared"
-import { marked } from "marked"
-import { memo, useId, useMemo } from "react"
-import ReactMarkdown, { Components } from "react-markdown"
-import remarkBreaks from "remark-breaks"
+"use client"
+
+import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { CodeBlock, CodeBlockCode } from "./code-block"
+import remarkBreaks from "remark-breaks"
+import { cn } from "@/lib/utils"
 
-export type MarkdownProps = {
-    children: string
-    id?: string
+interface MarkdownProps {
+    content: string
     className?: string
-    components?: Partial<Components>
 }
 
-function parseMarkdownIntoBlocks(markdown: string): string[] {
-    const tokens = marked.lexer(markdown)
-    return tokens.map((token) => token.raw)
-}
-
-function extractLanguage(className?: string): string {
-    if (!className) return "plaintext"
-    const match = className.match(/language-(\w+)/)
-    return match ? (match[1] ?? "plaintext") : "plaintext"
-}
-
-const INITIAL_COMPONENTS: Partial<Components> = {
-    code: function CodeComponent({ className, children, ...props }) {
-        const isInline =
-            !props.node?.position?.start.line ||
-            props.node?.position?.start.line === props.node?.position?.end.line
-
-        if (isInline) {
-            return (
-                <span
-                    className={cn(
-                        "bg-primary-foreground rounded-sm px-1 font-mono text-sm",
-                        className
-                    )}
-                    {...props}
-                >
-                    {children}
-                </span>
-            )
-        }
-
-        const language = extractLanguage(className)
-
-        return (
-            <CodeBlock className={className}>
-                <CodeBlockCode code={children as string} language={language} />
-            </CodeBlock>
-        )
-    },
-    pre: function PreComponent({ children }) {
-        return <>{children}</>
-    },
-}
-
-const MemoizedMarkdownBlock = memo(
-    function MarkdownBlock({
-        content,
-        components = INITIAL_COMPONENTS,
-    }: {
-        content: string
-        components?: Partial<Components>
-    }) {
-        return (
+export function Markdown({ content, className }: MarkdownProps) {
+    return (
+        <div
+            className={cn(
+                "prose prose-sm dark:prose-invert max-w-none text-foreground",
+                className
+            )}
+        >
             <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkBreaks]}
-                components={components}
+                components={{
+                    // Container wrapper with styling
+                    div: ({ children }) => (
+                        <div className="whitespace-pre-wrap leading-relaxed">
+                            {children}
+                        </div>
+                    ),
+                    // Customize rendering to match design system
+                    p: ({ children }) => (
+                        <p className="mb-2 last:mb-0 !text-sm">{children}</p>
+                    ),
+                    strong: ({ children }) => (
+                        <strong className="font-semibold text-foreground">
+                            {children}
+                        </strong>
+                    ),
+                    ul: ({ children }) => (
+                        <ul className="list-disc list-inside space-y-1 my-2">
+                            {children}
+                        </ul>
+                    ),
+                    ol: ({ children }) => (
+                        <ol className="list-decimal list-inside space-y-1 my-2">
+                            {children}
+                        </ol>
+                    ),
+                    li: ({ children }) => (
+                        <li className="text-sm">{children}</li>
+                    ),
+                    code: ({ children }) => {
+                        // Remove backticks from inline code content
+                        const cleanChildren =
+                            typeof children === "string"
+                                ? children.replace(/^`+|`+$/g, "")
+                                : children
+                        return (
+                            <code className="bg-muted/50 px-1 py-0.5 rounded text-xs">
+                                {cleanChildren}
+                            </code>
+                        )
+                    },
+                }}
             >
                 {content}
             </ReactMarkdown>
-        )
-    },
-    function propsAreEqual(prevProps, nextProps) {
-        return prevProps.content === nextProps.content
-    }
-)
-
-MemoizedMarkdownBlock.displayName = "MemoizedMarkdownBlock"
-
-function MarkdownComponent({
-    children,
-    id,
-    className,
-    components = INITIAL_COMPONENTS,
-}: MarkdownProps) {
-    const generatedId = useId()
-    const blockId = id ?? generatedId
-    const blocks = useMemo(() => parseMarkdownIntoBlocks(children), [children])
-
-    return (
-        <div className={className}>
-            {blocks.map((block, index) => (
-                <MemoizedMarkdownBlock
-                    key={`${blockId}-block-${index}`}
-                    content={block}
-                    components={components}
-                />
-            ))}
         </div>
     )
 }
-
-const Markdown = memo(MarkdownComponent)
-Markdown.displayName = "Markdown"
-
-export { Markdown }

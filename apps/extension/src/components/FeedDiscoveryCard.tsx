@@ -1,11 +1,10 @@
 import { Button } from '@/components/ui/button'
-import type { DiscoveredFeed } from '@readspace/shared'
-import { areUrlsEqual } from '@readspace/shared'
+import { areUrlsEqual, DiscoveredFeed, Subscription } from '@readspace/shared'
+import { useCreateFeed, useDeleteFeed } from '@/hooks/use-feeds'
 import { Rss, Trash2 } from 'lucide-react'
-import { useState, useMemo } from 'react'
-import { FeedSubscriptionModal } from './FeedSubscriptionModal'
-import { useExtensionStore } from '@/store'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
+import { FeedSubscriptionModal } from './FeedSubscriptionModal'
 
 interface FeedDiscoveryCardProps {
   feeds?: DiscoveredFeed[]
@@ -36,82 +35,124 @@ function FeedDiscoveryCardSkeleton() {
   )
 }
 
+import browser from 'webextension-polyfill'
+import { sendMessage } from '@/shared/messaging'
+import { ExtensionMessage } from '@/shared/types'
+
+// ... imports
+
 export function FeedDiscoveryCard({
   feeds,
   isLoading = false,
 }: FeedDiscoveryCardProps) {
-  // Initialize all hooks first (before any conditional returns)
+  // Initialize hooks
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isUnfollowing, setIsUnfollowing] = useState(false)
-  const [isFollowingFromModal, setIsFollowingFromModal] = useState(false)
-  const userFeeds = useExtensionStore((state) => state.feeds)
-  const { unsubscribeFromFeed } = useExtensionStore()
-  const pendingFollowUrls = useExtensionStore((state) => state.pendingFollowUrls)
-  const cancelFollow = useExtensionStore((state) => state.cancelFollow)
+  const [optimisticFollow, setOptimisticFollow] = useState<boolean | null>(null)
+  const [optimisticFeedId, setOptimisticFeedId] = useState<string | null>(null)
+  const [optimisticFeedUrl, setOptimisticFeedUrl] = useState<string | null>(
+    null
+  )
 
-  // Compute following state using useMemo for immediate, accurate state
-  // Check ALL discovered feeds against user's subscriptions with normalized URL comparison
-  const { isFollowing, followedFeedId, isPendingFollow } = useMemo(() => {
-    // Default state when no feeds available
-    if (!feeds || feeds.length === 0) {
-      return {
-        isFollowing: false,
-        followedFeedId: null,
-        isPendingFollow: false,
+  const createFeedMutation = useCreateFeed()
+  const deleteFeedMutation = useDeleteFeed()
+
+  // Check initial status from cache
+  useEffect(() => {
+    if (!feeds || feeds.length === 0) return
+
+    let mounted = true
+
+    const checkStatus = async () => {
+      for (const feed of feeds) {
+        try {
+          const status = await sendMessage({
+            type: 'checkFeedFollowed',
+            payload: { url: feed.url },
+          })
+          if (!mounted) return
+
+          if (status.followed) {
+            setOptimisticFollow(true)
+            if (status.followId) {
+              setOptimisticFeedId(status.followId)
+            }
+            setOptimisticFeedUrl(feed.url)
+            return // Found one, stop checking
+          }
+        } catch (error) {
+          console.error('Error checking feed status:', error)
+        }
       }
     }
 
-    // Check if any discovered feed is already in user's subscriptions
-    // Use normalized URL comparison to catch variations (http/https, www, trailing slash, etc.)
-    const followedFeed = userFeeds.find((userFeed) =>
-      feeds.some((discoveredFeed) =>
-        areUrlsEqual(userFeed.url, discoveredFeed.url)
-      )
-    )
+    checkStatus()
 
-    // Check if any discovered feed has a pending follow request
-    const hasPendingFollow = feeds.some((feed) => pendingFollowUrls.has(feed.url))
-
-    return {
-      isFollowing: !!followedFeed,
-      followedFeedId: followedFeed?.id || null,
-      isPendingFollow: hasPendingFollow,
+    return () => {
+      mounted = false
     }
-  }, [feeds, userFeeds, pendingFollowUrls])
+  }, [feeds])
+
+  // Listener for optimistic updates
+  useEffect(() => {
+    const listener = (msg: unknown) => {
+      const message = msg as ExtensionMessage
+      if (message.type === 'follow-changed') {
+        // Check if any feed matches
+        const match = feeds?.some((f) =>
+          areUrlsEqual(f.url, message.payload.url)
+        )
+        if (match) {
+          setOptimisticFollow(message.payload.followed)
+          if (message.payload.id) {
+            setOptimisticFeedId(message.payload.id)
+          }
+        }
+      }
+    }
+    browser.runtime.onMessage.addListener(listener)
+    return () => browser.runtime.onMessage.removeListener(listener)
+  }, [feeds])
+
+  const isFollowing = optimisticFollow !== null ? optimisticFollow : false
 
   // Show skeleton while loading (after all hooks are initialized)
   if (isLoading || !feeds || feeds.length === 0) {
     return <FeedDiscoveryCardSkeleton />
   }
 
-  const primaryFeed = feeds[0]
-
   const handleFollowClick = async () => {
     if (isFollowing) {
-      // Check if follow is still pending
-      if (isPendingFollow && primaryFeed) {
-        // Cancel the pending follow
-        cancelFollow(primaryFeed.url)
-        toast.success('Unfollowed')
-        return
-      }
-
       // Unfollow
-      if (followedFeedId) {
-        setIsUnfollowing(true)
+      const idToDelete = optimisticFeedId
+      const urlToDelete = optimisticFeedUrl || feeds[0].url
+
+      if (idToDelete) {
         try {
-          await unsubscribeFromFeed(followedFeedId)
+          // Pass URL for optimistic update in background
+          // We use followedFeedUrl or the first feed url if we matched?
+          // If we are following, followedFeedUrl should be set.
+          // If optimisticFollow is true but we don't have ID yet, we can't delete by ID.
+          // We need to handle that case.
+          await deleteFeedMutation.mutateAsync({
+            feedId: idToDelete,
+            url: urlToDelete,
+          })
           toast.success('Unfollowed')
-          // State will update automatically via useMemo when userFeeds changes
+          setOptimisticFollow(false)
+          setOptimisticFeedId(null)
+          setOptimisticFeedUrl(null)
         } catch (error) {
           console.error('Failed to unfollow:', error)
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error'
           toast.error(`Failed to unfollow: ${errorMessage}`)
-        } finally {
-          setIsUnfollowing(false)
         }
       } else {
+        // If we are optimistically following but don't have ID yet
+        if (optimisticFollow) {
+          toast.error('Please wait for subscription to complete...')
+          return
+        }
         console.error('Cannot unfollow: followedFeedId is null')
         toast.error('Unable to unfollow - feed ID not found')
       }
@@ -126,24 +167,29 @@ export function FeedDiscoveryCard({
 
   const handleSubscribeStart = () => {
     // Called when user clicks Subscribe in modal
-    setIsFollowingFromModal(true)
+    setOptimisticFollow(true)
   }
 
-  const handleSuccess = () => {
+  const handleSuccess = (subscription?: Subscription) => {
     // No need to manually set isFollowing - it will be computed from userFeeds
-    // which gets updated when loadUserData is called after subscription
-    setIsFollowingFromModal(false)
+    // But we capture the ID for immediate unfollow capability
+    if (subscription) {
+      setOptimisticFeedId(subscription.feed.id)
+      setOptimisticFeedUrl(subscription.feed.url)
+    }
   }
 
   const handleError = () => {
-    // Reset loading state on error
-    setIsFollowingFromModal(false)
+    // Error handling - revert optimistic state
+    setOptimisticFollow(false)
   }
 
   const displayDescription =
     feeds.length > 1
       ? `${feeds.length} feeds available`
       : 'Add to your Readspace feed'
+
+  const isPending = createFeedMutation.isPending || deleteFeedMutation.isPending
 
   return (
     <>
@@ -166,35 +212,33 @@ export function FeedDiscoveryCard({
           <div className="flex items-center flex-shrink-0">
             <Button
               onClick={handleFollowClick}
-              disabled={isUnfollowing || isPendingFollow || isFollowingFromModal}
+              disabled={isPending}
               size="sm"
               variant={
-                isFollowing && !isUnfollowing && !isPendingFollow && !isFollowingFromModal
+                isFollowing && !isPending
                   ? 'outline'
-                  : isFollowingFromModal || isPendingFollow || isUnfollowing
+                  : isPending
                     ? 'ghost'
                     : 'default'
               }
-              className={`flex-shrink-0 min-w-[100px] ${isFollowing && !isUnfollowing && !isPendingFollow && !isFollowingFromModal
+              className={`flex-shrink-0 min-w-[100px] ${
+                isFollowing && !isPending
                   ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
-                  : isFollowingFromModal || isPendingFollow
+                  : isPending
                     ? 'bg-orange-500/90 text-white hover:bg-orange-500/90'
-                    : isUnfollowing
-                      ? 'bg-destructive/90 text-destructive-foreground hover:bg-destructive/90'
-                      : !isFollowing
-                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                        : ''
-                }`}
+                    : !isFollowing
+                      ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                      : ''
+              }`}
             >
-              {isPendingFollow || isFollowingFromModal ? (
+              {isPending ? (
                 <div className="flex items-center justify-center overflow-hidden">
                   <div className="w-2.5 h-2.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5 flex-shrink-0" />
-                  <span className="truncate">Following...</span>
-                </div>
-              ) : isUnfollowing ? (
-                <div className="flex items-center justify-center overflow-hidden">
-                  <div className="w-2.5 h-2.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5 flex-shrink-0" />
-                  <span className="truncate">Unfollowing...</span>
+                  <span className="truncate">
+                    {createFeedMutation.isPending
+                      ? 'Following...'
+                      : 'Unfollowing...'}
+                  </span>
                 </div>
               ) : isFollowing ? (
                 <div className="flex items-center justify-center overflow-hidden">

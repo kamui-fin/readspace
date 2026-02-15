@@ -10,21 +10,17 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import (
-    ArticleContent,
-    Feed,
-    FeedArticle,
-    FeedSubscription,
-    Profile,
-    UserArticleState,
-)
+from app.models.article import ArticleContent, FeedArticle, UserEntry
+from app.models.feed import Feed, FeedSubscription
+from app.models.user import Profile
+from app.utils.hashing import get_content_hash
 
 
 @pytest_asyncio.fixture
 async def test_article(db_session: AsyncSession, test_feed: Feed, test_user: Profile):
     """Create a test article."""
     # Create a folder first
-    from app.models import Folder
+    from app.models.folder import Folder
 
     folder = Folder(
         id=uuid4(),
@@ -35,17 +31,20 @@ async def test_article(db_session: AsyncSession, test_feed: Feed, test_user: Pro
     await db_session.flush()
 
     # Create subscription with folder
-    subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=folder.id)
+    subscription = FeedSubscription(
+        user_id=test_user.id, feed_id=test_feed.id, folder_id=folder.id
+    )
     db_session.add(subscription)
     await db_session.flush()
 
     # Create article content
+    link = "https://example.com/article1"
     content = ArticleContent(
         title="Test Article",
-        link="https://example.com/article1",
+        link=link,
+        content_hash=get_content_hash(link),
         description="Test article description",
         content="Full article content here",
-        published_at=datetime.now(UTC),
     )
     db_session.add(content)
     await db_session.flush()
@@ -54,18 +53,19 @@ async def test_article(db_session: AsyncSession, test_feed: Feed, test_user: Pro
     article = FeedArticle(
         feed_id=test_feed.id,
         content_id=content.id,
-        guid="test-guid-1",
+        guid_hash="test-guid-1",
+        published_at=datetime.now(UTC),
     )
     db_session.add(article)
     await db_session.flush()
 
     # Create user article state
-    state = UserArticleState(
+    state = UserEntry(
         user_id=test_user.id,
-        article_id=article.id,
+        content_id=content.id,
+        feed_article_id=article.id,
         is_read=False,
-        is_read_later=False,
-        is_favorite=False,
+        is_saved=False,
     )
     db_session.add(state)
     await db_session.flush()
@@ -88,7 +88,7 @@ class TestSaveWebArticle:
         assert response.status_code in [201, 400, 500]
         if response.status_code == 201:
             data = response.json()
-            assert "id" in data
+            assert "article_id" in data
 
     @pytest.mark.asyncio
     async def test_save_article_with_metadata(self, async_client: AsyncClient):
@@ -130,7 +130,9 @@ class TestListArticles:
         assert data["next_cursor"] is None
 
     @pytest.mark.asyncio
-    async def test_list_articles_with_data(self, async_client: AsyncClient, test_article: FeedArticle):
+    async def test_list_articles_with_data(
+        self, async_client: AsyncClient, test_article: FeedArticle
+    ):
         """Test listing articles returns user's articles."""
         response = await async_client.get("/api/articles/")
 
@@ -141,7 +143,9 @@ class TestListArticles:
         assert "next_cursor" in data
 
     @pytest.mark.asyncio
-    async def test_list_articles_filter_by_feed(self, async_client: AsyncClient, test_feed: Feed):
+    async def test_list_articles_filter_by_feed(
+        self, async_client: AsyncClient, test_feed: Feed
+    ):
         """Test filtering articles by feed."""
         response = await async_client.get(f"/api/articles/?feed_ids={test_feed.id}")
 
@@ -172,12 +176,12 @@ class TestListArticles:
     @pytest.mark.asyncio
     async def test_list_articles_filter_by_read_later(self, async_client: AsyncClient):
         """Test filtering articles by read later status."""
-        response = await async_client.get("/api/articles/?is_read_later=true")
+        response = await async_client.get("/api/articles/?is_saved=true")
 
         assert response.status_code == 200
         data = response.json()
         for item in data["items"]:
-            assert item["is_read_later"] is True
+            assert item["is_saved"] is True
 
     @pytest.mark.asyncio
     async def test_list_articles_search(self, async_client: AsyncClient):
@@ -191,7 +195,9 @@ class TestListArticles:
     @pytest.mark.asyncio
     async def test_list_articles_sort_by_published(self, async_client: AsyncClient):
         """Test sorting articles by published date."""
-        response = await async_client.get("/api/articles/?sort_by=published_at&sort_order=desc")
+        response = await async_client.get(
+            "/api/articles/?sort_by=published_at&sort_order=desc"
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -233,11 +239,15 @@ class TestListArticles:
 
     @pytest.mark.asyncio
     async def test_articles_sorted_by_published_date(
-        self, async_client: AsyncClient, db_session: AsyncSession, test_feed: Feed, test_user: Profile
+        self,
+        async_client: AsyncClient,
+        db_session: AsyncSession,
+        test_feed: Feed,
+        test_user: Profile,
     ):
         """Test that articles are returned in sorted order by published date (newest first)."""
         # Create a folder first
-        from app.models import Folder
+        from app.models.folder import Folder
 
         folder = Folder(
             id=uuid4(),
@@ -248,7 +258,9 @@ class TestListArticles:
         await db_session.flush()
 
         # Create subscription with folder
-        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=folder.id)
+        subscription = FeedSubscription(
+            user_id=test_user.id, feed_id=test_feed.id, folder_id=folder.id
+        )
         db_session.add(subscription)
         await db_session.flush()
 
@@ -264,7 +276,9 @@ class TestListArticles:
             # Random number of minutes (0-59)
             minutes_ago = random.randint(0, 59)
 
-            published_date = base_date - timedelta(days=days_ago, hours=hours_ago, minutes=minutes_ago)
+            published_date = base_date - timedelta(
+                days=days_ago, hours=hours_ago, minutes=minutes_ago
+            )
             published_dates.append(published_date)
 
         # Shuffle the dates to ensure they're in random order when created
@@ -274,12 +288,13 @@ class TestListArticles:
         created_articles = []
         for i, published_date in enumerate(published_dates):
             # Create article content
+            link = f"https://example.com/article{i + 1}"
             content = ArticleContent(
                 title=f"Test Article {i + 1}",
-                link=f"https://example.com/article{i + 1}",
+                link=link,
+                content_hash=get_content_hash(link),
                 description=f"Test article {i + 1} description",
                 content=f"Full article {i + 1} content here",
-                published_at=published_date,
             )
             db_session.add(content)
             await db_session.flush()
@@ -288,18 +303,19 @@ class TestListArticles:
             article = FeedArticle(
                 feed_id=test_feed.id,
                 content_id=content.id,
-                guid=f"test-guid-{i + 1}",
+                guid_hash=f"test-guid-{i + 1}",
+                published_at=published_date,
             )
             db_session.add(article)
             await db_session.flush()
 
             # Create user article state
-            state = UserArticleState(
+            state = UserEntry(
                 user_id=test_user.id,
-                article_id=article.id,
+                content_id=content.id,
+                feed_article_id=article.id,
                 is_read=False,
-                is_read_later=False,
-                is_favorite=False,
+                is_saved=False,
             )
             db_session.add(state)
             created_articles.append((article, content, published_date))
@@ -326,8 +342,12 @@ class TestListArticles:
 
         # Verify articles are sorted by published_at in descending order (newest first)
         for i in range(len(our_articles) - 1):
-            current_published = datetime.fromisoformat(our_articles[i]["published_at"].replace("Z", "+00:00"))
-            next_published = datetime.fromisoformat(our_articles[i + 1]["published_at"].replace("Z", "+00:00"))
+            current_published = datetime.fromisoformat(
+                our_articles[i]["published_at"].replace("Z", "+00:00")
+            )
+            next_published = datetime.fromisoformat(
+                our_articles[i + 1]["published_at"].replace("Z", "+00:00")
+            )
 
             # Current article should be published after (newer than) the next article
             assert current_published >= next_published, (
@@ -339,23 +359,28 @@ class TestListArticles:
         # Additional verification: check that the sorted order matches expected descending order
         expected_sorted_dates = sorted(published_dates, reverse=True)
         actual_dates = [
-            datetime.fromisoformat(article["published_at"].replace("Z", "+00:00")) for article in our_articles
+            datetime.fromisoformat(article["published_at"].replace("Z", "+00:00"))
+            for article in our_articles
         ]
 
         # Convert to comparable format (remove microseconds for comparison)
-        expected_dates_normalized = [d.replace(microsecond=0) for d in expected_sorted_dates]
+        expected_dates_normalized = [
+            d.replace(microsecond=0) for d in expected_sorted_dates
+        ]
         actual_dates_normalized = [d.replace(microsecond=0) for d in actual_dates]
 
-        assert actual_dates_normalized == expected_dates_normalized, (
-            "Articles are not returned in the expected sorted order by published date"
-        )
+        assert (
+            actual_dates_normalized == expected_dates_normalized
+        ), "Articles are not returned in the expected sorted order by published date"
 
 
 class TestGetArticle:
     """Test get single article endpoint."""
 
     @pytest.mark.asyncio
-    async def test_get_article_success(self, async_client: AsyncClient, test_article: FeedArticle):
+    async def test_get_article_success(
+        self, async_client: AsyncClient, test_article: FeedArticle
+    ):
         """Test getting an article by ID."""
         response = await async_client.get(f"/api/articles/{test_article.id}")
 
@@ -384,7 +409,11 @@ class TestUpdateArticle:
 
     @pytest.mark.asyncio
     async def test_update_article_mark_as_read(
-        self, async_client: AsyncClient, test_article: FeedArticle, db_session: AsyncSession, test_user: Profile
+        self,
+        async_client: AsyncClient,
+        test_article: FeedArticle,
+        db_session: AsyncSession,
+        test_user: Profile,
     ):
         """Test marking article as read."""
         response = await async_client.put(
@@ -392,48 +421,34 @@ class TestUpdateArticle:
             json={"is_read": True},
         )
 
-        assert response.status_code == 200
-        data = response.json()
-        assert data["is_read"] is True
-        assert data["read_at"] is not None
+        assert response.status_code == 204
 
         # Verify in database
+        await db_session.commit()  # Ensure changes are committed
         result = await db_session.execute(
-            select(UserArticleState).where(
-                UserArticleState.article_id == test_article.id,
-                UserArticleState.user_id == test_user.id,
+            select(UserEntry).where(
+                UserEntry.feed_article_id == test_article.id,
+                UserEntry.user_id == test_user.id,
             )
         )
-        state = result.scalar_one()
+        state = result.scalar_one_or_none()
+        assert state is not None, "UserEntry should be created"
         assert state.is_read is True
 
     @pytest.mark.asyncio
-    async def test_update_article_mark_as_favorite(
-        self, async_client: AsyncClient, test_article: FeedArticle, db_session: AsyncSession, test_user: Profile
-    ):
-        """Test marking article as favorite."""
-        response = await async_client.put(
-            f"/api/articles/{test_article.id}?article_type=feed",
-            json={"is_favorite": True},
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["is_favorite"] is True
-
-    @pytest.mark.asyncio
     async def test_update_article_read_later(
-        self, async_client: AsyncClient, test_article: FeedArticle, db_session: AsyncSession
+        self,
+        async_client: AsyncClient,
+        test_article: FeedArticle,
+        db_session: AsyncSession,
     ):
         """Test marking article for read later."""
         response = await async_client.put(
             f"/api/articles/{test_article.id}?article_type=feed",
-            json={"is_read_later": True},
+            json={"is_saved": True},
         )
 
-        assert response.status_code == 200
-        data = response.json()
-        assert data["is_read_later"] is True
+        assert response.status_code == 204
 
     @pytest.mark.asyncio
     async def test_update_article_not_found(self, async_client: AsyncClient):
@@ -453,7 +468,7 @@ class TestTodaysArticles:
     @pytest.mark.asyncio
     async def test_get_todays_articles(self, async_client: AsyncClient):
         """Test getting today's articles."""
-        response = await async_client.get("/api/articles/today")
+        response = await async_client.get("/api/articles/views/today")
 
         assert response.status_code == 200
         data = response.json()
@@ -465,7 +480,7 @@ class TestTodaysArticles:
     @pytest.mark.asyncio
     async def test_get_todays_articles_pagination(self, async_client: AsyncClient):
         """Test pagination for today's articles."""
-        response = await async_client.get("/api/articles/today?limit=10")
+        response = await async_client.get("/api/articles/views/today?limit=10")
 
         assert response.status_code == 200
         data = response.json()
@@ -480,7 +495,7 @@ class TestRecentlyReadArticles:
     @pytest.mark.asyncio
     async def test_get_recently_read_articles(self, async_client: AsyncClient):
         """Test getting recently read articles."""
-        response = await async_client.get("/api/articles/recently-read")
+        response = await async_client.get("/api/articles/views/recently-read")
 
         assert response.status_code == 200
         data = response.json()
@@ -490,7 +505,7 @@ class TestRecentlyReadArticles:
     @pytest.mark.asyncio
     async def test_get_recently_read_pagination(self, async_client: AsyncClient):
         """Test pagination for recently read articles."""
-        response = await async_client.get("/api/articles/recently-read?limit=20")
+        response = await async_client.get("/api/articles/views/recently-read?limit=20")
 
         assert response.status_code == 200
         data = response.json()
@@ -505,7 +520,7 @@ class TestReadLaterArticles:
     @pytest.mark.asyncio
     async def test_get_read_later_articles(self, async_client: AsyncClient):
         """Test getting read later articles."""
-        response = await async_client.get("/api/articles/read-later")
+        response = await async_client.get("/api/articles/views/read-later")
 
         assert response.status_code == 200
         data = response.json()
@@ -515,7 +530,7 @@ class TestReadLaterArticles:
     @pytest.mark.asyncio
     async def test_get_read_later_pagination(self, async_client: AsyncClient):
         """Test pagination for read later articles."""
-        response = await async_client.get("/api/articles/read-later?limit=50")
+        response = await async_client.get("/api/articles/views/read-later?limit=50")
 
         assert response.status_code == 200
         data = response.json()
@@ -530,21 +545,16 @@ class TestUnreadCounts:
     @pytest.mark.asyncio
     async def test_get_unread_counts_global(self, async_client: AsyncClient):
         """Test getting global unread counts."""
-        response = await async_client.get("/api/articles/unread-counts")
+        response = await async_client.get("/api/articles/counts")
 
         assert response.status_code == 200
         data = response.json()
-        assert "total_unread" in data
-        assert isinstance(data["total_unread"], int)
-
-    @pytest.mark.asyncio
-    async def test_get_unread_counts_by_folder(self, async_client: AsyncClient, test_folder):
-        """Test getting unread counts for specific folder."""
-        response = await async_client.get(f"/api/articles/unread-counts?folder_id={test_folder.id}")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert "unread_count" in data
+        assert "feed_counts" in data
+        assert "read_later" in data
+        assert "today" in data
+        assert isinstance(data["feed_counts"], dict)
+        assert isinstance(data["read_later"], int)
+        assert isinstance(data["today"], int)
 
 
 class TestCheckArticleSaved:
@@ -553,7 +563,9 @@ class TestCheckArticleSaved:
     @pytest.mark.asyncio
     async def test_check_article_saved_not_found(self, async_client: AsyncClient):
         """Test checking if article is saved when it's not."""
-        response = await async_client.get("/api/articles/check-saved?url=https://example.com/not-saved")
+        response = await async_client.get(
+            "/api/articles/check-saved?url=https://example.com/not-saved"
+        )
 
         assert response.status_code == 200
         # Should return None or empty response

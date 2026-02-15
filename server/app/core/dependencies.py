@@ -1,18 +1,19 @@
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, Request
+import structlog
+from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
+from app.crud.profile import get_profile_by_id
 from app.db.session import get_db
-from app.schemas.auth import TokenData
+from app.models.enums import UserRole
+from app.models.user import Profile
 from app.services.user.auth import get_current_user
+from app.typing.user import TokenData
 
-if TYPE_CHECKING:
-    from app.core.redis_cache import RedisCache
-    from app.services.subscription import SubscriptionService
-    from app.services.user.user import UserService
+logger = structlog.get_logger(__name__)
 
 SettingsType = Annotated[Settings, Depends(get_settings)]
 CurrentUser = Annotated[TokenData, Depends(get_current_user)]
@@ -35,27 +36,21 @@ async def get_request_id(request: Request) -> str:
     return str(request.state.request_id)
 
 
-async def get_subscription_service(
-    db: DatabaseSession,
-    current_user: CurrentUser,
-) -> "SubscriptionService":
-    """Get SubscriptionService instance with dependency injection."""
-    from app.services.subscription import SubscriptionService
+async def get_current_admin(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    token_data: Annotated[TokenData, Depends(get_current_user)],
+) -> Profile:
+    """
+    Dependency that validates the user exists and has the ADMIN role.
+    Returns the user Profile object if successful.
+    """
+    user_id = UUID(token_data.sub)
+    profile = await get_profile_by_id(db, user_id=user_id)
 
-    return SubscriptionService(db=db, user_id=UUID(current_user.sub))
-
-
-async def get_user_service(
-    db: DatabaseSession,
-) -> "UserService":
-    """Get UserService instance with dependency injection."""
-    from app.services.user.user import UserService
-
-    return UserService(db=db)
-
-
-def get_redis_cache_dependency() -> "RedisCache":
-    """Get singleton RedisCache instance for dependency injection."""
-    from app.core.redis_cache import get_redis_cache
-
-    return get_redis_cache()
+    if not profile or profile.role != UserRole.ADMIN:
+        logger.warning("Unauthorized admin access attempt", user_id=token_data.sub)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return profile

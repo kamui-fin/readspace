@@ -1,12 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Figtree&display=swap');
 
-/* Import local design tokens */
-@import './lib/design-tokens/globals.css';
+@import 'tailwindcss';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Import local design tokens */
+@import '@readspace/design-tokens/theme.css';
 
 /* Ensure consistent popup width across browsers */
 body {

@@ -87,7 +87,7 @@ The extension communicates exclusively with:
 - **activeTab:** Access current tab information (URL, title, favicon) when saving articles
 - **storage:** Store authentication tokens and extension settings locally
 - **notifications:** Display save confirmations and error messages
-- **host_permissions (http://_/_, https://_/_):** Access any website to extract content when you explicitly save an article or subscribe to a feed
+- **host*permissions (http://*/_, https://_/\_):** Access any website to extract content when you explicitly save an article or subscribe to a feed
 
 ### Permission Usage
 

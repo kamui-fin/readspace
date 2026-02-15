@@ -25,7 +25,7 @@ import * as PortalPrimitive from "@radix-ui/react-portal"
 import { Primitive } from "@radix-ui/react-primitive"
 import * as React from "react"
 
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 const SortableImplContext = React.createContext<
     Pick<SortableProps, "getNewIndex"> &

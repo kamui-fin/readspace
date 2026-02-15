@@ -1,6 +1,6 @@
-import { browser } from '@/lib/browser'
+import { sendMessage } from '@/shared/messaging'
 import { useExtensionStore } from '@/store'
-import { useIsCloudProd } from '@/hooks/useIsCloudProd'
+import { useIsCloudProd } from '@/hooks/use-is-cloud-prod'
 import { Loader2 } from 'lucide-react'
 import React, { useState } from 'react'
 import toast from 'react-hot-toast'
@@ -34,18 +34,24 @@ export function LoginForm({ onShowSelfHosted }: LoginFormProps = {}) {
 
     try {
       // Send message to background script to handle login
-      const response = (await browser.runtime.sendMessage({
-        action: 'emailPasswordLogin',
-        email: email.trim(),
-        password: password.trim(),
-      })) as { success: boolean; error?: string; access_token?: string }
+      const { data, error: authError } = await sendMessage({
+        type: 'login',
+        payload: {
+          email: email.trim(),
+          password: password.trim(),
+        },
+      })
 
-      if (!response.success || !response.access_token) {
-        throw new Error(response.error || 'Failed to sign in')
+      if (authError) {
+        throw new Error(authError.message)
       }
 
-      // Login to the extension store with the access token
-      await login(response.access_token)
+      if (!data?.session) {
+        throw new Error('No session returned')
+      }
+
+      // Login to the extension store (token is already in storage)
+      await login()
       toast.success('Successfully signed in!', { id: toastId })
     } catch (error) {
       const errorMessage =
@@ -62,22 +68,20 @@ export function LoginForm({ onShowSelfHosted }: LoginFormProps = {}) {
       // Send message to background script to handle OAuth flow
       // This ensures the flow completes even if the popup closes
 
-      const response = (await browser.runtime.sendMessage({
-        action: 'startGoogleOAuth',
-      })) as
-        | { success: boolean; error?: string; access_token?: string }
-        | undefined
+      const { data, error: authError } = await sendMessage({
+        type: 'startGoogleOAuth',
+      })
 
-      if (!response) {
-        throw new Error('No response from background script')
+      if (authError) {
+        throw new Error(authError.message)
       }
 
-      if (!response.success || !response.access_token) {
-        throw new Error(response.error || 'Failed to authenticate with Google')
+      if (!data?.session) {
+        throw new Error('Failed to authenticate with Google')
       }
 
-      // Login to the extension store with the access token
-      await login(response.access_token)
+      // Login to the extension store (token is already in storage)
+      await login()
       toast.success('Successfully signed in with Google!', { id: toastId })
     } catch (error) {
       const errorMessage =
@@ -187,9 +191,11 @@ export function LoginForm({ onShowSelfHosted }: LoginFormProps = {}) {
         <div className="text-center pt-2">
           <button
             onClick={onShowSelfHosted}
-            className="text-xs text-muted-foreground hover:text-foreground underline"
+            className="text-xs text-muted-foreground hover:text-foreground underline cursor-pointer"
           >
-            Using a self-hosted server?
+            {isCloudProd
+              ? 'Using a self-hosted server?'
+              : 'Switch to cloud hosting'}
           </button>
         </div>
       )}

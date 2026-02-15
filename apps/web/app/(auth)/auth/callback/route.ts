@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { checkNewUser } from "@/lib/auth-helpers"
 import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {
@@ -18,17 +19,7 @@ export async function GET(request: Request) {
 
             if (user) {
                 // Check if user has any feed subscriptions
-                const { data: subscriptions, error: subscriptionError } =
-                    await supabase
-                        .from("feed_subscriptions")
-                        .select("id")
-                        .eq("user_id", user.id)
-                        .limit(1)
-
-                // If user has no feed subscriptions, they're new - redirect to onboarding
-                const isNewUser =
-                    !subscriptionError &&
-                    (!subscriptions || subscriptions.length === 0)
+                const isNewUser = await checkNewUser(user.id)
                 const redirectPath = isNewUser ? "/onboarding" : next
 
                 // behind a load‑balancer? trust x‑forwarded-host, else origin

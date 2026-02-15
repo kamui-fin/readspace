@@ -27,8 +27,8 @@ export default function OfflinePage() {
                 </CardHeader>
                 <CardContent className="text-center space-y-4">
                     <p className="text-sm text-muted-foreground">
-                        Your previously loaded articles are still
-                        available to read.
+                        Your previously loaded articles are still available to
+                        read.
                     </p>
                     <Button
                         onClick={() => window.location.reload()}

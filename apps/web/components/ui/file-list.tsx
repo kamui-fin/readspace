@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 import * as React from "react"
 import { Progress } from "./progress"
 
@@ -125,21 +125,16 @@ FileListActions.displayName = "FileListActions"
 const FileListAction = React.forwardRef<
     HTMLButtonElement,
     React.ButtonHTMLAttributes<HTMLButtonElement>
->(
-    (
-        { className, ...props },
-        ref // eslint-disable-line
-    ) => (
-        <button
-            ref={ref}
-            className={cn(
-                "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 w-8",
-                className
-            )}
-            {...props}
-        />
-    )
-)
+>(({ className, ...props }, ref) => (
+    <button
+        ref={ref}
+        className={cn(
+            "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 w-8",
+            className
+        )}
+        {...props}
+    />
+))
 FileListAction.displayName = "FileListAction"
 
 const FileListContent = React.forwardRef<

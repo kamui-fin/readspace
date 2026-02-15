@@ -1,10 +1,9 @@
-"""Folder model definition."""
+"""Folder model - pure SQLAlchemy."""
 
-import uuid
-from datetime import datetime, timezone
-
-from sqlalchemy import Column, DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Column, DateTime, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as SQLUUID
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.base_class import Base
 
@@ -14,25 +13,26 @@ class Folder(Base):
 
     __tablename__ = "folders"
 
-    id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    # CHECK constraint ensures name is not empty (enforced at database level)
-    name = Column(String(255), nullable=False)
+    id = Column(SQLUUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
+    name = Column(Text, nullable=False)
     user_id = Column(
         SQLUUID(as_uuid=True),
         ForeignKey("profiles.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    # Relationships
+    user = relationship("Profile", back_populates="folders")
+    subscriptions = relationship(
+        "FeedSubscription",
+        back_populates="folder",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     __table_args__ = (
-        # UNIQUE constraint ensures one folder name per user
         UniqueConstraint("user_id", "name", name="uq_folder_user_name"),
-        # CHECK constraint added in migration: ck_folder_name_not_empty
-        # Ensures name <> '' AND name IS NOT NULL
+        # CHECK constraint: ck_folder_name_not_empty (enforced at DB level)
     )

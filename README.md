@@ -23,24 +23,23 @@ All in one distraction-free inbox. No algorithms, no ads, no tracking.
   <img src="./docs/screenshots/readspace-mobile-article.png" alt="Readspace Mobile Article Demo" width="250" />
 </div>
 
-
 ## Features
 
 - Open source, Easy self-hosting, Privacy-friendly
 - Hosted version at app.readspace.ai
 - Firefox / Chrome extensions
-    - Save article to Readspace to read later
-    - Detect and follow feeds directly on any site
+  - Save article to Readspace to read later
+  - Detect and follow feeds directly on any site
 - Web, iOS, Android
-    - Smart search engine with over 10,000 feeds
-    - View similar feeds
-    - Read the original articles
-    - Summaries, translations
-    - Folder-based organization
-    - RSSHub support
-    - OPML import / export
-    - Dark mode
-    - Beautiful UI/UX & minimalist reader
+  - Smart search engine with over 10,000 feeds
+  - View similar feeds
+  - Read the original articles
+  - Summaries, translations
+  - Folder-based organization
+  - RSSHub support
+  - OPML import / export
+  - Dark mode
+  - Beautiful UI/UX & minimalist reader
 - ... and much more coming!
 
 ## Motivation
@@ -49,7 +48,7 @@ Information consumption is broken. Algorithms dictate what you see, newsletters 
 
 The abrupt shutdown of Google Reader fractured the original user-controlled web reading experience. Its commercial successors, like Feedly, have since prioritized high-value enterprise AI solutions (threat intelligence, market research), effectively abandoning the core consumer mission of a simple, focused reader.
 
-**Readspace reclaims this legacy.** 
+**Readspace reclaims this legacy.**
 
 We are building the best way to stay informed by leveraging the power of RSS, giving you a focused, ad-free, chronological stream from your chosen sources.
 
@@ -76,11 +75,11 @@ Readspace is designed for easy self-hosting, giving you complete control over yo
 
 #### Prerequisites
 
-* **Git**: For cloning the repository.
-* **Docker**: Ensure Docker Desktop or Docker Engine is installed and running (v20 or higher recommended).
-* **jq**: Command-line JSON processor used by setup scripts.
+- **Git**: For cloning the repository.
+- **Docker**: Ensure Docker Desktop or Docker Engine is installed and running (v20 or higher recommended).
+- **jq**: Command-line JSON processor used by setup scripts.
 
-#### Steps 
+#### Steps
 
 1.  **Clone the Repository**
 
@@ -138,5 +137,5 @@ To get started, please check out our **[Contributing Guide](CONTRIBUTING.md)**.
 
 We're building Readspace transparently and collaboratively. Join our growing community and help shape the future of focused reading:
 
-* **Discord:** [Join our community here](https://discord.gg/2Q5PtYwUQZ)
-* **GitHub:** Star us and help shape the product.
+- **Discord:** [Join our community here](https://discord.gg/2Q5PtYwUQZ)
+- **GitHub:** Star us and help shape the product.

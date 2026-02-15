@@ -3,7 +3,7 @@
 import * as React from "react"
 import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
 const TooltipProvider = ({

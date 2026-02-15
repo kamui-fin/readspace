@@ -1,5 +1,6 @@
 import asyncio
 from logging.config import fileConfig
+import os
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
@@ -10,12 +11,7 @@ from app.core.config import get_settings
 from app.db.base_class import Base
 
 # Import all models here to ensure they are registered with Base.metadata
-from app.models.article import ArticleContent, ClippedArticle, FeedArticle, UserArticleState  # noqa: F401
-from app.models.feed import Feed, FeedSubscription  # noqa: F401
-from app.models.folder import Folder  # noqa: F401
-from app.models.user import AuthUser, Profile  # noqa: F401
-
-# Import all models here to ensure they are registered with Base.metadata
+# from app.models import ... 
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -30,30 +26,36 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 target_metadata = [Base.metadata]
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
-
 
 def get_url():
-    import os
-
+    """
+    Retrieve the database URL from settings or environment variables.
+    """
     settings = get_settings()
 
     # Use ALEMBIC_DB_URL if it exists, otherwise fall back to SUPABASE_DB_CONNECTION
     db_url = os.getenv("ALEMBIC_DB_URL")
     if not db_url:
-        db_url = settings.SUPABASE_DB_CONNECTION
+        db_url = settings.DATABASE_URL_API
 
-    return db_url.replace("postgresql://", "postgresql+asyncpg://")
+    return db_url
 
 
 def include_object(obj, name, type_, reflected, compare_to):
-    print(obj, name, type_, reflected, compare_to)
-    # optionally skip creating the auth.users table itself
-    if type_ == "table" and obj.schema == "auth" and name == "users":
+    """
+    Filter out Supabase-managed schemas to prevent Alembic from managing them.
+    """
+    # Ignore tables in specific schemas (Supabase internal schemas)
+    if type_ == "table" and obj.schema in [
+        "auth",
+        "storage",
+        "realtime",
+        "extensions",
+        "graphql",
+        "vault",
+    ]:
         return False
+    
     return True
 
 
@@ -69,7 +71,13 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = get_url()
+    # 1. Check if URL is injected via Config (e.g., from Pytest)
+    url = config.get_main_option("sqlalchemy.url")
+    
+    # 2. Fallback to Environment/Settings
+    if not url:
+        url = get_url()
+
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -89,6 +97,7 @@ def do_run_migrations(connection: Connection) -> None:
         connection=connection,
         target_metadata=target_metadata,
         include_object=include_object,
+        compare_type=True,
         compare_server_default=True,
     )
     with context.begin_transaction():
@@ -100,9 +109,22 @@ async def run_async_migrations() -> None:
     and associate a connection with the context.
 
     """
-
     configuration = config.get_section(config.config_ini_section)
-    configuration["sqlalchemy.url"] = get_url()
+    
+    # 1. CRITICAL: Check if URL is injected via Config (from Pytest fixture)
+    # The fixture uses `alembic_cfg.set_main_option("sqlalchemy.url", ...)`
+    url = config.get_main_option("sqlalchemy.url")
+    
+    # 2. Fallback to Environment/Settings if not injected
+    if not url:
+        url = get_url()
+        
+    # 3. Ensure we use the async driver (asyncpg)
+    if not url.startswith("postgresql+asyncpg://") and url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://")
+        
+    configuration["sqlalchemy.url"] = url
+
     connectable = async_engine_from_config(
         configuration,
         prefix="sqlalchemy.",
@@ -117,7 +139,6 @@ async def run_async_migrations() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-
     asyncio.run(run_async_migrations())
 
 

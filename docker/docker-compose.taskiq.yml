@@ -29,8 +29,7 @@ services:
       context: ../server
       dockerfile: Dockerfile
     container_name: readspace_worker
-    # Single worker with async concurrency (--max-async-tasks controls concurrent task limit)
-    command: taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-pattern "app/workers/*.py" --max-async-tasks 50
+    command: taskiq worker app.core.taskiq_app:broker app.workers.registry --max-async-tasks 200
     restart: on-failure
     depends_on:
       rabbitmq:
@@ -40,9 +39,6 @@ services:
       - PYTHONUNBUFFERED=1
       - ENVIRONMENT=production
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
-      # SUPABASE_DB_CONNECTION configured via Coolify dashboard
-      # Production (Supabase Cloud): Use port 6543 (transaction mode)
-      # Local/Self-hosted: Use port 5432 (session mode)
     networks:
       - coolify
 
@@ -51,7 +47,7 @@ services:
       context: ../server
       dockerfile: Dockerfile
     container_name: readspace_scheduler
-    command: taskiq scheduler app.core.taskiq_app:scheduler --fs-discover --tasks-pattern "app/workers/*.py"
+    command: taskiq scheduler app.core.taskiq_app:scheduler app.workers.registry 
     depends_on:
       rabbitmq:
         condition: service_healthy

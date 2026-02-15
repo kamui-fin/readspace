@@ -1,7 +1,12 @@
-"use client"
+import { cookies } from "next/headers"
+import { TodayPageClient } from "./client"
+import { getLayoutFromCookie, LAYOUT_COOKIE_NAME } from "@/lib/cookies"
 
-import { ArticlesView } from "@/components/articles"
+export default async function TodayPage() {
+    const cookieStore = await cookies()
+    const layout = getLayoutFromCookie(
+        cookieStore.get(LAYOUT_COOKIE_NAME)?.value
+    )
 
-export default function TodayPage() {
-    return <ArticlesView initialSidebarTitle="Today" mode="today" />
+    return <TodayPageClient defaultLayout={layout} />
 }

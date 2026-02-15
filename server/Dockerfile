@@ -27,6 +27,7 @@ COPY alembic.ini .
 # Copy the application code
 COPY ./alembic ./alembic
 COPY ./app ./app
+COPY ./scripts ./scripts
 
 # Expose the port the app runs on
 EXPOSE 8008

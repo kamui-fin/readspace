@@ -1,51 +1,17 @@
 import { QueryProvider } from "@/components/providers/QueryProvider"
 import { Metadata, Viewport } from "next"
 import {
-    EB_Garamond,
-    Figtree,
-    Geist,
-    Geist_Mono,
-    Noto_Serif_JP,
-    Noto_Serif_SC,
-    Noto_Serif_TC,
-} from "next/font/google"
+    eb_garamond,
+    geistMono,
+    geistSans,
+    logo,
+    notoSerifJP,
+    notoSerifSC,
+    notoSerifTC,
+} from "@/lib/fonts"
 import "./globals.css"
-import { PostHogProvider } from "./providers"
-
-const geistSans = Geist({
-    variable: "--font-sans",
-    subsets: ["latin"],
-})
-
-const geistMono = Geist_Mono({
-    variable: "--font-mono",
-    subsets: ["latin"],
-})
-
-const eb_garamond = EB_Garamond({
-    variable: "--font-garamond-serif",
-    subsets: ["latin"],
-})
-
-const logo = Figtree({
-    variable: "--font-logo",
-    subsets: ["latin"],
-})
-
-const notoSerifSC = Noto_Serif_SC({
-    variable: "--font-noto-serif-sc",
-    subsets: ["latin"],
-})
-
-const notoSerifJP = Noto_Serif_JP({
-    variable: "--font-noto-serif-jp",
-    subsets: ["latin"],
-})
-
-const notoSerifTC = Noto_Serif_TC({
-    variable: "--font-noto-serif-tc",
-    subsets: ["latin"],
-})
+import { PosthogProvider } from "@/components/providers/PosthogProvider"
+import { cn } from "@/lib/utils"
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.readspace.ai"
 
@@ -124,24 +90,30 @@ export const viewport: Viewport = {
     userScalable: true,
 }
 
-export default async function RootLayout({
+export default function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode
 }>) {
     return (
         <html lang="en" suppressHydrationWarning>
-            {/* <head>
-                <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
-            </head> */}
             <body
-                className={`${geistSans.variable} ${geistMono.variable} ${eb_garamond.variable} ${logo.variable} ${notoSerifSC.variable} ${notoSerifJP.variable} ${notoSerifTC.variable} font-sans antialiased mt-0`}
+                className={cn(
+                    geistSans.variable,
+                    geistMono.variable,
+                    eb_garamond.variable,
+                    logo.variable,
+                    notoSerifSC.variable,
+                    notoSerifJP.variable,
+                    notoSerifTC.variable,
+                    "font-sans antialiased mt-0"
+                )}
             >
-                <PostHogProvider>
+                <PosthogProvider>
                     <QueryProvider>
                         <main className="w-full">{children}</main>
                     </QueryProvider>
-                </PostHogProvider>
+                </PosthogProvider>
             </body>
         </html>
     )

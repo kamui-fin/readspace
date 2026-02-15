@@ -1,31 +1,19 @@
 import { cva, type VariantProps } from "class-variance-authority"
-import {
-    Code2,
-    Cpu,
-    Gamepad2,
-    GraduationCap,
-    Heart,
-    Microscope,
-    MoreHorizontal,
-    Newspaper,
-    Paintbrush,
-    Palette,
-    Shield,
-    TrendingUp,
-} from "lucide-react"
+import { MoreHorizontal } from "lucide-react"
 import * as React from "react"
-
-import { cn } from "@readspace/shared"
+import { CATEGORY_CONFIG } from "@/lib/categories"
+import { FeedCategory } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 const categoryBadgeVariants = cva(
-    "inline-flex items-center gap-2 rounded-[6px] border px-4 py-2 text-sm font-medium transition-all duration-200 cursor-pointer hover:scale-105 hover:shadow-sm",
+    "inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-[0.98]",
     {
         variants: {
             variant: {
                 default:
-                    "border-[#E4ECDF] bg-white text-[#91998C] hover:border-[#D8E5D0] hover:bg-[#FAFBFA] dark:border-border dark:bg-card dark:text-muted-foreground dark:hover:bg-accent",
+                    "border-[#E4ECDF] bg-white text-[#6B7566] hover:border-[#ACC59D] hover:bg-[#F8FAF7] hover:text-[#6A994E] dark:border-border dark:bg-card dark:text-muted-foreground dark:hover:bg-accent dark:hover:text-primary",
                 selected:
-                    "border-[#ACC59D] bg-white text-[#6A994E] hover:border-[#9BB88A] hover:bg-[#F8FAF7] dark:border-primary/30 dark:bg-card dark:text-primary dark:hover:bg-accent",
+                    "border-[#6A994E] bg-[#F3F9EF] text-[#6A994E] shadow-sm hover:border-[#5A8A3E] hover:bg-[#EBF5E4] dark:border-primary dark:bg-primary/10 dark:text-primary dark:hover:bg-primary/15",
             },
         },
         defaultVariants: {
@@ -37,35 +25,23 @@ const categoryBadgeVariants = cva(
 const getCategoryIcon = (categoryName: string) => {
     const iconProps = { size: 16 }
 
-    switch (categoryName) {
-        case "Technology & Programming":
-            return <Code2 {...iconProps} />
-        case "AI":
-        case "Artificial Intelligence":
-            return <Cpu {...iconProps} />
-        case "Design & Creativity":
-            return <Palette {...iconProps} />
-        case "Business & Finance":
-            return <TrendingUp {...iconProps} />
-        case "News & Politics":
-            return <Newspaper {...iconProps} />
-        case "Gaming & Entertainment":
-            return <Gamepad2 {...iconProps} />
-        case "Science & Research":
-            return <Microscope {...iconProps} />
-        case "Lifestyle & Personal":
-            return <Heart {...iconProps} />
-        case "Culture & Arts":
-            return <Paintbrush {...iconProps} />
-        case "Security & Privacy":
-            return <Shield {...iconProps} />
-        case "Education & Learning":
-            return <GraduationCap {...iconProps} />
-        case "Miscellaneous":
-            return <MoreHorizontal {...iconProps} />
-        default:
-            return <MoreHorizontal {...iconProps} />
+    // Try to find by key (enum value)
+    if (Object.values(FeedCategory).includes(categoryName as FeedCategory)) {
+        const config = CATEGORY_CONFIG[categoryName as FeedCategory]
+        if (config) return <config.icon {...iconProps} />
     }
+
+    // Fallback: try to find by name (legacy support or display name match)
+    // This part might be expensive if loop, but it's small list.
+    // Actually, let's just use the key lookup for now as we migrated everything.
+
+    const config = CATEGORY_CONFIG[categoryName as FeedCategory]
+    if (config) {
+        const Icon = config.icon
+        return <Icon {...iconProps} />
+    }
+
+    return <MoreHorizontal {...iconProps} />
 }
 
 export interface CategoryBadgeProps

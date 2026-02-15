@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 export interface LoaderProps {
     variant?:

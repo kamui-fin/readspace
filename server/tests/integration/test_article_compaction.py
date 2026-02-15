@@ -1,5 +1,6 @@
 """End-to-end tests for article compaction task."""
 
+import hashlib
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -7,12 +8,17 @@ import pytest
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription, Folder, Profile, UserArticleState
-from app.workers.feed_tasks import async_compact_old_articles, compact_old_articles_task
+from app.models.article import ArticleContent, FeedArticle
+from app.models.feed import Feed, FeedSubscription
+from app.models.folder import Folder
+from app.models.user import Profile
+from app.workers.feed.compaction import compact_old_articles
 
 
 @pytest.mark.asyncio
-async def test_compaction_task_deletes_old_articles_e2e(db_session: AsyncSession, test_user: Profile):
+async def test_compaction_task_deletes_old_articles_e2e(
+    db_session: AsyncSession, test_user: Profile
+):
     """Test full article compaction workflow with real database."""
     # Create folder
     folder = Folder(
@@ -27,6 +33,8 @@ async def test_compaction_task_deletes_old_articles_e2e(db_session: AsyncSession
         id=uuid4(),
         url=f"https://example.com/e2e-feed-{uuid4().hex[:8]}.xml",
         title="E2E Test Feed",
+        description="Test feed description",
+        language="en",
     )
     db_session.add(feed)
     await db_session.flush()
@@ -39,19 +47,21 @@ async def test_compaction_task_deletes_old_articles_e2e(db_session: AsyncSession
         folder_id=folder.id,
     )
     db_session.add(subscription)
-    await db_session.commit()
+    await db_session.flush()
 
-    # Create 70 old articles (all > 30 days)
+    # Create 70 old articles (all > 7 days to match ARTICLE_RETENTION_DAYS)
     article_ids = []
     for i in range(70):
-        published_at = datetime.now(timezone.utc) - timedelta(days=31 + i)
+        published_at = datetime.now(timezone.utc) - timedelta(days=8 + i)
+        link = f"https://example.com/e2e-old-{i}"
+        content_hash = hashlib.sha256(link.encode()).hexdigest()
         content = ArticleContent(
             id=uuid4(),
             title=f"E2E Old Article {i}",
-            link=f"https://example.com/e2e-old-{i}",
+            link=link,
+            content_hash=content_hash,
             description="Test article for E2E compaction",
             content="Test content",
-            published_at=published_at,
         )
         db_session.add(content)
         await db_session.flush()
@@ -60,8 +70,8 @@ async def test_compaction_task_deletes_old_articles_e2e(db_session: AsyncSession
             id=uuid4(),
             feed_id=feed.id,
             content_id=content.id,
-            guid=f"e2e-old-{uuid4()}",
-            created_at=published_at,
+            guid_hash=f"e2e-old-{uuid4()}",
+            published_at=published_at,
         )
         db_session.add(article)
         await db_session.flush()
@@ -70,35 +80,55 @@ async def test_compaction_task_deletes_old_articles_e2e(db_session: AsyncSession
     await db_session.commit()
 
     # Verify initial count
-    result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
+    result = await db_session.execute(
+        select(FeedArticle).where(FeedArticle.feed_id == feed.id)
+    )
     articles_before = result.scalars().all()
     assert len(articles_before) == 70
 
-    # Run compaction task
-    result = await async_compact_old_articles(db=db_session)
+    # Store feed_id before running compaction
+    feed_id = feed.id
 
-    # Commit to persist the changes
+    # Test the CRUD function directly with the test session
+    from app.crud.article.actions import delete_old_article_contents
+
+    deleted_count = await delete_old_article_contents(
+        db_session, retention_days=7, min_articles_per_feed=50
+    )
     await db_session.commit()
 
-    # Verify final count for THIS FEED - should keep exactly 50 newest
+    # Verify 20 articles were deleted (70 - 50 = 20)
+    assert deleted_count == 20, f"Expected 20 articles deleted, got {deleted_count}"
+
+    # Create a fresh query
     from sqlalchemy.orm import selectinload
 
     result = await db_session.execute(
-        select(FeedArticle).where(FeedArticle.feed_id == feed.id).options(selectinload(FeedArticle.content))
+        select(FeedArticle)
+        .where(FeedArticle.feed_id == feed_id)
+        .options(selectinload(FeedArticle.content))
     )
     articles_after = result.scalars().all()
-    assert len(articles_after) == 50, f"Expected 50 articles for test feed, got {len(articles_after)}"
+    assert (
+        len(articles_after) == 50
+    ), f"Expected 50 articles for test feed, got {len(articles_after)}"
 
     # Verify the oldest articles were deleted and newest were kept
     # The remaining articles should be the 50 newest ones (indices 0-49)
-    remaining_titles = {article.content.title for article in articles_after if article.content}
+    remaining_titles = {
+        article.content.title for article in articles_after if article.content
+    }
     for i in range(50):
         expected_title = f"E2E Old Article {i}"
-        assert expected_title in remaining_titles, f"Expected {expected_title} to be kept"
+        assert (
+            expected_title in remaining_titles
+        ), f"Expected {expected_title} to be kept"
 
 
 @pytest.mark.asyncio
-async def test_compaction_preserves_user_saved_articles_e2e(db_session: AsyncSession, test_user: Profile):
+async def test_compaction_preserves_user_saved_articles_e2e(
+    db_session: AsyncSession, test_user: Profile
+):
     """Test that compaction preserves articles saved by users across all feeds."""
     # Create folder
     folder = Folder(
@@ -113,6 +143,8 @@ async def test_compaction_preserves_user_saved_articles_e2e(db_session: AsyncSes
         id=uuid4(),
         url=f"https://example.com/e2e-saved-feed-{uuid4().hex[:8]}.xml",
         title="E2E Saved Test Feed",
+        description="Test feed description",
+        language="en",
     )
     db_session.add(feed)
     await db_session.flush()
@@ -127,17 +159,19 @@ async def test_compaction_preserves_user_saved_articles_e2e(db_session: AsyncSes
     db_session.add(subscription)
     await db_session.commit()
 
-    # Create 70 old articles
+    # Create 70 old articles (all > 7 days to match ARTICLE_RETENTION_DAYS)
     saved_article_ids = []
     for i in range(70):
-        published_at = datetime.now(timezone.utc) - timedelta(days=31 + i)
+        published_at = datetime.now(timezone.utc) - timedelta(days=8 + i)
+        link = f"https://example.com/e2e-saved-{i}"
+        content_hash = hashlib.sha256(link.encode()).hexdigest()
         content = ArticleContent(
             id=uuid4(),
             title=f"E2E Article {i}",
-            link=f"https://example.com/e2e-saved-{i}",
+            link=link,
+            content_hash=content_hash,
             description="Test article",
             content="Test content",
-            published_at=published_at,
         )
         db_session.add(content)
         await db_session.flush()
@@ -146,43 +180,58 @@ async def test_compaction_preserves_user_saved_articles_e2e(db_session: AsyncSes
             id=uuid4(),
             feed_id=feed.id,
             content_id=content.id,
-            guid=f"e2e-saved-{uuid4()}",
-            created_at=published_at,
+            guid_hash=f"e2e-saved-{uuid4()}",
+            published_at=published_at,
         )
         db_session.add(article)
         await db_session.flush()
 
         # Mark the oldest 5 articles (which would normally be deleted) as saved
         if i >= 65:  # These are the oldest 5
-            state = UserArticleState(
-                id=uuid4(),
+            from app.models.article import UserEntry
+
+            state = UserEntry(
                 user_id=test_user.id,
-                article_id=article.id,
-                is_read_later=True,
-                is_favorite=False,
+                content_id=content.id,
+                feed_article_id=article.id,
+                is_saved=True,
             )
             db_session.add(state)
             saved_article_ids.append(article.id)
 
     await db_session.commit()
 
-    # Run compaction
-    result = await async_compact_old_articles(db=db_session)
+    # Store IDs before running compaction
+    feed_id = feed.id
+
+    # Test the CRUD function directly
+    from app.crud.article.actions import delete_old_article_contents
+
+    deleted_count = await delete_old_article_contents(
+        db_session, retention_days=7, min_articles_per_feed=50
+    )
+    await db_session.commit()
 
     # Verify all saved articles still exist
     for saved_id in saved_article_ids:
-        result = await db_session.execute(select(FeedArticle).where(FeedArticle.id == saved_id))
+        result = await db_session.execute(
+            select(FeedArticle).where(FeedArticle.id == saved_id)
+        )
         article = result.scalar_one_or_none()
         assert article is not None, f"Saved article {saved_id} was deleted"
 
     # Verify we kept at least 50 articles plus the saved ones
-    result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
+    result = await db_session.execute(
+        select(FeedArticle).where(FeedArticle.feed_id == feed_id)
+    )
     remaining_articles = result.scalars().all()
     assert len(remaining_articles) >= 50 + len(saved_article_ids)
 
 
 @pytest.mark.asyncio
-async def test_compaction_handles_multiple_users_e2e(db_session: AsyncSession, test_user: Profile):
+async def test_compaction_handles_multiple_users_e2e(
+    db_session: AsyncSession, test_user: Profile
+):
     """Test that compaction correctly handles articles with multiple users."""
     # Create second user
     user2_id = uuid4()
@@ -202,7 +251,7 @@ async def test_compaction_handles_multiple_users_e2e(db_session: AsyncSession, t
     # Fetch the auto-created profile from database trigger
     result = await db_session.execute(
         text("SELECT id, email FROM profiles WHERE id = :user_id"),
-        {"user_id": str(user2_id)}
+        {"user_id": str(user2_id)},
     )
     profile_row = result.fetchone()
     if not profile_row:
@@ -229,6 +278,8 @@ async def test_compaction_handles_multiple_users_e2e(db_session: AsyncSession, t
         id=uuid4(),
         url=f"https://example.com/e2e-shared-feed-{uuid4().hex[:8]}.xml",
         title="E2E Shared Feed",
+        description="Test feed description",
+        language="en",
     )
     db_session.add(feed)
     await db_session.flush()
@@ -250,19 +301,21 @@ async def test_compaction_handles_multiple_users_e2e(db_session: AsyncSession, t
     db_session.add(subscription2)
     await db_session.commit()
 
-    # Create 70 old articles
+    # Create 70 old articles (all > 7 days to match ARTICLE_RETENTION_DAYS)
     user1_saved_id = None
     user2_saved_id = None
 
     for i in range(70):
-        published_at = datetime.now(timezone.utc) - timedelta(days=31 + i)
+        published_at = datetime.now(timezone.utc) - timedelta(days=8 + i)
+        link = f"https://example.com/e2e-shared-{i}"
+        content_hash = hashlib.sha256(link.encode()).hexdigest()
         content = ArticleContent(
             id=uuid4(),
             title=f"E2E Shared Article {i}",
-            link=f"https://example.com/e2e-shared-{i}",
+            link=link,
+            content_hash=content_hash,
             description="Shared article",
             content="Test content",
-            published_at=published_at,
         )
         db_session.add(content)
         await db_session.flush()
@@ -271,51 +324,64 @@ async def test_compaction_handles_multiple_users_e2e(db_session: AsyncSession, t
             id=uuid4(),
             feed_id=feed.id,
             content_id=content.id,
-            guid=f"e2e-shared-{uuid4()}",
-            created_at=published_at,
+            guid_hash=f"e2e-shared-{uuid4()}",
+            published_at=published_at,
         )
         db_session.add(article)
         await db_session.flush()
 
         # User 1 saves the oldest article
         if i == 69:
-            state = UserArticleState(
-                id=uuid4(),
+            from app.models.article import UserEntry
+
+            state = UserEntry(
                 user_id=test_user.id,
-                article_id=article.id,
-                is_favorite=True,
-                is_read_later=False,
+                content_id=content.id,
+                feed_article_id=article.id,
+                is_saved=False,
             )
             db_session.add(state)
             user1_saved_id = article.id
 
         # User 2 saves a different old article
         if i == 68:
-            state = UserArticleState(
-                id=uuid4(),
+            from app.models.article import UserEntry
+
+            state = UserEntry(
                 user_id=user2.id,
-                article_id=article.id,
-                is_read_later=True,
-                is_favorite=False,
+                content_id=content.id,
+                feed_article_id=article.id,
+                is_saved=True,
             )
             db_session.add(state)
             user2_saved_id = article.id
 
     await db_session.commit()
 
-    # Run compaction
-    result = await async_compact_old_articles(db=db_session)
+    # Test the CRUD function directly
+    from app.crud.article.actions import delete_old_article_contents
+
+    deleted_count = await delete_old_article_contents(
+        db_session, retention_days=7, min_articles_per_feed=50
+    )
+    await db_session.commit()
 
     # Verify both users' saved articles are preserved
-    result = await db_session.execute(select(FeedArticle).where(FeedArticle.id == user1_saved_id))
+    result = await db_session.execute(
+        select(FeedArticle).where(FeedArticle.id == user1_saved_id)
+    )
     assert result.scalar_one_or_none() is not None, "User 1's saved article was deleted"
 
-    result = await db_session.execute(select(FeedArticle).where(FeedArticle.id == user2_saved_id))
+    result = await db_session.execute(
+        select(FeedArticle).where(FeedArticle.id == user2_saved_id)
+    )
     assert result.scalar_one_or_none() is not None, "User 2's saved article was deleted"
 
 
 @pytest.mark.asyncio
-async def test_compaction_respects_retention_policy(db_session: AsyncSession, test_user: Profile):
+async def test_compaction_respects_retention_policy(
+    db_session: AsyncSession, test_user: Profile
+):
     """Test that compaction respects the retention policy and minimum article count."""
     # Create folder
     folder = Folder(
@@ -330,6 +396,8 @@ async def test_compaction_respects_retention_policy(db_session: AsyncSession, te
         id=uuid4(),
         url=f"https://example.com/e2e-retention-feed-{uuid4().hex[:8]}.xml",
         title="E2E Retention Policy Feed",
+        description="Test feed description",
+        language="en",
     )
     db_session.add(feed)
     await db_session.flush()
@@ -344,16 +412,18 @@ async def test_compaction_respects_retention_policy(db_session: AsyncSession, te
     db_session.add(subscription)
     await db_session.commit()
 
-    # Create 70 old articles (all > 30 days old)
+    # Create 70 old articles (all > 7 days to match ARTICLE_RETENTION_DAYS)
     for i in range(70):
-        published_at = datetime.now(timezone.utc) - timedelta(days=31 + i)
+        published_at = datetime.now(timezone.utc) - timedelta(days=8 + i)
+        link = f"https://example.com/e2e-retention-{i}"
+        content_hash = hashlib.sha256(link.encode()).hexdigest()
         content = ArticleContent(
             id=uuid4(),
             title=f"E2E Retention Article {i}",
-            link=f"https://example.com/e2e-retention-{i}",
+            link=link,
+            content_hash=content_hash,
             description="Test article",
             content="Test content",
-            published_at=published_at,
         )
         db_session.add(content)
         await db_session.flush()
@@ -362,31 +432,45 @@ async def test_compaction_respects_retention_policy(db_session: AsyncSession, te
             id=uuid4(),
             feed_id=feed.id,
             content_id=content.id,
-            guid=f"e2e-retention-{uuid4()}",
-            created_at=published_at,
+            guid_hash=f"e2e-retention-{uuid4()}",
+            published_at=published_at,
         )
         db_session.add(article)
 
     await db_session.commit()
 
     # Count before compaction
-    result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
+    result = await db_session.execute(
+        select(FeedArticle).where(FeedArticle.feed_id == feed.id)
+    )
     articles_before = result.scalars().all()
     initial_count = len(articles_before)
     assert initial_count == 70
 
-    # Run compaction
-    result = await async_compact_old_articles(db=db_session)
+    # Store feed_id before running compaction
+    feed_id = feed.id
+
+    # Test the CRUD function directly
+    from app.crud.article.actions import delete_old_article_contents
+
+    deleted_count = await delete_old_article_contents(
+        db_session, retention_days=7, min_articles_per_feed=50
+    )
+    await db_session.commit()
 
     # Verify compaction deleted articles but kept minimum 50
-    assert "deleted_articles" in result
-    result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
+    assert deleted_count == 20  # 70 - 50 = 20
+    result = await db_session.execute(
+        select(FeedArticle).where(FeedArticle.feed_id == feed_id)
+    )
     articles_after = result.scalars().all()
     assert len(articles_after) == 50  # Should keep exactly 50 newest
 
 
 @pytest.mark.asyncio
-async def test_compaction_task_wrapper_e2e(db_session: AsyncSession, test_user: Profile):
+async def test_compaction_task_wrapper_e2e(
+    db_session: AsyncSession, test_user: Profile
+):
     """Test the async compaction function directly (since Celery task can't run in async context)."""
     # Create folder
     folder = Folder(
@@ -401,6 +485,8 @@ async def test_compaction_task_wrapper_e2e(db_session: AsyncSession, test_user: 
         id=uuid4(),
         url=f"https://example.com/e2e-task-feed-{uuid4().hex[:8]}.xml",
         title="E2E Task Wrapper Feed",
+        description="Test feed description",
+        language="en",
     )
     db_session.add(feed)
     await db_session.flush()
@@ -415,16 +501,18 @@ async def test_compaction_task_wrapper_e2e(db_session: AsyncSession, test_user: 
     db_session.add(subscription)
     await db_session.commit()
 
-    # Create 60 old articles
+    # Create 60 old articles (all > 7 days to match ARTICLE_RETENTION_DAYS)
     for i in range(60):
-        published_at = datetime.now(timezone.utc) - timedelta(days=31 + i)
+        published_at = datetime.now(timezone.utc) - timedelta(days=8 + i)
+        link = f"https://example.com/e2e-task-{i}"
+        content_hash = hashlib.sha256(link.encode()).hexdigest()
         content = ArticleContent(
             id=uuid4(),
             title=f"Task Wrapper Article {i}",
-            link=f"https://example.com/e2e-task-{i}",
+            link=link,
+            content_hash=content_hash,
             description="Test article",
             content="Test content",
-            published_at=published_at,
         )
         db_session.add(content)
         await db_session.flush()
@@ -433,24 +521,30 @@ async def test_compaction_task_wrapper_e2e(db_session: AsyncSession, test_user: 
             id=uuid4(),
             feed_id=feed.id,
             content_id=content.id,
-            guid=f"e2e-task-{uuid4()}",
-            created_at=published_at,
+            guid_hash=f"e2e-task-{uuid4()}",
+            published_at=published_at,
         )
         db_session.add(article)
 
     await db_session.commit()
 
-    # Call the async function directly instead of the Celery task wrapper
-    # (Celery tasks can't run in an existing event loop)
-    result = await async_compact_old_articles(db=db_session)
+    # Store feed_id before running compaction
+    feed_id = feed.id
 
-    # Should return results dictionary
-    assert "deleted_articles" in result
+    # Test the CRUD function directly
+    from app.crud.article.actions import delete_old_article_contents
 
-    # Commit the changes made by the compaction function
+    deleted_count = await delete_old_article_contents(
+        db_session, retention_days=7, min_articles_per_feed=50
+    )
     await db_session.commit()
 
     # Verify articles were deleted from THIS FEED - should keep exactly 50
-    result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
+    assert deleted_count == 10  # 60 - 50 = 10
+    result = await db_session.execute(
+        select(FeedArticle).where(FeedArticle.feed_id == feed_id)
+    )
     articles_after = result.scalars().all()
-    assert len(articles_after) == 50, f"Expected 50 articles for test feed, got {len(articles_after)}"
+    assert (
+        len(articles_after) == 50
+    ), f"Expected 50 articles for test feed, got {len(articles_after)}"

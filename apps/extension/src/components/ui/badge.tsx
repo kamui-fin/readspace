@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { cn } from '@readspace/shared'
+import { cn } from '@/utils/cn'
 import { badgeVariants, type BadgeVariants } from './badge-variants'
 
 export interface BadgeProps

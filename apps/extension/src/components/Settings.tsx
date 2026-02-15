@@ -16,9 +16,12 @@ const PRODUCTION_DEFAULTS = {
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs',
 }
 
-export function Settings({ onBack }: SettingsProps) {
-  const { settings, user, logout } = useExtensionStore()
-  const [showSelfHosted, setShowSelfHosted] = useState(false)
+export function Settings({
+  onBack,
+  initialShowSelfHosted = false,
+}: SettingsProps & { initialShowSelfHosted?: boolean }) {
+  const { settings, user, logout, updateSettings } = useExtensionStore()
+  const [showSelfHosted, setShowSelfHosted] = useState(initialShowSelfHosted)
 
   // Check if using production settings
   const isUsingProduction =
@@ -26,9 +29,15 @@ export function Settings({ onBack }: SettingsProps) {
     settings.supabase_url === PRODUCTION_DEFAULTS.supabase_url &&
     settings.supabase_anon_key === PRODUCTION_DEFAULTS.supabase_anon_key
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     toast.success('Successfully signed out')
+    onBack()
+  }
+
+  const switchToCloud = () => {
+    updateSettings(PRODUCTION_DEFAULTS)
+    toast.success('Switched to Readspace Cloud')
     onBack()
   }
 
@@ -45,7 +54,7 @@ export function Settings({ onBack }: SettingsProps) {
           variant="ghost"
           size="sm"
           onClick={onBack}
-          className="h-8 w-8 p-0"
+          className="h-8 w-8 p-0 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
         </Button>
@@ -64,6 +73,7 @@ export function Settings({ onBack }: SettingsProps) {
               variant="destructive"
               size="sm"
               onClick={handleLogout}
+              className="cursor-pointer"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
@@ -95,9 +105,34 @@ export function Settings({ onBack }: SettingsProps) {
               </div>
             )}
           </div>
-          <Button size="sm" onClick={() => setShowSelfHosted(true)}>
-            Modify
-          </Button>
+
+          {isUsingProduction ? (
+            <Button
+              size="sm"
+              onClick={() => setShowSelfHosted(true)}
+              className="cursor-pointer"
+            >
+              Modify
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowSelfHosted(true)}
+                className="cursor-pointer"
+              >
+                Modify
+              </Button>
+              <Button
+                size="sm"
+                onClick={switchToCloud}
+                className="cursor-pointer"
+              >
+                Switch to Cloud
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

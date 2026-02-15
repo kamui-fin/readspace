@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 
 export type Mode = "typewriter" | "fade"

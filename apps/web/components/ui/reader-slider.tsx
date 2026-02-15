@@ -1,5 +1,5 @@
 import { Slider } from "@/components/ui/slider"
-import { cn } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 import React from "react"
 
 type ReaderSliderProps = {
