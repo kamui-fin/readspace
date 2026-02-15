@@ -164,25 +164,23 @@ export function useUpdateArticle(
       const previousArticle = queryClient.getQueryData<Article>(
         queryKeys.article(articleId),
       );
-      const previousUnreadCounts = queryClient.getQueryData<ArticleCountsResponse>(
-        queryKeys.unreadCounts(),
-      );
+      const previousUnreadCounts =
+        queryClient.getQueryData<ArticleCountsResponse>(
+          queryKeys.unreadCounts(),
+        );
 
       // Optimistically update article detail
-      queryClient.setQueryData<Article>(
-        queryKeys.article(articleId),
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            ...data,
-            // Map frontend fields to backend fields for the optimistic update
-            ...(data.note !== undefined && { user_note: data.note }),
-            // Ensure priority is of correct type if provided
-            ...(data.priority && { priority: data.priority as any }),
-          };
-        }
-      );
+      queryClient.setQueryData<Article>(queryKeys.article(articleId), (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          ...data,
+          // Map frontend fields to backend fields for the optimistic update
+          ...(data.note !== undefined && { user_note: data.note }),
+          // Ensure priority is of correct type if provided
+          ...(data.priority && { priority: data.priority as any }),
+        };
+      });
 
       // Optimistically update all infinite lists (generic update)
       queryClient.setQueriesData(
@@ -196,10 +194,10 @@ export function useUpdateArticle(
               items: page.items.map((item: ArticleSummary) =>
                 item.id === articleId
                   ? {
-                    ...item,
-                    ...data,
-                    ...(data.priority && { priority: data.priority as any }),
-                  }
+                      ...item,
+                      ...data,
+                      ...(data.priority && { priority: data.priority as any }),
+                    }
                   : item,
               ),
             })),
@@ -217,7 +215,9 @@ export function useUpdateArticle(
               ...oldData,
               pages: oldData.pages.map((page: any) => ({
                 ...page,
-                items: page.items.filter((item: ArticleSummary) => item.id !== articleId),
+                items: page.items.filter(
+                  (item: ArticleSummary) => item.id !== articleId,
+                ),
               })),
             };
           },
@@ -241,9 +241,15 @@ export function useUpdateArticle(
             const feedId = previousArticle?.feed_id;
 
             if (feedId && newFeedCounts[feedId] !== undefined) {
-              if (data.is_read === true && (!previousArticle || !previousArticle.is_read)) {
+              if (
+                data.is_read === true &&
+                (!previousArticle || !previousArticle.is_read)
+              ) {
                 newFeedCounts[feedId] = Math.max(0, newFeedCounts[feedId] - 1);
-              } else if (data.is_read === false && (!previousArticle || previousArticle.is_read)) {
+              } else if (
+                data.is_read === false &&
+                (!previousArticle || previousArticle.is_read)
+              ) {
                 newFeedCounts[feedId] = newFeedCounts[feedId] + 1;
               }
             }
@@ -251,9 +257,15 @@ export function useUpdateArticle(
 
           // Handle is_saved changes
           if (data.is_saved !== undefined) {
-            if (data.is_saved === true && (!previousArticle || !previousArticle.is_saved)) {
+            if (
+              data.is_saved === true &&
+              (!previousArticle || !previousArticle.is_saved)
+            ) {
               newReadLater++;
-            } else if (data.is_saved === false && (!previousArticle || previousArticle.is_saved)) {
+            } else if (
+              data.is_saved === false &&
+              (!previousArticle || previousArticle.is_saved)
+            ) {
               newReadLater = Math.max(0, newReadLater - 1);
             }
           }
@@ -286,7 +298,9 @@ export function useUpdateArticle(
       // Invalidate to be safe
       queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
       queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.infiniteReadLater() });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.infiniteReadLater(),
+      });
     },
     onSettled: (_data, _error, { articleId }) => {
       // Invalidate article
@@ -706,7 +720,12 @@ export function useSummarizeArticleMutation(
   options?: UseMutationOptions<
     SummarizeResponse,
     unknown,
-    { articleId: string; content?: string; languageKey?: string; articleType?: string }
+    {
+      articleId: string;
+      content?: string;
+      languageKey?: string;
+      articleType?: string;
+    }
   >,
 ) {
   const queryClient = useQueryClient();
@@ -747,7 +766,12 @@ export function useTranslateArticleMutation(
   options?: UseMutationOptions<
     TranslateResponse,
     unknown,
-    { articleId: string; targetLanguage: string; content?: string; articleType?: string }
+    {
+      articleId: string;
+      targetLanguage: string;
+      content?: string;
+      articleType?: string;
+    }
   >,
 ) {
   const queryClient = useQueryClient();

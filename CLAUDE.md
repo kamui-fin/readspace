@@ -9,6 +9,7 @@ Readspace is an open-source, privacy-first reading hub that brings RSS feeds, ne
 ## Architecture
 
 ### Turborepo Monorepo Structure
+
 - **`apps/web/`**: Next.js 15 frontend with TypeScript and Tailwind CSS
 - **`apps/extension/`**: Chrome/Firefox browser extension built with Vite and React
 - **`packages/shared/`**: Shared utilities and types between apps
@@ -18,6 +19,7 @@ Readspace is an open-source, privacy-first reading hub that brings RSS feeds, ne
 - **`docker/`**: Docker configurations and orchestration scripts
 
 ### Backend Architecture (`server/`)
+
 - **FastAPI** with async/await patterns throughout
 - **PostgreSQL** with SQLAlchemy ORM and Alembic migrations
 - **Supabase** for authentication and real-time features
@@ -26,12 +28,14 @@ Readspace is an open-source, privacy-first reading hub that brings RSS feeds, ne
 - **Structured logging** with JSON output
 
 Key service patterns:
+
 - Repository pattern for data access (`repositories/`)
 - Service layer for business logic (`services/`)
 - CRUD operations abstracted (`crud/`)
 - Background workers for RSS feed fetching and processing (`workers/`)
 
 ### Frontend Architecture (`apps/web/`)
+
 - **Next.js 15** with App Router and Server Components
 - **TypeScript** throughout with strict type checking
 - **Tailwind CSS** for styling with shadcn/ui components
@@ -40,6 +44,7 @@ Key service patterns:
 - **Supabase Auth** integration with session management
 
 ### Browser Extension (`apps/extension/`)
+
 - **Manifest V3** Chrome extension with Firefox compatibility
 - **React** with TypeScript
 - **Vite** for building with separate Chrome/Firefox targets
@@ -47,6 +52,7 @@ Key service patterns:
 - Background service worker for API communication
 
 ### Shared Packages (`packages/`)
+
 - **`shared/`**: Common utilities, types, and business logic shared between web and extension
 - **`eslint-config/`**: Centralized ESLint configuration for consistent code quality
 - **`typescript-config/`**: Shared TypeScript configurations for different project types
@@ -54,6 +60,7 @@ Key service patterns:
 ## Development Commands
 
 ### Environment Setup
+
 ```bash
 # Initial setup - generates all .env files
 ./docker/setup.sh
@@ -93,6 +100,7 @@ turbo run clean
 ```
 
 ### Backend Development (`server/`)
+
 ```bash
 cd server
 poetry install
@@ -114,6 +122,7 @@ docker compose exec api alembic upgrade head
 ```
 
 ### Frontend Development (`apps/web/`)
+
 ```bash
 cd apps/web
 bun install
@@ -129,6 +138,7 @@ turbo run dev --filter=web # Start only web app
 ```
 
 ### Extension Development (`apps/extension/`)
+
 ```bash
 cd apps/extension
 bun install
@@ -146,17 +156,20 @@ turbo run build --filter=extension  # Build only extension
 ## Key Integration Points
 
 ### Authentication Flow
+
 - Supabase Auth handles user authentication across all components
 - JWT tokens are shared between web app and extension
 - Backend validates Supabase JWT tokens on protected routes
 
 ### Data Flow
+
 - RSS feeds are processed by Celery workers in the background
 - Articles are stored with full content extraction and metadata
 - Real-time updates use Supabase's real-time subscriptions
 - Browser extension communicates with backend API for saving articles
 
 ### Database Schema
+
 - User management through Supabase Auth
 - RSS feeds, articles, and user preferences in PostgreSQL
 - Vector embeddings for AI-powered features (content similarity, recommendations)
@@ -165,18 +178,21 @@ turbo run build --filter=extension  # Build only extension
 ## Testing Strategy
 
 ### Backend Testing
+
 - Unit tests for services and utilities (`tests/unit/`)
 - Integration tests for API endpoints (`tests/integration/`)
 - Factory pattern for test data generation
 - Pytest with async support
 
 ### Frontend Testing
+
 - Component testing framework not yet implemented
 - Type safety enforced through TypeScript strict mode
 
 ## Common Development Patterns
 
 ### Backend Patterns
+
 - Use repository pattern for database access
 - Implement services for complex business logic
 - Background tasks handled through Celery
@@ -184,6 +200,7 @@ turbo run build --filter=extension  # Build only extension
 - Async/await throughout for I/O operations
 
 ### Backend Guidelines
+
 - **Test-Driven Development**: Write unit tests first in `tests/unit/` before implementing functionality
 - **Code Quality Workflow**: After writing code, always:
   1. Build the project
@@ -196,6 +213,7 @@ turbo run build --filter=extension  # Build only extension
 - **Function Signatures**: All new Python functions must have type signatures, even if existing functions lack them
 
 ### Frontend Patterns
+
 - Server Components for initial data fetching
 - Client Components for interactivity
 - Custom hooks for shared logic
@@ -203,6 +221,7 @@ turbo run build --filter=extension  # Build only extension
 - TanStack Query for server state management
 
 ### Frontend Guidelines
+
 - **Component Architecture**: Keep components relatively small and focused
   - Abstract functionality into reusable components
   - Leverage the existing shadcn/ui component system
@@ -218,6 +237,7 @@ turbo run build --filter=extension  # Build only extension
   4. Lint code (`bun run lint`)
 
 ### Monorepo Guidelines
+
 - **Workspace Dependencies**: Use workspace references (e.g., `"@readspace/shared": "workspace:*"`) for internal packages
 - **Shared Code**: Place common utilities, types, and business logic in `packages/shared`
 - **Configuration**: Use shared ESLint and TypeScript configs from `packages/` for consistency
@@ -225,6 +245,7 @@ turbo run build --filter=extension  # Build only extension
 - **Package Naming**: Follow the `@readspace/package-name` convention for internal packages
 
 ### Extension Patterns
+
 - Message passing between content script and background worker
 - Chrome Storage API for persistence
 - Declarative permissions in manifest
@@ -232,6 +253,7 @@ turbo run build --filter=extension  # Build only extension
 ## Environment Configuration
 
 Each component requires its own `.env` file:
+
 - `server/.env` - Backend API keys and database config
 - `apps/web/.env` - Frontend Supabase configuration
 - `docker/supabase/.env` - Database credentials and JWT secrets
@@ -251,6 +273,7 @@ The `docker/setup.sh` script generates these files with appropriate defaults for
 ### Frontend (`apps/web/`) Directory Structure
 
 #### Core Application Files
+
 - **`app/`** - Next.js App Router structure
   - **`app/(auth)/`** - Authentication routes (login, signup, callback)
   - **`app/(protected)/`** - Protected application routes
@@ -263,6 +286,7 @@ The `docker/setup.sh` script generates these files with appropriate defaults for
   - **`app/providers.tsx`** - Context providers setup
 
 #### Component Organization
+
 - **`components/`** - Reusable UI components
   - `ui/` - shadcn/ui base components
   - `navigation/` - Navigation and header components
@@ -273,6 +297,7 @@ The `docker/setup.sh` script generates these files with appropriate defaults for
   - `onboarding/` - User onboarding flow components
 
 #### State and Utilities
+
 - **`stores/`** - Zustand state stores
 - **`hooks/`** - Custom React hooks
 - **`lib/`** - Utility functions and configurations
@@ -284,18 +309,21 @@ The `docker/setup.sh` script generates these files with appropriate defaults for
 ### Shared Packages (`packages/`) Directory Structure
 
 #### Shared Package (`packages/shared/`)
+
 - **`src/utils/`** - Shared utility functions
 - **`src/types/`** - Common TypeScript type definitions
 - **`src/constants/`** - Shared constants and configuration
 - **`package.json`** - Package configuration with proper exports
 
 #### Configuration Packages
+
 - **`packages/eslint-config/`** - Shared ESLint rules for web and extension
 - **`packages/typescript-config/`** - TypeScript configurations for different project types
 
 ### Backend (`server/`) Directory Structure
 
 #### Core Application (`server/app/`)
+
 - **`main.py`** - FastAPI application entry point
 - **`core/`** - Core application configuration
   - `config.py` - Application settings and configuration
@@ -305,6 +333,7 @@ The `docker/setup.sh` script generates these files with appropriate defaults for
   - `redis_cache.py` - Redis caching utilities
 
 #### API Layer
+
 - **`routers/`** - FastAPI route handlers (API endpoints)
   - `rss_feeds.py` - RSS feed management endpoints
   - `rss_articles.py` - Article management endpoints
@@ -312,6 +341,7 @@ The `docker/setup.sh` script generates these files with appropriate defaults for
   - `users.py` - User management endpoints
 
 #### Business Logic
+
 - **`services/`** - Business logic layer
   - `feed_*` files - RSS feed processing services
   - `article_*` files - Article processing services
@@ -320,6 +350,7 @@ The `docker/setup.sh` script generates these files with appropriate defaults for
   - `subscription_service.py` - User subscription management
 
 #### Data Layer
+
 - **`models/`** - SQLAlchemy database models
   - `rss_models.py` - RSS feed and article models
   - `user_models.py` - User-related models
@@ -328,16 +359,19 @@ The `docker/setup.sh` script generates these files with appropriate defaults for
   - `supabase.py` - Supabase integration
 
 #### Background Processing
+
 - **`workers/`** - Celery background tasks
   - `tasks.py` - Background job definitions (feed fetching, article processing)
 
 #### Database and Testing
+
 - **`alembic/`** - Database migrations
 - **`tests/`** - Test suite
   - `unit/` - Unit tests
   - `integration/` - Integration tests
 
 #### Configuration Files
+
 - **`pyproject.toml`** - Poetry dependency management and project config
 - **`alembic.ini`** - Database migration configuration
 - **`pytest.ini`** - Test configuration
@@ -345,6 +379,7 @@ The `docker/setup.sh` script generates these files with appropriate defaults for
 ## Visual Development
 
 IMMEDIATELY after implementing any front-end change:
+
 1. **Identify what changed** - Review the modified components/pages
 2. **Navigate to affected pages** - Use `mcp__playwright__browser_navigate` to visit each changed view
 3. **Validate feature implementation** - Ensure the change fulfills the user's specific request
@@ -355,7 +390,9 @@ IMMEDIATELY after implementing any front-end change:
 This verification ensures changes meet design standards and user requirements.
 
 ### Comprehensive Design Review
+
 Invoke the `@agent-design-review` subagent for thorough design validation when:
+
 - Completing significant UI/UX features
 - Before finalizing PRs with visual changes
 - Needing comprehensive accessibility and responsiveness testing
@@ -366,11 +403,14 @@ Invoke the `@agent-design-review` subagent for thorough design validation when:
 ## Important Type Definitions
 
 ### RSS Feed URL vs Website URL
+
 When working with feeds, there are two distinct URL fields:
+
 - **`url`**: The RSS feed URL (the actual XML feed endpoint, e.g., `https://example.com/feed.xml`)
 - **`link`**: The website URL (the human-readable website the feed belongs to, e.g., `https://example.com`)
 
 This distinction is critical in both:
+
 - Database schema (`apps/web/database.types.ts` - line 287+)
 - Server API schemas (`server/app/schemas/rss_schemas.py` and `subscription_schemas.py`)
 - Frontend types (`apps/web/lib/api/hooks/feeds.ts`)

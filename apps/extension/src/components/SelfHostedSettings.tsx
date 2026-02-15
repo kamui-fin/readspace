@@ -90,14 +90,14 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
         (finalSettings.readspace_url !== PRODUCTION_DEFAULTS.readspace_url ||
           finalSettings.supabase_url !== PRODUCTION_DEFAULTS.supabase_url ||
           finalSettings.supabase_anon_key !==
-          PRODUCTION_DEFAULTS.supabase_anon_key)
+            PRODUCTION_DEFAULTS.supabase_anon_key)
 
       const switchingToCloud =
         !isUsingProduction &&
         finalSettings.readspace_url === PRODUCTION_DEFAULTS.readspace_url &&
         finalSettings.supabase_url === PRODUCTION_DEFAULTS.supabase_url &&
         finalSettings.supabase_anon_key ===
-        PRODUCTION_DEFAULTS.supabase_anon_key
+          PRODUCTION_DEFAULTS.supabase_anon_key
 
       // If user is authenticated and switching configurations, log them out first
       if (user && (switchingToSelfHosted || switchingToCloud)) {

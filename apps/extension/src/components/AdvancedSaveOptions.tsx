@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { PageMetadata, SaveOptions, Priority } from '@readspace/shared'
+import { PageMetadata, SaveOptions, Priority, ArticlePriority } from '@readspace/shared'
 import { ArrowLeft, Save, Flag, StickyNote } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -29,7 +29,7 @@ export function AdvancedSaveOptions({
   )
   const [note, setNote] = useState(initialValues?.note || '')
   const [priority, setPriority] = useState<Priority>(
-    initialValues?.priority || 'LOW'
+    initialValues?.priority || ArticlePriority.LOW
   )
 
   const handleSave = async () => {
@@ -91,13 +91,12 @@ export function AdvancedSaveOptions({
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => setPriority('LOW')}
+              onClick={() => setPriority(ArticlePriority.LOW)}
               className={`
                 px-3 py-2 rounded text-sm font-medium transition-all cursor-pointer
-                ${
-                  priority === 'LOW'
-                    ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                ${priority === ArticlePriority.LOW
+                  ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >
@@ -108,13 +107,12 @@ export function AdvancedSaveOptions({
             </button>
             <button
               type="button"
-              onClick={() => setPriority('MEDIUM')}
+              onClick={() => setPriority(ArticlePriority.MEDIUM)}
               className={`
                 px-3 py-2 rounded text-sm font-medium transition-all cursor-pointer
-                ${
-                  priority === 'MEDIUM'
-                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                ${priority === ArticlePriority.MEDIUM
+                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >
@@ -125,13 +123,12 @@ export function AdvancedSaveOptions({
             </button>
             <button
               type="button"
-              onClick={() => setPriority('HIGH')}
+              onClick={() => setPriority(ArticlePriority.HIGH)}
               className={`
                 px-3 py-2 rounded text-sm font-medium transition-all cursor-pointer
-                ${
-                  priority === 'HIGH'
-                    ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                ${priority === ArticlePriority.HIGH
+                  ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >

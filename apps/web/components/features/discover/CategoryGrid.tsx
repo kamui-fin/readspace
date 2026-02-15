@@ -1,7 +1,12 @@
 import { CategoryBadge } from "@/components/ui/category-badge"
 import { useIsMobile } from "@/hooks/use-mobile"
 
-import { FEED_CATEGORIES, MOBILE_CATEGORY_NAMES, CATEGORY_DISPLAY_NAMES, FeedCategory } from "@readspace/shared"
+import {
+    FEED_CATEGORIES,
+    MOBILE_CATEGORY_NAMES,
+    CATEGORY_DISPLAY_NAMES,
+    FeedCategory,
+} from "@readspace/shared"
 
 interface CategoryGridProps {
     onCategoryClick: (category: string) => void

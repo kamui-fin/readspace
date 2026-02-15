@@ -9,10 +9,10 @@ This guide explains how to test the Google OAuth flow for your Chrome extension 
 ## Understanding Extension OAuth
 
 ### Key Concepts
+
 1. **Extension ID**: Chrome assigns a unique ID to your extension. This ID changes between:
    - **Unpacked/Development**: Random ID (changes if you remove/reload)
    - **Chrome Web Store**: Fixed ID based on your private key
-   
 2. **Redirect URI**: Chrome extensions use a special redirect URI format:
    - Format: `https://<extension-id>.chromiumapp.org/`
    - Generated automatically via `browser.identity.getRedirectURL()`
@@ -40,7 +40,6 @@ This guide explains how to test the Google OAuth flow for your Chrome extension 
    https://<YOUR-EXTENSION-ID>.chromiumapp.org/
    ```
    Replace `<YOUR-EXTENSION-ID>` with the ID from Step 1
-   
 4. Keep the existing production redirect URI if you have one
 
 ### Step 3: Configure Google Cloud Console
@@ -60,6 +59,7 @@ This guide explains how to test the Google OAuth flow for your Chrome extension 
 ### Step 4: Build and Test the Extension
 
 1. Build the extension:
+
    ```bash
    cd /home/kamui/dev/projects/readspace/apps/extension
    bun run build
@@ -87,6 +87,7 @@ To debug issues, open the **service worker console**:
    ```
 
 You can also check for errors in:
+
 - **Extension popup**: Right-click popup → Inspect
 - **Background service worker**: Click "service worker" link in chrome://extensions/
 
@@ -97,17 +98,20 @@ After successful OAuth:
 1. Open service worker console
 2. Run:
    ```javascript
-   chrome.storage.local.get('session', (data) => console.log(data))
+   chrome.storage.local.get("session", (data) => console.log(data));
    ```
 3. You should see the session object with `access_token` and `refresh_token`
 
 ## Common Issues and Solutions
 
 ### Issue: "Invalid redirect URI"
+
 **Solution**: Make sure the redirect URI in Google Cloud Console and Supabase matches exactly with `https://<extension-id>.chromiumapp.org/`
 
 ### Issue: Extension ID keeps changing
+
 **Solution**: This is normal for unpacked extensions. Options:
+
 1. Update the redirect URI each time (annoying for testing)
 2. Use a fixed key (see below)
 
@@ -116,6 +120,7 @@ After successful OAuth:
 **Solution**: Generate a key pair and add to manifest:
 
 1. Generate a key:
+
    ```bash
    openssl genrsa 2048 | openssl pkcs8 -topk8 -nocrypt -out key.pem
    ```
@@ -127,25 +132,28 @@ After successful OAuth:
      ...
    }
    ```
-   
 3. The extension will now have a consistent ID
 
 **Note**: Remove the key before publishing to Chrome Web Store!
 
 ### Issue: "OAuth URL not returned"
+
 **Solution**: Check that Supabase Google provider is enabled and configured correctly
 
 ### Issue: CORS errors
+
 **Solution**: Make sure `skipBrowserRedirect: true` is set in the OAuth options (already in your code)
 
 ## Production vs Development
 
 ### Development (Current Setup)
+
 - Extension ID: Changes with each load (unless you add a key)
 - Redirect URI: `https://<dev-extension-id>.chromiumapp.org/`
 - Must be manually added to Google Console and Supabase
 
 ### Production (Chrome Web Store)
+
 - Extension ID: Fixed based on the key used when publishing
 - Redirect URI: `https://<production-extension-id>.chromiumapp.org/`
 - Should already be configured in your Google Console

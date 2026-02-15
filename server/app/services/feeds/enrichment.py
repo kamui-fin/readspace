@@ -26,7 +26,6 @@ from app.services.feeds.language_detection import detect_feed_language
 from app.services.feeds.scoring import calculate_hybrid_popularity_score
 from app.typing.feeds import (
     ArticleStats,
-    FaviconResult,
     FeedEnrichmentInput,
     FeedEnrichmentResponse,
     FeedEnrichmentSnapshot,
@@ -177,7 +176,6 @@ def build_feed_update_mapping(
     if language:
         update_mapping["language"] = language
 
-
     # Add LLM enrichment data
     if llm_result:
         update_mapping["tags"] = llm_result.tags
@@ -213,11 +211,11 @@ def build_feed_update_mapping(
         if llm_result.enhanced_description:
             update_mapping["description"] = llm_result.enhanced_description
 
-        # Calculate hybrid popularity score with domain authority
+        # Calculate hybrid popularity score
         popularity_data = calculate_hybrid_popularity_score(
             feed_snapshot,
             llm_result.popularity_estimate,
-            domain_authority_score,
+            domain_authority_score=0.0,
             article_stats=feed_snapshot.article_stats,
         )
 

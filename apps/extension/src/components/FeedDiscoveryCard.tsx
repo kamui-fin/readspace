@@ -98,7 +98,9 @@ export function FeedDiscoveryCard({
       const message = msg as ExtensionMessage
       if (message.type === 'follow-changed') {
         // Check if any feed matches
-        const match = feeds?.some((f) => areUrlsEqual(f.url, message.payload.url))
+        const match = feeds?.some((f) =>
+          areUrlsEqual(f.url, message.payload.url)
+        )
         if (match) {
           setOptimisticFollow(message.payload.followed)
           if (message.payload.id) {
@@ -219,14 +221,15 @@ export function FeedDiscoveryCard({
                     ? 'ghost'
                     : 'default'
               }
-              className={`flex-shrink-0 min-w-[100px] ${isFollowing && !isPending
+              className={`flex-shrink-0 min-w-[100px] ${
+                isFollowing && !isPending
                   ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
                   : isPending
                     ? 'bg-orange-500/90 text-white hover:bg-orange-500/90'
                     : !isFollowing
                       ? 'bg-orange-500 hover:bg-orange-600 text-white'
                       : ''
-                }`}
+              }`}
             >
               {isPending ? (
                 <div className="flex items-center justify-center overflow-hidden">

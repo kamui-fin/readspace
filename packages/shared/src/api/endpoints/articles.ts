@@ -98,7 +98,9 @@ export const articles = {
     const queryParams = new URLSearchParams();
     if (article_type === "clipped") queryParams.append("clipped", "true");
     const queryString = queryParams.toString();
-    return ApiClient.get<Article>(`/api/articles/${id}${queryString ? `?${queryString}` : ""}`);
+    return ApiClient.get<Article>(
+      `/api/articles/${id}${queryString ? `?${queryString}` : ""}`,
+    );
   },
 
   updateArticle: (

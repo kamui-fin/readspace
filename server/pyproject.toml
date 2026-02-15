@@ -6,7 +6,7 @@ authors = [
     {name = "Kamui",email = "fin-kamui@pm.me"}
 ]
 readme = "README.md"
-requires-python = ">=3.10,<=3.13.9"
+requires-python = ">=3.10,<4.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -27,12 +27,12 @@ packages = [
 [tool.poe.tasks]
 start = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8008"
 test = "pytest tests/"
-test-unit = "pytest tests/unit/ -m unit"
+test-unit = "pytest tests/unit/"
 test-integration = "pytest -c pytest.integration.ini"
 # Coverage commands
 test-coverage = "pytest tests/ --cov=app --cov-report=html:htmlcov --cov-report=term-missing"
-test-coverage-unit = "pytest tests/unit/ -m unit --cov=app --cov-report=html:htmlcov/unit --cov-report=term-missing"
-test-coverage-integration = "pytest tests/integration/ -m integration --cov=app --cov-report=html:htmlcov/integration --cov-report=term-missing"
+test-coverage-unit = "pytest tests/unit/ --cov=app --cov-report=html:htmlcov/unit --cov-report=term-missing"
+test-coverage-integration = "pytest tests/integration/ --cov=app --cov-report=html:htmlcov/integration --cov-report=term-missing"
 # Taskiq commands
 worker = "taskiq worker app.core.taskiq_app:broker app.workers.registry"
 scheduler = "taskiq scheduler app.core.taskiq_app:scheduler app.workers.registry"

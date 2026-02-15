@@ -83,6 +83,7 @@ Then start the infrastructure services in development mode:
 ```
 
 This starts:
+
 - Supabase (with Studio and Analytics)
 - Redis
 - RabbitMQ (message broker with management UI)
@@ -111,6 +112,7 @@ With the infrastructure running, you can now launch any of the application servi
 cd apps/web
 bun dev
 ```
+
 The web client will be available at `http://localhost:8042`.
 
 #### Backend Server (FastAPI)
@@ -121,6 +123,7 @@ poetry install
 poetry run poe migrate
 poetry run poe start
 ```
+
 The backend API will be available at `http://localhost:8008`.
 
 #### Browser Extension
@@ -128,19 +131,22 @@ The backend API will be available at `http://localhost:8008`.
 The extension is built with Vite and supports both Chrome and Firefox.
 
 **For Chrome:**
+
 1.  **Start the development server:**
+
     ```bash
     cd apps/extension
     bun dev
     ```
 
 2.  **Load the extension in Chrome:**
-    -   Open Chrome and navigate to `chrome://extensions`.
-    -   Enable "Developer mode".
-    -   Click "Load unpacked".
-    -   Select the `apps/extension/dist` directory.
+    - Open Chrome and navigate to `chrome://extensions`.
+    - Enable "Developer mode".
+    - Click "Load unpacked".
+    - Select the `apps/extension/dist` directory.
 
 **For Firefox:**
+
 ```bash
 cd apps/extension
 bun dev:firefox:watch # in one terminal
@@ -167,8 +173,8 @@ Follow the Expo CLI instructions to run on iOS simulator, Android emulator, or p
 
 Our backend uses Taskiq to manage asynchronous tasks. The architecture consists of two main components:
 
--   **`worker`**: Executes background tasks, such as fetching RSS feeds, processing articles, or sending notifications.
--   **`scheduler`**: Periodically adds tasks to the queue based on a defined schedule (e.g., "fetch this feed every hour").
+- **`worker`**: Executes background tasks, such as fetching RSS feeds, processing articles, or sending notifications.
+- **`scheduler`**: Periodically adds tasks to the queue based on a defined schedule (e.g., "fetch this feed every hour").
 
 When running `./docker/launch.sh --dev`, the worker and scheduler services are automatically started in Docker.
 
@@ -259,4 +265,4 @@ When you're done developing, stop the infrastructure services:
 4.  Push your branch and open a Pull Request against the `main` branch.
 5.  Provide a clear description of your changes.
 
-Thank you for your contribution! 
+Thank you for your contribution!

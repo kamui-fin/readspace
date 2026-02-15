@@ -221,4 +221,3 @@ export interface FeedsResponse {
   subscriptions: SubscriptionResponse[] | SubscriptionResponseExtended[];
   folders: FolderResponse[];
 }
-

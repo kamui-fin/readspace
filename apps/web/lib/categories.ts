@@ -184,4 +184,3 @@ export const CATEGORY_CONFIG: Record<FeedCategory, CategoryConfig> = {
 }
 
 export const CATEGORY_LIST = Object.values(CATEGORY_CONFIG)
-

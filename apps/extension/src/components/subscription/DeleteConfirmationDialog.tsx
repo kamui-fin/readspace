@@ -26,9 +26,7 @@ export function DeleteConfirmationDialog({
         <DialogHeader>
           <DialogTitle>Delete Folder</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete{' '}
-            &quot;{folderName}&quot;
-            ?
+            Are you sure you want to delete &quot;{folderName}&quot; ?
           </DialogDescription>
         </DialogHeader>
         <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">

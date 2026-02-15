@@ -49,80 +49,80 @@ export function FeedCard({
     const dropdownActions = (showPreviewButton ||
         showSimilarButton ||
         isAdmin) && (
-            <>
-                {/* Desktop version */}
-                <div className="hidden md:block">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                            >
-                                <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                <span className="sr-only">More options</span>
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            {showPreviewButton && (
-                                <Link href={`/feeds/${feed.id}/articles`}>
-                                    <DropdownMenuItem>
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        Preview
-                                    </DropdownMenuItem>
-                                </Link>
-                            )}
-                            {showSimilarButton && (
-                                <Link href={`/feeds/${feed.id}/similar`}>
-                                    <DropdownMenuItem>
-                                        <Sparkles className="mr-2 h-4 w-4" />
-                                        View Similar Feeds
-                                    </DropdownMenuItem>
-                                </Link>
-                            )}
-                            {isAdmin && (
-                                <>
-                                    <DropdownMenuItem
-                                        onSelect={() => setIsEditDialogOpen(true)}
-                                    >
-                                        <Pencil className="mr-2 h-4 w-4" />
-                                        Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                        onSelect={handleAdminDelete}
-                                        className="text-destructive focus:text-destructive"
-                                    >
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Delete
-                                    </DropdownMenuItem>
-                                </>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
+        <>
+            {/* Desktop version */}
+            <div className="hidden md:block">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                        >
+                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                            <span className="sr-only">More options</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        {showPreviewButton && (
+                            <Link href={`/feeds/${feed.id}/articles`}>
+                                <DropdownMenuItem>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    Preview
+                                </DropdownMenuItem>
+                            </Link>
+                        )}
+                        {showSimilarButton && (
+                            <Link href={`/feeds/${feed.id}/similar`}>
+                                <DropdownMenuItem>
+                                    <Sparkles className="mr-2 h-4 w-4" />
+                                    View Similar Feeds
+                                </DropdownMenuItem>
+                            </Link>
+                        )}
+                        {isAdmin && (
+                            <>
+                                <DropdownMenuItem
+                                    onSelect={() => setIsEditDialogOpen(true)}
+                                >
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onSelect={handleAdminDelete}
+                                    className="text-destructive focus:text-destructive"
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                </DropdownMenuItem>
+                            </>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
 
-                {/* Mobile version - shown below description */}
-                {/* Note: BaseFeedCard doesn't support mobile-specific positioning yet */}
-            </>
-        )
+            {/* Mobile version - shown below description */}
+            {/* Note: BaseFeedCard doesn't support mobile-specific positioning yet */}
+        </>
+    )
 
     // Normalize the feed to FeedSummary type
     const normalizedFeed: FeedSummary & { description?: string | null } =
         "error_count" in feed
             ? (feed as FeedSummary & { description?: string | null })
             : {
-                // FeedDiscoveryResult -> FeedSummary conversion
-                id: feed.id ?? "",
-                url: feed.url ?? "",
-                title: feed.title,
-                link: feed.link ?? null,
-                image_url: feed.image_url ?? null,
-                description: (feed as FeedDiscoveryResult).description,
-                language: feed.language ?? "en",
-                author: feed.author ?? null,
-                content_type: (feed.content_type as any) ?? null,
-                tags_native: feed.tags_native ?? [],
-            }
+                  // FeedDiscoveryResult -> FeedSummary conversion
+                  id: feed.id ?? "",
+                  url: feed.url ?? "",
+                  title: feed.title,
+                  link: feed.link ?? null,
+                  image_url: feed.image_url ?? null,
+                  description: (feed as FeedDiscoveryResult).description,
+                  language: feed.language ?? "en",
+                  author: feed.author ?? null,
+                  content_type: (feed.content_type as any) ?? null,
+                  tags_native: feed.tags_native ?? [],
+              }
 
     return (
         <>

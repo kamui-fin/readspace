@@ -106,7 +106,6 @@ def test_build_feed_update_mapping():
         feed_snapshot, 
         language="en", 
         llm_result=llm_result, 
-        domain_authority_score=0.5
     )
     
     assert mapping["id"] == "123"

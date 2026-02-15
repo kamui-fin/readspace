@@ -14,49 +14,58 @@ export function useCurrentPage() {
   const [isMetadataLoading, setIsMetadataLoading] = useState(true)
   const [isFeedDataLoading, setIsFeedDataLoading] = useState(true)
 
-  const checkCache = useCallback(async (url: string) => {
-    try {
-      const cachedPage = await sendMessage<CachedPageData>({
-        type: 'getCachedPageByUrl',
-        payload: url,
-      })
-      if (cachedPage) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (cachedPage.metadata) setCurrentPageMetadata(cachedPage.metadata as any)
-        if (cachedPage.content?.estimated_read_time)
-          setReadingTime(cachedPage.content.estimated_read_time)
-        return !!(cachedPage.metadata?.feeds && cachedPage.metadata.feeds.length > 0)
-      }
-    } catch {
-      // ignore
-    }
-    return false
-  }, [setCurrentPageMetadata])
-
-  const extractFromPage = useCallback(async (tabId: number) => {
-    try {
-      const metadata = await sendTabMessage<
-        PageMetadata & { estimated_read_time?: number }
-      >(tabId, 'extractMetadata', 3000)
-      if (metadata) {
-        // Filter out low confidence feeds (unvalidated guesses)
-        // They will be added back if validated by background script
-        const filteredFeeds =
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          metadata.feeds?.filter((f: any) => f.score >= 5) || []
-
-        setCurrentPageMetadata({
-          ...metadata,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          feeds: filteredFeeds as any,
+  const checkCache = useCallback(
+    async (url: string) => {
+      try {
+        const cachedPage = await sendMessage<CachedPageData>({
+          type: 'getCachedPageByUrl',
+          payload: url,
         })
-        if (metadata.estimated_read_time)
-          setReadingTime(metadata.estimated_read_time)
+        if (cachedPage) {
+          if (cachedPage.metadata)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            setCurrentPageMetadata(cachedPage.metadata as any)
+          if (cachedPage.content?.estimated_read_time)
+            setReadingTime(cachedPage.content.estimated_read_time)
+          return !!(
+            cachedPage.metadata?.feeds && cachedPage.metadata.feeds.length > 0
+          )
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
-  }, [setCurrentPageMetadata])
+      return false
+    },
+    [setCurrentPageMetadata]
+  )
+
+  const extractFromPage = useCallback(
+    async (tabId: number) => {
+      try {
+        const metadata = await sendTabMessage<
+          PageMetadata & { estimated_read_time?: number }
+        >(tabId, 'extractMetadata', 3000)
+        if (metadata) {
+          // Filter out low confidence feeds (unvalidated guesses)
+          // They will be added back if validated by background script
+          const filteredFeeds =
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            metadata.feeds?.filter((f: any) => f.score >= 5) || []
+
+          setCurrentPageMetadata({
+            ...metadata,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            feeds: filteredFeeds as any,
+          })
+          if (metadata.estimated_read_time)
+            setReadingTime(metadata.estimated_read_time)
+        }
+      } catch {
+        // ignore
+      }
+    },
+    [setCurrentPageMetadata]
+  )
 
   const extractPageMetadata = useCallback(
     async (tab: chrome.tabs.Tab) => {

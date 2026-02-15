@@ -1,6 +1,5 @@
 """Feed enrichment worker operations."""
 
-import asyncio
 from typing import Any
 
 import structlog
@@ -13,9 +12,7 @@ from app.crud.feed.core import (
     get_feeds_needing_enrichment,
 )
 from app.services.ai.batch import enrich_feeds_batch
-from app.services.feeds.domain_authority import get_domain_authority_scores_batch
 from app.services.feeds.enrichment import prepare_bulk_updates, prepare_feed_snapshots
-
 from app.services.feeds.meilisearch import sync_feeds_batch
 from app.workers.common import worker_db
 

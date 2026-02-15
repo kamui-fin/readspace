@@ -7,12 +7,16 @@ import { readFileSync } from 'fs'
 // Load browser-specific manifest
 function getManifest(mode: string) {
   const isFirefox = mode === 'firefox'
-  const baseManifest = JSON.parse(readFileSync(resolve('./src/manifest.base.json'), 'utf-8'))
+  const baseManifest = JSON.parse(
+    readFileSync(resolve('./src/manifest.base.json'), 'utf-8')
+  )
   const specificManifestPath = isFirefox
     ? resolve('./src/manifest.firefox.json')
     : resolve('./src/manifest.chrome.json')
 
-  const specificManifest = JSON.parse(readFileSync(specificManifestPath, 'utf-8'))
+  const specificManifest = JSON.parse(
+    readFileSync(specificManifestPath, 'utf-8')
+  )
 
   return {
     ...baseManifest,
@@ -51,11 +55,11 @@ export default defineConfig(({ mode }) => {
           'tailwindcss-animate',
           'tailwindcss',
           '@tailwindcss/forms',
-          'tailwindcss/plugin'
+          'tailwindcss/plugin',
         ],
         output: {
           manualChunks: undefined, // Disable code splitting for service worker
-        }
+        },
       },
     },
     define: {
@@ -63,4 +67,4 @@ export default defineConfig(({ mode }) => {
       __BROWSER__: JSON.stringify(isFirefox ? 'firefox' : 'chrome'),
     },
   }
-}) 
+})

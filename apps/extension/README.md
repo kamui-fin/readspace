@@ -49,6 +49,7 @@ bun run dev:firefox:watch
 ```
 
 The `dev:firefox:watch` command will:
+
 - Build the extension for Firefox
 - Launch Firefox with the extension loaded
 - Watch for changes and automatically rebuild
@@ -60,7 +61,7 @@ The `dev:firefox:watch` command will:
 # Build Chrome extension
 bun run build:chrome
 
-# Build Firefox extension  
+# Build Firefox extension
 bun run build:firefox
 
 # Build both browsers
@@ -131,10 +132,12 @@ const tabs = await tabs.query({ active: true })
 The extension uses separate manifest files for each browser:
 
 **Chrome (`src/manifest.chrome.json`)**:
+
 - Standard Manifest V3
 - Uses `service_worker` with `type: "module"`
 
 **Firefox (`src/manifest.firefox.json`)**:
+
 - Manifest V3 with Firefox optimizations
 - Uses `background.scripts` instead of `service_worker` (Firefox service worker support is limited)
 - Includes `browser_specific_settings` for addon ID
@@ -207,34 +210,40 @@ The build system automatically:
 - Sets the appropriate output directory (`dist/` vs `dist-firefox/`)
 - Defines `__BROWSER__` constant for runtime detection
 
-##  Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
-**webextension-polyfill not found**: 
+**webextension-polyfill not found**:
+
 ```bash
 bun install
 ```
 
 **Build fails with manifest errors**:
+
 - Check that `src/manifest.chrome.json` and `src/manifest.firefox.json` exist
 - Verify JSON syntax
 
 **Firefox extension won't load**:
+
 - Use `bun run lint:firefox` to check for issues
 - Check browser console for errors
 - Ensure minimum Firefox version (109+)
 - If you see "service_worker is disabled" error, this is expected - Firefox uses `background.scripts`
 
 **Firefox watch mode not working**:
+
 - Ensure Firefox is installed and in your PATH
 - Try running `bun run dev:firefox` for a one-time launch without watch mode
 
 **Chrome extension manifest errors**:
+
 - Verify Manifest V3 compatibility
 - Check Chrome developer console
 
 **web-ext config errors**:
+
 - Ensure `web-ext-config.cjs` is used (not `.js`) due to ES modules in package.json
 
 ### Development Tips
@@ -253,4 +262,4 @@ When contributing:
 2. Use the browser compatibility layer for new API calls
 3. Update both manifest files if adding new permissions
 4. Run `bun run lint:firefox` before submitting
-5. Use `bun` for dependency management 
+5. Use `bun` for dependency management

@@ -57,8 +57,8 @@ export function DiscoverContent({ onAiSettingsChange }: DiscoverContentProps) {
                             <h1 className="pt-4 mb-6 text-2xl md:text-4xl font-semibold text-foreground dark:text-foreground tracking-tight">
                                 {activeCategory
                                     ? CATEGORY_CONFIG[
-                                        activeCategory as FeedCategory
-                                    ]?.name || activeCategory
+                                          activeCategory as FeedCategory
+                                      ]?.name || activeCategory
                                     : "Search Feeds"}
                             </h1>
                         ) : (

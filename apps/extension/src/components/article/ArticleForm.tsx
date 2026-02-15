@@ -1,6 +1,6 @@
 import { Flag, Pencil, StickyNote } from 'lucide-react'
 import { useState } from 'react'
-import type { PageMetadata, Priority } from '@readspace/shared'
+import { PageMetadata, Priority, ArticlePriority } from '@readspace/shared'
 
 interface ArticleFormProps {
   customTitle: string
@@ -88,13 +88,12 @@ export function ArticleForm({
         </label>
         <div className="grid grid-cols-3 gap-1.5">
           <button
-            onClick={() => setPriority('LOW')}
+            onClick={() => setPriority(ArticlePriority.LOW)}
             className={`
               px-2 py-1.5 rounded text-xs font-medium transition-all cursor-pointer
-              ${
-                priority === 'LOW'
-                  ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+              ${priority === ArticlePriority.LOW
+                ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
+                : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
               }
             `}
           >
@@ -104,13 +103,12 @@ export function ArticleForm({
             </div>
           </button>
           <button
-            onClick={() => setPriority('MEDIUM')}
+            onClick={() => setPriority(ArticlePriority.MEDIUM)}
             className={`
               px-2 py-1.5 rounded text-xs font-medium transition-all cursor-pointer
-              ${
-                priority === 'MEDIUM'
-                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+              ${priority === ArticlePriority.MEDIUM
+                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
               }
             `}
           >
@@ -120,13 +118,12 @@ export function ArticleForm({
             </div>
           </button>
           <button
-            onClick={() => setPriority('HIGH')}
+            onClick={() => setPriority(ArticlePriority.HIGH)}
             className={`
               px-2 py-1.5 rounded text-xs font-medium transition-all cursor-pointer
-              ${
-                priority === 'HIGH'
-                  ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+              ${priority === ArticlePriority.HIGH
+                ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
+                : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
               }
             `}
           >

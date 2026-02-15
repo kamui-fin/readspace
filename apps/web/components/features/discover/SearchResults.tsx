@@ -80,8 +80,8 @@ export function SearchResults({
     // Prepare preview feed data if available
     let previewFeedData:
         | (FeedSummary & {
-            is_preview: true
-        })
+              is_preview: true
+          })
         | null = null
     if (previewFeed && !isPreviewLoading && !previewError) {
         previewFeedData = createPreviewFeedData(previewFeed)
@@ -171,9 +171,13 @@ export function SearchResults({
                                 language: hitData.language || "en",
                                 image_url: hitData.image_url ?? null,
                                 author: hitData.author ?? null,
-                                content_type: (hitData.content_type as ContentType) ?? null,
+                                content_type:
+                                    (hitData.content_type as ContentType) ??
+                                    null,
                                 tags_native: hitData.tags_native ?? [],
-                                top_level_category: hitData.top_level_category ? (hitData.top_level_category as FeedCategory) : null,
+                                top_level_category: hitData.top_level_category
+                                    ? (hitData.top_level_category as FeedCategory)
+                                    : null,
                                 popularity_score: hitData.popularity_score,
                                 is_subscribed: false,
                             }

@@ -86,8 +86,6 @@ export const feeds = {
       feed_id: string;
     }>(`/api/feeds/${feed_id}/read-status`),
 
-
-
   bulkDeleteFeeds: (feed_ids: string[]) =>
     ApiClient.delete<{
       deleted_count: number;

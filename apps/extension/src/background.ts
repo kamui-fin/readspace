@@ -12,7 +12,7 @@ initTabs()
 // Message router
 browser.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
   // Return true to indicate we will send a response asynchronously
-  ; (async () => {
+  ;(async () => {
     try {
       const response = await handleMessage(msg as ExtensionMessage)
       // In webextension-polyfill, we return the promise instead of using sendResponse

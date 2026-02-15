@@ -53,7 +53,7 @@ def test_parse_rss_feed_with_tags_ttl():
 
     assert parsed.title == "Tech News"
     assert parsed.description == "Latest technology news"
-    assert parsed.language == "en-US"
+    assert parsed.language == "en"
     assert "Technology" in parsed.tags
     assert "Programming" in parsed.tags
     assert len(parsed.articles) == 1

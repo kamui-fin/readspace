@@ -6,22 +6,24 @@ When using Readspace with a custom domain, you'll need to configure your reverse
 
 Readspace consists of three services that need to be exposed:
 
-| Service | Container Name | Internal Port | Host Port | Subdomain Example |
-|---------|---------------|---------------|-----------|-------------------|
-| Web Application | `readspace_web` | `8042` | `18042` | `app.example.com` |
-| API Server | `readspace_api` | `8008` | `18008` | `api.example.com` |
-| Supabase | `kong` | `8000` | `18000` | `supabase.example.com` |
+| Service         | Container Name  | Internal Port | Host Port | Subdomain Example      |
+| --------------- | --------------- | ------------- | --------- | ---------------------- |
+| Web Application | `readspace_web` | `8042`        | `18042`   | `app.example.com`      |
+| API Server      | `readspace_api` | `8008`        | `18008`   | `api.example.com`      |
+| Supabase        | `kong`          | `8000`        | `18000`   | `supabase.example.com` |
 
 ### Important: Choosing the Right Port
 
 The port you use depends on where your reverse proxy is running:
 
 **🐳 Reverse Proxy in Docker (same network as Readspace)**
+
 - Use container names with internal ports
 - Example: `readspace_web:8042`, `readspace_api:8008`, `kong:8000`
 - Common for: Traefik, Caddy in Docker, nginx in Docker
 
 **💻 Reverse Proxy on Host (installed directly on server)**
+
 - Use `localhost` with host ports
 - Example: `localhost:18042`, `localhost:18008`, `localhost:18000`
 - Common for: nginx via apt/yum, Caddy binary, Apache, nginx Proxy Manager
@@ -120,6 +122,7 @@ nginx Proxy Manager provides a web UI for managing reverse proxy configurations,
 3. **Save** each configuration
 
 **Network Setup**: If NPM is running in Docker, ensure it's in the same network as Readspace:
+
 ```yaml
 networks:
   default:
@@ -174,6 +177,7 @@ supabase.example.com {
 ```
 
 **Start Caddy**:
+
 ```bash
 caddy run --config Caddyfile
 ```
@@ -262,6 +266,7 @@ server {
 ```
 
 **Enable and reload nginx**:
+
 ```bash
 sudo ln -s /etc/nginx/sites-available/readspace.conf /etc/nginx/sites-enabled/
 sudo nginx -t
@@ -269,6 +274,7 @@ sudo systemctl reload nginx
 ```
 
 **SSL Certificates**: Use [Certbot](https://certbot.eff.org/) to obtain Let's Encrypt certificates:
+
 ```bash
 sudo certbot --nginx -d app.example.com -d api.example.com -d supabase.example.com
 ```

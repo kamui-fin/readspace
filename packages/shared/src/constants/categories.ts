@@ -1,6 +1,5 @@
 import { FeedCategory } from "../api/types";
 
-
 /**
  * List of all available feed categories
  */

@@ -96,18 +96,18 @@ export interface SaveArticleResponse {
 
 export type CheckArticleSavedResponse =
   | {
-    is_saved: true;
-    article_id: string;
-    title: string | null;
-    note: string | null;
-    priority: ArticlePriority | null;
-    is_read: boolean;
-    read_at: string | null;
-  }
+      is_saved: true;
+      article_id: string;
+      title: string | null;
+      note: string | null;
+      priority: ArticlePriority | null;
+      is_read: boolean;
+      read_at: string | null;
+    }
   | {
-    is_saved: false;
-    article_id: null;
-  };
+      is_saved: false;
+      article_id: null;
+    };
 
 // ============= API Requests =============
 

@@ -22,7 +22,6 @@ const categoryBadgeVariants = cva(
     }
 )
 
-
 const getCategoryIcon = (categoryName: string) => {
     const iconProps = { size: 16 }
 
@@ -33,7 +32,7 @@ const getCategoryIcon = (categoryName: string) => {
     }
 
     // Fallback: try to find by name (legacy support or display name match)
-    // This part might be expensive if loop, but it's small list. 
+    // This part might be expensive if loop, but it's small list.
     // Actually, let's just use the key lookup for now as we migrated everything.
 
     const config = CATEGORY_CONFIG[categoryName as FeedCategory]
@@ -47,7 +46,7 @@ const getCategoryIcon = (categoryName: string) => {
 
 export interface CategoryBadgeProps
     extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof categoryBadgeVariants> {
+        VariantProps<typeof categoryBadgeVariants> {
     category: string
     iconKey?: string
     selected?: boolean

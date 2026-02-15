@@ -164,12 +164,12 @@ async def _poll_job(client: genai.Client, job_name: str, timeout_seconds: int = 
                         success = getattr(stats, "successful_count", 0)
                         failed = getattr(stats, "failed_count", 0)
                         incomplete = getattr(stats, "incomplete_count", 0)
-                    
+
                     total = success + failed + incomplete
                     if total > 0:
                         stats_str = f"Processed: {success}/{total} (Failed: {failed})"
-            except Exception:
-                pass  # Ignore stat extraction errors
+            except Exception as e:
+                logger.warning("Failed to extract completion stats", error=str(e))
 
             logger.info(
                 "Batch job running",

@@ -106,21 +106,18 @@ export function useCreateFeed(
       ApiClient.createFeed(feed),
     onSuccess: (newSubscription) => {
       // Update feeds list with new subscription
-      queryClient.setQueryData<FeedsResponse>(
-        queryKeys.feeds(),
-        (old) => {
-          if (!old) {
-            return {
-              subscriptions: [newSubscription],
-              folders: [],
-            };
-          }
+      queryClient.setQueryData<FeedsResponse>(queryKeys.feeds(), (old) => {
+        if (!old) {
           return {
-            ...old,
-            subscriptions: [...old.subscriptions, newSubscription],
+            subscriptions: [newSubscription],
+            folders: [],
           };
-        },
-      );
+        }
+        return {
+          ...old,
+          subscriptions: [...old.subscriptions, newSubscription],
+        };
+      });
     },
     onSettled: (data) => {
       queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
@@ -364,5 +361,3 @@ export function useBulkUpdateFeedsFolder(
     ...options,
   });
 }
-
-

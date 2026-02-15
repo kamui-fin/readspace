@@ -17,9 +17,9 @@ Analyze the provided context, which includes direct git repository information a
 1.  **Analyze Context**: Prioritize the user's summary (`$ARGUMENTS`) if provided. Then, analyze the output of the git commands—especially the `git diff` and `git log`—to get a complete picture of the work performed.
 2.  **Identify Changes**: Sift through the context to identify distinct tasks, features, and bug fixes.
 3.  **Categorize**: Group the identified work into three main sections:
-    * `Finished`: For tasks that appear complete in the diff or are in recent commits.
-    * `In Progress`: For work that is partially complete in the diff.
-    * `Todo`: For identified next steps, possibly inferred from comments or the nature of the incomplete work.
+    - `Finished`: For tasks that appear complete in the diff or are in recent commits.
+    - `In Progress`: For work that is partially complete in the diff.
+    - `Todo`: For identified next steps, possibly inferred from comments or the nature of the incomplete work.
 4.  **Sub-Group by Feature**: Within each main section, group related items by the feature or component they belong to. Use brackets for the feature name (e.g., `[profile]`).
 5.  **Format Output**: Draft the devlog entry using the specified markdown format.
 
@@ -29,10 +29,10 @@ Analyze the provided context, which includes direct git repository information a
 
 Your final output **must** be only the markdown for the devlog entry. Do not include any conversational text, preamble, or explanation.
 
--   The main heading (`#`) must be the current date.
--   Use `##` headings for the main sections: `Finished`, `In Progress`, and `Todo`.
--   Under each section, group related tasks by feature/component using brackets, like `[article view]`.
--   List each individual task as a bullet point (`*`).
+- The main heading (`#`) must be the current date.
+- Use `##` headings for the main sections: `Finished`, `In Progress`, and `Todo`.
+- Under each section, group related tasks by feature/component using brackets, like `[article view]`.
+- List each individual task as a bullet point (`*`).
 
 ### Example Output Structure:
 
@@ -42,25 +42,29 @@ Your final output **must** be only the markdown for the devlog entry. Do not inc
 ## Finished
 
 [following]
-* added faster-image for heavy list views with image hash for loading state
-* reworked animation/offsets to account for sticky header race conditions
+
+- added faster-image for heavy list views with image hash for loading state
+- reworked animation/offsets to account for sticky header race conditions
 
 [profile]
-* moved recents/mark as read under this route
-* fixed sticky header for recents
+
+- moved recents/mark as read under this route
+- fixed sticky header for recents
 
 ## In Progress
 
 [discover]
-* implementation of this route (check web)
+
+- implementation of this route (check web)
 
 ## Todo
 
 [article view]
-* html view enhancements, i.e., typography, content rendering, etc.
-````
 
------
+- html view enhancements, i.e., typography, content rendering, etc.
+```
+
+---
 
 ## What to Analyze
 
@@ -68,8 +72,8 @@ Your final output **must** be only the markdown for the devlog entry. Do not inc
 
 **Git Context:**
 
-  - **Current Branch**: `!git branch --show-current`
-  - **Recent Commits**:
+- **Current Branch**: `!git branch --show-current`
+- **Recent Commits**:
 
 <!-- end list -->
 
@@ -77,7 +81,7 @@ Your final output **must** be only the markdown for the devlog entry. Do not inc
 !git log --oneline -10
 ```
 
-  - **Staged & Unstaged Changes**:
+- **Staged & Unstaged Changes**:
 
 <!-- end list -->
 

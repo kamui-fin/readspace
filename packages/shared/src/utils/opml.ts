@@ -66,8 +66,8 @@ export async function validateOpml(file: File): Promise<OpmlValidationResult> {
     let hasNestedCategories = false;
     const existingUrls = new Set<string>();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const countFeeds = (
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       outlines: Array<{ xmlUrl?: string; outlines?: any[] }>,
       level = 0,
     ) => {

@@ -73,7 +73,11 @@ export function useArticleActions({
     }
   }
 
-  const updateArticle = async (articleId: string, url: string, data: Record<string, unknown>) => {
+  const updateArticle = async (
+    articleId: string,
+    url: string,
+    data: Record<string, unknown>
+  ) => {
     setStatus((prev) => ({ ...prev, isUpdating: true }))
     try {
       await sendMessage({
@@ -139,8 +143,10 @@ export function useArticleActions({
         payload: {
           url,
           title:
+            data.title ||
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            data.title || (extractedContent as any)?.title || initialMetadata?.title,
+            (extractedContent as any)?.title ||
+            initialMetadata?.title,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           content: (extractedContent as any)?.content,
           metadata:
