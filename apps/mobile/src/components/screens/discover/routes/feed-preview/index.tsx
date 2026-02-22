@@ -9,10 +9,10 @@ import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import {
   ApiClient,
   type FeedDiscoveryResult,
-  type SimilarFeedsResponse,
   useCreateFeed,
   useDeleteFeed,
   useFeed,
@@ -83,8 +83,8 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
   } = useQuery({
     queryKey: ['feed-articles', feedId],
     queryFn: async () => {
-      const response = await ApiClient.rss.getArticles({
-        feed_ids: [feedId],
+      const response = await ApiClient.getArticles({
+        feed_id: feedId,
         limit: 5,
       });
       return response;
@@ -93,14 +93,33 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
   });
 
   // Fetch similar feeds (top 4 for preview)
-  const { data: similarData, isLoading: isSimilarLoading } = useQuery<SimilarFeedsResponse>({
+  const { data: similarData, isLoading: isSimilarLoading } = useQuery({
     queryKey: ['similar-feeds-preview', feedId, 4],
-    queryFn: () => ApiClient.rss.getSimilarFeeds(feedId, { limit: 4 }),
+    queryFn: async () => {
+      const index = meilisearchClient.index(FEEDS_INDEX_NAME);
+      const results = await index.searchSimilarDocuments({
+        id: feedId,
+        limit: 4,
+        embedder: 'default',
+        showRankingScore: true,
+      });
+      return results;
+    },
     enabled: !!feedId,
   });
 
   const articles = articlesData?.items || [];
-  const similarFeeds = similarData?.similar_feeds || [];
+  const similarFeeds = (similarData?.hits || []).map((hit: any) => ({
+    id: hit.id,
+    url: hit.url,
+    title: hit.title,
+    link: hit.link ?? null,
+    image_url: hit.image_url ?? undefined,
+    language: hit.language ?? 'en',
+    description: hit.description ?? '',
+    is_subscribed: false,
+    is_preview: true,
+  }));
   // Use local state if available, otherwise fall back to feed data
   const isFollowing = localIsSubscribed !== null ? localIsSubscribed : feed?.is_subscribed || false;
 
@@ -142,8 +161,7 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
       setShouldWaitForPreview(true);
       setIsPreviewRefreshing(true);
 
-      // Call API directly with preview=true parameter
-      ApiClient.rss
+      ApiClient
         .refreshFeed(feedId, true, true)
         .then(async (feedData) => {
           // Store the feed data from refresh response (cast to FeedDiscoveryResult)
@@ -196,8 +214,7 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
       createFeed.mutate(
         {
           url: feedUrlToFollow,
-          folder_id: folderId || undefined,
-          silent: false,
+          folder_id: folderId || '',
         },
         {
           onSuccess: () => {

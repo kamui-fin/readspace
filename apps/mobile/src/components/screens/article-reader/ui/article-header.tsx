@@ -94,13 +94,13 @@ export function ArticleHeader({
       </Text>
 
       {/* Note for clipped articles */}
-      {isClipped && article.note && (
+      {isClipped && article.user_note && (
         <View className="mb-3 rounded-lg border border-grey4 bg-grey6 px-3 py-2 dark:border-grey4-dark dark:bg-grey6-dark">
           <Text
             size="sm"
             fontFamily="geist"
             className="leading-relaxed text-grey dark:text-grey-dark">
-            {article.note}
+            {article.user_note}
           </Text>
         </View>
       )}

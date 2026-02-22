@@ -1,4 +1,4 @@
-import { RssIcon } from '@components/icons/rss';
+import LocalRssIcon from '@components/icons/local/rss';
 import { COLORS } from '@lib/constants/colors';
 import { useMemo } from 'react';
 import { View } from 'react-native';
@@ -89,7 +89,7 @@ export function useFavicon({
           height: size,
           backgroundColor,
         }}>
-        <RssIcon size={size * 0.6} color={COLORS.light.grey} />
+        <LocalRssIcon width={size * 0.6} height={size * 0.6} fill={COLORS.light.grey} />
       </View>
     );
   }, [backgroundColor]);

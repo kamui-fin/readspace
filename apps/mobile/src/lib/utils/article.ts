@@ -45,7 +45,7 @@ export function processArticles(
       });
     } else if (activeTab === 1) {
       // Saved: articles marked as read_later
-      result = result.filter((article) => article.is_read_later);
+      result = result.filter((article) => article.is_saved);
     } else if (activeTab === 3) {
       // Recent: articles that have been read (is_read = true)
       result = result.filter((article) => article.is_read);
@@ -58,7 +58,7 @@ export function processArticles(
   } else if (filter === 'read') {
     result = result.filter((article) => article.is_read);
   } else if (filter === 'read_later') {
-    result = result.filter((article) => article.is_read_later);
+    result = result.filter((article) => article.is_saved);
   }
 
   return result;

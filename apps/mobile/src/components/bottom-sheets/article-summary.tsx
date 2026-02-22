@@ -3,8 +3,8 @@ import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { SparkleIcon } from '@components/icons/sparkle';
-import { RefreshAiIcon } from '@components/icons/refresh-ai';
+import SparkleIcon from '@components/icons/local/sparkle';
+import RefreshAiIcon from '@components/icons/local/refresh-ai';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { Monicon } from '@monicon/native';
@@ -15,6 +15,7 @@ import { View } from 'react-native';
 interface ArticleSummaryBottomSheetProps {
   summary: SummarizeResponse | null;
   isLoading: boolean;
+  error?: string | null;
   onRegenerate?: () => void;
   onClose?: () => void;
 }
@@ -22,7 +23,7 @@ interface ArticleSummaryBottomSheetProps {
 export const ArticleSummaryBottomSheet = forwardRef<
   BottomSheetModal,
   ArticleSummaryBottomSheetProps
->(({ summary, isLoading, onRegenerate, onClose }, ref) => {
+>(({ summary, isLoading, error, onRegenerate, onClose }, ref) => {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
@@ -32,7 +33,7 @@ export const ArticleSummaryBottomSheet = forwardRef<
   const headerLeft = useMemo(
     () => (
       <View className="flex-row items-center gap-1">
-        <SparkleIcon size={20} color={colors.primary} />
+        <SparkleIcon width={20} height={20} fill={colors.primary} />
         <Text size="xl" fontFamily="geist-semibold" className="text-primary_foreground">
           AI Summary
         </Text>
@@ -56,7 +57,7 @@ export const ArticleSummaryBottomSheet = forwardRef<
             Generating summary...
           </Text>
         </View>
-      ) : summary?.success && summary.summary ? (
+      ) : summary?.summary ? (
         <View className="gap-4">
           {/* Summary Text */}
           <View className="bg-grey6 dark:bg-grey6 rounded-2xl p-5">
@@ -76,7 +77,7 @@ export const ArticleSummaryBottomSheet = forwardRef<
                 variant="secondary"
                 size="large"
                 onPress={onRegenerate}
-                leftIcon={<RefreshAiIcon size={18} color={colors.primary} />}>
+                leftIcon={<RefreshAiIcon width={18} height={18} fill={colors.primary} />}>
                 Regenerate Summary
               </Button>
             )}
@@ -98,7 +99,7 @@ export const ArticleSummaryBottomSheet = forwardRef<
             </View>
           </View>
         </View>
-      ) : summary?.error ? (
+      ) : error ? (
         <View className="items-center justify-center py-12">
           <View
             className="mb-4 items-center justify-center rounded-full"
@@ -116,7 +117,7 @@ export const ArticleSummaryBottomSheet = forwardRef<
             Failed to Generate Summary
           </Text>
           <Text size="base" fontFamily="geist" className="text-grey dark:text-grey text-center">
-            {summary.error}
+            {error}
           </Text>
           {onRegenerate && (
             <Button
@@ -124,7 +125,7 @@ export const ArticleSummaryBottomSheet = forwardRef<
               size="medium"
               onPress={onRegenerate}
               className="mt-6"
-              leftIcon={<RefreshAiIcon size={18} color={colors.white} />}>
+              leftIcon={<RefreshAiIcon width={18} height={18} fill={colors.white} />}>
               Try Again
             </Button>
           )}

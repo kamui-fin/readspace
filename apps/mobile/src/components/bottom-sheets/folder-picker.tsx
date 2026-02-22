@@ -10,7 +10,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { Monicon } from '@monicon/native';
-import { useFolders } from '@readspace/shared';
+import { useFeeds } from '@readspace/shared';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { View } from 'react-native';
 
@@ -39,8 +39,8 @@ export const FolderPickerBottomSheet = forwardRef<
   }));
 
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(initialFolderId ?? null);
-  const { data: folders } = useFolders();
-
+  const { data: feedsData } = useFeeds();
+  const folders = feedsData?.folders || [];
   const typedFolders = (folders as { id: string; name: string }[]) || [];
 
   const handleSelect = useCallback((folderId: string | null) => {

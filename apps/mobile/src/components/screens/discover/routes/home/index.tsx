@@ -2,7 +2,7 @@ import {
   CreateFolderModal,
   type CreateFolderModalRef,
 } from '@components/bottom-sheets/create-folder';
-import { PlusIcon } from '@components/icons/plus';
+import PlusIcon from '@components/icons/local/plus';
 import { CategoriesList } from '@/components/screens/discover/ui/categories.list';
 import { RecentSearches } from '@components/screens/discover/ui/recent-searches';
 import { SearchResults } from '@/components/screens/discover/ui/search-results.list';
@@ -14,10 +14,10 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useDiscoverScroll } from '@contexts/discover-scroll-context';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { ApiClient, type DiscoverSearchResponse, useTrendingFeeds } from '@readspace/shared';
+import { ApiClient } from '@readspace/shared';
 import { useSearchHistory } from '@stores/search-history';
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useMemo } from 'react';
 import type { TextInput as RNTextInput } from 'react-native';
 import {
   Keyboard,
@@ -28,6 +28,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { InstantSearch, Configure, useSearchBox, useMenu, useInfiniteHits, useInstantSearch } from 'react-instantsearch';
+import { createSearchClient, meilisearchClient, FEEDS_INDEX_NAME } from '@lib/meilisearch-client';
 
 const CATEGORIES = [
   'Technology & Programming',
@@ -46,7 +48,19 @@ const CATEGORIES = [
 
 type ViewState = 'default' | 'category' | 'search' | 'focused';
 
+import type { FeedSummary } from '@readspace/shared';
 export function DiscoverScreen() {
+  const { searchClient } = useMemo(() => createSearchClient(), []);
+
+  return (
+    <InstantSearch searchClient={searchClient as any} indexName={FEEDS_INDEX_NAME}>
+      <Configure hitsPerPage={20} attributesToHighlight={['title', 'description']} />
+      <DiscoverScreenInner />
+    </InstantSearch>
+  );
+}
+
+function DiscoverScreenInner() {
   const [viewState, setViewState] = useState<ViewState>('default');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('');
@@ -70,44 +84,45 @@ export function DiscoverScreen() {
   const languageCode =
     selectedLanguage === 'english' ? 'en' : selectedLanguage === 'chinese' ? 'zh' : 'ja';
 
-  // Fetch trending feeds
+  // Fetch trending feeds using Meilisearch directly
   const {
     data: trendingData,
     isLoading: isTrendingLoading,
     isFetching: isTrendingFetching,
     error: trendingError,
-  } = useTrendingFeeds({ language: languageCode, limit: 20 }, { enabled: viewState === 'default' });
+  } = useQuery({
+    queryKey: ['trending', languageCode],
+    queryFn: async () => {
+      const res = await meilisearchClient.index(FEEDS_INDEX_NAME).search('', {
+        limit: 20,
+        filter: [`language=${languageCode}`], // Assuming 'language' is a filterable attribute
+      });
+      return res.hits as unknown as FeedSummary[];
+    },
+    enabled: viewState === 'default',
+  });
 
   const showTrendingSkeleton =
     (isTrendingLoading || isTrendingFetching) && (!trendingData || trendingData.length === 0);
 
-  // Search/category feeds
-  const {
-    data: searchData,
-    isLoading: isSearchLoading,
-    isFetching,
-    isSuccess: isSearchSuccess,
-  } = useQuery<DiscoverSearchResponse>({
-    queryKey: ['discover', 'search', activeQuery, selectedCategory, languageCode],
-    queryFn: async () => {
-      return await ApiClient.rss.searchFeeds({
-        q: activeQuery || undefined,
-        category: selectedCategory || undefined,
-        language: languageCode,
-        limit: 50,
-      });
-    },
-    enabled: viewState === 'category' || viewState === 'search',
-  });
+  const { refine: refineQuery } = useSearchBox();
+  const { refine: refineCategory } = useMenu({ attribute: 'top_level_category', limit: 100 });
+  const { refine: refineLanguage } = useMenu({ attribute: 'language', limit: 10 });
+  const { items: hits, isLastPage } = useInfiniteHits();
+  const { status } = useInstantSearch();
 
-  const showSearchSkeleton = (isSearchLoading || isFetching) && !isSearchSuccess && !searchData;
+  const isSearchLoading = status === 'loading' || status === 'stalled';
+  const showSearchSkeleton = isSearchLoading && hits.length === 0;
 
   const handleCategoryPress = useCallback(
     (category: string) => {
       setSelectedCategory(category);
+      refineCategory(category);
+
       setViewState('category');
       setSearchQuery('');
       setActiveQuery('');
+      refineQuery('');
       setIsSearchFocused(false);
       setTimeout(() => {
         categoryScrollRef.current?.scrollTo({ x: 0, animated: true });
@@ -128,8 +143,11 @@ export function DiscoverScreen() {
     if (!searchQuery.trim()) return;
     addSearch(searchQuery);
     setActiveQuery(searchQuery);
+    refineQuery(searchQuery);
+
     setViewState('search');
     setSelectedCategory(null);
+    refineCategory('');
     setIsSearchFocused(false);
     searchBarRef.current?.blur();
     Keyboard.dismiss();
@@ -153,8 +171,10 @@ export function DiscoverScreen() {
     setIsSearchFocused(false);
     setSearchQuery('');
     setActiveQuery('');
+    refineQuery('');
     setViewState('default');
     setSelectedCategory(null);
+    refineCategory('');
     searchBarRef.current?.blur();
     Keyboard.dismiss();
     setIsSearching?.(false);
@@ -163,18 +183,23 @@ export function DiscoverScreen() {
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
     setActiveQuery('');
-  }, []);
+    refineQuery('');
+  }, [refineQuery]);
 
   const handleLanguageChange = useCallback((language: Language) => {
     setSelectedLanguage(language);
-  }, []);
+    refineLanguage(language === 'english' ? 'en' : language === 'chinese' ? 'zh' : 'ja');
+  }, [refineLanguage]);
 
   const handleRecentSearchPress = useCallback(
     (query: string) => {
       addSearch(query);
       setSearchQuery(query);
       setActiveQuery(query);
+      refineQuery(query);
       setViewState('search');
+      setSelectedCategory(null);
+      refineCategory('');
       setIsSearchFocused(false);
       searchBarRef.current?.blur();
       Keyboard.dismiss();
@@ -196,8 +221,9 @@ export function DiscoverScreen() {
   const handleClearCategory = useCallback(() => {
     setViewState('default');
     setSelectedCategory(null);
+    refineCategory('');
     setIsSearching?.(false);
-  }, [setIsSearching]);
+  }, [setIsSearching, refineCategory]);
 
   const insets = useSafeAreaInsets();
 
@@ -219,7 +245,7 @@ export function DiscoverScreen() {
                   fullWidth={false}
                   onPress={() => createFolderModalRef.current?.present()}
                   style={{ backgroundColor: colors.grey5 }}>
-                  <PlusIcon size={22} color={colors.grey} strokeWidth={2} />
+                  <PlusIcon width={22} height={22} fill={colors.grey} strokeWidth={2} />
                 </Button>
               </View>
             )}
@@ -281,7 +307,7 @@ export function DiscoverScreen() {
               /* Search/Category Results */
               <SearchResults
                 showSearchSkeleton={showSearchSkeleton}
-                searchData={searchData}
+                hits={hits as any}
                 contentPaddingBottom={contentPaddingBottom}
                 selectedCategory={selectedCategory}
                 categoriesRow1={categoriesRow1}

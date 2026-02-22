@@ -1,5 +1,5 @@
 import { useStorageState } from '@hooks/useStorageState';
-import { configureApiClient } from '@lib/api/config';
+import { configureApiClient } from '@lib/api-client';
 import { supabase } from '@lib/supabase/client';
 import type { Session, User } from '@supabase/supabase-js';
 import { useRouter, useSegments } from 'expo-router';
@@ -32,10 +32,10 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   isAuthenticated: false,
   isLoading: true,
-  signOut: async () => {},
-  signIn: async () => {},
-  signUp: async () => {},
-  signInWithGoogle: async () => {},
+  signOut: async () => { },
+  signIn: async () => { },
+  signUp: async () => { },
+  signInWithGoogle: async () => { },
 });
 
 export function useSession() {

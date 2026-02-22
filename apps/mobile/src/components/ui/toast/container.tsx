@@ -1,6 +1,6 @@
-import { CircleCheckIcon } from '@components/icons/circle-check';
-import { CircleErrorIcon } from '@components/icons/circle-error';
-import { CircleInfoIcon } from '@components/icons/circle-info';
+import CheckCircleIcon from '@components/icons/local/check-circle';
+import CloseCircleIcon from '@components/icons/local/close-circle';
+import InfoCircleIcon from '@components/icons/local/info-circle';
 import { Spinner } from '@components/ui/spinner';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
@@ -212,7 +212,7 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
       return toast.custom.icon;
     }
     if (toast.type === 'success') {
-      return <CircleCheckIcon size={20} color={colors.secondary} />;
+      return <CheckCircleIcon width={20} height={20} fill={colors.secondary} />;
     }
     if (toast.type === 'promise') {
       return (
@@ -233,9 +233,9 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
       );
     }
     if (toast.type === 'info') {
-      return <CircleInfoIcon size={20} color={colors.orange} />;
+      return <InfoCircleIcon width={20} height={20} fill={colors.orange} />;
     }
-    return <CircleErrorIcon size={20} color={colors.red} />;
+    return <CloseCircleIcon width={20} height={20} fill={colors.red} />;
   };
 
   return (
@@ -247,8 +247,8 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
           ...(toast.from === 'top'
             ? { top: insets.top + 16 }
             : {
-                bottom: bottomOffset,
-              }),
+              bottom: bottomOffset,
+            }),
           zIndex: 9999,
         },
         containerStyle,

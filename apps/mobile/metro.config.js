@@ -15,9 +15,7 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
-const configWithMonicon = withMonicon(config, {
-  collections: ['solar'],
-});
+const configWithMonicon = withMonicon(config);
 
 module.exports = withUniwindConfig(configWithMonicon, {
   cssEntryFile: './global.css',

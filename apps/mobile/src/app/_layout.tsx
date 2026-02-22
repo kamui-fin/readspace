@@ -41,9 +41,8 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-// Import API client to initialize it
-import '@lib/api/client';
-import { configureApiClient } from '@lib/api/config';
+import '@lib/api-client';
+import { configureApiClient } from '@lib/api-client';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();

@@ -2,13 +2,13 @@ import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.car
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { Skeleton } from '@components/ui/skeleton';
 import { Text } from '@components/ui/text';
-import type { DiscoverSearchResponse } from '@readspace/shared';
+import type { FeedSummary } from '@readspace/shared';
 import { ScrollView, View } from 'react-native';
 import { CategoriesList } from './categories.list';
 
 interface SearchResultsProps {
   showSearchSkeleton: boolean;
-  searchData: DiscoverSearchResponse | undefined;
+  hits: FeedSummary[];
   contentPaddingBottom: number;
   selectedCategory: string | null;
   categoriesRow1: string[];
@@ -20,7 +20,7 @@ interface SearchResultsProps {
 
 export function SearchResults({
   showSearchSkeleton,
-  searchData,
+  hits,
   contentPaddingBottom,
   selectedCategory,
   categoriesRow1,
@@ -51,11 +51,11 @@ export function SearchResults({
             ))}
           </View>
         </ScrollView>
-      ) : searchData?.results && searchData.results.length > 0 ? (
+      ) : hits && hits.length > 0 ? (
         <InfiniteScrollList
-          data={searchData.results}
+          data={hits}
           estimatedItemSize={80}
-          renderItem={(item) => (
+          renderItem={({ item }) => (
             <FeedListItem
               feedId={item.id}
               title={item.title || 'Untitled Feed'}

@@ -4,7 +4,7 @@ import { ArticleHeader } from '@components/screens/article-reader/ui/article-hea
 import { useFavicon } from '@hooks/useFavicon';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { calculateReadingTime } from '@readspace/shared';
+
 import type { Article } from '@readspace/shared';
 import { useMemo } from 'react';
 import {
@@ -86,23 +86,9 @@ export function ArticleReader({
     colors
   );
 
-  const feedTitle =
-    typeof article.feed === 'object' && article.feed ? article.feed.title : undefined;
-  const feedImageUrl =
-    typeof article.feed === 'object' && article.feed ? article.feed.image_url : undefined;
-
-  // Try multiple ways to get the feed ID
-  let feedId: string | undefined;
-  if (typeof article.feed === 'object' && article.feed && 'id' in article.feed) {
-    feedId = article.feed.id as string;
-  } else if (typeof article.feed === 'string') {
-    feedId = article.feed;
-  }
-
-  // Check if there's a feed_id field directly on the article
-  if (!feedId && 'feed_id' in article && typeof article.feed_id === 'string') {
-    feedId = article.feed_id;
-  }
+  const feedTitle = article.feed_title;
+  const feedImageUrl = article.feed_icon;
+  const feedId = article.feed_id || undefined;
 
   // For clipped articles, show domain and use created_at as saved date
   const displaySource = isClipped ? extractDomain(article.link) : feedTitle;
@@ -122,10 +108,11 @@ export function ArticleReader({
   // Calculate reading time from content with proper CJK support
   const readTimeMinutes = useMemo(() => {
     if (article.content) {
-      return calculateReadingTime(article.content);
+      const textLength = article.content.replace(/<[^>]*>?/gm, '').length;
+      return Math.max(1, Math.ceil(textLength / 1000));
     }
-    return article.estimated_read_time_minutes || 1;
-  }, [article.content, article.estimated_read_time_minutes]);
+    return 1;
+  }, [article.content]);
 
   const readTime = `${readTimeMinutes} min read`;
 
@@ -223,10 +210,10 @@ export function ArticleReader({
               // Apply italic font if inside italic context
               const linkStyle = isInsideItalic
                 ? {
-                    ...tagsStyles.a,
-                    fontFamily: 'EBGaramond_500Medium_Italic',
-                    fontStyle: 'italic' as const,
-                  }
+                  ...tagsStyles.a,
+                  fontFamily: 'EBGaramond_500Medium_Italic',
+                  fontStyle: 'italic' as const,
+                }
                 : tagsStyles.a;
 
               // Safely access tbaseStyle with null check

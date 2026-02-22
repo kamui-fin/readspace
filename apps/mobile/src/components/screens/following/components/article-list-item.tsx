@@ -63,7 +63,7 @@ export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListI
       <ArticleItemCard
         article={article}
         imageUrl={displayImageUrl}
-        title={article.title}
+        title={article.title || undefined}
         description={article.description || undefined}
         timestamp={timestamp}
         faviconUrl={iconUrl}
@@ -92,13 +92,13 @@ export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListI
           }
         }}
         onMarkAsRead={(article) => {
-          onToggleRead(article.id, article.is_read || false, article.article_type);
+          onToggleRead(article.id, article.is_read || false, article.article_type as any);
         }}
         onMarkAsUnread={(article) => {
-          onToggleRead(article.id, article.is_read || false, article.article_type);
+          onToggleRead(article.id, article.is_read || false, article.article_type as any);
         }}
         onSaveArticle={(article) => {
-          onBookmark(article.id, article.is_read_later || false, article.article_type);
+          onBookmark(article.id, article.is_saved || false, article.article_type as any);
         }}
       />
     );
@@ -106,6 +106,9 @@ export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListI
 
   return <View />;
 }
-function extractFeedInfo(article: Article): { feedTitle: any; feedImageUrl: any } {
-  throw new Error('Function not implemented.');
+function extractFeedInfo(article: any): { feedTitle: any; feedImageUrl: any } {
+  return {
+    feedTitle: typeof article.feed === 'object' && article.feed ? article.feed.title : undefined,
+    feedImageUrl: typeof article.feed === 'object' && article.feed ? article.feed.image_url : undefined,
+  };
 }

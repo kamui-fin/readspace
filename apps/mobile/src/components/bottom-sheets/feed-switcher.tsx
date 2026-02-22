@@ -2,7 +2,7 @@ import {
   CreateFolderModal,
   type CreateFolderModalRef,
 } from '@components/bottom-sheets/create-folder';
-import { ExpandVerticalIcon } from '@components/icons/expand-vertical';
+import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Chip } from '@components/ui/chip';
@@ -17,7 +17,7 @@ import {
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { COLORS } from '@lib/constants/colors';
 import { Monicon } from '@monicon/native';
-import { type Feed, type Folder, useFeeds, useFolders } from '@readspace/shared';
+import { type Subscription, type Folder, useFeeds, useUnreadCounts } from '@readspace/shared';
 import { type FeedSwitcherStore, useFeedSwitcherStore } from '@stores/feed-switcher';
 import { useFeedViewStore } from '@stores/feed-view';
 import { Image as ExpoImage } from 'expo-image';
@@ -33,7 +33,7 @@ interface ListItem {
   type: 'folder-group';
   id: string;
   folder: Folder;
-  folderFeeds: Feed[];
+  folderFeeds: Subscription[];
   unreadCount: number;
   isExpanded: boolean;
   isEmpty: boolean;
@@ -48,10 +48,12 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
     const colors = COLORS[isDark ? 'dark' : 'light'];
 
     const { data: feedsData } = useFeeds();
-    const { data: foldersData } = useFolders();
 
-    const feeds = useMemo(() => (feedsData as Feed[]) || [], [feedsData]);
-    const folders = useMemo(() => (foldersData as Folder[]) || [], [foldersData]);
+    const { data: unreadCountsData } = useUnreadCounts();
+    const unreadCounts = unreadCountsData?.feed_counts || {};
+
+    const feeds = useMemo(() => (feedsData?.subscriptions as Subscription[]) || [], [feedsData]);
+    const folders = useMemo(() => (feedsData?.folders as Folder[]) || [], [feedsData]);
 
     const expandedFolders = useFeedSwitcherStore(
       (state: FeedSwitcherStore) => state.expandedFolders
@@ -75,8 +77,8 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
       const items: ListItem[] = [];
 
       folders.forEach((folder) => {
-        const folderFeeds = feeds.filter((feed) => feed.folder_id === folder.id);
-        const unreadCount = folderFeeds.reduce((sum, feed) => sum + (feed.unread_count || 0), 0);
+        const folderFeeds = feeds.filter((sub) => sub.folder?.id === folder.id);
+        const unreadCount = folderFeeds.reduce((sum, sub) => sum + (unreadCounts[sub.feed.id] || 0), 0);
         const isExpanded = expandedFolders.has(folder.id);
         const isEmpty = folderFeeds.length === 0;
 
@@ -103,9 +105,9 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
 
     const handleFeedPress = useCallback(
       (feedId: string) => {
-        const feed = feeds.find((f) => f.id === feedId);
-        if (feed) {
-          selectFeed(feedId, feed.title);
+        const sub = feeds.find((f) => f.feed.id === feedId);
+        if (sub) {
+          selectFeed(feedId, sub.feed.title);
           bottomSheetRef.current?.dismiss();
         }
       },
@@ -190,7 +192,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
                           toggleFolderExpand(item.folder.id);
                         }}
                         className="h-8 w-8 bg-transparent dark:bg-transparent">
-                        <ExpandVerticalIcon size={20} color={colors.grey2} />
+                        <ExpandVerticalIcon width={20} height={20} fill={colors.grey2} />
                       </Button>
                     </View>
                   </View>
@@ -200,7 +202,8 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
               {/* Expanded Feeds */}
               {item.isExpanded && !item.isEmpty && (
                 <View className="pl-4 pb-8">
-                  {item.folderFeeds.map((feed) => {
+                  {item.folderFeeds.map((sub) => {
+                    const feed = sub.feed;
                     const isFeedViewing = viewType === 'feed' && selectedId === feed.id;
                     const faviconUrl =
                       feed.image_url ||
@@ -252,9 +255,9 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
                             numberOfLines={1}>
                             {feed.title}
                           </Text>
-                          {feed.unread_count > 0 && (
+                          {unreadCounts[feed.id] > 0 && (
                             <Text className="font-geist text-sm text-grey2 dark:text-grey2-dark">
-                              {feed.unread_count} unread
+                              {unreadCounts[feed.id]} unread
                             </Text>
                           )}
                         </View>

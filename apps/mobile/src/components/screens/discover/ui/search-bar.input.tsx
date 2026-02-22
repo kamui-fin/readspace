@@ -1,5 +1,5 @@
-import { CloseIcon } from '@components/icons/close';
-import { LanguageIcon } from '@components/icons/language';
+import CloseCircleIcon from '@components/icons/local/close-circle';
+import LanguageIcon from '@components/icons/local/language';
 import { Button } from '@components/ui/button';
 import {
   DropdownMenuContent,
@@ -86,7 +86,7 @@ export const SearchBar = forwardRef<React.ComponentRef<typeof Input>, SearchBarP
               size="small"
               fullWidth={false}
               className="min-w-0 flex-row items-center gap-1">
-              <LanguageIcon size={20} color={colors.grey} />
+              <LanguageIcon width={20} height={20} fill={colors.grey} />
               <Monicon
                 name="solar:alt-arrow-down-linear"
                 size={12}
@@ -167,7 +167,7 @@ export const SearchBar = forwardRef<React.ComponentRef<typeof Input>, SearchBarP
             fullWidth={false}
             onPress={onCancel}
             className="bg-grey6 dark:bg-grey6-dark rounded-full h-12 w-12 items-center justify-center">
-            <CloseIcon size={24} color={colors.black} />
+            <CloseCircleIcon width={24} height={24} fill={colors.black} />
           </Button>
         )}
       </View>

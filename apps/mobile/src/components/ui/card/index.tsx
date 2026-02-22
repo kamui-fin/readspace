@@ -1,4 +1,4 @@
-import { RssIcon } from '@components/icons/rss';
+import RssIcon from '@components/icons/local/rss';
 import { Divider } from '@components/ui/divider';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
@@ -27,7 +27,7 @@ const cardVariants = cva('bg-background dark:bg-background-dark', {
 
 export interface CardProps
   extends Omit<PressableProps, 'children'>,
-    VariantProps<typeof cardVariants> {
+  VariantProps<typeof cardVariants> {
   children?: ReactNode;
   className?: string;
   // Feed variant props
@@ -161,7 +161,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                     <FallbackComponent size={16} className="rounded-sm" />
                   ) : (
                     <View className="h-4 w-4 items-center justify-center rounded-sm bg-orange-100 dark:bg-orange-950">
-                      <RssIcon size={12} color={isDark ? '#9a3412' : '#ea580c'} />
+                      <RssIcon width={12} height={12} fill={isDark ? '#9a3412' : '#ea580c'} />
                     </View>
                   )}
 

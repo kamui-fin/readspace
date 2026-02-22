@@ -1,7 +1,7 @@
 import { OPMLImportBottomSheet } from '@components/bottom-sheets/opml-import';
-import { DiscordIcon } from '@components/icons/discord';
-import { ExpandVerticalIcon } from '@components/icons/expand-vertical';
-import { GitHubIcon } from '@components/icons/github';
+import DiscordIcon from '@components/icons/local/discord';
+import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
+import GitHubIcon from '@components/icons/local/github';
 import { Header } from '@components/navigation/header';
 import { UserProfile } from '@components/screens/profile/ui/user-profile';
 import { Button } from '@components/ui/button';
@@ -24,7 +24,7 @@ import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { exportFeedsToOPML, readFileContent, validateOPMLFile } from '@lib/utils/opml';
 import { Monicon } from '@monicon/native';
-import { useFeeds, useFolders } from '@readspace/shared';
+import { useFeeds } from '@readspace/shared';
 import { useSettingsStore } from '@stores/settings';
 import { type Theme, useThemeStore } from '@stores/theme';
 import { useQueryClient } from '@tanstack/react-query';
@@ -49,8 +49,9 @@ export function ProfileScreen() {
   const { settings } = useSettingsStore();
 
   // Fetch feeds and folders for OPML export
-  const { data: feeds } = useFeeds();
-  const { data: folders } = useFolders();
+  const { data: feedsData } = useFeeds();
+  const feeds = feedsData?.subscriptions || [];
+  const folders = feedsData?.folders || [];
 
   const queryClient = useQueryClient();
 
@@ -141,7 +142,11 @@ export function ProfileScreen() {
       }
 
       const typedFolders = (folders as { id: string; name: string }[]) || [];
-      await exportFeedsToOPML(feeds || [], typedFolders);
+      const feedsDataForExport = feeds.map(sub => ({
+        ...sub.feed,
+        folder_id: sub.folder?.id
+      })) as any[];
+      await exportFeedsToOPML(feedsDataForExport, typedFolders);
       toast.success('OPML exported successfully!');
     } catch (error) {
       console.error('OPML export error:', error);
@@ -204,7 +209,7 @@ export function ProfileScreen() {
                       variant="secondary"
                       size="medium"
                       fullWidth={false}
-                      rightIcon={<ExpandVerticalIcon size={16} color={colors.black} />}
+                      rightIcon={<ExpandVerticalIcon fill={colors.black} />}
                       textClassName="font-geist-medium text-lg">
                       {theme.charAt(0).toUpperCase() + theme.slice(1)}
                     </Button>
@@ -342,7 +347,7 @@ export function ProfileScreen() {
                 size="large"
                 fullWidth
                 onPress={handleGithubPress}
-                leftIcon={<GitHubIcon size={20} color={githubColor} />}
+                leftIcon={<GitHubIcon fill={githubColor} />}
                 style={{
                   backgroundColor: githubBackground,
                 }}>
@@ -357,7 +362,7 @@ export function ProfileScreen() {
                 size="large"
                 fullWidth
                 onPress={handleDiscordPress}
-                leftIcon={<DiscordIcon size={20} color={discordColor} />}
+                leftIcon={<DiscordIcon fill={discordColor} />}
                 style={{
                   backgroundColor: discordBackground,
                 }}>

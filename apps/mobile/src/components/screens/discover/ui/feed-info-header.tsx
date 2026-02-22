@@ -37,8 +37,8 @@ export function FeedInfoHeader({
   }, []);
 
   const handleUrlPress = useCallback(async () => {
-    if (!feed?.link && !feed?.url) return;
     const url = feed.link || feed.url;
+    if (!url) return;
     const fullUrl = url.startsWith('http') ? url : `https://${url}`;
     const supported = await Linking.canOpenURL(fullUrl);
     if (supported) {
@@ -157,24 +157,29 @@ export function FeedInfoHeader({
       )}
 
       {/* Feed Tags */}
-      {feed.tags && feed.tags.length > 0 && (
-        <View className="mb-6 flex-row flex-wrap items-center gap-2">
-          {feed.tags.slice(0, 5).map((tag: string | { name: string }, index: number) => {
-            const tagName = typeof tag === 'string' ? tag : (tag as any)?.name || 'Tag';
-            const formattedTag = tagName.replace(/\s+/g, '-');
-            return (
-              <View
-                key={`${tagName}-${index.toString()}`}
-                className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
-                style={{ backgroundColor: colors.grey5 }}>
-                <Text size="sm" fontFamily="geist" style={{ color: colors.grey, fontSize: 12 }}>
-                  #{formattedTag}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-      )}
+      {(() => {
+        const fallBackTags = (feed as any).tags;
+        const displayTags = (feed.tags_native && feed.tags_native.length > 0) ? feed.tags_native : fallBackTags;
+        if (!displayTags || displayTags.length === 0) return null;
+        return (
+          <View className="mb-6 flex-row flex-wrap items-center gap-2">
+            {displayTags.slice(0, 5).map((tag: string | { name: string }, index: number) => {
+              const tagName = typeof tag === 'string' ? tag : (tag as any)?.name || 'Tag';
+              const formattedTag = tagName.replace(/\s+/g, '-');
+              return (
+                <View
+                  key={`${tagName}-${index.toString()}`}
+                  className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
+                  style={{ backgroundColor: colors.grey5 }}>
+                  <Text size="sm" fontFamily="geist" style={{ color: colors.grey, fontSize: 12 }}>
+                    #{formattedTag}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        );
+      })()}
 
       {/* Follow Button */}
       <Button

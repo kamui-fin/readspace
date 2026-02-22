@@ -1,5 +1,5 @@
-import { CircleCheckIcon } from '@components/icons/circle-check';
-import { CircleErrorIcon } from '@components/icons/circle-error';
+import CheckCircleIcon from '@components/icons/local/check-circle';
+import CloseCircleIcon from '@components/icons/local/close-circle';
 import { COLORS } from '@lib/constants/colors';
 import { useCallback, useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -125,9 +125,9 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
           }}>
           <Animated.View style={[{ marginRight: 12 }, iconAnimatedStyle]}>
             {toast.type === 'success' ? (
-              <CircleCheckIcon size={24} color={COLORS.light.secondary} />
+              <CheckCircleIcon width={24} height={24} fill={COLORS.light.secondary} />
             ) : (
-              <CircleErrorIcon size={24} color={COLORS.light.red} />
+              <CloseCircleIcon width={24} height={24} fill={COLORS.light.red} />
             )}
           </Animated.View>
 

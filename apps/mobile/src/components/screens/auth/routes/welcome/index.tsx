@@ -1,5 +1,5 @@
-import { GoogleIcon } from '@components/icons/google';
-import { ReadspaceLogo } from '@components/icons/readspace-logo';
+import GoogleIcon from '@components/icons/local/google';
+import ReadspaceLogo from '@components/icons/local/readspace-logo';
 import { Button } from '@components/ui/button';
 import { ThreeDotsAnimation } from '@components/ui/three-dots';
 import { toast } from '@components/ui/toast';
@@ -102,7 +102,7 @@ export function WelcomeScreen() {
           <View
             className="items-center justify-center rounded-xl bg-black dark:bg-black"
             style={{ width: logoSize, height: logoSize }}>
-            <ReadspaceLogo size={logoSize} />
+            <ReadspaceLogo width={logoSize} height={logoSize} />
           </View>
           <Text className="text-primary_foreground dark:text-primary_foreground ml-4 font-figtree-medium text-4xl">
             readspace
@@ -135,7 +135,7 @@ export function WelcomeScreen() {
           disabled={isLoading}
           leftIcon={
             !isLoading ? (
-              <GoogleIcon size={20} color={isDark ? COLORS.dark.white : COLORS.light.black} />
+              <GoogleIcon width={20} height={20} fill={isDark ? COLORS.dark.white : COLORS.light.black} />
             ) : undefined
           }>
           {isLoading ? (

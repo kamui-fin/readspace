@@ -1,4 +1,4 @@
-import { ExpandVerticalIcon } from '@components/icons/expand-vertical';
+import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
 import {
   actionsContainerVariants,
   foregroundVariants,
@@ -104,7 +104,7 @@ export function HeaderForeground({
             <View
               className="justify-center"
               style={{ marginBottom: Platform.OS === 'ios' ? 6 : 2 }}>
-              <ExpandVerticalIcon size={24} color={colors.black} />
+              <ExpandVerticalIcon width={24} height={24} fill={colors.black} />
             </View>
           </TouchableOpacity>
         ) : (

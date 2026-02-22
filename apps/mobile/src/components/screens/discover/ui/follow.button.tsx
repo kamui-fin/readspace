@@ -8,7 +8,7 @@ import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { useDeleteFeed, useFeeds, useSubscribeToFeed } from '@readspace/shared';
+import { useDeleteFeed, useFeeds, useCreateFeed } from '@readspace/shared';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import * as Haptics from 'expo-haptics';
@@ -93,7 +93,7 @@ export function FollowButton({
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const folderPickerRef = useRef<FolderPickerModalRef | FolderPickerBottomSheetRef>(null);
 
-  const subscribeToFeed = useSubscribeToFeed();
+  const createFeed = useCreateFeed();
   const deleteFeed = useDeleteFeed();
   const { data: userFeeds } = useFeeds();
 
@@ -101,7 +101,7 @@ export function FollowButton({
   const [optimisticFollowing, setOptimisticFollowing] = useState<boolean | null>(null);
 
   // Check if we're actually subscribed by looking at user's feed list
-  const actuallyFollowing = userFeeds?.some((feed) => feed.id === feedId) ?? isFollowing;
+  const actuallyFollowing = userFeeds?.subscriptions?.some((sub) => sub.feed.id === feedId) ?? isFollowing;
 
   // Clear optimistic state when actual state catches up and matches it
   useEffect(() => {
@@ -112,12 +112,16 @@ export function FollowButton({
 
   // Determine display state: optimistic state overrides actual state
   const displayFollowing = optimisticFollowing !== null ? optimisticFollowing : actuallyFollowing;
-  const isLoading = subscribeToFeed.isPending || deleteFeed.isPending;
+  const isLoading = createFeed.isPending || deleteFeed.isPending;
 
   const handleFolderSelect = (folderId: string | null) => {
+    if (!feedUrl) {
+      toast.error('Cannot subscribe: Missing Feed URL');
+      return;
+    }
     setOptimisticFollowing(true);
-    subscribeToFeed.mutate(
-      { feedId, folderId: folderId || '' },
+    createFeed.mutate(
+      { url: feedUrl, folder_id: folderId || '' },
       {
         onSuccess: () => {
           toast.success('Subscribed to feed');
@@ -195,7 +199,7 @@ export function FollowButton({
             variant: variant || 'default',
             following: displayFollowing,
           })}>
-          {subscribeToFeed.isPending
+          {createFeed.isPending
             ? 'Following...'
             : deleteFeed.isPending
               ? variant === 'large'

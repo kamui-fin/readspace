@@ -9,7 +9,8 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { Monicon } from '@monicon/native';
-import { ApiClient, type SimilarFeedsResponse, useCreateFeed } from '@readspace/shared';
+import { FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
+import { ApiClient, useCreateFeed } from '@readspace/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -45,7 +46,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
   // Fetch the feed details to get the title
   const { data: feedData } = useQuery({
     queryKey: ['feed', feedId],
-    queryFn: () => ApiClient.rss.getFeed(feedId),
+    queryFn: () => ApiClient.getFeed(feedId),
     enabled: !!feedId,
   });
 
@@ -54,13 +55,32 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
     data: similarData,
     isLoading,
     error,
-  } = useQuery<SimilarFeedsResponse>({
+  } = useQuery({
     queryKey: ['similar-feeds-full', feedId, 20],
-    queryFn: () => ApiClient.rss.getSimilarFeeds(feedId, { limit: 20 }),
+    queryFn: async () => {
+      const index = meilisearchClient.index(FEEDS_INDEX_NAME);
+      const results = await index.searchSimilarDocuments({
+        id: feedId,
+        limit: 20,
+        embedder: 'default',
+        showRankingScore: true,
+      });
+      return results;
+    },
     enabled: !!feedId,
   });
 
-  const similarFeeds = similarData?.similar_feeds || [];
+  const similarFeeds = (similarData?.hits || []).map((hit: any) => ({
+    id: hit.id,
+    url: hit.url,
+    title: hit.title,
+    link: hit.link ?? null,
+    image_url: hit.image_url ?? undefined,
+    language: hit.language ?? 'en',
+    description: hit.description ?? '',
+    is_subscribed: false,
+    is_preview: true,
+  }));
   const feedTitle = feedData?.title || 'this feed';
 
   // Update header title when feed data loads
@@ -182,8 +202,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
       createFeed.mutate(
         {
           url: pendingFeedUrl,
-          folder_id: folderId || undefined,
-          silent: false,
+          folder_id: folderId || '',
         },
         {
           onSuccess: () => {
@@ -269,7 +288,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
               collapsable={false}
             />
             <View className="gap-2 px-6 pt-4">
-              {similarFeeds.map((similarFeed, index) => (
+              {similarFeeds.map((similarFeed: any, index: number) => (
                 <View key={similarFeed.id}>
                   <FeedListItem
                     feedId={similarFeed.id}

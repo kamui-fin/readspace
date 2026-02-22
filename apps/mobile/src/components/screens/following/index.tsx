@@ -156,8 +156,7 @@ export function FollowingScreen({
       createFeed.mutate(
         {
           url: feedData.url,
-          folder_id: folderId || undefined,
-          silent: false,
+          folder_id: folderId || '',
         },
         {
           onSuccess: () => {
@@ -183,7 +182,7 @@ export function FollowingScreen({
       updateArticle.mutate(
         {
           articleId,
-          data: { is_read_later: newValue },
+          data: { is_saved: newValue },
           articleType,
         },
         {

@@ -37,7 +37,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
   // Fetch feed details to get the title
   const { data: feedData } = useQuery({
     queryKey: ['feed', feedId],
-    queryFn: () => ApiClient.rss.getFeed(feedId),
+    queryFn: () => ApiClient.getFeed(feedId),
     enabled: !!feedId,
   });
 
@@ -52,8 +52,8 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
   } = useQuery({
     queryKey: ['feed-articles-full', feedId],
     queryFn: async () => {
-      const response = await ApiClient.rss.getArticles({
-        feed_ids: [feedId],
+      const response = await ApiClient.getArticles({
+        feed_id: feedId,
         limit: 50, // Get more articles for the full list
       });
       return response;
@@ -91,16 +91,16 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
         <View>
           <Card
             variant="article"
-            imageUrl={article.image_url || undefined}
-            title={article.title}
-            description={article.description || undefined}
+            imageUrl={article.image_url ?? undefined}
+            title={article.title ?? ''}
+            description={article.description ?? undefined}
             timestamp={
               article.published_at
                 ? formatRelativeDate(new Date(article.published_at))
                 : 'Unknown date'
             }
-            faviconUrl={feedData?.image_url || undefined}
-            feedName={feedData?.title || undefined}
+            faviconUrl={feedData?.image_url ?? undefined}
+            feedName={feedData?.title ?? undefined}
             onPress={() => handleArticlePress(article.id)}
             showTopDivider={index > 0}
             showBottomDivider={false}
@@ -126,8 +126,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
       createFeed.mutate(
         {
           url: feedData.url,
-          folder_id: folderId || undefined,
-          silent: false,
+          folder_id: folderId || '',
         },
         {
           onSuccess: () => {

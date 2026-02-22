@@ -6,7 +6,7 @@ import { Monicon } from '@monicon/native';
 import { Button } from '@components/ui/button';
 import { Modal } from '@components/ui/modal';
 import { Radio } from '@components/ui/radio';
-import { useFolders, useCreateFolder } from '@readspace/shared';
+import { useFeeds, useCreateFolder } from '@readspace/shared';
 import { COLORS } from '@lib/constants/colors';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { toast } from '@components/ui/toast';
@@ -36,7 +36,8 @@ export const FolderPickerModal = forwardRef<FolderPickerModalRef, FolderPickerMo
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
       initialFolderId ?? null
     );
-    const { data: folders } = useFolders();
+    const { data: feedsData } = useFeeds();
+    const folders = feedsData?.folders || [];
 
     const typedFolders = (folders as { id: string; name: string }[]) || [];
 

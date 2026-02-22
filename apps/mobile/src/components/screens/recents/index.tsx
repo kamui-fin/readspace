@@ -145,7 +145,7 @@ export function RecentsScreen() {
       updateArticle.mutate(
         {
           articleId,
-          data: { is_read_later: newValue },
+          data: { is_saved: newValue },
           articleType,
         },
         {
@@ -280,20 +280,20 @@ export function RecentsScreen() {
 
       // Extract feed information
       const feedTitle =
-        typeof article.feed === 'object' && article.feed
-          ? article.feed.title || undefined
+        typeof (article as any).feed === 'object' && (article as any).feed
+          ? (article as any).feed.title || undefined
           : undefined;
       const feedImageUrl =
-        typeof article.feed === 'object' && article.feed
-          ? article.feed.image_url || undefined
+        typeof (article as any).feed === 'object' && (article as any).feed
+          ? (article as any).feed.image_url || undefined
           : undefined;
 
       // Try multiple ways to get the feed ID
       let feedId: string | undefined;
-      if (typeof article.feed === 'object' && article.feed) {
-        feedId = (article.feed as any).id;
-      } else if (typeof article.feed === 'string') {
-        feedId = article.feed;
+      if (typeof (article as any).feed === 'object' && (article as any).feed) {
+        feedId = ((article as any).feed as any).id;
+      } else if (typeof (article as any).feed === 'string') {
+        feedId = (article as any).feed;
       }
 
       // Check if there's a feed_id field directly on the article
@@ -317,16 +317,16 @@ export function RecentsScreen() {
         displayFaviconUrl = getFaviconUrl(article.link);
       } else if (feedImageUrl) {
         displayFaviconUrl = feedImageUrl;
-      } else if (typeof article.feed === 'object' && article.feed && (article.feed as any).link) {
+      } else if (typeof (article as any).feed === 'object' && (article as any).feed && ((article as any).feed as any).link) {
         // Fallback: generate favicon from feed's website URL
-        displayFaviconUrl = getFaviconUrl((article.feed as any).link);
+        displayFaviconUrl = getFaviconUrl(((article as any).feed as any).link);
       }
 
       return (
         <ArticleItemCard
           article={article}
           imageUrl={displayImageUrl}
-          title={article.title}
+          title={article.title || undefined}
           description={article.description || undefined}
           timestamp={timestamp}
           faviconUrl={displayFaviconUrl}
@@ -345,13 +345,13 @@ export function RecentsScreen() {
             }
           }}
           onMarkAsRead={(article) => {
-            handleToggleRead(article.id, article.is_read || false, article.article_type);
+            handleToggleRead(article.id, article.is_read || false, article.article_type as any);
           }}
           onMarkAsUnread={(article) => {
-            handleToggleRead(article.id, article.is_read || false, article.article_type);
+            handleToggleRead(article.id, article.is_read || false, article.article_type as any);
           }}
           onSaveArticle={(article) => {
-            handleBookmark(article.id, article.is_read_later || false, article.article_type);
+            handleBookmark(article.id, article.is_saved || false, article.article_type as any);
           }}
         />
       );

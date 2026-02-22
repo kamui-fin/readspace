@@ -20,8 +20,8 @@ import { COLORS } from '@lib/constants/colors';
 import { Monicon } from '@monicon/native';
 import {
   useArticle,
-  useExtractFullText,
-  useSummarizeArticle,
+  useExtractFullTextMutation,
+  useSummarizeArticleMutation,
   useUpdateArticle,
 } from '@readspace/shared';
 import { useQueryClient } from '@tanstack/react-query';
@@ -65,10 +65,14 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   const updateArticle = useUpdateArticle();
 
   // Extract full text hook - auto-trigger for articles without extracted content
-  const { refetch: extractFullText, data: extractedData } = useExtractFullText(
-    articleId || '',
-    article?.link || ''
-  );
+  const extractMutation = useExtractFullTextMutation();
+  const extractedData = extractMutation.data;
+  const extractFullText = useCallback(async () => {
+    return extractMutation.mutateAsync({
+      articleId: articleId || '',
+      articleUrl: article?.link || ''
+    });
+  }, [articleId, article?.link, extractMutation]);
 
   // Get the current content based on source
   const currentContent =
@@ -76,12 +80,16 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
       ? article?.extracted_content || extractedData?.content
       : article?.content;
 
-  // AI Summary hook - only enabled when user requests it
-  const {
-    refetch: generateSummary,
-    data: summaryData,
-    isLoading: isSummaryLoading,
-  } = useSummarizeArticle(articleId || '', currentContent || undefined);
+  // AI Summary hooks
+  const summarizeMutation = useSummarizeArticleMutation();
+  const summaryData = summarizeMutation.data;
+  const isSummaryLoading = summarizeMutation.isPending;
+  const generateSummary = useCallback(async () => {
+    return summarizeMutation.mutateAsync({
+      articleId: articleId || '',
+      content: currentContent || undefined
+    });
+  }, [articleId, currentContent, summarizeMutation]);
 
   // Sync contentSource with article.extracted_content
   useLayoutEffect(() => {
@@ -145,11 +153,11 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const newValue = !article.is_read_later;
+    const newValue = !article.is_saved;
     updateArticle.mutate(
       {
         articleId: article.id,
-        data: { is_read_later: newValue },
+        data: { is_saved: newValue },
         articleType: article.article_type || 'feed',
       },
       {
@@ -180,7 +188,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     updateArticle.mutate(
       {
         articleId: article.id,
-        data: { is_read_later: false },
+        data: { is_saved: false },
         articleType: article.article_type || 'feed',
       },
       {
@@ -200,7 +208,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
       await Share.share({
         message: `${article.title}\n\n${article.link}`,
         url: article.link,
-        title: article.title,
+        title: article.title ?? undefined,
       });
     } catch {
       toast.error('Failed to share article');
@@ -279,7 +287,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
           onClose={handleClose}
           onShare={handleShare}
           onBookmark={handleBookmark}
-          onMenuPress={() => {}}
+          onMenuPress={() => { }}
           isBookmarked={false}
           isClipped={false}
         />
@@ -295,7 +303,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
           onClose={handleClose}
           onShare={handleShare}
           onBookmark={handleBookmark}
-          onMenuPress={() => {}}
+          onMenuPress={() => { }}
           isBookmarked={false}
           isClipped={false}
         />
@@ -320,7 +328,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         onShare={handleShare}
         onBookmark={isClipped ? handleMarkAsDone : handleBookmark}
         onMenuPress={handleMenuPress}
-        isBookmarked={article.is_read_later || false}
+        isBookmarked={article.is_saved || false}
         isClipped={isClipped}
         menuTrigger={
           <DropdownMenuRoot>
@@ -425,6 +433,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
       <ArticleSummaryBottomSheet
         ref={summaryBottomSheetRef}
         summary={summaryData || null}
+        error={summarizeMutation.error ? String(summarizeMutation.error) : null}
         isLoading={isSummaryLoading}
         onRegenerate={handleRegenerateSummary}
       />

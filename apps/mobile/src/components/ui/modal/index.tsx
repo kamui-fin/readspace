@@ -12,7 +12,7 @@ import { forwardRef, useCallback } from 'react';
 import { Platform, Text, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CloseIcon } from '@components/icons/close';
+import CloseCircleIcon from '@components/icons/local/close-circle';
 import { Button } from '@components/ui/button';
 import { COLORS } from '@lib/constants/colors';
 
@@ -111,101 +111,102 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
             headerRight ||
             secondaryAction ||
             (showCloseButton && onClose)) && (
-            <>
-              <View
-                className={clsx('relative px-4 py-2 flex-row items-center', headerClassName)}
-                style={{ minHeight: 56 }}>
-                {/* Header Left */}
-                {headerLeft && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      left: 16,
-                      top: 0,
-                      bottom: 0,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      zIndex: 10,
-                    }}>
-                    {headerLeft}
-                  </View>
-                )}
+              <>
+                <View
+                  className={clsx('relative px-4 py-2 flex-row items-center', headerClassName)}
+                  style={{ minHeight: 56 }}>
+                  {/* Header Left */}
+                  {headerLeft && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        left: 16,
+                        top: 0,
+                        bottom: 0,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: 10,
+                      }}>
+                      {headerLeft}
+                    </View>
+                  )}
 
-                {/* Header Content - Centered or Left Aligned */}
-                <View className="flex-1" style={{ justifyContent: 'center' }}>
-                  {headerTitle && (
-                    <Text
-                      className={clsx(
-                        'font-geist-semibold text-2xl text-primary-foreground dark:text-primary-foreground-dark',
-                        headerTitleAlign === 'center' ? 'text-center' : 'text-left'
-                      )}
-                      style={{ lineHeight: 28 }}>
-                      {headerTitle}
-                    </Text>
+                  {/* Header Content - Centered or Left Aligned */}
+                  <View className="flex-1" style={{ justifyContent: 'center' }}>
+                    {headerTitle && (
+                      <Text
+                        className={clsx(
+                          'font-geist-semibold text-2xl text-primary-foreground dark:text-primary-foreground-dark',
+                          headerTitleAlign === 'center' ? 'text-center' : 'text-left'
+                        )}
+                        style={{ lineHeight: 28 }}>
+                        {headerTitle}
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* Secondary Action - Absolutely Positioned (to the left of close button) */}
+                  {secondaryAction && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        right: showCloseButton && onClose ? 56 : 16,
+                        top: 0,
+                        bottom: 0,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: 10,
+                      }}>
+                      {secondaryAction}
+                    </View>
+                  )}
+
+                  {/* Close Button - Absolutely Positioned */}
+                  {showCloseButton && onClose && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        right: 16,
+                        top: 0,
+                        bottom: 0,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: 10,
+                      }}>
+                      <Button
+                        variant="icon"
+                        size="small"
+                        className="h-8 w-8"
+                        fullWidth={false}
+                        onPress={onClose}>
+                        <CloseCircleIcon
+                          width={16}
+                          height={16}
+                          strokeWidth={2.8}
+                          fill={isDark ? COLORS.dark.grey : COLORS.light.grey}
+                        />
+                      </Button>
+                    </View>
+                  )}
+
+                  {/* Header Right */}
+                  {headerRight && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        right: showCloseButton && onClose ? 56 : 16,
+                        top: 0,
+                        bottom: 0,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        zIndex: 10,
+                      }}>
+                      {headerRight}
+                    </View>
                   )}
                 </View>
-
-                {/* Secondary Action - Absolutely Positioned (to the left of close button) */}
-                {secondaryAction && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      right: showCloseButton && onClose ? 56 : 16,
-                      top: 0,
-                      bottom: 0,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      zIndex: 10,
-                    }}>
-                    {secondaryAction}
-                  </View>
-                )}
-
-                {/* Close Button - Absolutely Positioned */}
-                {showCloseButton && onClose && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      right: 16,
-                      top: 0,
-                      bottom: 0,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      zIndex: 10,
-                    }}>
-                    <Button
-                      variant="icon"
-                      size="small"
-                      className="h-8 w-8"
-                      fullWidth={false}
-                      onPress={onClose}>
-                      <CloseIcon
-                        size={16}
-                        strokeWidth={2.8}
-                        color={isDark ? COLORS.dark.grey : COLORS.light.grey}
-                      />
-                    </Button>
-                  </View>
-                )}
-
-                {/* Header Right */}
-                {headerRight && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      right: showCloseButton && onClose ? 56 : 16,
-                      top: 0,
-                      bottom: 0,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      zIndex: 10,
-                    }}>
-                    {headerRight}
-                  </View>
-                )}
-              </View>
-            </>
-          )}
+              </>
+            )}
 
           {/* Content */}
           <View className="flex-1 px-4 pb-6">{children}</View>
