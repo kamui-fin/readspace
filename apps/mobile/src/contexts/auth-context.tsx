@@ -1,4 +1,4 @@
-import { useStorageState } from '@hooks/useStorageState';
+
 import { configureApiClient } from '@lib/api-client';
 import { supabase } from '@lib/supabase/client';
 import type { Session, User } from '@supabase/supabase-js';
@@ -51,85 +51,44 @@ interface SessionProviderProps {
 }
 
 export function SessionProvider({ children }: SessionProviderProps) {
-  const [[isStorageLoading], setStoredSession] = useStorageState('session');
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isSessionLoading, setIsSessionLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const segments = useSegments();
 
-  // Combined loading state: wait for both storage and Supabase session check
-  const isLoading = isStorageLoading || isSessionLoading;
-
   useEffect(() => {
-    // Get initial session
-    const getSession = async () => {
-      try {
-        const {
-          data: { session: currentSession },
-        } = await supabase.auth.getSession();
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+    console.log('[AuthContext] 🚀 Starting initialization...');
 
-        // Store session token for persistence check
-        if (currentSession) {
-          setStoredSession(currentSession.access_token);
-        }
+    supabase.auth.getSession().then(({ data: { session: currentSession }, error }) => {
+      console.log('[AuthContext] 📦 getSession resolved. hasSession:', !!currentSession, 'error:', error?.message);
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      configureApiClient();
+      setIsLoading(false);
+    });
 
-        // Configure API client after getting initial session
-        configureApiClient();
-      } catch (error) {
-        console.error('Error getting session:', error);
-      } finally {
-        // Mark session check as complete
-        setIsSessionLoading(false);
-      }
-    };
-
-    getSession();
-
-    // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, newSession) => {
-      console.log('Auth state changed:', event);
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      console.log('[AuthContext] 🔄 onAuthStateChange:', _event, 'hasSession:', !!newSession);
+      // Don't update state on INITIAL_SESSION as getSession handles the initial load
+      if (_event === 'INITIAL_SESSION') return;
+
       setSession(newSession);
       setUser(newSession?.user ?? null);
-
-      // Update stored session
-      if (newSession) {
-        setStoredSession(newSession.access_token);
-      } else {
-        setStoredSession(null);
-      }
-
-      // Reconfigure API client when session changes
       configureApiClient();
+      setIsLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [setStoredSession]);
+  }, []);
 
-  // Handle navigation based on auth state changes
-  // Note: Initial routing is handled by /app/index.tsx
-  useEffect(() => {
-    if (isLoading) return;
-
-    const inAuthGroup = segments[0] === '(auth)';
-    const inProtectedGroup = segments[0] === '(protected)';
-
-    // Only redirect if user is in the wrong section after auth state changes
-    // This prevents unnecessary redirects during initial load
-    if (!session && inProtectedGroup) {
-      // Redirect to auth
-      router.replace('/(auth)');
-    } else if (session && inAuthGroup) {
-      // Redirect directly to protected tabs instead of root to avoid redirect loop
-      router.replace('/(protected)/(tabs)');
-    }
-  }, [session, segments, isLoading, router]);
+  // Note: We deliberately removed the strict manual redirection effect here.
+  // The app's routing is controlled entirely by `app/index.tsx` on initialization, 
+  // and by Expo Router's automatic segmented hierarchy rendering during the session.
 
   const signIn = async (credentials: SignInCredentials) => {
     const { error } = await supabase.auth.signInWithPassword({

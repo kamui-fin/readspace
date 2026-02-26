@@ -6,6 +6,7 @@ import { Text as RNText, type TextProps as RNTextProps } from 'react-native';
 const textVariants = cva('', {
   variants: {
     size: {
+      xs: 'text-xs',
       sm: 'text-sm',
       base: 'text-base',
       md: 'text-md',
@@ -45,25 +46,30 @@ const textVariants = cva('', {
   },
 });
 
-export type TextSize = 'sm' | 'base' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
+export type TextSize = 'xs' | 'sm' | 'base' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | number;
 
 export interface TextProps
   extends Omit<RNTextProps, 'className'>,
-    VariantProps<typeof textVariants> {
+  Omit<VariantProps<typeof textVariants>, 'size'> {
+  size?: TextSize;
   className?: string;
   variant?: 'heading' | 'body';
 }
 
 export const Text = forwardRef<RNText, TextProps>(
-  ({ className, size = 'base', fontFamily, variant, ...props }, ref) => {
+  ({ className, size = 'base', fontFamily, variant, style, ...props }, ref) => {
     // Automatically apply heading variant for large text sizes if variant not specified
     const effectiveVariant =
-      variant ?? (size && ['xl', '2xl', '3xl', '4xl'].includes(size) ? 'heading' : 'body');
+      variant ?? (typeof size === 'string' && ['xl', '2xl', '3xl', '4xl'].includes(size) ? 'heading' : 'body');
+
+    const sizeVariant = typeof size === 'string' ? size as VariantProps<typeof textVariants>['size'] : undefined;
+    const customStyle = typeof size === 'number' ? { fontSize: size } : undefined;
 
     return (
       <RNText
         ref={ref}
-        className={clsx(textVariants({ size, fontFamily, variant: effectiveVariant }), className)}
+        className={clsx(textVariants({ size: sizeVariant, fontFamily, variant: effectiveVariant }), className)}
+        style={[customStyle, style]}
         {...props}
       />
     );

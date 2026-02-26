@@ -7,7 +7,8 @@ import SparkleIcon from '@components/icons/local/sparkle';
 import RefreshAiIcon from '@components/icons/local/refresh-ai';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import DangerTriangleBoldIcon from '@components/icons/solar/danger-triangle-bold';
+import InfoCircleBoldIcon from '@components/icons/solar/info-circle-bold';
 import type { SummarizeResponse } from '@readspace/shared';
 import { forwardRef, useMemo } from 'react';
 import { View } from 'react-native';
@@ -87,7 +88,7 @@ export const ArticleSummaryBottomSheet = forwardRef<
           <View className="bg-muted dark:bg-muted mt-4 rounded-xl p-4">
             <View className="flex-row items-start gap-2">
               <View style={{ marginTop: 2 }}>
-                <Monicon name="solar:info-circle-bold" size={18} color={colors.muted_foreground} />
+                <InfoCircleBoldIcon width={18} height={18} color={colors.muted_foreground} />
               </View>
               <Text
                 size="base"
@@ -108,7 +109,7 @@ export const ArticleSummaryBottomSheet = forwardRef<
               width: 56,
               height: 56,
             }}>
-            <Monicon name="solar:danger-triangle-bold" size={28} color={colors.destructive} />
+            <DangerTriangleBoldIcon width={28} height={28} color={colors.destructive} />
           </View>
           <Text
             size="lg"

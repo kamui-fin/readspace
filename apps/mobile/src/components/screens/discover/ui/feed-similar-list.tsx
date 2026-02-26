@@ -1,9 +1,10 @@
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { EmptyState } from '@components/ui/empty-state';
+import FeedLinearIcon from '@components/icons/solar/feed-linear';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import AltArrowRightLinearIcon from '@components/icons/solar/alt-arrow-right-linear';
 import { View } from 'react-native';
 
 interface FeedSimilarListProps {
@@ -31,9 +32,9 @@ export function FeedSimilarList({
         </Text>
         {similarFeeds.length > 0 && (
           <Button variant="icon" size="small" fullWidth={false} onPress={onShowMore}>
-            <Monicon
-              name="solar:alt-arrow-right-linear"
-              size={18}
+            <AltArrowRightLinearIcon
+              width={18}
+              height={18}
               strokeWidth={2.4}
               color={greyColor}
             />
@@ -82,7 +83,7 @@ export function FeedSimilarList({
           ))}
         </View>
       ) : (
-        <EmptyState icon="solar:feed-linear" message="No similar feeds found" className="py-8" />
+        <EmptyState icon={FeedLinearIcon} message="No similar feeds found" className="py-8" />
       )}
     </View>
   );

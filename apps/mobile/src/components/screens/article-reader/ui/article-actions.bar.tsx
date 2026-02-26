@@ -1,7 +1,12 @@
 import { Button } from '@components/ui/button';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
+import BookmarkBoldIcon from '@components/icons/solar/bookmark-bold';
+import BookmarkLinearIcon from '@components/icons/solar/bookmark-linear';
+import CheckCircleBoldIcon from '@components/icons/solar/check-circle-bold';
+import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
+import ShareBoldIcon from '@components/icons/solar/share-bold';
 import { type ReactNode, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
@@ -128,14 +133,14 @@ export function ArticleActionBar({
       onLayout={(e) => setActionBarHeight(e.nativeEvent.layout.height)}>
       {/* Close Button */}
       <Button variant="icon" size="small" fullWidth={false} onPress={onClose}>
-        <Monicon name="solar:arrow-left-linear" size={18} strokeWidth={2.4} color={greyColor} />
+        <ArrowLeftLinearIcon width={18} height={18} strokeWidth={2.4} color={greyColor} />
       </Button>
 
       {/* Right Actions */}
       <View className="flex-row items-center gap-3">
         {/* Share Button */}
         <Button variant="icon" size="small" fullWidth={false} onPress={onShare}>
-          <Monicon name="solar:share-bold" size={18} strokeWidth={2.4} color={greyColor} />
+          <ShareBoldIcon width={18} height={18} strokeWidth={2.4} color={greyColor} />
         </Button>
 
         {/* Bookmark Button (or Done button for clipped articles) */}
@@ -147,28 +152,31 @@ export function ArticleActionBar({
           style={
             !isClipped && isBookmarked
               ? {
-                  backgroundColor: colors.icon_bg_yellow,
-                }
+                backgroundColor: colors.icon_bg_yellow,
+              }
               : undefined
           }>
-          <Monicon
-            name={
-              isClipped
-                ? 'solar:check-circle-bold'
-                : isBookmarked
-                  ? 'solar:bookmark-bold'
-                  : 'solar:bookmark-linear'
-            }
-            size={18}
-            color={isClipped ? colors.secondary : isBookmarked ? '#FBBC04' : greyColor}
-            strokeWidth={2.4}
-          />
+          {(() => {
+            const Icon = isClipped
+              ? CheckCircleBoldIcon
+              : isBookmarked
+                ? BookmarkBoldIcon
+                : BookmarkLinearIcon;
+            return (
+              <Icon
+                width={18}
+                height={18}
+                color={isClipped ? colors.secondary : isBookmarked ? '#FBBC04' : greyColor}
+                strokeWidth={2.4}
+              />
+            );
+          })()}
         </Button>
 
         {/* Menu Button */}
         {menuTrigger || (
           <Button variant="icon" size="small" fullWidth={false} onPress={onMenuPress}>
-            <Monicon name="solar:menu-dots-bold" size={18} strokeWidth={2.4} color={greyColor} />
+            <MenuDotsBoldIcon width={18} height={18} strokeWidth={2.4} color={greyColor} />
           </Button>
         )}
       </View>

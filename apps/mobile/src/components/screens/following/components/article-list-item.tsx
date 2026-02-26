@@ -4,7 +4,7 @@ import { formatRelativeDate } from '@readspace/shared';
 import type { Article } from '@readspace/shared';
 import { useFavicon } from '@hooks/useFavicon';
 import { useRouter, useSegments } from 'expo-router';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { ListItem } from '@lib/utils/article';
 
@@ -22,6 +22,9 @@ export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListI
   const router = useRouter();
   const segments = useSegments();
   const isNavigatingRef = useRef(false);
+
+  // Optimistically set read state instantly on click while backend handles it.
+  const [hasMarkedRead, setHasMarkedRead] = useState(false);
 
   if (item.type === 'section') {
     return (
@@ -62,6 +65,7 @@ export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListI
     return (
       <ArticleItemCard
         article={article}
+        isRead={article.is_read || hasMarkedRead}
         imageUrl={displayImageUrl}
         title={article.title || undefined}
         description={article.description || undefined}
@@ -83,6 +87,13 @@ export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListI
           // Only navigate if not already on this article route
           if (!currentPath.includes(articlePath)) {
             isNavigatingRef.current = true;
+
+            // Immediately mark as read locally for instantaneous feedback 
+            // when returning to the list (backend syncs separately).
+            if (!article.is_read) {
+              setHasMarkedRead(true);
+            }
+
             router.push(articleRoute as any);
 
             // Reset navigation flag after a short delay
@@ -108,7 +119,7 @@ export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListI
 }
 function extractFeedInfo(article: any): { feedTitle: any; feedImageUrl: any } {
   return {
-    feedTitle: typeof article.feed === 'object' && article.feed ? article.feed.title : undefined,
-    feedImageUrl: typeof article.feed === 'object' && article.feed ? article.feed.image_url : undefined,
+    feedTitle: article.feed_title || (typeof article.feed === 'object' && article.feed ? article.feed.title : undefined),
+    feedImageUrl: article.feed_icon || (typeof article.feed === 'object' && article.feed ? article.feed.image_url : undefined),
   };
 }

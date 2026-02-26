@@ -10,7 +10,8 @@ import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
+import InboxLineLinearIcon from '@components/icons/solar/inbox-line-linear';
 import { ApiClient, type Article, formatRelativeDate, useCreateFeed } from '@readspace/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSegments } from 'expo-router';
@@ -151,9 +152,9 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
         <View className="px-4 pb-2">
           <View className="flex-row items-center">
             <Button variant="icon" size="small" fullWidth={false} onPress={handleBack}>
-              <Monicon
-                name="solar:arrow-left-linear"
-                size={18}
+              <ArrowLeftLinearIcon
+                width={18}
+                height={18}
                 strokeWidth={2.4}
                 color={colors.grey}
               />
@@ -184,9 +185,9 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
         <View className="px-4 pb-2">
           <View className="flex-row items-center">
             <Button variant="icon" size="small" fullWidth={false} onPress={handleBack}>
-              <Monicon
-                name="solar:arrow-left-linear"
-                size={18}
+              <ArrowLeftLinearIcon
+                width={18}
+                height={18}
                 strokeWidth={2.4}
                 color={colors.grey}
               />
@@ -224,9 +225,9 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
       <View className="px-4 pb-2">
         <View className="flex-row items-center">
           <Button variant="icon" size="small" fullWidth={false} onPress={handleBack}>
-            <Monicon
-              name="solar:arrow-left-linear"
-              size={18}
+            <ArrowLeftLinearIcon
+              width={18}
+              height={18}
               strokeWidth={2.4}
               color={colors.grey}
             />
@@ -258,7 +259,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
         />
       ) : (
         <View className="flex-1 items-center justify-center px-6">
-          <Monicon name="solar:inbox-line-linear" size={64} color={colors.grey5} />
+          <InboxLineLinearIcon width={64} height={64} color={colors.grey5} />
           <Text
             size="lg"
             fontFamily="geist-semibold"

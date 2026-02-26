@@ -51,11 +51,11 @@ export function SearchResults({
             ))}
           </View>
         </ScrollView>
-      ) : hits && hits.length > 0 ? (
+      ) : hits && hits.filter(Boolean).length > 0 ? (
         <InfiniteScrollList
-          data={hits}
+          data={hits.filter(Boolean)}
           estimatedItemSize={80}
-          renderItem={({ item }) => (
+          renderItem={(item) => (
             <FeedListItem
               feedId={item.id}
               title={item.title || 'Untitled Feed'}
@@ -66,7 +66,7 @@ export function SearchResults({
               isPreview={item.is_preview}
             />
           )}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item?.id ?? ''}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             paddingBottom: contentPaddingBottom,
@@ -88,7 +88,7 @@ export function SearchResults({
         />
       ) : (
         <View className="flex-1 items-center justify-center px-6 py-12">
-          <Text size="base" fontFamily="geist" className="text-center text-grey">
+          <Text size="base" fontFamily="geist" className="text-grey text-center">
             No feeds found matching your search
           </Text>
         </View>

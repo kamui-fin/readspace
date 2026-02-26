@@ -125,6 +125,7 @@ export const Input = forwardRef((props: InputProps, ref: any) => {
               }),
               paddingLeft: leftElement ? 0 : 16,
               paddingRight: rightElement ? 0 : 16,
+              fontFamily: 'Geist_500Medium',
               fontWeight: '500',
             },
             props.inputStyle,

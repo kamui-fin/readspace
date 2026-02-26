@@ -9,7 +9,7 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import AddFolderBoldIcon from '@components/icons/solar/add-folder-bold';
 import { useFeeds } from '@readspace/shared';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { View } from 'react-native';
@@ -71,7 +71,7 @@ export const FolderPickerBottomSheet = forwardRef<
               className="h-8 w-8"
               fullWidth={false}
               onPress={handleCreateFolderPress}>
-              <Monicon name="solar:add-folder-bold" size={16} color={colors.grey} />
+              <AddFolderBoldIcon width={16} height={16} color={colors.grey} />
             </Button>
             <Button
               variant="primary"

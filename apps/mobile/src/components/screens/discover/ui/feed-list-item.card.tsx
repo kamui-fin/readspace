@@ -43,7 +43,14 @@ export const FeedListItem = ({
 
   const handlePress = () => {
     if (!disableNavigation) {
-      router.push(`/(protected)/(tabs)/discover/feed/${feedId}`);
+      router.push({
+        pathname: `/(protected)/(tabs)/discover/feed/${feedId}`,
+        params: {
+          title,
+          description,
+          image_url: iconUrl,
+        },
+      });
     }
   };
 
@@ -55,7 +62,7 @@ export const FeedListItem = ({
       onPress={handlePress}
       className={clsx(
         'flex-row items-center gap-4 py-4',
-        isPreview ? 'bg-secondary/10 dark:bg-secondary/20' : 'bg-white dark:bg-white-dark',
+        isPreview ? 'bg-secondary/10 dark:bg-secondary/20' : 'dark:bg-white-dark bg-white',
         className
       )}
       {...props}>
@@ -101,7 +108,7 @@ export const FeedListItem = ({
         <Text
           size="base"
           fontFamily="geist-semibold"
-          className="mb-1 text-black dark:text-black-dark"
+          className="dark:text-black-dark mb-1 text-black"
           numberOfLines={1}>
           {stripHtml(title)}
         </Text>

@@ -11,7 +11,8 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { type LoginFormData, LoginSchema } from '@lib/validation/auth-schemas';
-import { Monicon } from '@monicon/native';
+import EyeBoldIcon from '@components/icons/solar/eye-bold';
+import EyeClosedBoldIcon from '@components/icons/solar/eye-closed-bold';
 import { useSettingsStore } from '@stores/settings';
 import { router } from 'expo-router';
 import { Formik, type FormikHelpers } from 'formik';
@@ -196,11 +197,10 @@ export function LoginScreen() {
                       borderRadius={12}
                       rightElement={
                         <InputPressable onPress={() => setShowPassword(!showPassword)}>
-                          <Monicon
-                            name={showPassword ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
-                            size={20}
-                            color={colors.grey}
-                          />
+                          {(() => {
+                            const IconObj = showPassword ? EyeBoldIcon : EyeClosedBoldIcon;
+                            return <IconObj width={20} height={20} color={colors.grey} />;
+                          })()}
                         </InputPressable>
                       }
                     />

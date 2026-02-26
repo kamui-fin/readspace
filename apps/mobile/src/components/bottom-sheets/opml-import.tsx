@@ -6,7 +6,8 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import DocumentTextBoldIcon from '@components/icons/solar/document-text-bold';
+import InfoCircleBoldIcon from '@components/icons/solar/info-circle-bold';
 import { useImportOPML } from '@readspace/shared';
 import type * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
@@ -83,7 +84,7 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
           {/* File Info Card */}
           <View className="mb-6 rounded-xl bg-grey5 p-4 dark:bg-grey5-dark">
             <View className="flex-row items-center gap-3">
-              <Monicon name="lucide:file-text" size={24} color={colors.primary} />
+              <DocumentTextBoldIcon width={24} height={24} color={colors.primary} />
               <Text className="flex-1 font-geist-semibold text-base text-black dark:text-black-dark">
                 {file?.name || 'Unknown file'}
               </Text>
@@ -94,7 +95,7 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
           <View className="mb-6 rounded-xl bg-grey6 p-4 dark:bg-grey6-dark">
             <View className="flex-row gap-2">
               <View style={{ marginTop: 2 }}>
-                <Monicon name="lucide:info" size={16} color={colors.grey} />
+                <InfoCircleBoldIcon width={16} height={16} color={colors.grey} />
               </View>
               <Text className="flex-1 font-geist text-sm text-grey dark:text-grey">
                 The import will run in the background. You can track progress on the status page.

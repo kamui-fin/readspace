@@ -11,7 +11,9 @@ import {
 import { Input } from '@components/ui/input';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import AltArrowDownLinearIcon from '@components/icons/solar/alt-arrow-down-linear';
+import CloseCircleBoldIcon from '@components/icons/solar/close-circle-bold';
+import MagniferLinearIcon from '@components/icons/solar/magnifer-linear';
 import { forwardRef, useCallback, useMemo } from 'react';
 import type { TextInputProps } from 'react-native';
 import { View } from 'react-native';
@@ -87,9 +89,9 @@ export const SearchBar = forwardRef<React.ComponentRef<typeof Input>, SearchBarP
               fullWidth={false}
               className="min-w-0 flex-row items-center gap-1">
               <LanguageIcon width={20} height={20} fill={colors.grey} />
-              <Monicon
-                name="solar:alt-arrow-down-linear"
-                size={12}
+              <AltArrowDownLinearIcon
+                width={12}
+                height={12}
                 strokeWidth={2.8}
                 color={colors.grey}
               />
@@ -115,7 +117,7 @@ export const SearchBar = forwardRef<React.ComponentRef<typeof Input>, SearchBarP
             fullWidth={false}
             onPress={handleClear}
             className="min-w-0">
-            <Monicon name="solar:close-circle-bold" size={20} color={colors.grey} />
+            <CloseCircleBoldIcon width={20} height={20} color={colors.grey} />
           </Button>
         );
       }
@@ -135,7 +137,7 @@ export const SearchBar = forwardRef<React.ComponentRef<typeof Input>, SearchBarP
 
     const leftElement = (
       <View style={{ padding: 8, paddingLeft: 12 }}>
-        <Monicon name="solar:magnifer-linear" size={20} color={colors.grey} strokeWidth={2.4} />
+        <MagniferLinearIcon width={20} height={20} color={colors.grey} strokeWidth={2.4} />
       </View>
     );
 

@@ -1,21 +1,6 @@
-import { createMMKV } from 'react-native-mmkv';
+import 'expo-sqlite/localStorage/install';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-
-const storage = createMMKV();
-
-const zustandStorage = {
-  getItem: (name: string) => {
-    const value = storage.getString(name);
-    return value ?? null;
-  },
-  setItem: (name: string, value: string) => {
-    storage.set(name, value);
-  },
-  removeItem: (name: string) => {
-    storage.remove(name);
-  },
-};
 
 interface FeedSwitcherState {
   expandedFolders: Set<string>;
@@ -48,7 +33,7 @@ export const useFeedSwitcherStore = create<FeedSwitcherStore>()(
     }),
     {
       name: 'feed-switcher-storage',
-      storage: createJSONStorage(() => zustandStorage),
+      storage: createJSONStorage(() => localStorage),
       // Custom serialization for Set
       partialize: (state) => ({
         expandedFolders: Array.from(state.expandedFolders),

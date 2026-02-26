@@ -18,6 +18,7 @@ export interface InfiniteScrollListProps<T>
   estimatedItemSize?: number;
   onScroll?: (event: any) => void;
   scrollEventThrottle?: number;
+  initialContainerPoolRatio?: number;
 }
 
 export const InfiniteScrollList = forwardRef<any, InfiniteScrollListProps<any>>(
@@ -34,6 +35,7 @@ export const InfiniteScrollList = forwardRef<any, InfiniteScrollListProps<any>>(
       ListFooterComponent,
       ListHeaderComponent,
       estimatedItemSize = 120,
+      initialContainerPoolRatio = 10,
       onScroll,
       scrollEventThrottle,
       ...props
@@ -87,6 +89,7 @@ export const InfiniteScrollList = forwardRef<any, InfiniteScrollListProps<any>>(
         ListHeaderComponent={ListHeaderComponent}
         onScroll={onScroll}
         scrollEventThrottle={scrollEventThrottle}
+        initialContainerPoolRatio={initialContainerPoolRatio}
         style={{
           // List content should be below header (zIndex: 10)
           // The native scrollbar will naturally appear above due to platform rendering

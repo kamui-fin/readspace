@@ -1,10 +1,11 @@
 import { Button } from '@components/ui/button';
 import { EmptyState } from '@components/ui/empty-state';
 import { Card } from '@components/ui/card';
+import DocumentTextLinearIcon from '@components/icons/solar/document-text-linear';
 import { Skeleton } from '@components/ui/skeleton';
 import { Text } from '@components/ui/text';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import AltArrowRightLinearIcon from '@components/icons/solar/alt-arrow-right-linear';
 import { Feed, FeedDiscoveryResult, formatRelativeDate } from '@readspace/shared';
 import { Dimensions, FlatList, View } from 'react-native';
 
@@ -43,9 +44,9 @@ export function FeedRecentArticles({
         </Text>
         {articles.length > 0 && (
           <Button variant="icon" size="small" fullWidth={false} onPress={onShowMore}>
-            <Monicon
-              name="solar:alt-arrow-right-linear"
-              size={18}
+            <AltArrowRightLinearIcon
+              width={18}
+              height={18}
               strokeWidth={2.4}
               color={greyColor}
             />
@@ -92,7 +93,7 @@ export function FeedRecentArticles({
         />
       ) : (
         <EmptyState
-          icon="solar:document-text-linear"
+          icon={DocumentTextLinearIcon}
           message="No recent articles available"
           className="py-8"
         />

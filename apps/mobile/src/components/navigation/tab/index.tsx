@@ -1,6 +1,6 @@
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+
 import { cva } from 'class-variance-authority';
 import clsx from 'clsx';
 import type { PressableProps } from 'react-native';
@@ -33,11 +33,11 @@ const tabTextVariants = cva('font-geist-medium text-base', {
 export interface TabProps extends Omit<PressableProps, 'children'> {
   label: string;
   active?: boolean;
-  iconName?: string;
+  icon?: React.ComponentType<{ width?: number; height?: number; color?: string; strokeWidth?: number }>;
   onPress?: () => void;
 }
 
-export function Tab({ label, active = false, iconName, onPress, ...props }: TabProps) {
+export function Tab({ label, active = false, icon: IconComponent, onPress, ...props }: TabProps) {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
@@ -53,10 +53,10 @@ export function Tab({ label, active = false, iconName, onPress, ...props }: TabP
       style={active ? { backgroundColor: activeBgColor } : undefined}
       onPress={onPress}
       {...props}>
-      {iconName && (
-        <Monicon name={iconName} size={18} color={active ? colors.secondary : colors.grey} />
+      {IconComponent && (
+        <IconComponent width={18} height={18} color={active ? colors.secondary : colors.grey} />
       )}
-      {iconName && <View className="w-2" />}
+      {IconComponent && <View className="w-2" />}
       <Text className={clsx(tabTextVariants({ active }))}>{label}</Text>
     </Pressable>
   );

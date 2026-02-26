@@ -7,14 +7,17 @@ import { Tab } from '@components/navigation/tab';
 import { Button } from '@components/ui/button';
 import { DEVICE_CORNER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import SortBoldIcon from '@components/icons/solar/sort-bold';
+import CalendarBoldIcon from '@components/icons/solar/calendar-bold';
+import BookmarkBoldIcon from '@components/icons/solar/bookmark-bold';
+import InboxBoldIcon from '@components/icons/solar/inbox-bold';
 import clsx from 'clsx';
 import { View } from 'react-native';
 
 export const buttonConfigs = [
-  { label: 'Today', iconName: 'solar:calendar-bold' },
-  { label: 'Saved', iconName: 'solar:bookmark-bold' },
-  { label: 'All', iconName: 'solar:inbox-bold' },
+  { label: 'Today', icon: CalendarBoldIcon },
+  { label: 'Saved', icon: BookmarkBoldIcon },
+  { label: 'All', icon: InboxBoldIcon },
 ];
 
 interface HeaderTabsProps {
@@ -46,7 +49,7 @@ export function HeaderTabs({
               label={btn.label}
               active={activeTab === index}
               onPress={() => onTabChange?.(index)}
-              iconName={btn.iconName}
+              icon={btn.icon}
             />
           ))}
         </View>
@@ -66,7 +69,7 @@ export function HeaderTabs({
                 backgroundColor: colors.grey5,
                 borderRadius: DEVICE_CORNER_RADIUS - 2,
               }}>
-              <Monicon name="solar:sort-bold" size={16} color={colors.grey2} />
+              <SortBoldIcon width={16} height={16} color={colors.grey2} />
             </Button>
           )}
         </View>

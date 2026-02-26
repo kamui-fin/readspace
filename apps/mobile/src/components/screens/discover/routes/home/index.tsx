@@ -28,23 +28,19 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { InstantSearch, Configure, useSearchBox, useMenu, useInfiniteHits, useInstantSearch } from 'react-instantsearch';
+import {
+  InstantSearch,
+  Configure,
+  useSearchBox,
+  useMenu,
+  useInfiniteHits,
+  useInstantSearch,
+  useClearRefinements,
+} from 'react-instantsearch';
 import { createSearchClient, meilisearchClient, FEEDS_INDEX_NAME } from '@lib/meilisearch-client';
+import { MOBILE_CATEGORY_NAMES } from '@readspace/shared';
 
-const CATEGORIES = [
-  'Technology & Programming',
-  'Culture & Arts',
-  'Lifestyle & Personal',
-  'Miscellaneous',
-  'Design & Creativity',
-  'Science & Research',
-  'News & Politics',
-  'Gaming & Entertainment',
-  'Business & Finance',
-  'Artificial Intelligence',
-  'Security & Privacy',
-  'Education & Learning',
-];
+const CATEGORIES = Object.values(MOBILE_CATEGORY_NAMES);
 
 type ViewState = 'default' | 'category' | 'search' | 'focused';
 
@@ -53,7 +49,10 @@ export function DiscoverScreen() {
   const { searchClient } = useMemo(() => createSearchClient(), []);
 
   return (
-    <InstantSearch searchClient={searchClient as any} indexName={FEEDS_INDEX_NAME}>
+    <InstantSearch
+      searchClient={searchClient as any}
+      indexName={FEEDS_INDEX_NAME}
+      future={{ preserveSharedStateOnUnmount: true }}>
       <Configure hitsPerPage={20} attributesToHighlight={['title', 'description']} />
       <DiscoverScreenInner />
     </InstantSearch>
@@ -110,6 +109,7 @@ function DiscoverScreenInner() {
   const { refine: refineLanguage } = useMenu({ attribute: 'language', limit: 10 });
   const { items: hits, isLastPage } = useInfiniteHits();
   const { status } = useInstantSearch();
+  const { refine: clearRefinementsBase } = useClearRefinements();
 
   const isSearchLoading = status === 'loading' || status === 'stalled';
   const showSearchSkeleton = isSearchLoading && hits.length === 0;
@@ -147,7 +147,7 @@ function DiscoverScreenInner() {
 
     setViewState('search');
     setSelectedCategory(null);
-    refineCategory('');
+    clearRefinementsBase();
     setIsSearchFocused(false);
     searchBarRef.current?.blur();
     Keyboard.dismiss();
@@ -186,10 +186,13 @@ function DiscoverScreenInner() {
     refineQuery('');
   }, [refineQuery]);
 
-  const handleLanguageChange = useCallback((language: Language) => {
-    setSelectedLanguage(language);
-    refineLanguage(language === 'english' ? 'en' : language === 'chinese' ? 'zh' : 'ja');
-  }, [refineLanguage]);
+  const handleLanguageChange = useCallback(
+    (language: Language) => {
+      setSelectedLanguage(language);
+      refineLanguage(language === 'english' ? 'en' : language === 'chinese' ? 'zh' : 'ja');
+    },
+    [refineLanguage]
+  );
 
   const handleRecentSearchPress = useCallback(
     (query: string) => {
@@ -199,7 +202,7 @@ function DiscoverScreenInner() {
       refineQuery(query);
       setViewState('search');
       setSelectedCategory(null);
-      refineCategory('');
+      clearRefinementsBase();
       setIsSearchFocused(false);
       searchBarRef.current?.blur();
       Keyboard.dismiss();
@@ -221,9 +224,9 @@ function DiscoverScreenInner() {
   const handleClearCategory = useCallback(() => {
     setViewState('default');
     setSelectedCategory(null);
-    refineCategory('');
+    clearRefinementsBase();
     setIsSearching?.(false);
-  }, [setIsSearching, refineCategory]);
+  }, [setIsSearching, clearRefinementsBase]);
 
   const insets = useSafeAreaInsets();
 
@@ -241,7 +244,7 @@ function DiscoverScreenInner() {
                 <Button
                   variant="icon"
                   size="large"
-                  className="h-9 w-9 rounded-full bg-grey-5 dark:bg-grey-5"
+                  className="bg-grey-5 dark:bg-grey-5 h-9 w-9 rounded-full"
                   fullWidth={false}
                   onPress={() => createFolderModalRef.current?.present()}
                   style={{ backgroundColor: colors.grey5 }}>

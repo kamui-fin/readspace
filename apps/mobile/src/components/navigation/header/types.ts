@@ -4,7 +4,7 @@ import type { SharedValue } from 'react-native-reanimated';
 export interface HeaderAction {
   label: string;
   onPress: () => void;
-  icon: string;
+  icon: React.ComponentType<{ width?: number; height?: number; color?: string; strokeWidth?: number }>;
   disabled?: boolean;
 }
 

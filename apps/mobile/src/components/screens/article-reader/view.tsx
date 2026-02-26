@@ -17,7 +17,7 @@ import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
 import {
   useArticle,
   useExtractFullTextMutation,
@@ -103,14 +103,14 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
       !article.extracted_content &&
       article.article_type === 'feed' &&
       article.link &&
-      !extractedData
+      extractMutation.status === 'idle'
     ) {
       // Trigger extraction automatically
       extractFullText().catch((error) => {
         console.warn('Failed to auto-extract article content:', error);
       });
     }
-  }, [article, extractedData, extractFullText]);
+  }, [article, extractMutation.status, extractFullText]);
 
   // Mark as read on mount (only if subscribed to the feed)
   useEffect(() => {
@@ -335,9 +335,9 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
             <DropdownMenuTrigger asChild>
               <Button variant="icon" size="small" fullWidth={false} className="h-11 w-11">
                 <View style={{ transform: [{ rotate: '90deg' }] }}>
-                  <Monicon
-                    name="solar:menu-dots-bold"
-                    size={18}
+                  <MenuDotsBoldIcon
+                    width={18}
+                    height={18}
                     strokeWidth={2.4}
                     color={colors.grey}
                   />

@@ -1,6 +1,6 @@
 import { Text } from '@components/ui/text';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import ClockCircleOutlineIcon from '@components/icons/solar/clock-circle-outline';
 import { Pressable, ScrollView, View } from 'react-native';
 
 interface RecentSearchesProps {
@@ -35,7 +35,7 @@ export function RecentSearches({
                 key={query}
                 onPress={() => onRecentSearchPress(query)}
                 className="flex-row items-center gap-3 py-2 transition-opacity active:opacity-60">
-                <Monicon name="solar:clock-circle-outline" size={20} color={colors.grey} />
+                <ClockCircleOutlineIcon width={20} height={20} color={colors.grey} />
                 <Text size="base" fontFamily="geist" className="flex-1 text-black">
                   {query}
                 </Text>

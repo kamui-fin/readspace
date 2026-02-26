@@ -1,43 +1,8 @@
 import { AppState, Platform } from 'react-native';
+import 'expo-sqlite/localStorage/install';
 import 'react-native-url-polyfill/auto';
 import { getSettings } from '@stores/settings';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { createMMKV } from 'react-native-mmkv';
-
-// Create MMKV storage instance for Supabase auth
-// Using a separate instance for auth data
-const authStorage = createMMKV({ id: 'supabase-auth' });
-
-// Create an adapter for MMKV that implements AsyncStorage interface
-// MMKV is synchronous, but we wrap it in async functions for compatibility
-const MMKVAdapter = {
-  getItem: async (key: string): Promise<string | null> => {
-    try {
-      const value = authStorage.getString(key);
-      return value ?? null;
-    } catch (error) {
-      console.error(`Error getting item ${key} from MMKV:`, error);
-      return null;
-    }
-  },
-  setItem: async (key: string, value: string): Promise<void> => {
-    try {
-      authStorage.set(key, value);
-    } catch (error) {
-      console.error(`Error setting item ${key} in MMKV:`, error);
-      throw error;
-    }
-  },
-  removeItem: async (key: string): Promise<void> => {
-    try {
-      authStorage.remove(key);
-    } catch (error) {
-      console.error(`Error removing item ${key} from MMKV:`, error);
-      throw error;
-    }
-  },
-};
-
 // Helper to resolve hostname for Android emulator
 const resolveHostname = (url: string) => {
   const _url = new URL(url);
@@ -79,7 +44,7 @@ export function getSupabaseClient(supabaseUrl?: string, supabaseAnonKey?: string
   // Create new client (or override existing one if params provided)
   const client = createClient(resolvedUrl, key, {
     auth: {
-      storage: MMKVAdapter,
+      storage: localStorage,
       autoRefreshToken: !supabaseUrl, // Don't auto-refresh for validation clients
       persistSession: !supabaseUrl, // Don't persist for validation clients
       detectSessionInUrl: false,

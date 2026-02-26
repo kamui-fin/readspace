@@ -8,7 +8,7 @@ import { useDiscoverScroll } from '@contexts/discover-scroll-context';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import DocumentTextLinearIcon from '@components/icons/solar/document-text-linear';
 import { FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import { ApiClient, useCreateFeed } from '@readspace/shared';
 import { useQuery } from '@tanstack/react-query';
@@ -309,7 +309,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
           </ScrollView>
         ) : (
           <View className="flex-1 items-center justify-center px-6">
-            <Monicon name="solar:document-text-linear" size={64} color={colors.grey5} />
+            <DocumentTextLinearIcon width={64} height={64} color={colors.grey5} />
             <Text
               size="lg"
               fontFamily="geist-semibold"

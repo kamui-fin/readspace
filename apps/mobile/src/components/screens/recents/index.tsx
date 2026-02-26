@@ -2,6 +2,7 @@
 
 import { Header } from '@components/navigation/header';
 import { EmptyState } from '@/components/ui/empty-state';
+import HistoryBrokenIcon from '@components/icons/solar/history-broken';
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
 import { ArticleItemCard } from '@components/screens/following/ui/article-item.card';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
@@ -385,7 +386,7 @@ export function RecentsScreen() {
     return (
       <EmptyState
         variant="centered"
-        icon="solar:history-broken"
+        icon={HistoryBrokenIcon}
         message="No recently read articles."
       />
     );

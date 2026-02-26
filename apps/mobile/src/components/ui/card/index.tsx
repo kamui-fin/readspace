@@ -3,7 +3,7 @@ import { Divider } from '@components/ui/divider';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { stripHtml } from '@lib/utils/html';
-import { Monicon } from '@monicon/native';
+import ClockCircleLinearIcon from '@components/icons/solar/clock-circle-linear';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import { Image as ExpoImage } from 'expo-image';
@@ -45,6 +45,7 @@ export interface CardProps
   showBottomDivider?: boolean;
   // Text-only variant props
   content?: ReactNode;
+  isRead?: boolean;
 }
 
 /**
@@ -69,6 +70,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
       showTopDivider = false,
       showBottomDivider = true,
       content,
+      isRead,
       children,
       ...props
     },
@@ -139,7 +141,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
     // Article variant - edge-to-edge, image on right, text on left
     if (variant === 'article') {
       return (
-        <View>
+        <View className={clsx(isRead && 'opacity-60')}>
           {/* Top divider - edge-to-edge, no horizontal margin */}
           {showTopDivider && <Divider />}
           <Pressable ref={ref} className={clsx(cardVariants({ variant }), className)} {...props}>
@@ -147,7 +149,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
             <View className="flex-1">
               {/* Feed name and timestamp header */}
               {(feedName || timestamp) && (
-                <View className="mb-3 flex-row items-center gap-2">
+                <View className="mb-3 flex-row items-center gap-1.5">
                   {/* Favicon */}
                   {faviconUrl ? (
                     <ExpoImage
@@ -168,7 +170,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                   {/* Feed name */}
                   {feedName && (
                     <Text
-                      size="sm"
+                      size="xs"
                       fontFamily="geist"
                       className="text-grey dark:text-grey"
                       numberOfLines={1}
@@ -181,9 +183,9 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                   {/* Clock icon */}
                   {timestamp && (
                     <>
-                      <Monicon name="solar:clock-circle-linear" size={14} color="#90988B" />
+                      <ClockCircleLinearIcon width={12} height={12} color="#90988B" />
                       <Text
-                        size="sm"
+                        size="xs"
                         fontFamily="geist"
                         className="text-grey dark:text-grey"
                         numberOfLines={1}
@@ -198,16 +200,26 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                 <Text
                   size="base"
                   fontFamily="geist-semibold"
-                  className="mb-1 leading-5 tracking-tight text-primary-foreground dark:text-primary-foreground-dark"
+                  className={clsx(
+                    "mb-1 leading-5 tracking-tight",
+                    isRead
+                      ? "text-grey dark:text-grey"
+                      : "text-primary-foreground dark:text-primary-foreground-dark"
+                  )}
                   numberOfLines={3}>
                   {stripHtml(title)}
                 </Text>
               )}
               {description && (
                 <Text
-                  size="sm"
+                  size={13}
                   fontFamily="geist"
-                  className="leading-5 text-grey dark:text-grey-dark"
+                  className={clsx(
+                    "leading-5",
+                    isRead
+                      ? "text-grey/70 dark:text-grey-dark/70"
+                      : "text-grey dark:text-grey-dark"
+                  )}
                   numberOfLines={2}>
                   {stripHtml(description)}
                 </Text>

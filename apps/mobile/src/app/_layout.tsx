@@ -1,6 +1,5 @@
 import 'global.css';
-import { SplashScreenController } from '@components/screens/splash';
-import { SessionProvider } from '@contexts/auth-context';
+import { SessionProvider, useSession } from '@contexts/auth-context';
 import { ThemeProvider } from '@contexts/theme-provider';
 import { ToastProvider } from '@contexts/toast-provider';
 import { useThemeStore } from '@stores/theme';
@@ -37,7 +36,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Font from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -67,7 +66,6 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <SessionProvider>
-          <SplashScreenController />
           <RootNavigator />
         </SessionProvider>
       </ThemeProvider>
@@ -76,6 +74,8 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
+  const { session, isLoading: isAuthLoading } = useSession();
+  const segments = useSegments();
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [fontError, setFontError] = useState<Error | null>(null);
   const getEffectiveColorScheme = useThemeStore((state) => state.getEffectiveColorScheme);
@@ -122,14 +122,47 @@ function RootNavigator() {
       } catch (e) {
         console.warn('Error loading fonts:', e);
         setFontError(e as Error);
-      } finally {
-        // Hide splash screen after fonts are loaded
-        await SplashScreen.hideAsync();
       }
     }
 
     loadFonts();
   }, []);
+
+  const router = useRouter();
+
+  // Handle navigation based on auth state changes globally here
+  useEffect(() => {
+    if (isAuthLoading) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+    const inProtectedGroup = segments[0] === '(protected)';
+    const isRoot = !segments.length || segments[0] === 'index';
+
+    // Wait until router is mounted and navigation completes
+    // Only redirect if user is in the wrong section, or they are stuck on the empty index placeholder
+    if (!session && (inProtectedGroup || isRoot)) {
+      // Not logged in but in protected area (or root) - redirect to auth
+      router.replace('/(auth)');
+    } else if (session && (inAuthGroup || isRoot)) {
+      // Logged in but in auth area (or root) - redirect to protected area
+      router.replace('/(protected)/(tabs)');
+    }
+  }, [session, segments, isAuthLoading, router]);
+
+  // Handle splash screen hiding
+  useEffect(() => {
+    if ((fontsLoaded || fontError) && !isAuthLoading) {
+      const inAuthGroup = segments[0] === '(auth)';
+      const inProtectedGroup = segments[0] === '(protected)';
+
+      // Prevent hiding Splash Screen until the navigation finishes redirecting
+      // to the appropriate group based on auth state
+      if (session && !inProtectedGroup) return;
+      if (!session && !inAuthGroup) return;
+
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError, isAuthLoading, session, segments]);
 
   // Prevent rendering until the fonts have loaded (or errored)
   if (!fontsLoaded && !fontError) {

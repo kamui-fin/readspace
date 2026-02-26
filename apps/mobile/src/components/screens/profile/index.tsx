@@ -3,6 +3,9 @@ import DiscordIcon from '@components/icons/local/discord';
 import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
 import GitHubIcon from '@components/icons/local/github';
 import { Header } from '@components/navigation/header';
+import { SettingsGroup } from '@components/screens/profile/ui/settings-group';
+import { SettingsItem } from '@components/screens/profile/ui/settings-item';
+import { ToastTester } from '@components/screens/profile/ui/toast-tester';
 import { UserProfile } from '@components/screens/profile/ui/user-profile';
 import { Button } from '@components/ui/button';
 import { Chip } from '@components/ui/chip';
@@ -23,7 +26,11 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { exportFeedsToOPML, readFileContent, validateOPMLFile } from '@lib/utils/opml';
-import { Monicon } from '@monicon/native';
+import ArchiveUpMinimlisticLinearIcon from '@components/icons/solar/archive-up-minimlistic-linear';
+import DownloadLinearIcon from '@components/icons/solar/download-linear';
+import HistoryLinearIcon from '@components/icons/solar/history-linear';
+import Logout2LinearIcon from '@components/icons/solar/logout-2-linear';
+import PaletteLinearIcon from '@components/icons/solar/palette-linear';
 import { useFeeds } from '@readspace/shared';
 import { useSettingsStore } from '@stores/settings';
 import { type Theme, useThemeStore } from '@stores/theme';
@@ -154,11 +161,6 @@ export function ProfileScreen() {
     }
   }, [feeds, folders]);
 
-  // Lighter shade colors for buttons
-  const githubBackground = isDark ? 'rgba(22, 22, 20, 0.15)' : 'rgba(22, 22, 20, 0.1)';
-  const discordBackground = isDark ? 'rgba(88, 101, 242, 0.15)' : 'rgba(88, 101, 242, 0.1)';
-  const redBackground = isDark ? 'rgba(234, 67, 53, 0.15)' : 'rgba(234, 67, 53, 0.1)';
-
   const githubColor = '#161614';
   const discordColor = '#5865F2';
 
@@ -194,203 +196,124 @@ export function ProfileScreen() {
           )}
 
           {/* Preferences Section */}
-          <View className="mb-8 gap-2">
-            <Text size="md" fontFamily="geist-semibold" className="text-grey dark:text-grey">
-              Preferences
-            </Text>
-            <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <Text size="lg" fontFamily="geist" className="text-black dark:text-black-dark">
-                  Theme
-                </Text>
-                <DropdownMenuRoot>
-                  <DropdownMenuTrigger>
-                    <Button
-                      variant="secondary"
-                      size="medium"
-                      fullWidth={false}
-                      rightIcon={<ExpandVerticalIcon fill={colors.black} />}
-                      textClassName="font-geist-medium text-lg">
-                      {theme.charAt(0).toUpperCase() + theme.slice(1)}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuCheckboxItem
-                      key="system"
-                      value={theme === 'system' ? 'on' : 'off'}
-                      onValueChange={() => handleThemeChange('system')}
-                      className="px-4 py-3">
-                      <DropdownMenuItemIcon
-                        ios={{
-                          name: 'paintbrush.pointed',
-                        }}
-                        androidIconName="palette"
-                      />
-                      <DropdownMenuItemTitle size="lg" fontFamily="geist">
-                        System
-                      </DropdownMenuItemTitle>
-                      <DropdownMenuItemIndicator />
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      key="light"
-                      value={theme === 'light' ? 'on' : 'off'}
-                      onValueChange={() => handleThemeChange('light')}
-                      className="px-4 py-3">
-                      <DropdownMenuItemIcon
-                        ios={{
-                          name: 'sun.max',
-                        }}
-                        androidIconName="light_mode"
-                      />
-                      <DropdownMenuItemTitle size="lg" fontFamily="geist">
-                        Light
-                      </DropdownMenuItemTitle>
-                      <DropdownMenuItemIndicator />
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      key="dark"
-                      value={theme === 'dark' ? 'on' : 'off'}
-                      onValueChange={() => handleThemeChange('dark')}
-                      className="px-4 py-3">
-                      <DropdownMenuItemIcon
-                        ios={{
-                          name: 'moon',
-                        }}
-                        androidIconName="dark_mode"
-                      />
-                      <DropdownMenuItemTitle size="lg" fontFamily="geist">
-                        Dark
-                      </DropdownMenuItemTitle>
-                      <DropdownMenuItemIndicator />
-                    </DropdownMenuCheckboxItem>
-                  </DropdownMenuContent>
-                </DropdownMenuRoot>
-              </View>
-
-              {/* Import OPML Button */}
-              <Button
-                variant="secondary"
-                size="large"
-                fullWidth
-                onPress={handleOPMLImport}
-                leftIcon={
-                  <Monicon
-                    name="solar:download-linear"
-                    size={20}
-                    strokeWidth={2.4}
-                    color={colors.black}
+          <SettingsGroup title="Preferences" className="mb-6">
+            <DropdownMenuRoot>
+              <DropdownMenuTrigger>
+                <SettingsItem
+                  label="Theme"
+                  variant="select"
+                  value={theme.charAt(0).toUpperCase() + theme.slice(1)}
+                  leftIcon={<PaletteLinearIcon width={22} height={22} color={colors.black} />}
+                />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuCheckboxItem
+                  key="system"
+                  value={theme === 'system' ? 'on' : 'off'}
+                  onValueChange={() => handleThemeChange('system')}
+                  className="px-4 py-3">
+                  <DropdownMenuItemIcon
+                    ios={{
+                      name: 'paintbrush.pointed',
+                    }}
+                    androidIconName="palette"
                   />
-                }>
-                <Text
-                  size="base"
-                  fontFamily="geist-semibold"
-                  className="text-black dark:text-black-dark">
-                  Import Subscriptions
-                </Text>
-              </Button>
-
-              {/* Export OPML Button */}
-              <Button
-                variant="secondary"
-                size="large"
-                fullWidth
-                onPress={handleOPMLExport}
-                leftIcon={
-                  <Monicon
-                    name="solar:archive-up-minimlistic-linear"
-                    size={20}
-                    strokeWidth={2.4}
-                    color={colors.black}
+                  <DropdownMenuItemTitle size="lg" fontFamily="geist">
+                    System
+                  </DropdownMenuItemTitle>
+                  <DropdownMenuItemIndicator />
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  key="light"
+                  value={theme === 'light' ? 'on' : 'off'}
+                  onValueChange={() => handleThemeChange('light')}
+                  className="px-4 py-3">
+                  <DropdownMenuItemIcon
+                    ios={{
+                      name: 'sun.max',
+                    }}
+                    androidIconName="light_mode"
                   />
-                }>
-                <Text
-                  size="base"
-                  fontFamily="geist-semibold"
-                  className="text-black dark:text-black-dark">
-                  Export OPML
-                </Text>
-              </Button>
-
-              {/* Reading History Button */}
-              <Button
-                variant="secondary"
-                size="large"
-                fullWidth
-                onPress={() => router.push('/(protected)/recents')}
-                leftIcon={
-                  <Monicon
-                    name="solar:history-bold-duotone"
-                    size={20}
-                    strokeWidth={2.4}
-                    color={colors.black}
+                  <DropdownMenuItemTitle size="lg" fontFamily="geist">
+                    Light
+                  </DropdownMenuItemTitle>
+                  <DropdownMenuItemIndicator />
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  key="dark"
+                  value={theme === 'dark' ? 'on' : 'off'}
+                  onValueChange={() => handleThemeChange('dark')}
+                  className="px-4 py-3">
+                  <DropdownMenuItemIcon
+                    ios={{
+                      name: 'moon',
+                    }}
+                    androidIconName="dark_mode"
                   />
-                }>
-                <Text
-                  size="base"
-                  fontFamily="geist-semibold"
-                  className="text-black dark:text-black-dark">
-                  Reading History
-                </Text>
-              </Button>
-            </View>
-          </View>
+                  <DropdownMenuItemTitle size="lg" fontFamily="geist">
+                    Dark
+                  </DropdownMenuItemTitle>
+                  <DropdownMenuItemIndicator />
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenuRoot>
+
+            <SettingsItem
+              label="Reading History"
+              variant="button"
+              leftIcon={<HistoryLinearIcon width={22} height={22} color={colors.black} />}
+              onPress={() => router.push('/(protected)/recents')}
+            />
+
+            <SettingsItem
+              label="Import Subscriptions"
+              variant="button"
+              leftIcon={<DownloadLinearIcon width={22} height={22} color={colors.black} />}
+              onPress={handleOPMLImport}
+            />
+
+            <SettingsItem
+              label="Export OPML"
+              variant="button"
+              leftIcon={<ArchiveUpMinimlisticLinearIcon width={22} height={22} color={colors.black} />}
+              onPress={handleOPMLExport}
+              isLast={true}
+            />
+          </SettingsGroup>
 
           {/* Other Section */}
-          <View className="mb-10 gap-2">
-            <Text size="md" fontFamily="geist-semibold" className="text-grey dark:text-grey">
-              Other
-            </Text>
-            <View className="gap-3">
-              {/* GitHub Button */}
-              <Button
-                variant="secondary"
-                size="large"
-                fullWidth
-                onPress={handleGithubPress}
-                leftIcon={<GitHubIcon fill={githubColor} />}
-                style={{
-                  backgroundColor: githubBackground,
-                }}>
-                <Text size="lg" fontFamily="geist-semibold" style={{ color: githubColor }}>
-                  GitHub
-                </Text>
-              </Button>
+          <SettingsGroup title="Other" className="mb-6">
+            <SettingsItem
+              label="GitHub"
+              variant="link"
+              leftIcon={<GitHubIcon width={22} height={22} fill={githubColor} />}
+              onPress={handleGithubPress}
+            />
 
-              {/* Discord Button */}
-              <Button
-                variant="secondary"
-                size="large"
-                fullWidth
-                onPress={handleDiscordPress}
-                leftIcon={<DiscordIcon fill={discordColor} />}
-                style={{
-                  backgroundColor: discordBackground,
-                }}>
-                <Text size="lg" fontFamily="geist-semibold" style={{ color: discordColor }}>
-                  Join the Discord
-                </Text>
-              </Button>
-            </View>
-          </View>
+            <SettingsItem
+              label="Join the Discord"
+              variant="link"
+              leftIcon={<DiscordIcon width={22} height={22} fill={discordColor} />}
+              onPress={handleDiscordPress}
+              isLast={true}
+            />
+          </SettingsGroup>
 
-          {/* Logout Button */}
-          <View>
-            <Button
-              variant="secondary"
-              size="large"
-              fullWidth
+          {/* Developer Tools */}
+          <ToastTester />
+
+          {/* Account Section */}
+          <SettingsGroup title="Account" className="mb-8">
+            <SettingsItem
+              label={isLoggingOut ? 'Logging out...' : 'Logout'}
+              variant="link"
+              leftIcon={<Logout2LinearIcon width={22} height={22} color={colors.red} />}
               onPress={handleLogout}
               disabled={isLoggingOut}
-              loading={isLoggingOut}
-              leftIcon={<Monicon name="solar:logout-2-bold" size={20} color={colors.red} />}
-              style={{
-                backgroundColor: redBackground,
-              }}>
-              <Text size="lg" fontFamily="geist-semibold" style={{ color: colors.red }}>
-                {isLoggingOut ? 'Logging out...' : 'Logout'}
-              </Text>
-            </Button>
-          </View>
+              danger={true}
+              isLast={true}
+            />
+          </SettingsGroup>
         </View>
       </ScrollView>
 

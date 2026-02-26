@@ -1,7 +1,9 @@
 import { Divider } from '@components/ui/divider';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import BookmarkBoldIcon from '@components/icons/solar/bookmark-bold';
+import LetterOpenedBoldIcon from '@components/icons/solar/letter-opened-bold';
+import LetterUnreadBoldIcon from '@components/icons/solar/letter-unread-bold';
 import type { Article } from '@readspace/shared';
 import { useArticleActionsStore } from '@stores/article-actions';
 import { forwardRef, useCallback, useEffect, useRef } from 'react';
@@ -20,7 +22,7 @@ import { Card, type CardProps } from '@components/ui/card/index';
 
 export interface SwipeAction {
   id: string;
-  icon: string;
+  icon: React.ComponentType<{ width?: number; height?: number; color?: string; strokeWidth?: number }>;
   color: string;
   onPress: () => void;
 }
@@ -85,7 +87,7 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
       if (onMarkAsUnread && article) {
         actions.push({
           id: 'unread',
-          icon: 'solar:letter-unread-bold',
+          icon: LetterUnreadBoldIcon,
           color: colors.secondary,
           onPress: () => onMarkAsUnread(article),
         });
@@ -100,7 +102,7 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
       if (onSaveArticle && article) {
         actions.push({
           id: 'save',
-          icon: 'solar:bookmark-bold',
+          icon: BookmarkBoldIcon,
           color: '#fb923c', // orange-400
           onPress: () => onSaveArticle(article),
         });
@@ -108,7 +110,7 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
       if (onMarkAsRead && article) {
         actions.push({
           id: 'read',
-          icon: 'solar:letter-opened-bold',
+          icon: LetterOpenedBoldIcon,
           color: colors.primary,
           onPress: () => onMarkAsRead(article),
         });
@@ -136,9 +138,9 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
     ]);
 
     // Get store execute functions and store them in refs for stable access
-    const executeMarkAsUnreadRef = useRef<(articleId: string) => void>(() => {});
-    const executeMarkAsReadRef = useRef<(articleId: string) => void>(() => {});
-    const executeSaveArticleRef = useRef<(articleId: string) => void>(() => {});
+    const executeMarkAsUnreadRef = useRef<(articleId: string) => void>(() => { });
+    const executeMarkAsReadRef = useRef<(articleId: string) => void>(() => { });
+    const executeSaveArticleRef = useRef<(articleId: string) => void>(() => { });
 
     // Update refs with store functions
     useEffect(() => {
@@ -176,6 +178,12 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
       }
     }, []);
 
+    const resetSwipeGesture = useCallback(() => {
+      setTimeout(() => {
+        isSwipeGesture.value = false;
+      }, 100);
+    }, [isSwipeGesture]);
+
     // Get store actions for registering callbacks
     const registerCallbacks = useArticleActionsStore((state) => state.registerCallbacks);
     const unregisterCallbacks = useArticleActionsStore((state) => state.unregisterCallbacks);
@@ -190,18 +198,18 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
       registerCallbacks(articleId, {
         onMarkAsRead: onMarkAsRead
           ? () => {
-              onMarkAsRead(articleRef);
-            }
+            onMarkAsRead(articleRef);
+          }
           : undefined,
         onMarkAsUnread: onMarkAsUnread
           ? () => {
-              onMarkAsUnread(articleRef);
-            }
+            onMarkAsUnread(articleRef);
+          }
           : undefined,
         onSaveArticle: onSaveArticle
           ? () => {
-              onSaveArticle(articleRef);
-            }
+            onSaveArticle(articleRef);
+          }
           : undefined,
       });
 
@@ -302,11 +310,7 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
         leftActionScale.value = withTiming(0, { duration: 150 });
         rightActionScale.value = withTiming(0, { duration: 150 });
         // Reset after a short delay to allow press events
-        runOnJS(() => {
-          setTimeout(() => {
-            isSwipeGesture.value = false;
-          }, 100);
-        })();
+        runOnJS(resetSwipeGesture)();
       });
 
     // Animated styles
@@ -389,7 +393,7 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
                     backgroundColor: action.color,
                   }}>
                   <Animated.View style={leftIconAnimatedStyle}>
-                    <Monicon name={action.icon} size={24} color={colors.white} />
+                    <action.icon width={24} height={24} color={colors.white} />
                   </Animated.View>
                 </Pressable>
               );
@@ -422,7 +426,7 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
                     backgroundColor: action.color,
                   }}>
                   <Animated.View style={rightIconAnimatedStyle}>
-                    <Monicon name={action.icon} size={24} color={colors.white} />
+                    <action.icon width={24} height={24} color={colors.white} />
                   </Animated.View>
                 </Pressable>
               );

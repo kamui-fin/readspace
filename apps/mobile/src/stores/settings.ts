@@ -1,25 +1,7 @@
 import { CLOUD_CONFIG } from '@lib/constants/config';
-import { createMMKV } from 'react-native-mmkv';
+import 'expo-sqlite/localStorage/install';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-
-const storage = createMMKV({
-  id: 'settings-storage',
-});
-
-// MMKV storage adapter for Zustand
-const mmkvStorage = {
-  getItem: (name: string) => {
-    const value = storage.getString(name);
-    return value ?? null;
-  },
-  setItem: (name: string, value: string) => {
-    storage.set(name, value);
-  },
-  removeItem: (name: string) => {
-    storage.remove(name);
-  },
-};
 
 // Cloud default configuration (hardcoded to always use production cloud instance)
 const CLOUD_SETTINGS = {
@@ -88,7 +70,7 @@ export const useSettingsStore = create<SettingsStore>()(
     }),
     {
       name: 'readspace-settings',
-      storage: createJSONStorage(() => mmkvStorage),
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         settings: state.settings,
       }),

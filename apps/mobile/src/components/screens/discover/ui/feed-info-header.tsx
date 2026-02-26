@@ -3,7 +3,8 @@ import { Chip } from '@components/ui/chip';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
+import LinkMinimalistic2BoldIcon from '@components/icons/solar/link-minimalistic-2-bold';
 import { Feed, FeedDiscoveryResult } from '@readspace/shared';
 import { Image } from 'expo-image';
 import { useCallback, useState } from 'react';
@@ -52,7 +53,7 @@ export function FeedInfoHeader({
     <View className="px-4 pb-4 pt-2">
       <View className="mb-6 flex-row items-center">
         <Button variant="icon" size="small" fullWidth={false} onPress={onBack}>
-          <Monicon name="solar:arrow-left-linear" size={18} strokeWidth={2.4} color={greyColor} />
+          <ArrowLeftLinearIcon width={18} height={18} strokeWidth={2.4} color={greyColor} />
         </Button>
       </View>
 
@@ -139,9 +140,9 @@ export function FeedInfoHeader({
           size="small"
           onPress={handleUrlPress}
           className="mb-4 h-auto flex-row items-center justify-start gap-2 px-0">
-          <Monicon
-            name="solar:link-minimalistic-2-bold"
-            size={20}
+          <LinkMinimalistic2BoldIcon
+            width={20}
+            height={20}
             strokeWidth={2.4}
             color={colors.primary}
           />

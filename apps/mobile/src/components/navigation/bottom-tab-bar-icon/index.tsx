@@ -1,4 +1,3 @@
-import { Monicon, type MoniconProps } from '@monicon/native';
 import type React from 'react';
 
 interface SvgIconProps {
@@ -8,10 +7,12 @@ interface SvgIconProps {
   filled?: boolean;
 }
 
-interface TabBarIconProps extends Partial<MoniconProps> {
+interface TabBarIconProps {
   component?: React.ComponentType<SvgIconProps>;
   name?: string;
   focused?: boolean;
+  size?: number;
+  color?: string;
 }
 
 export function TabBarIcon({ component: SvgComponent, name, focused, ...props }: TabBarIconProps) {
@@ -25,10 +26,5 @@ export function TabBarIcon({ component: SvgComponent, name, focused, ...props }:
       />
     );
   }
-
-  if (name) {
-    return <Monicon name={name} {...props} />;
-  }
-
   return null;
 }

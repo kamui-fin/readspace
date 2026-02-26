@@ -27,16 +27,39 @@ const isIOS = Platform.OS === 'ios';
 
 interface FeedPreviewScreenProps {
   feedId: string;
+  initialData?: {
+    title?: string;
+    description?: string;
+    image_url?: string;
+  };
 }
 
-export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
+export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProps) {
   const router = useRouter();
   const segments = useSegments();
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const folderPickerRef = useRef<FolderPickerModalRef>(null);
   const [pendingSimilarFeedUrl, setPendingSimilarFeedUrl] = useState<string | null>(null);
   const [isPreviewRefreshing, setIsPreviewRefreshing] = useState(false);
-  const [previewFeedData, setPreviewFeedData] = useState<FeedDiscoveryResult | null>(null);
+  const [previewFeedData, setPreviewFeedData] = useState<FeedDiscoveryResult | null>(
+    initialData?.title
+      ? ({
+          id: feedId,
+          url: '', // placeholder
+          title: initialData.title || 'Untitled Feed',
+          description: initialData.description || null,
+          link: null,
+          language: 'en',
+          image_url: initialData.image_url || null,
+          author: null,
+          content_type: null,
+          last_updated_at: null,
+          tags: [],
+          tags_native: [],
+          is_subscribed: false,
+        } as any)
+      : null
+  );
 
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
@@ -58,8 +81,9 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
     enabled: !!feedId && !isPreviewRefreshing,
   });
 
-  // Use preview feed data if available, otherwise use fetched data
-  const feed = previewFeedData || fetchedFeedData;
+  // Use preview feed data if available, otherwise use fetched data.
+  // If we have fetched data, prefer it over the initial metadata.
+  const feed = fetchedFeedData || previewFeedData;
 
   // Sync local subscription state with feed data
   useEffect(() => {
@@ -161,8 +185,7 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
       setShouldWaitForPreview(true);
       setIsPreviewRefreshing(true);
 
-      ApiClient
-        .refreshFeed(feedId, true, true)
+      ApiClient.refreshFeed(feedId, true, true)
         .then(async (feedData) => {
           // Store the feed data from refresh response (cast to FeedDiscoveryResult)
           setPreviewFeedData(feedData as unknown as FeedDiscoveryResult);
@@ -275,12 +298,12 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
 
   if (!feed) {
     return (
-      <View className="flex-1 bg-white dark:bg-white-dark" style={{ paddingTop: insets.top }}>
+      <View className="dark:bg-white-dark flex-1 bg-white" style={{ paddingTop: insets.top }}>
         <View className="flex-1 items-center justify-center px-6">
           <Text
             size="base"
             fontFamily="geist"
-            className="text-center text-grey dark:text-grey-dark">
+            className="text-grey dark:text-grey-dark text-center">
             Feed not found
           </Text>
         </View>
@@ -290,7 +313,7 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
 
   return (
     <>
-      <View className="flex-1 bg-white dark:bg-white-dark" style={{ paddingTop: insets.top }}>
+      <View className="dark:bg-white-dark flex-1 bg-white" style={{ paddingTop: insets.top }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{

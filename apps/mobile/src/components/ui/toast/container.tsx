@@ -1,6 +1,6 @@
-import CheckCircleIcon from '@components/icons/local/check-circle';
-import CloseCircleIcon from '@components/icons/local/close-circle';
-import InfoCircleIcon from '@components/icons/local/info-circle';
+import CheckCircleBoldIcon from '@components/icons/solar/check-circle-bold';
+import CloseCircleBoldIcon from '@components/icons/solar/close-circle-bold';
+import InfoCircleBoldIcon from '@components/icons/solar/info-circle-bold';
 import { Spinner } from '@components/ui/spinner';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
@@ -16,6 +16,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
+
+import { getToastBackgroundColor, getToastTextColor } from './utils';
 
 export type ToastType = 'success' | 'error' | 'promise' | 'info' | 'custom';
 
@@ -175,44 +177,14 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
-  const getBackgroundColor = () => {
-    if (toast.type === 'custom' && toast.custom?.backgroundColor) {
-      return toast.custom.backgroundColor;
-    }
-    if (toast.type === 'success') {
-      return colors.icon_bg_green;
-    }
-    if (toast.type === 'promise') {
-      return colors.icon_bg_blue;
-    }
-    if (toast.type === 'info') {
-      return colors.icon_bg_yellow;
-    }
-    return colors.icon_bg_red;
-  };
 
-  const getTextColor = () => {
-    if (toast.type === 'custom' && toast.custom?.textColor) {
-      return toast.custom.textColor;
-    }
-    if (toast.type === 'success') {
-      return colors.secondary;
-    }
-    if (toast.type === 'promise') {
-      return colors.blue;
-    }
-    if (toast.type === 'info') {
-      return colors.orange;
-    }
-    return colors.red;
-  };
 
   const renderIcon = () => {
     if (toast.type === 'custom' && toast.custom?.icon) {
       return toast.custom.icon;
     }
     if (toast.type === 'success') {
-      return <CheckCircleIcon width={20} height={20} fill={colors.secondary} />;
+      return <CheckCircleBoldIcon width={20} height={20} color={colors.secondary} />;
     }
     if (toast.type === 'promise') {
       return (
@@ -233,9 +205,9 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
       );
     }
     if (toast.type === 'info') {
-      return <InfoCircleIcon width={20} height={20} fill={colors.orange} />;
+      return <InfoCircleBoldIcon width={20} height={20} color={colors.orange} />;
     }
-    return <CloseCircleIcon width={20} height={20} fill={colors.red} />;
+    return <CloseCircleBoldIcon width={20} height={20} color={colors.red} />;
   };
 
   return (
@@ -255,13 +227,14 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
       ]}>
       <Pressable onPress={handleDismiss}>
         <View
-          className="flex-row items-center rounded-full py-[10px] pl-4 pr-[18px] shadow-none"
+          className="flex-row items-center rounded-full py-[10px] pl-4 pr-[18px]"
           style={{
-            backgroundColor: getBackgroundColor(),
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 5,
+            backgroundColor: getToastBackgroundColor(toast.type, colors, toast.custom),
+            shadowColor: isDark ? '#000' : '#8A9A9D',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: isDark ? 0.35 : 0.08,
+            shadowRadius: 12,
+            elevation: 3,
           }}>
           <Animated.View className="mr-1" style={iconAnimatedStyle}>
             {renderIcon()}
@@ -269,8 +242,11 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
 
           <Animated.View style={textAnimatedStyle}>
             <Text
-              className="text-[15px] font-semibold leading-5"
-              style={{ color: getTextColor() }}
+              className="text-[14px]"
+              style={{
+                color: getToastTextColor(toast.type, colors, toast.custom),
+                fontFamily: 'Geist_500Medium',
+              }}
               numberOfLines={2}>
               {toast.title}
             </Text>

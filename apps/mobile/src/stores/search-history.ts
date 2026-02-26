@@ -1,24 +1,6 @@
-import { createMMKV } from 'react-native-mmkv';
+import 'expo-sqlite/localStorage/install';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-
-const storage = createMMKV({
-  id: 'search-history-storage',
-});
-
-// MMKV storage adapter for Zustand
-const mmkvStorage = {
-  getItem: (name: string) => {
-    const value = storage.getString(name);
-    return value ?? null;
-  },
-  setItem: (name: string, value: string) => {
-    storage.set(name, value);
-  },
-  removeItem: (name: string) => {
-    storage.remove(name);
-  },
-};
 
 const MAX_SEARCH_HISTORY = 10;
 
@@ -74,7 +56,7 @@ export const useSearchHistory = create<SearchHistoryStore>()(
     }),
     {
       name: 'readspace-search-history',
-      storage: createJSONStorage(() => mmkvStorage),
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         searches: state.searches,
       }),

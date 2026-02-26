@@ -8,7 +8,7 @@ import { useGoogleAuth } from '@hooks/useGoogleAuth';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { SPACING } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import LetterBoldIcon from '@components/icons/solar/letter-bold';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Text, useWindowDimensions, View } from 'react-native';
@@ -124,7 +124,7 @@ export function WelcomeScreen() {
           variant="primary"
           size="large"
           onPress={() => router.push('/(auth)/login')}
-          leftIcon={<Monicon name="solar:letter-bold" size={20} color={COLORS.white} />}>
+          leftIcon={<LetterBoldIcon width={20} height={20} color={COLORS.white} />}>
           Continue with Email
         </Button>
 

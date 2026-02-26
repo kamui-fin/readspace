@@ -8,7 +8,7 @@ import {
 } from '@/components/navigation/header/constants/header-variants';
 import { Button } from '@components/ui/button';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
 import clsx from 'clsx';
 import { Platform, Text, TouchableOpacity, View } from 'react-native';
 
@@ -19,7 +19,7 @@ interface HeaderForegroundProps {
   onBackPress?: () => void;
   actions?: {
     label: string;
-    icon: string;
+    icon: React.ComponentType<{ width?: number, height?: number, color?: string, strokeWidth?: number }>;
     onPress: () => void;
     disabled?: boolean;
   }[];
@@ -50,9 +50,9 @@ export function HeaderForeground({
         {showBackButton && (
           <View className="absolute left-4 top-0 z-10">
             <Button onPress={onBackPress} variant="icon" size="small" fullWidth={false}>
-              <Monicon
-                name="solar:arrow-left-linear"
-                size={18}
+              <ArrowLeftLinearIcon
+                width={18}
+                height={18}
                 strokeWidth={2.4}
                 color={colors.grey}
               />
@@ -81,7 +81,7 @@ export function HeaderForeground({
           size="small"
           fullWidth={false}
           className="mr-3">
-          <Monicon name="solar:arrow-left-linear" size={18} strokeWidth={2.4} color={colors.grey} />
+          <ArrowLeftLinearIcon width={18} height={18} strokeWidth={2.4} color={colors.grey} />
         </Button>
       )}
 
@@ -133,7 +133,7 @@ export function HeaderForeground({
               fullWidth={false}
               disabled={action.disabled}
               className="bg-transparent px-2 py-2">
-              <Monicon name={action.icon} size={20} color={colors.primary_foreground} />
+              <action.icon width={20} height={20} color={colors.primary_foreground} />
             </Button>
           ))}
         </View>

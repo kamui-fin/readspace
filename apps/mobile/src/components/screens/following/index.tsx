@@ -5,7 +5,6 @@ import { FolderPickerModal, type FolderPickerModalRef } from '@/components/modal
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { toast } from '@components/ui/toast';
-import { useToast } from '@contexts/toast-provider';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
@@ -50,7 +49,6 @@ export function FollowingScreen({
   safeMinimumHeight,
 }: FollowingScreenProps) {
   const listRef = useRef<any>(null);
-  const { showToast, updateToast } = useToast();
   const insets = useSafeAreaInsets();
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];

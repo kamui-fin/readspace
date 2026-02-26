@@ -16,7 +16,14 @@ import {
 } from '@components/ui/dropdown-menu';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { COLORS } from '@lib/constants/colors';
-import { Monicon } from '@monicon/native';
+import AddFolderBoldIcon from '@components/icons/solar/add-folder-bold';
+import CheckCircleBoldIcon from '@components/icons/solar/check-circle-bold';
+import FolderOpenBoldIcon from '@components/icons/solar/folder-open-bold';
+import FolderOpenLinearIcon from '@components/icons/solar/folder-open-linear';
+import FolderWithFilesBoldIcon from '@components/icons/solar/folder-with-files-bold';
+import FolderWithFilesLinearIcon from '@components/icons/solar/folder-with-files-linear';
+import InboxBrokenIcon from '@components/icons/solar/inbox-broken';
+import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
 import { type Subscription, type Folder, useFeeds, useUnreadCounts } from '@readspace/shared';
 import { type FeedSwitcherStore, useFeedSwitcherStore } from '@stores/feed-switcher';
 import { useFeedViewStore } from '@stores/feed-view';
@@ -130,13 +137,13 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
         const isLast = index === listData.length - 1;
         const isFolderViewing = viewType === 'folder' && selectedId === item.folder.id;
 
-        const getFolderIcon = () => {
+        const FolderIconComponent = (() => {
           if (item.isExpanded) {
-            return item.isEmpty ? 'solar:folder-open-linear' : 'solar:folder-open-bold';
+            return item.isEmpty ? FolderOpenLinearIcon : FolderOpenBoldIcon;
           } else {
-            return item.isEmpty ? 'solar:folder-with-files-linear' : 'solar:folder-with-files-bold';
+            return item.isEmpty ? FolderWithFilesLinearIcon : FolderWithFilesBoldIcon;
           }
-        };
+        })();
 
         return (
           <View className={!isLast ? 'mb-4' : 'mb-2'}>
@@ -159,9 +166,9 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
                   {/* Folder Icon */}
                   <View className="flex-shrink-0">
                     {isFolderViewing ? (
-                      <Monicon name="solar:check-circle-bold" size={28} color={colors.secondary} />
+                      <CheckCircleBoldIcon width={28} height={28} color={colors.secondary} />
                     ) : (
-                      <Monicon name={getFolderIcon()} size={28} color={colors.secondary} />
+                      <FolderIconComponent width={28} height={28} color={colors.secondary} />
                     )}
                   </View>
 
@@ -224,9 +231,9 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
                         <View className="flex-shrink-0">
                           {isFeedViewing ? (
                             <View className="h-10 w-10 items-center justify-center">
-                              <Monicon
-                                name="solar:check-circle-bold"
-                                size={32}
+                              <CheckCircleBoldIcon
+                                width={32}
+                                height={32}
                                 color={colors.secondary}
                               />
                             </View>
@@ -295,12 +302,12 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
             className="h-8 w-8"
             fullWidth={false}
             onPress={handleCreateFolderPress}>
-            <Monicon name="solar:add-folder-bold" size={16} color={colors.grey} />
+            <AddFolderBoldIcon width={16} height={16} color={colors.grey} />
           </Button>
           <DropdownMenuRoot>
             <DropdownMenuTrigger>
               <Button variant="icon" size="small" className="h-8 w-8" fullWidth={false}>
-                <Monicon name="solar:menu-dots-bold" size={16} color={colors.grey} />
+                <MenuDotsBoldIcon width={16} height={16} color={colors.grey} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -343,7 +350,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
           index={1}>
           {listData.length === 0 ? (
             <View className="items-center justify-center py-12">
-              <Monicon name="solar:inbox-broken" size={64} color={colors.grey} />
+              <InboxBrokenIcon width={64} height={64} color={colors.grey} />
               <Text className="mt-4 font-geist-medium text-base text-grey dark:text-grey">
                 No feeds yet
               </Text>

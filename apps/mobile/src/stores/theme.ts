@@ -1,25 +1,7 @@
 import { Appearance, type ColorSchemeName } from 'react-native';
-import { createMMKV } from 'react-native-mmkv';
+import 'expo-sqlite/localStorage/install';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-
-const storage = createMMKV({
-  id: 'theme-storage',
-});
-
-// MMKV storage adapter for Zustand
-const mmkvStorage = {
-  getItem: (name: string) => {
-    const value = storage.getString(name);
-    return value ?? null;
-  },
-  setItem: (name: string, value: string) => {
-    storage.set(name, value);
-  },
-  removeItem: (name: string) => {
-    storage.remove(name);
-  },
-};
 
 export type Theme = 'system' | 'light' | 'dark';
 
@@ -67,7 +49,7 @@ export const useThemeStore = create<ThemeStore>()(
     }),
     {
       name: 'readspace-theme',
-      storage: createJSONStorage(() => mmkvStorage),
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         theme: state.theme,
       }),

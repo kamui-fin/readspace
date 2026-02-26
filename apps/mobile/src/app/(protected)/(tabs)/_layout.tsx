@@ -1,4 +1,6 @@
 import { TabBarIcon } from '@components/navigation/bottom-tab-bar-icon';
+import CompassBoldIcon from '@components/icons/solar/compass-bold';
+import NotesBoldDuotoneIcon from '@components/icons/solar/notes-bold-duotone';
 import { BottomTabbar } from '@components/navigation/bottom-tabs';
 import { Header } from '@components/navigation/header';
 import { Avatar } from '@components/ui/avatar';
@@ -152,7 +154,7 @@ export default function TabsLayout() {
             tabBarLabel: 'Following',
             tabBarIcon: ({ color, size, focused }) => (
               <TabBarIcon
-                name="solar:notes-bold-duotone"
+                component={NotesBoldDuotoneIcon}
                 size={size}
                 color={color}
                 focused={focused}
@@ -166,7 +168,7 @@ export default function TabsLayout() {
             title: 'Discover',
             tabBarLabel: 'Discover',
             tabBarIcon: ({ color, size, focused }) => (
-              <TabBarIcon name="solar:compass-bold" size={size} color={color} focused={focused} />
+              <TabBarIcon component={CompassBoldIcon} size={size} color={color} focused={focused} />
             ),
           }}
         />

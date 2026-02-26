@@ -32,7 +32,7 @@ export function ArticleHeader({
 
   return (
     <View
-      className="mb-6 border-b border-grey4 px-6 pb-6 dark:border-grey4-dark"
+      className="mb-6 mx-6 border-b border-divider pb-6"
       style={{ marginTop: article.image_url ? 24 : insets.top + 56 }}>
       {/* Source */}
       {!isClipped && feedId ? (
@@ -89,7 +89,7 @@ export function ArticleHeader({
         size="lg"
         fontFamily="geist-bold"
         className="mb-3 text-primary-foreground dark:text-primary-foreground-dark"
-        style={{ letterSpacing: -0.72, fontSize: 30, lineHeight: 38 }}>
+        style={{ letterSpacing: -1.2, fontSize: 30, lineHeight: 38 }}>
         {stripHtml(article.title)}
       </Text>
 

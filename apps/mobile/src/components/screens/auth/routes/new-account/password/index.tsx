@@ -3,7 +3,8 @@ import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { PasswordSchema } from '@lib/validation/auth-schemas';
-import { Monicon } from '@monicon/native';
+import EyeBoldIcon from '@components/icons/solar/eye-bold';
+import EyeClosedBoldIcon from '@components/icons/solar/eye-closed-bold';
 import { Formik, type FormikProps } from 'formik';
 import { useEffect, useState } from 'react';
 import { Keyboard, TouchableWithoutFeedback, View } from 'react-native';
@@ -72,11 +73,10 @@ function PasswordFormContent({
           borderRadius={12}
           rightElement={
             <InputPressable onPress={() => setShowPassword(!showPassword)}>
-              <Monicon
-                name={showPassword ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
-                size={20}
-                color={colors.grey}
-              />
+              {(() => {
+                const IconObj = showPassword ? EyeBoldIcon : EyeClosedBoldIcon;
+                return <IconObj width={20} height={20} color={colors.grey} />;
+              })()}
             </InputPressable>
           }
         />
@@ -90,7 +90,7 @@ export function PasswordStep({ initialPassword = '', onPasswordChange }: Passwor
     <Formik
       initialValues={{ password: initialPassword || '' }}
       validationSchema={toFormikValidationSchema(PasswordSchema)}
-      onSubmit={() => {}}
+      onSubmit={() => { }}
       validateOnMount={false}
       validateOnChange={false}
       validateOnBlur={true}>

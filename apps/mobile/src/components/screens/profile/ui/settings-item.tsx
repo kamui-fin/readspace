@@ -1,5 +1,6 @@
 import { Text } from '@components/ui/text';
-import { Monicon } from '@monicon/native';
+import AltArrowRightLinearIcon from '@components/icons/solar/alt-arrow-right-linear';
+import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
 import clsx from 'clsx';
 import { forwardRef } from 'react';
 import { Pressable, type PressableProps, View } from 'react-native';
@@ -11,24 +12,26 @@ interface BaseSettingsItemProps extends PressableProps {
   variant: SettingsItemVariant;
   className?: string;
   isLast?: boolean;
+  danger?: boolean;
+  leftIcon?: React.ReactNode;
 }
 
 interface SelectSettingsItemProps extends BaseSettingsItemProps {
   variant: 'select';
   value: string;
-  icon?: never;
+  rightIcon?: never;
 }
 
 interface ButtonSettingsItemProps extends BaseSettingsItemProps {
   variant: 'button';
   value?: never;
-  icon?: never;
+  rightIcon?: never;
 }
 
 interface LinkSettingsItemProps extends BaseSettingsItemProps {
   variant: 'link';
   value?: never;
-  icon: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
 export type SettingsItemProps =
@@ -37,22 +40,22 @@ export type SettingsItemProps =
   | LinkSettingsItemProps;
 
 export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, SettingsItemProps>(
-  ({ label, variant, value, icon, className, isLast = false, ...props }, ref) => {
+  ({ label, variant, value, leftIcon, rightIcon, className, isLast = false, danger = false, ...props }, ref) => {
     const renderRightContent = () => {
       switch (variant) {
         case 'select':
           return (
             <View className="flex-row items-center gap-2">
-              <Text size="base" fontFamily="geist" className="text-grey dark:text-grey">
+              <Text size={15} fontFamily="geist" className="text-grey dark:text-grey">
                 {value}
               </Text>
-              <Monicon name="lucide:chevrons-up-down" size={20} color="#9FA29F" />
+              <ExpandVerticalIcon width={18} height={18} fill="#9FA29F" />
             </View>
           );
         case 'button':
-          return <Monicon name="solar:alt-arrow-right-linear" size={20} color="#9FA29F" />;
+          return <AltArrowRightLinearIcon width={18} height={18} color="#9FA29F" />;
         case 'link':
-          return icon;
+          return rightIcon || <AltArrowRightLinearIcon width={18} height={18} color="#9FA29F" />;
         default:
           return null;
       }
@@ -62,18 +65,30 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
       <Pressable
         ref={ref}
         className={clsx(
-          'flex-row items-center justify-between bg-background px-4 py-4 dark:bg-background-dark',
-          !isLast && 'border-b border-grey5 dark:border-grey4-dark',
+          'bg-grey6 dark:bg-[#1C1C1E]',
           className
         )}
         style={({ pressed }) => ({
           opacity: pressed ? 0.7 : 1,
         })}
         {...props}>
-        <Text size="base" fontFamily="geist" className="text-black dark:text-black-dark">
-          {label}
-        </Text>
-        {renderRightContent()}
+        <View className="flex-row items-center justify-between px-5 py-3.5">
+          <View className="flex-row items-center gap-3">
+            {leftIcon}
+            <Text
+              size={15}
+              fontFamily="geist-medium"
+              className={clsx(
+                danger ? 'text-red dark:text-red' : 'text-black dark:text-black-dark'
+              )}>
+              {label}
+            </Text>
+          </View>
+          {renderRightContent()}
+        </View>
+        {!isLast && (
+          <View className="mx-5 h-[1px] bg-grey5 dark:bg-[#2C2C2E]" />
+        )}
       </Pressable>
     );
   }

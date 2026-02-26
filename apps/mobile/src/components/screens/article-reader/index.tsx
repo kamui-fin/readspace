@@ -153,6 +153,50 @@ export function ArticleReader({
     return content;
   }, [article.content, article.image_url]);
 
+  // Memoize renderers to prevent unnecessary re-renders of RenderHTML
+  const renderers = useMemo(
+    () => ({
+      // biome-ignore lint/suspicious/noExplicitAny: react-native-render-html renderer types are complex
+      a: (props: any) => {
+        // Check if link is inside an italic context by examining parent styles
+        const tnode = props.TDefaultRenderer?.props?.tnode;
+        const parentDomNode = tnode?.parent?.domNode;
+        const parentTagName = parentDomNode?.name;
+
+        // Check if parent is em or i, or if link contains em/i
+        const linkInnerHTML = tnode?.domNode?.innerHTML || '';
+        const isInsideItalic =
+          parentTagName === 'em' ||
+          parentTagName === 'i' ||
+          linkInnerHTML.toLowerCase().includes('<em>') ||
+          linkInnerHTML.toLowerCase().includes('<i>');
+
+        // Apply italic font if inside italic context
+        const linkStyle = isInsideItalic
+          ? {
+            ...tagsStyles.a,
+            fontFamily: 'EBGaramond_500Medium_Italic',
+            fontStyle: 'italic' as const,
+          }
+          : tagsStyles.a;
+
+        // Safely access tbaseStyle with null check
+        const baseTStyle = props.TDefaultRenderer?.props?.tbaseStyle || {};
+
+        return (
+          <props.TDefaultRenderer
+            {...props}
+            tbaseStyle={{
+              ...baseTStyle,
+              ...linkStyle,
+            }}
+          />
+        );
+      },
+    }),
+    [tagsStyles.a]
+  );
+
   return (
     <ScrollView
       className="flex-1 bg-background dark:bg-background-dark"
@@ -191,45 +235,7 @@ export function ArticleReader({
           enableExperimentalMarginCollapsing
           enableCSSInlineProcessing={false}
           renderersProps={renderersProps}
-          renderers={{
-            // biome-ignore lint/suspicious/noExplicitAny: react-native-render-html renderer types are complex
-            a: (props: any) => {
-              // Check if link is inside an italic context by examining parent styles
-              const tnode = props.TDefaultRenderer?.props?.tnode;
-              const parentDomNode = tnode?.parent?.domNode;
-              const parentTagName = parentDomNode?.name;
-
-              // Check if parent is em or i, or if link contains em/i
-              const linkInnerHTML = tnode?.domNode?.innerHTML || '';
-              const isInsideItalic =
-                parentTagName === 'em' ||
-                parentTagName === 'i' ||
-                linkInnerHTML.toLowerCase().includes('<em>') ||
-                linkInnerHTML.toLowerCase().includes('<i>');
-
-              // Apply italic font if inside italic context
-              const linkStyle = isInsideItalic
-                ? {
-                  ...tagsStyles.a,
-                  fontFamily: 'EBGaramond_500Medium_Italic',
-                  fontStyle: 'italic' as const,
-                }
-                : tagsStyles.a;
-
-              // Safely access tbaseStyle with null check
-              const baseTStyle = props.TDefaultRenderer?.props?.tbaseStyle || {};
-
-              return (
-                <props.TDefaultRenderer
-                  {...props}
-                  tbaseStyle={{
-                    ...baseTStyle,
-                    ...linkStyle,
-                  }}
-                />
-              );
-            },
-          }}
+          renderers={renderers}
         />
       </View>
     </ScrollView>

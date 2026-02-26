@@ -9,6 +9,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'portrait',
   icon: './assets/app/icon.png',
   userInterfaceStyle: 'light',
+  scheme: 'com.readspace.rss',
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.readspace.rss',
@@ -60,6 +61,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     'expo-font',
+    'expo-sqlite',
     [
       'expo-web-browser',
       {

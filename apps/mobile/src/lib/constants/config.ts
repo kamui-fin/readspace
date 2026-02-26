@@ -26,7 +26,7 @@ export const GOOGLE_WEB_CLIENT_ID =
  * Loaded from environment variables for security
  */
 export const CLOUD_CONFIG = {
-  READSPACE_URL: process.env.EXPO_PUBLIC_CLOUD_API_URL || 'https://api.readspace.ai',
-  SUPABASE_URL: process.env.EXPO_PUBLIC_CLOUD_SUPABASE_URL || '',
-  SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_CLOUD_SUPABASE_ANON_KEY || '',
+  READSPACE_URL: process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_CLOUD_API_URL || 'https://api.readspace.ai',
+  SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_CLOUD_SUPABASE_URL || '',
+  SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_CLOUD_SUPABASE_ANON_KEY || '',
 } as const;
