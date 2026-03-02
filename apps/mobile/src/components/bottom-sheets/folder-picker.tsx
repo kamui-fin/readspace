@@ -6,10 +6,7 @@ import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Radio } from '@components/ui/radio';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
-import { COLORS } from '@lib/constants/colors';
-import AddFolderBoldIcon from '@components/icons/solar/add-folder-bold';
 import { useFeeds } from '@readspace/shared';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { View } from 'react-native';
@@ -30,8 +27,6 @@ export const FolderPickerBottomSheet = forwardRef<
 >(({ onFolderSelect, initialFolderId }, ref) => {
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const createFolderModalRef = useRef<CreateFolderModalRef>(null);
-  const isDark = useIsDarkMode();
-  const colors = COLORS[isDark ? 'dark' : 'light'];
 
   useImperativeHandle(ref, () => ({
     present: () => bottomSheetRef.current?.present(),
@@ -52,7 +47,7 @@ export const FolderPickerBottomSheet = forwardRef<
     bottomSheetRef.current?.dismiss();
   }, [selectedFolderId, onFolderSelect]);
 
-  const handleCreateFolderPress = useCallback(() => {
+  const handleNewFolder = useCallback(() => {
     createFolderModalRef.current?.present();
   }, []);
 
@@ -62,31 +57,8 @@ export const FolderPickerBottomSheet = forwardRef<
         ref={bottomSheetRef}
         headerTitle="Select Folder"
         headerTitleAlign="left"
-        enablePanDownToClose={true}
-        headerRight={
-          <View className="flex-row items-center gap-2">
-            <Button
-              variant="icon"
-              size="small"
-              className="h-8 w-8"
-              fullWidth={false}
-              onPress={handleCreateFolderPress}>
-              <AddFolderBoldIcon width={16} height={16} color={colors.grey} />
-            </Button>
-            <Button
-              variant="primary"
-              size="small"
-              className="h-8"
-              fullWidth={false}
-              onPress={handleConfirm}
-              disabled={false}
-              style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
-              Confirm
-            </Button>
-          </View>
-        }>
+        enablePanDownToClose={true}>
         <View className="gap-3">
-          {/* Folder Options */}
           {typedFolders.map((folder) => (
             <Radio
               key={folder.id}
@@ -95,6 +67,28 @@ export const FolderPickerBottomSheet = forwardRef<
               onPress={() => handleSelect(folder.id)}
             />
           ))}
+        </View>
+
+        {/* Bottom action buttons */}
+        <View className="mt-6 flex-row gap-3">
+          <Button
+            variant="secondary"
+            size="large"
+            fullWidth={false}
+            className="flex-1"
+            onPress={handleNewFolder}
+            style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
+            New Folder
+          </Button>
+          <Button
+            variant="primary"
+            size="large"
+            fullWidth={false}
+            className="flex-1"
+            onPress={handleConfirm}
+            style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
+            Confirm
+          </Button>
         </View>
       </BottomSheet>
 

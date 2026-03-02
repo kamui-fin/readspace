@@ -40,7 +40,7 @@ const chipVariants = cva('flex-row items-center rounded-full', {
   },
 });
 
-const chipTextVariants = cva('font-geist-semibold', {
+const chipTextVariants = cva('font-geist-medium', {
   variants: {
     size: {
       small: 'text-xs',

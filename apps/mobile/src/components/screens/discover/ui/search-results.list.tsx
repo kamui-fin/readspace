@@ -29,6 +29,19 @@ export function SearchResults({
   onClearCategory,
   categoryScrollRef,
 }: SearchResultsProps) {
+  const categoryHeader = selectedCategory ? (
+    <View className="mb-6">
+      <CategoriesList
+        selectedCategory={selectedCategory}
+        categoriesRow1={categoriesRow1}
+        categoriesRow2={categoriesRow2}
+        onCategoryPress={onCategoryPress}
+        onClearCategory={onClearCategory}
+        categoryScrollRef={categoryScrollRef}
+      />
+    </View>
+  ) : null;
+
   return (
     <View className="flex-1">
       {showSearchSkeleton ? (
@@ -38,6 +51,7 @@ export function SearchResults({
           contentContainerStyle={{
             paddingBottom: contentPaddingBottom,
           }}>
+          {categoryHeader}
           <View className="gap-4 px-6 pt-4">
             {Array.from({ length: 8 }, (_, i) => `search-skeleton-${i}`).map((key) => (
               <View key={key} className="flex-row gap-3">
@@ -55,6 +69,7 @@ export function SearchResults({
         <InfiniteScrollList
           data={hits.filter(Boolean)}
           estimatedItemSize={80}
+          ListHeaderComponent={categoryHeader}
           renderItem={(item) => (
             <FeedListItem
               feedId={item.id}
@@ -71,23 +86,12 @@ export function SearchResults({
           contentContainerStyle={{
             paddingBottom: contentPaddingBottom,
           }}
-          ListHeaderComponent={
-            selectedCategory ? (
-              <View className="mb-6">
-                <CategoriesList
-                  selectedCategory={selectedCategory}
-                  categoriesRow1={categoriesRow1}
-                  categoriesRow2={categoriesRow2}
-                  onCategoryPress={onCategoryPress}
-                  onClearCategory={onClearCategory}
-                  categoryScrollRef={categoryScrollRef}
-                />
-              </View>
-            ) : undefined
-          }
         />
       ) : (
-        <View className="flex-1 items-center justify-center px-6 py-12">
+        <View
+          className="flex-1 items-center justify-center px-6"
+          style={{ paddingBottom: contentPaddingBottom }}>
+          {categoryHeader}
           <Text size="base" fontFamily="geist" className="text-grey text-center">
             No feeds found matching your search
           </Text>

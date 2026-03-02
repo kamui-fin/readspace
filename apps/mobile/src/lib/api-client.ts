@@ -5,18 +5,18 @@ import { Platform } from 'react-native';
 
 // Helper to resolve hostname for Android emulator
 const resolveHostname = (url: string): string => {
-    try {
-        const _url = new URL(url);
-        if (_url.hostname === 'localhost' && Platform.OS === 'android') {
-            _url.hostname = '10.0.2.2';
-        }
-        return _url.toString().replace(/\/$/, '');
-    } catch (e) {
-        if (url.includes('localhost') && Platform.OS === 'android') {
-            return url.replace('localhost', '10.0.2.2').replace(/\/$/, '');
-        }
-        return url.replace(/\/$/, '');
+  try {
+    const _url = new URL(url);
+    if (_url.hostname === 'localhost' && Platform.OS === 'android') {
+      _url.hostname = '10.0.2.2';
     }
+    return _url.toString().replace(/\/$/, '');
+  } catch (e) {
+    if (url.includes('localhost') && Platform.OS === 'android') {
+      return url.replace('localhost', '10.0.2.2').replace(/\/$/, '');
+    }
+    return url.replace(/\/$/, '');
+  }
 };
 
 /**
@@ -27,57 +27,59 @@ const resolveHostname = (url: string): string => {
  * - After login/logout
  */
 export function configureApiClient(readspaceUrl?: string) {
-    const settings = getSettings();
-    const apiBaseUrl = resolveHostname(readspaceUrl || settings?.readspace_url || 'http://localhost:8008');
+  const settings = getSettings();
+  const apiBaseUrl = resolveHostname(
+    readspaceUrl || settings?.readspace_url || 'http://localhost:8008'
+  );
 
-    console.log('[API] Configuring with baseUrl:', apiBaseUrl);
+  console.log('[API] Configuring with baseUrl:', apiBaseUrl);
 
-    ApiClient.configure({
-        baseUrl: apiBaseUrl,
-        getAuthToken: async () => {
-            if (!supabase) {
-                console.warn('[API] No Supabase client available');
-                return null;
-            }
+  ApiClient.configure({
+    baseUrl: apiBaseUrl,
+    getAuthToken: async () => {
+      if (!supabase) {
+        console.warn('[API] No Supabase client available');
+        return null;
+      }
 
-            // Get the current session
-            const {
-                data: { session },
-            } = await supabase.auth.getSession();
+      // Get the current session
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-            if (!session) {
-                return null;
-            }
+      if (!session) {
+        return null;
+      }
 
-            // Check if token is expired or about to expire (within 60 seconds)
-            const expiresAt = session.expires_at;
-            if (expiresAt) {
-                const now = Math.floor(Date.now() / 1000);
-                const timeUntilExpiry = expiresAt - now;
+      // Check if token is expired or about to expire (within 60 seconds)
+      const expiresAt = session.expires_at;
+      if (expiresAt) {
+        const now = Math.floor(Date.now() / 1000);
+        const timeUntilExpiry = expiresAt - now;
 
-                // If token expires in less than 60 seconds, refresh it
-                if (timeUntilExpiry < 60) {
-                    console.log('[API] Token expiring soon, refreshing...');
-                    const {
-                        data: { session: refreshedSession },
-                        error,
-                    } = await supabase.auth.refreshSession();
+        // If token expires in less than 60 seconds, refresh it
+        if (timeUntilExpiry < 60) {
+          console.log('[API] Token expiring soon, refreshing...');
+          const {
+            data: { session: refreshedSession },
+            error,
+          } = await supabase.auth.refreshSession();
 
-                    if (error) {
-                        console.error('[API] Failed to refresh session:', error);
-                        return session.access_token; // Return old token as fallback
-                    }
+          if (error) {
+            console.error('[API] Failed to refresh session:', error);
+            return session.access_token; // Return old token as fallback
+          }
 
-                    if (refreshedSession) {
-                        console.log('[API] Session refreshed successfully');
-                        return refreshedSession.access_token;
-                    }
-                }
-            }
+          if (refreshedSession) {
+            console.log('[API] Session refreshed successfully');
+            return refreshedSession.access_token;
+          }
+        }
+      }
 
-            return session.access_token;
-        },
-    });
+      return session.access_token;
+    },
+  });
 }
 
 // Auto-configure on import

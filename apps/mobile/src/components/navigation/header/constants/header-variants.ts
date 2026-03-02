@@ -38,7 +38,7 @@ export const titleContainerVariants = cva('', {
 });
 
 export const titleVariants = cva(
-  'leading-8 text-primary-foreground dark:text-primary-foreground-dark',
+  'leading-8 text-primary-foreground dark:text-primary-foreground-dark tracking-tight',
   {
     variants: {
       fontWeight: {
@@ -47,6 +47,7 @@ export const titleVariants = cva(
       },
       size: {
         default: 'text-3xl',
+        medium: 'text-2xl',
         small: 'text-xl',
       },
     },

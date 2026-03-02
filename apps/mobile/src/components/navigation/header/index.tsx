@@ -1,7 +1,5 @@
-import type { HeaderProps } from '@/components/navigation/header/types';
 import { HeaderForeground } from '@components/navigation/header/ui/header-foreground';
 import { HeaderTabs } from '@components/navigation/header/ui/header-tabs';
-import { headerContainerVariants } from '@/components/navigation/header/constants/header-variants';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import clsx from 'clsx';
@@ -17,6 +15,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { headerContainerVariants } from '@/components/navigation/header/constants/header-variants';
+import type { HeaderProps } from '@/components/navigation/header/types';
 
 export const Header: React.FC<HeaderProps> = (props) => {
   const {

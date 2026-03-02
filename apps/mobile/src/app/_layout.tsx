@@ -2,8 +2,6 @@ import 'global.css';
 import { SessionProvider, useSession } from '@contexts/auth-context';
 import { ThemeProvider } from '@contexts/theme-provider';
 import { ToastProvider } from '@contexts/toast-provider';
-import { useThemeStore } from '@stores/theme';
-import clsx from 'clsx';
 import {
   EBGaramond_400Regular,
   EBGaramond_400Regular_Italic,
@@ -33,13 +31,16 @@ import {
   GeistMono_700Bold,
 } from '@expo-google-fonts/geist-mono';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { COLORS } from '@lib/constants/colors';
+import { useThemeStore } from '@stores/theme';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import clsx from 'clsx';
 import * as Font from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import '@lib/api-client';
 import { configureApiClient } from '@lib/api-client';
 
@@ -169,12 +170,14 @@ function RootNavigator() {
     return null;
   }
 
+  const backgroundColor = isDark ? COLORS.dark.background : COLORS.light.background;
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }} className={clsx(isDark && 'dark')}>
       <KeyboardProvider>
         <BottomSheetModalProvider>
           <ToastProvider>
-            <Stack screenOptions={{ headerShown: false }}>
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor } }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="(protected)" />
               <Stack.Screen name="(auth)" />

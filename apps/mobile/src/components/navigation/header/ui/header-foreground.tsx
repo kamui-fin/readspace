@@ -1,4 +1,9 @@
 import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
+import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
+import { Button } from '@components/ui/button';
+import { COLORS } from '@lib/constants/colors';
+import clsx from 'clsx';
+import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import {
   actionsContainerVariants,
   foregroundVariants,
@@ -6,11 +11,6 @@ import {
   titleContainerVariants,
   titleVariants,
 } from '@/components/navigation/header/constants/header-variants';
-import { Button } from '@components/ui/button';
-import { COLORS } from '@lib/constants/colors';
-import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
-import clsx from 'clsx';
-import { Platform, Text, TouchableOpacity, View } from 'react-native';
 
 interface HeaderForegroundProps {
   title: string;
@@ -19,7 +19,12 @@ interface HeaderForegroundProps {
   onBackPress?: () => void;
   actions?: {
     label: string;
-    icon: React.ComponentType<{ width?: number, height?: number, color?: string, strokeWidth?: number }>;
+    icon: React.ComponentType<{
+      width?: number;
+      height?: number;
+      color?: string;
+      strokeWidth?: number;
+    }>;
     onPress: () => void;
     disabled?: boolean;
   }[];
@@ -50,12 +55,7 @@ export function HeaderForeground({
         {showBackButton && (
           <View className="absolute left-4 top-0 z-10">
             <Button onPress={onBackPress} variant="icon" size="small" fullWidth={false}>
-              <ArrowLeftLinearIcon
-                width={18}
-                height={18}
-                strokeWidth={2.4}
-                color={colors.grey}
-              />
+              <ArrowLeftLinearIcon width={18} height={18} strokeWidth={2.4} color={colors.grey} />
             </Button>
           </View>
         )}

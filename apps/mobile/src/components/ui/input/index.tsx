@@ -1,3 +1,4 @@
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useOnFocus } from '@hooks/useOnFocus';
 import { COLORS } from '@lib/constants/colors';
@@ -45,8 +46,8 @@ export const useId = (id?: string) => {
   return newId;
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: forwardRef typing
-export const Input = forwardRef((props: InputProps, ref: any) => {
+// Internal Input component to avoid dry violations
+const InputBase = forwardRef((props: InputProps & { TextInputComponent: any }, ref: any) => {
   const {
     leftElement,
     rightElement,
@@ -64,6 +65,7 @@ export const Input = forwardRef((props: InputProps, ref: any) => {
     borderRadius = 9999,
     secureTextEntry,
     multiline,
+    TextInputComponent,
     ...rest
   } = props;
   const { onFocus, onBlur } = useOnFocus();
@@ -103,10 +105,9 @@ export const Input = forwardRef((props: InputProps, ref: any) => {
           },
         ]}>
         {leftElement}
-        <ReactNativeTextInput
+        <TextInputComponent
           className={clsx('text-gray-900 dark:text-white')}
           style={[
-            // @ts-expect-error remove focus outline on web as we'll control the focus styling
             Platform.select({
               web: {
                 outline: 'none',
@@ -117,11 +118,11 @@ export const Input = forwardRef((props: InputProps, ref: any) => {
               flexGrow: 1,
               paddingTop: Platform.select({
                 ios: 16,
-                default: 12,
+                default: 16,
               }),
               paddingBottom: Platform.select({
                 ios: 16,
-                default: 12,
+                default: 16,
               }),
               paddingLeft: leftElement ? 0 : 16,
               paddingRight: rightElement ? 0 : 16,
@@ -185,7 +186,16 @@ export const Input = forwardRef((props: InputProps, ref: any) => {
   );
 });
 
+export const Input = forwardRef((props: InputProps, ref: any) => {
+  return <InputBase {...props} ref={ref} TextInputComponent={ReactNativeTextInput} />;
+});
+
+export const BottomSheetInput = forwardRef((props: InputProps, ref: any) => {
+  return <InputBase {...props} ref={ref} TextInputComponent={BottomSheetTextInput} />;
+});
+
 Input.displayName = 'Input';
+BottomSheetInput.displayName = 'BottomSheetInput';
 
 // This component adds appropriate padding to match our design system and increase the pressable area
 // Usage - with rightElement and leftElement

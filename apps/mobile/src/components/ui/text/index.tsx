@@ -50,7 +50,7 @@ export type TextSize = 'xs' | 'sm' | 'base' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
 
 export interface TextProps
   extends Omit<RNTextProps, 'className'>,
-  Omit<VariantProps<typeof textVariants>, 'size'> {
+    Omit<VariantProps<typeof textVariants>, 'size'> {
   size?: TextSize;
   className?: string;
   variant?: 'heading' | 'body';
@@ -60,15 +60,20 @@ export const Text = forwardRef<RNText, TextProps>(
   ({ className, size = 'base', fontFamily, variant, style, ...props }, ref) => {
     // Automatically apply heading variant for large text sizes if variant not specified
     const effectiveVariant =
-      variant ?? (typeof size === 'string' && ['xl', '2xl', '3xl', '4xl'].includes(size) ? 'heading' : 'body');
+      variant ??
+      (typeof size === 'string' && ['xl', '2xl', '3xl', '4xl'].includes(size) ? 'heading' : 'body');
 
-    const sizeVariant = typeof size === 'string' ? size as VariantProps<typeof textVariants>['size'] : undefined;
+    const sizeVariant =
+      typeof size === 'string' ? (size as VariantProps<typeof textVariants>['size']) : undefined;
     const customStyle = typeof size === 'number' ? { fontSize: size } : undefined;
 
     return (
       <RNText
         ref={ref}
-        className={clsx(textVariants({ size: sizeVariant, fontFamily, variant: effectiveVariant }), className)}
+        className={clsx(
+          textVariants({ size: sizeVariant, fontFamily, variant: effectiveVariant }),
+          className
+        )}
         style={[customStyle, style]}
         {...props}
       />

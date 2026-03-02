@@ -1,5 +1,6 @@
 import { Chip } from '@components/ui/chip';
 import { Text } from '@components/ui/text';
+import { MOBILE_CATEGORY_NAMES } from '@readspace/shared';
 import { Pressable, ScrollView, View } from 'react-native';
 
 interface CategoriesListProps {
@@ -41,23 +42,23 @@ export function CategoriesList({
         className="pl-6">
         <View className="gap-2 pr-6">
           <View className="flex-row gap-2">
-            {categoriesRow1.map((category) => (
+            {categoriesRow1.map((categoryId) => (
               <Chip
-                key={category}
-                label={category}
-                selected={selectedCategory === category}
-                onPress={() => onCategoryPress(category)}
+                key={categoryId}
+                label={MOBILE_CATEGORY_NAMES[categoryId as keyof typeof MOBILE_CATEGORY_NAMES]}
+                selected={selectedCategory === categoryId}
+                onPress={() => onCategoryPress(categoryId)}
                 size="category"
               />
             ))}
           </View>
           <View className="flex-row gap-2">
-            {categoriesRow2.map((category) => (
+            {categoriesRow2.map((categoryId) => (
               <Chip
-                key={category}
-                label={category}
-                selected={selectedCategory === category}
-                onPress={() => onCategoryPress(category)}
+                key={categoryId}
+                label={MOBILE_CATEGORY_NAMES[categoryId as keyof typeof MOBILE_CATEGORY_NAMES]}
+                selected={selectedCategory === categoryId}
+                onPress={() => onCategoryPress(categoryId)}
                 size="category"
               />
             ))}

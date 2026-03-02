@@ -3,6 +3,7 @@ import 'expo-sqlite/localStorage/install';
 import 'react-native-url-polyfill/auto';
 import { getSettings } from '@stores/settings';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+
 // Helper to resolve hostname for Android emulator
 const resolveHostname = (url: string) => {
   const _url = new URL(url);

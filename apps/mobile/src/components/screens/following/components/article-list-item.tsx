@@ -1,12 +1,12 @@
 import { ArticleItemCard } from '@components/screens/following/ui/article-item.card';
 import { Text } from '@components/ui/text';
-import { formatRelativeDate } from '@readspace/shared';
-import type { Article } from '@readspace/shared';
 import { useFavicon } from '@hooks/useFavicon';
-import { useRouter, useSegments } from 'expo-router';
-import { useRef, useState } from 'react';
-import { View } from 'react-native';
 import type { ListItem } from '@lib/utils/article';
+import type { Article } from '@readspace/shared';
+import { formatRelativeDate } from '@readspace/shared';
+import { Link } from 'expo-router';
+import { useState } from 'react';
+import { View } from 'react-native';
 
 interface ArticleListItemProps {
   item: ListItem;
@@ -16,13 +16,16 @@ interface ArticleListItemProps {
     articleType: 'feed' | 'clipped'
   ) => void;
   onBookmark: (articleId: string, currentlySaved: boolean, articleType: 'feed' | 'clipped') => void;
+  /** When true, articles won't be greyed out even if is_read=true */
+  hideReadState?: boolean;
 }
 
-export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListItemProps) {
-  const router = useRouter();
-  const segments = useSegments();
-  const isNavigatingRef = useRef(false);
-
+export function ArticleListItem({
+  item,
+  onToggleRead,
+  onBookmark,
+  hideReadState = false,
+}: ArticleListItemProps) {
   // Optimistically set read state instantly on click while backend handles it.
   const [hasMarkedRead, setHasMarkedRead] = useState(false);
 
@@ -63,55 +66,38 @@ export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListI
     });
 
     return (
-      <ArticleItemCard
-        article={article}
-        isRead={article.is_read || hasMarkedRead}
-        imageUrl={displayImageUrl}
-        title={article.title || undefined}
-        description={article.description || undefined}
-        timestamp={timestamp}
-        faviconUrl={iconUrl}
-        fallbackComponent={fallbackComponent}
-        feedName={feedTitle}
-        className="px-4"
-        showTopDivider={false}
-        showBottomDivider={false}
-        onPress={() => {
-          // Prevent duplicate navigation using ref to track navigation state
-          if (isNavigatingRef.current) return;
-
-          const articleRoute = `/(protected)/articles/${article.id}`;
-          const currentPath = segments.join('/');
-          const articlePath = `articles/${article.id}`;
-
-          // Only navigate if not already on this article route
-          if (!currentPath.includes(articlePath)) {
-            isNavigatingRef.current = true;
-
-            // Immediately mark as read locally for instantaneous feedback 
+      <Link href={`/(protected)/articles/${article.id}`} asChild>
+        <ArticleItemCard
+          article={article}
+          isRead={hideReadState ? false : article.is_read || hasMarkedRead}
+          imageUrl={displayImageUrl}
+          title={article.title || undefined}
+          description={article.description || undefined}
+          timestamp={timestamp}
+          faviconUrl={iconUrl}
+          fallbackComponent={fallbackComponent}
+          feedName={feedTitle}
+          className="px-4"
+          showTopDivider={false}
+          showBottomDivider={false}
+          onPress={() => {
+            // Immediately mark as read locally for instantaneous feedback
             // when returning to the list (backend syncs separately).
             if (!article.is_read) {
               setHasMarkedRead(true);
             }
-
-            router.push(articleRoute as any);
-
-            // Reset navigation flag after a short delay
-            setTimeout(() => {
-              isNavigatingRef.current = false;
-            }, 500);
-          }
-        }}
-        onMarkAsRead={(article) => {
-          onToggleRead(article.id, article.is_read || false, article.article_type as any);
-        }}
-        onMarkAsUnread={(article) => {
-          onToggleRead(article.id, article.is_read || false, article.article_type as any);
-        }}
-        onSaveArticle={(article) => {
-          onBookmark(article.id, article.is_saved || false, article.article_type as any);
-        }}
-      />
+          }}
+          onMarkAsRead={(article) => {
+            onToggleRead(article.id, article.is_read || false, article.article_type as any);
+          }}
+          onMarkAsUnread={(article) => {
+            onToggleRead(article.id, article.is_read || false, article.article_type as any);
+          }}
+          onSaveArticle={(article) => {
+            onBookmark(article.id, article.is_saved || false, article.article_type as any);
+          }}
+        />
+      </Link>
     );
   }
 
@@ -119,7 +105,11 @@ export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListI
 }
 function extractFeedInfo(article: any): { feedTitle: any; feedImageUrl: any } {
   return {
-    feedTitle: article.feed_title || (typeof article.feed === 'object' && article.feed ? article.feed.title : undefined),
-    feedImageUrl: article.feed_icon || (typeof article.feed === 'object' && article.feed ? article.feed.image_url : undefined),
+    feedTitle:
+      article.feed_title ||
+      (typeof article.feed === 'object' && article.feed ? article.feed.title : undefined),
+    feedImageUrl:
+      article.feed_icon ||
+      (typeof article.feed === 'object' && article.feed ? article.feed.image_url : undefined),
   };
 }

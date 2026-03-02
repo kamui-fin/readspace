@@ -177,8 +177,6 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
-
-
   const renderIcon = () => {
     if (toast.type === 'custom' && toast.custom?.icon) {
       return toast.custom.icon;
@@ -219,8 +217,8 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
           ...(toast.from === 'top'
             ? { top: insets.top + 16 }
             : {
-              bottom: bottomOffset,
-            }),
+                bottom: bottomOffset,
+              }),
           zIndex: 9999,
         },
         containerStyle,

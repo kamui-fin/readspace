@@ -9,10 +9,6 @@ export default function FeedPreviewRoute() {
     image_url?: string;
   }>();
 
-  if (!id) {
-    return null;
-  }
-
   return (
     <FeedPreviewScreen
       feedId={id}

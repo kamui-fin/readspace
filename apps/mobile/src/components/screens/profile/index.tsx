@@ -2,6 +2,11 @@ import { OPMLImportBottomSheet } from '@components/bottom-sheets/opml-import';
 import DiscordIcon from '@components/icons/local/discord';
 import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
 import GitHubIcon from '@components/icons/local/github';
+import ArchiveUpMinimlisticLinearIcon from '@components/icons/solar/archive-up-minimlistic-linear';
+import DownloadLinearIcon from '@components/icons/solar/download-linear';
+import HistoryLinearIcon from '@components/icons/solar/history-linear';
+import Logout2LinearIcon from '@components/icons/solar/logout-2-linear';
+import PaletteLinearIcon from '@components/icons/solar/palette-linear';
 import { Header } from '@components/navigation/header';
 import { SettingsGroup } from '@components/screens/profile/ui/settings-group';
 import { SettingsItem } from '@components/screens/profile/ui/settings-item';
@@ -26,11 +31,6 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { exportFeedsToOPML, readFileContent, validateOPMLFile } from '@lib/utils/opml';
-import ArchiveUpMinimlisticLinearIcon from '@components/icons/solar/archive-up-minimlistic-linear';
-import DownloadLinearIcon from '@components/icons/solar/download-linear';
-import HistoryLinearIcon from '@components/icons/solar/history-linear';
-import Logout2LinearIcon from '@components/icons/solar/logout-2-linear';
-import PaletteLinearIcon from '@components/icons/solar/palette-linear';
 import { useFeeds } from '@readspace/shared';
 import { useSettingsStore } from '@stores/settings';
 import { type Theme, useThemeStore } from '@stores/theme';
@@ -149,9 +149,9 @@ export function ProfileScreen() {
       }
 
       const typedFolders = (folders as { id: string; name: string }[]) || [];
-      const feedsDataForExport = feeds.map(sub => ({
+      const feedsDataForExport = feeds.map((sub) => ({
         ...sub.feed,
-        folder_id: sub.folder?.id
+        folder_id: sub.folder?.id,
       })) as any[];
       await exportFeedsToOPML(feedsDataForExport, typedFolders);
       toast.success('OPML exported successfully!');
@@ -275,7 +275,9 @@ export function ProfileScreen() {
             <SettingsItem
               label="Export OPML"
               variant="button"
-              leftIcon={<ArchiveUpMinimlisticLinearIcon width={22} height={22} color={colors.black} />}
+              leftIcon={
+                <ArchiveUpMinimlisticLinearIcon width={22} height={22} color={colors.black} />
+              }
               onPress={handleOPMLExport}
               isLast={true}
             />

@@ -1,13 +1,15 @@
+import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
+import LayersMinimalisticLinearIcon from '@components/icons/solar/layers-minimalistic-linear';
+import LinkMinimalistic2BoldIcon from '@components/icons/solar/link-minimalistic-2-bold';
+import UserCircleLinearIcon from '@components/icons/solar/user-circle-linear';
 import { Button } from '@components/ui/button';
 import { Chip } from '@components/ui/chip';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { COLORS } from '@lib/constants/colors';
-import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
-import LinkMinimalistic2BoldIcon from '@components/icons/solar/link-minimalistic-2-bold';
 import { Feed, FeedDiscoveryResult } from '@readspace/shared';
 import { Image } from 'expo-image';
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Linking, View } from 'react-native';
 
 interface FeedInfoHeaderProps {
@@ -21,7 +23,14 @@ interface FeedInfoHeaderProps {
   greyColor: string;
 }
 
-export function FeedInfoHeader({
+function formatContentType(contentType: string): string {
+  return contentType
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export const FeedInfoHeader = memo(function FeedInfoHeader({
   feed,
   isFollowing,
   isFeedDead,
@@ -32,6 +41,7 @@ export function FeedInfoHeader({
   greyColor,
 }: FeedInfoHeaderProps) {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const toggleDescription = useCallback(() => {
     setIsDescriptionExpanded((prev) => !prev);
@@ -49,61 +59,110 @@ export function FeedInfoHeader({
     }
   }, [feed]);
 
+  const contentType = (feed as FeedDiscoveryResult).content_type;
+  const author = (feed as FeedDiscoveryResult).author || (feed as any).author;
+
+  console.log(feed.image_url, imageError);
+
   return (
     <View className="px-4 pb-4 pt-2">
+      {/* Back button row */}
       <View className="mb-6 flex-row items-center">
         <Button variant="icon" size="small" fullWidth={false} onPress={onBack}>
           <ArrowLeftLinearIcon width={18} height={18} strokeWidth={2.4} color={greyColor} />
         </Button>
       </View>
 
-      {/* Feed Icon */}
-      <View className="relative mb-4">
-        <View
-          className="h-24 w-24 items-center justify-center overflow-hidden rounded-3xl"
-          style={{
-            backgroundColor: colors.white,
-          }}>
-          {feed.image_url ? (
-            <Image source={{ uri: feed.image_url }} className="h-full w-full" contentFit="cover" />
-          ) : (
-            <Text size="lg" fontFamily="geist-bold" style={{ color: colors.grey, fontSize: 30 }}>
-              {(feed.title || 'F').charAt(0).toUpperCase()}
-            </Text>
+      {/* Feed Icon + Title Row */}
+      <View className="mb-4 flex-row items-center gap-4">
+        {/* Feed Icon */}
+        <View className="relative">
+          <View
+            className="h-20 w-20 items-center justify-center overflow-hidden rounded-2xl"
+            style={{
+              backgroundColor: colors.grey5,
+            }}>
+            {feed.image_url && !imageError ? (
+              <Image
+                source={{ uri: feed.image_url }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+                onError={(e) => {
+                  console.log(e);
+                  setImageError(true);
+                }}
+              />
+            ) : (
+              <Text size="lg" fontFamily="geist-bold" style={{ color: colors.grey, fontSize: 28 }}>
+                {(feed.title || 'F').charAt(0).toUpperCase()}
+              </Text>
+            )}
+          </View>
+          {isFeedDead && (
+            <Chip
+              label="Dead"
+              variant="filled"
+              size="small"
+              className="absolute -right-1 -top-1 bg-red"
+              textClassName="text-white"
+            />
           )}
         </View>
-        {isFeedDead && (
-          <Chip
-            label="Inactive"
-            variant="filled"
-            size="medium"
-            className="absolute -right-1 -top-1 bg-red"
-            textClassName="text-white"
-          />
-        )}
-      </View>
 
-      {/* Feed Title */}
-      <Text
-        size="2xl"
-        fontFamily="geist-bold"
-        className="mb-2 tracking-heading text-black dark:text-black-dark">
-        {feed.title || 'Untitled Feed'}
-      </Text>
+        {/* Title + meta info */}
+        <View className="flex-1">
+          <Text
+            size="xl"
+            fontFamily="geist-bold"
+            className="mb-1 tracking-heading text-black dark:text-black-dark"
+            numberOfLines={2}>
+            {feed.title || 'Untitled Feed'}
+          </Text>
+
+          {/* Author */}
+          {author ? (
+            <View className="mb-1 flex-row items-center gap-1.5">
+              <UserCircleLinearIcon width={13} height={13} color={greyColor} strokeWidth={1.8} />
+              <Text
+                size="sm"
+                fontFamily="geist"
+                style={{ color: colors.grey, fontSize: 12 }}
+                numberOfLines={1}>
+                {author}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Content Type */}
+          {contentType ? (
+            <View className="flex-row items-center gap-1.5">
+              <LayersMinimalisticLinearIcon
+                width={13}
+                height={13}
+                color={greyColor}
+                strokeWidth={1.8}
+              />
+              <Text size="sm" fontFamily="geist" style={{ color: colors.grey, fontSize: 12 }}>
+                {formatContentType(contentType)}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      </View>
 
       {/* Feed Description */}
       {feed.description && (
         <View className="mb-4">
-          {feed.description.length > 80 ? (
+          {feed.description.length > 120 ? (
             <>
               <Text
-                size="base"
+                size="sm"
                 fontFamily="geist"
                 className="leading-6 text-grey dark:text-grey-dark">
-                {isDescriptionExpanded ? feed.description : `${feed.description.slice(0, 80)}... `}
+                {isDescriptionExpanded ? feed.description : `${feed.description.slice(0, 120)}... `}
                 {!isDescriptionExpanded && (
                   <Text
-                    size="base"
+                    size="sm"
                     fontFamily="geist-medium"
                     onPress={toggleDescription}
                     className="text-black dark:text-black-dark">
@@ -113,20 +172,17 @@ export function FeedInfoHeader({
               </Text>
               {isDescriptionExpanded && (
                 <Button
-                  variant="ghost"
+                  variant="text"
                   size="small"
                   onPress={toggleDescription}
                   className="mt-1 h-auto self-start px-0"
-                  textClassName="text-base font-geist-medium text-black dark:text-black-dark">
+                  textClassName="text-sm font-geist-medium text-black dark:text-black-dark">
                   less
                 </Button>
               )}
             </>
           ) : (
-            <Text
-              size="base"
-              fontFamily="geist"
-              className="leading-6 text-grey dark:text-grey-dark">
+            <Text size="sm" fontFamily="geist" className="leading-6 text-grey dark:text-grey-dark">
               {feed.description}
             </Text>
           )}
@@ -136,21 +192,21 @@ export function FeedInfoHeader({
       {/* Feed URL */}
       {(feed.link || feed.url) && (
         <Button
-          variant="ghost"
+          variant="text"
           size="small"
           onPress={handleUrlPress}
           className="mb-4 h-auto flex-row items-center justify-start gap-2 px-0">
           <LinkMinimalistic2BoldIcon
-            width={20}
-            height={20}
+            width={14}
+            height={14}
             strokeWidth={2.4}
             color={colors.primary}
           />
           <Text
             size="sm"
             fontFamily="geist"
-            className="flex-1 flex-shrink underline text-left"
-            style={{ color: colors.primary }}
+            className="flex-1 flex-shrink text-left"
+            style={{ color: colors.primary, fontSize: 12 }}
             numberOfLines={1}>
             {feed.link || feed.url}
           </Text>
@@ -160,19 +216,20 @@ export function FeedInfoHeader({
       {/* Feed Tags */}
       {(() => {
         const fallBackTags = (feed as any).tags;
-        const displayTags = (feed.tags_native && feed.tags_native.length > 0) ? feed.tags_native : fallBackTags;
+        const displayTags =
+          feed.tags_native && feed.tags_native.length > 0 ? feed.tags_native : fallBackTags;
         if (!displayTags || displayTags.length === 0) return null;
         return (
-          <View className="mb-6 flex-row flex-wrap items-center gap-2">
+          <View className="mb-5 flex-row flex-wrap items-center gap-2">
             {displayTags.slice(0, 5).map((tag: string | { name: string }, index: number) => {
               const tagName = typeof tag === 'string' ? tag : (tag as any)?.name || 'Tag';
               const formattedTag = tagName.replace(/\s+/g, '-');
               return (
                 <View
                   key={`${tagName}-${index.toString()}`}
-                  className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
+                  className="flex-row items-center gap-1.5 rounded-full px-3 py-1"
                   style={{ backgroundColor: colors.grey5 }}>
-                  <Text size="sm" fontFamily="geist" style={{ color: colors.grey, fontSize: 12 }}>
+                  <Text size="sm" fontFamily="geist" style={{ color: colors.grey, fontSize: 11 }}>
                     #{formattedTag}
                   </Text>
                 </View>
@@ -199,4 +256,4 @@ export function FeedInfoHeader({
       </Button>
     </View>
   );
-}
+});

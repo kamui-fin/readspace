@@ -1,3 +1,5 @@
+import DocumentTextBoldIcon from '@components/icons/solar/document-text-bold';
+import InfoCircleBoldIcon from '@components/icons/solar/info-circle-bold';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Spinner } from '@components/ui/spinner';
@@ -6,8 +8,6 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import DocumentTextBoldIcon from '@components/icons/solar/document-text-bold';
-import InfoCircleBoldIcon from '@components/icons/solar/info-circle-bold';
 import { useImportOPML } from '@readspace/shared';
 import type * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
@@ -77,7 +77,7 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
     return (
       <BottomSheet ref={ref} headerTitle="Confirm Import" enablePanDownToClose={!isImporting}>
         <View>
-          <Text className="mb-6 font-geist text-base text-grey dark:text-grey">
+          <Text className="mb-6 font-geist-medium text-base text-grey dark:text-grey">
             Review the details below before importing your feeds.
           </Text>
 
@@ -97,7 +97,7 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
               <View style={{ marginTop: 2 }}>
                 <InfoCircleBoldIcon width={16} height={16} color={colors.grey} />
               </View>
-              <Text className="flex-1 font-geist text-sm text-grey dark:text-grey">
+              <Text className="flex-1 font-geist-medium text-sm text-grey dark:text-grey">
                 The import will run in the background. You can track progress on the status page.
               </Text>
             </View>

@@ -1,9 +1,10 @@
-import { Divider } from '@components/ui/divider';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { COLORS } from '@lib/constants/colors';
 import BookmarkBoldIcon from '@components/icons/solar/bookmark-bold';
 import LetterOpenedBoldIcon from '@components/icons/solar/letter-opened-bold';
 import LetterUnreadBoldIcon from '@components/icons/solar/letter-unread-bold';
+import { Card, type CardProps } from '@components/ui/card/index';
+import { Divider } from '@components/ui/divider';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 import type { Article } from '@readspace/shared';
 import { useArticleActionsStore } from '@stores/article-actions';
 import { forwardRef, useCallback, useEffect, useRef } from 'react';
@@ -18,11 +19,15 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { Card, type CardProps } from '@components/ui/card/index';
 
 export interface SwipeAction {
   id: string;
-  icon: React.ComponentType<{ width?: number; height?: number; color?: string; strokeWidth?: number }>;
+  icon: React.ComponentType<{
+    width?: number;
+    height?: number;
+    color?: string;
+    strokeWidth?: number;
+  }>;
   color: string;
   onPress: () => void;
 }
@@ -138,9 +143,9 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
     ]);
 
     // Get store execute functions and store them in refs for stable access
-    const executeMarkAsUnreadRef = useRef<(articleId: string) => void>(() => { });
-    const executeMarkAsReadRef = useRef<(articleId: string) => void>(() => { });
-    const executeSaveArticleRef = useRef<(articleId: string) => void>(() => { });
+    const executeMarkAsUnreadRef = useRef<(articleId: string) => void>(() => {});
+    const executeMarkAsReadRef = useRef<(articleId: string) => void>(() => {});
+    const executeSaveArticleRef = useRef<(articleId: string) => void>(() => {});
 
     // Update refs with store functions
     useEffect(() => {
@@ -198,18 +203,18 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
       registerCallbacks(articleId, {
         onMarkAsRead: onMarkAsRead
           ? () => {
-            onMarkAsRead(articleRef);
-          }
+              onMarkAsRead(articleRef);
+            }
           : undefined,
         onMarkAsUnread: onMarkAsUnread
           ? () => {
-            onMarkAsUnread(articleRef);
-          }
+              onMarkAsUnread(articleRef);
+            }
           : undefined,
         onSaveArticle: onSaveArticle
           ? () => {
-            onSaveArticle(articleRef);
-          }
+              onSaveArticle(articleRef);
+            }
           : undefined,
       });
 

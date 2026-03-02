@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import { useKeyboardHandler as useRNKeyboardHandler } from 'react-native-keyboard-controller';
-import { useSharedValue, useDerivedValue, withTiming, Easing } from 'react-native-reanimated';
+import { Easing, useDerivedValue, useSharedValue, withTiming } from 'react-native-reanimated';
 
 /**
  * A comprehensive hook for handling keyboard interactions.

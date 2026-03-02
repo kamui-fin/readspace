@@ -325,9 +325,11 @@ export function useBulkDeleteFeeds(
     mutationFn: ({ feedIds }: { feedIds: string[] }) =>
       ApiClient.bulkDeleteFeeds(feedIds),
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
-      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() }),
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] }),
+      ]);
     },
     ...options,
   });
@@ -356,7 +358,9 @@ export function useBulkUpdateFeedsFolder(
       folderId: string;
     }) => ApiClient.bulkUpdateFeedsFolder(feedIds, folderId),
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] }),
+      ]);
     },
     ...options,
   });

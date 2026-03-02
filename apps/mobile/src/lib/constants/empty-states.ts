@@ -1,9 +1,14 @@
-import InboxBrokenIcon from '@components/icons/solar/inbox-broken';
 import BookmarkBrokenIcon from '@components/icons/solar/bookmark-broken';
 import HistoryBrokenIcon from '@components/icons/solar/history-broken';
+import InboxBrokenIcon from '@components/icons/solar/inbox-broken';
 
 export interface EmptyStateConfig {
-  icon: React.ComponentType<{ width?: number; height?: number; color?: string; strokeWidth?: number }>;
+  icon: React.ComponentType<{
+    width?: number;
+    height?: number;
+    color?: string;
+    strokeWidth?: number;
+  }>;
   message: string;
 }
 

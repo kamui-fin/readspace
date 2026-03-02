@@ -6,7 +6,7 @@ import { forwardRef } from 'react';
 import { Pressable, type PressableProps, Text, View } from 'react-native';
 
 const radioVariants = cva(
-  'flex-row items-center gap-3 rounded-2xl bg-grey5 px-5 py-4 transition-opacity active:opacity-80 dark:bg-grey5-dark',
+  'flex-row items-center gap-3 rounded-2xl bg-grey6 px-5 py-4 transition-opacity active:opacity-80 dark:bg-grey6-dark',
   {
     variants: {},
     defaultVariants: {},

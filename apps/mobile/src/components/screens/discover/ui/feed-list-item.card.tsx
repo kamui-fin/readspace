@@ -3,7 +3,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { stripHtml } from '@lib/utils/html';
 import clsx from 'clsx';
-import { useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Image, Pressable, type PressableProps, View } from 'react-native';
 import { FollowButton } from './follow.button';
@@ -36,36 +36,15 @@ export const FeedListItem = ({
   disableNavigation = false,
   ...props
 }: FeedListItemProps) => {
-  const router = useRouter();
   const [imageError, setImageError] = useState(false);
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
-  const handlePress = () => {
-    if (!disableNavigation) {
-      router.push({
-        pathname: `/(protected)/(tabs)/discover/feed/${feedId}`,
-        params: {
-          title,
-          description,
-          image_url: iconUrl,
-        },
-      });
-    }
-  };
-
   // Generate UI Avatars fallback URL
   const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(title)}&size=128&background=random&length=2&bold=true&format=png`;
 
-  return (
-    <Pressable
-      onPress={handlePress}
-      className={clsx(
-        'flex-row items-center gap-4 py-4',
-        isPreview ? 'bg-secondary/10 dark:bg-secondary/20' : 'dark:bg-white-dark bg-white',
-        className
-      )}
-      {...props}>
+  const innerPressable = (
+    <Pressable className={clsx('flex-row items-center gap-4 py-3', className)} {...props}>
       {/* Icon */}
       <View
         className="h-12 w-12 items-center justify-center overflow-hidden rounded-lg"
@@ -86,29 +65,10 @@ export const FeedListItem = ({
 
       {/* Content */}
       <View className="flex-1">
-        {/* Preview Badge */}
-        {isPreview && (
-          <View
-            className="mb-1 self-start rounded-sm px-1.5 py-0.5"
-            style={{
-              backgroundColor: `${colors.secondary}33`,
-            }}>
-            <Text
-              size="sm"
-              fontFamily="geist-medium"
-              className="uppercase tracking-wider"
-              style={{
-                color: colors.secondary,
-                fontSize: 10,
-              }}>
-              Preview
-            </Text>
-          </View>
-        )}
         <Text
           size="base"
           fontFamily="geist-semibold"
-          className="dark:text-black-dark mb-1 text-black"
+          className="dark:text-black-dark mb-1 text-black tracking-tight"
           numberOfLines={1}>
           {stripHtml(title)}
         </Text>
@@ -130,5 +90,15 @@ export const FeedListItem = ({
         onFollowRequest={onFollowRequest}
       />
     </Pressable>
+  );
+
+  if (disableNavigation) {
+    return innerPressable;
+  }
+
+  return (
+    <Link href={`/(protected)/(tabs)/discover/feed/${feedId}`} asChild>
+      {innerPressable}
+    </Link>
   );
 };

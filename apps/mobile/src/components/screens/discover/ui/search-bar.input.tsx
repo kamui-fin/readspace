@@ -1,53 +1,41 @@
-import CloseCircleIcon from '@components/icons/local/close-circle';
 import LanguageIcon from '@components/icons/local/language';
-import { Button } from '@components/ui/button';
-import {
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuItemTitle,
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-} from '@components/ui/dropdown-menu';
-import { Input } from '@components/ui/input';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { COLORS } from '@lib/constants/colors';
-import AltArrowDownLinearIcon from '@components/icons/solar/alt-arrow-down-linear';
+import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
 import CloseCircleBoldIcon from '@components/icons/solar/close-circle-bold';
 import MagniferLinearIcon from '@components/icons/solar/magnifer-linear';
-import { forwardRef, useCallback, useMemo } from 'react';
-import type { TextInputProps } from 'react-native';
-import { View } from 'react-native';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
+import { forwardRef, useCallback } from 'react';
+import { Platform, TextInput, type TextInputProps, TouchableOpacity, View } from 'react-native';
 
 export type Language = 'english' | 'chinese' | 'japanese';
-
-const LANGUAGES = [
-  { value: 'english' as Language, label: 'English' },
-  { value: 'chinese' as Language, label: '中文' },
-  { value: 'japanese' as Language, label: '日本語' },
-];
 
 export interface SearchBarProps extends Omit<TextInputProps, 'onSubmitEditing' | 'ref'> {
   onLanguageChange?: (language: Language) => void;
   selectedLanguage?: Language;
+  languagePickerRef?: React.RefObject<BottomSheetModal | null>;
   onClear?: () => void;
   onSubmit?: () => void;
   onCancel?: () => void;
   containerClassName?: string;
-  showClearButton?: boolean;
+  /** True when the input is focused — switches left icon to back arrow */
   showCancelButton?: boolean;
+  /** showClearButton is kept for API compat but clear is now shown automatically when value is non-empty */
+  showClearButton?: boolean;
 }
 
-export const SearchBar = forwardRef<React.ComponentRef<typeof Input>, SearchBarProps>(
+export const SearchBar = forwardRef<TextInput, SearchBarProps>(
   (
     {
       onLanguageChange,
       selectedLanguage = 'english',
+      languagePickerRef,
       onClear,
       onSubmit,
       onCancel,
       containerClassName,
-      showClearButton = false,
       showCancelButton = false,
+      showClearButton = false,
       value,
       onFocus,
       onBlur,
@@ -68,110 +56,70 @@ export const SearchBar = forwardRef<React.ComponentRef<typeof Input>, SearchBarP
       }
     }, [value, onSubmit]);
 
-    const handleLanguageSelect = useCallback(
-      (language: Language) => {
-        onLanguageChange?.(language);
-      },
-      [onLanguageChange]
-    );
-
-    // Build right element with language picker and clear button
-    const rightElement = useMemo(() => {
-      const buttons: React.ReactNode[] = [];
-
-      // Language picker dropdown
-      buttons.push(
-        <DropdownMenuRoot key="language">
-          <DropdownMenuTrigger>
-            <Button
-              variant="text"
-              size="small"
-              fullWidth={false}
-              className="min-w-0 flex-row items-center gap-1">
-              <LanguageIcon width={20} height={20} fill={colors.grey} />
-              <AltArrowDownLinearIcon
-                width={12}
-                height={12}
-                strokeWidth={2.8}
-                color={colors.grey}
-              />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            {LANGUAGES.map((lang) => (
-              <DropdownMenuItem key={lang.value} onSelect={() => handleLanguageSelect(lang.value)}>
-                <DropdownMenuItemTitle>{lang.label}</DropdownMenuItemTitle>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenuRoot>
-      );
-
-      // Clear button (if shown and has value)
-      if (showClearButton && value) {
-        buttons.push(
-          <Button
-            key="clear"
-            variant="text"
-            size="small"
-            fullWidth={false}
-            onPress={handleClear}
-            className="min-w-0">
-            <CloseCircleBoldIcon width={20} height={20} color={colors.grey} />
-          </Button>
-        );
-      }
-
-      return <View className="flex-row items-center gap-2 pr-2.5">{buttons}</View>;
-    }, [showClearButton, value, handleClear, handleLanguageSelect, colors.grey]);
-
-    // biome-ignore lint/suspicious/noExplicitAny: TextInput event types are complex
-    const handleFocus = (e: any) => {
-      onFocus?.(e);
-    };
-
-    // biome-ignore lint/suspicious/noExplicitAny: TextInput event types are complex
-    const handleBlur = (e: any) => {
-      onBlur?.(e);
-    };
-
-    const leftElement = (
-      <View style={{ padding: 8, paddingLeft: 12 }}>
-        <MagniferLinearIcon width={20} height={20} color={colors.grey} strokeWidth={2.4} />
-      </View>
-    );
+    const isFocused = showCancelButton;
+    const hasText = Boolean(value);
 
     return (
-      <View className="flex-row items-center gap-3">
-        <View className="flex-1">
-          <Input
-            ref={ref}
-            className="w-full"
-            placeholder="What are you looking for?"
-            value={value}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            onSubmitEditing={() => handleSubmit()}
-            returnKeyType="search"
-            inputStyle={{
-              textAlignVertical: 'center',
-              textAlign: 'left',
-            }}
-            leftElement={leftElement}
-            rightElement={rightElement}
-            {...props}
-          />
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderRadius: 9999,
+          backgroundColor: isDark ? COLORS.dark.grey6 : COLORS.light.grey6,
+        }}>
+        {/* Left icon: back arrow when focused, magnifier when idle */}
+        <TouchableOpacity
+          onPress={isFocused ? onCancel : undefined}
+          activeOpacity={isFocused ? 0.6 : 1}
+          style={{ padding: 8, paddingLeft: 12 }}>
+          {isFocused ? (
+            <ArrowLeftLinearIcon width={20} height={20} color={colors.black} strokeWidth={2.4} />
+          ) : (
+            <MagniferLinearIcon width={20} height={20} color={colors.grey} strokeWidth={2.4} />
+          )}
+        </TouchableOpacity>
+
+        {/* Text input fills remaining space */}
+        <TextInput
+          ref={ref}
+          style={[
+            {
+              flex: 1,
+              fontFamily: 'Geist_500Medium',
+              fontWeight: '500',
+              fontSize: 16,
+              color: isDark ? COLORS.dark.black : COLORS.light.black,
+              paddingTop: Platform.select({ ios: 16, default: 12 }),
+              paddingBottom: Platform.select({ ios: 16, default: 12 }),
+            },
+            // @ts-expect-error web outline
+            Platform.select({ web: { outline: 'none' }, default: undefined }),
+          ]}
+          placeholder="What are you looking for?"
+          placeholderTextColor={isDark ? COLORS.dark.grey2 : COLORS.light.grey2}
+          value={value}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          onSubmitEditing={handleSubmit}
+          returnKeyType="search"
+          selectionColor={isDark ? COLORS.dark.grey3 : COLORS.light.grey3}
+          {...props}
+        />
+
+        {/* Right icon: clear X when typing, language picker when idle/focused-empty */}
+        <View style={{ paddingRight: 8 }}>
+          {hasText ? (
+            <TouchableOpacity onPress={handleClear} style={{ padding: 8 }}>
+              <CloseCircleBoldIcon width={20} height={20} color={colors.grey} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              onPress={() => languagePickerRef?.current?.present()}
+              style={{ padding: 8 }}>
+              <LanguageIcon width={20} height={20} fill={colors.black} />
+            </TouchableOpacity>
+          )}
         </View>
-        {showCancelButton && (
-          <Button
-            variant="icon"
-            size="medium"
-            fullWidth={false}
-            onPress={onCancel}
-            className="bg-grey6 dark:bg-grey6-dark rounded-full h-12 w-12 items-center justify-center">
-            <CloseCircleIcon width={24} height={24} fill={colors.black} />
-          </Button>
-        )}
       </View>
     );
   }

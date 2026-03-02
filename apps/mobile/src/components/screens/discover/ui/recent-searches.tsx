@@ -1,6 +1,6 @@
+import ClockCircleOutlineIcon from '@components/icons/solar/clock-circle-outline';
 import { Text } from '@components/ui/text';
 import { COLORS } from '@lib/constants/colors';
-import ClockCircleOutlineIcon from '@components/icons/solar/clock-circle-outline';
 import { Pressable, ScrollView, View } from 'react-native';
 
 interface RecentSearchesProps {

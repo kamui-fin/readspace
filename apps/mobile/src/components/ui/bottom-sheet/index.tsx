@@ -10,7 +10,7 @@ import {
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
 import { forwardRef, useCallback } from 'react';
-import { Text, useColorScheme, View } from 'react-native';
+import { type StyleProp, Text, type TextStyle, useColorScheme, View } from 'react-native';
 
 import { COLORS } from '@lib/constants/colors';
 
@@ -18,6 +18,7 @@ export interface BottomSheetProps extends Omit<BottomSheetModalProps, 'children'
   children: ReactNode;
   headerTitle?: string;
   headerTitleAlign?: 'left' | 'center';
+  headerTitleStyle?: StyleProp<TextStyle>;
   headerLeft?: ReactNode;
   headerRight?: ReactNode;
   containerClassName?: string;
@@ -33,6 +34,7 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
       children,
       headerTitle,
       headerTitleAlign = 'center',
+      headerTitleStyle,
       headerLeft,
       headerRight,
       containerClassName,
@@ -86,7 +88,6 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
         }}
         animateOnMount={true}
         detached={false}
-        android_keyboardInputMode="adjustResize"
         keyboardBehavior="interactive"
         keyboardBlurBehavior="restore"
         onChange={handleSheetChanges}
@@ -103,14 +104,14 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
               backgroundColor: isDark ? COLORS.dark.background : COLORS.light.background,
             }}>
             <View
-              className={clsx('relative px-4 py-4 flex-row items-center', headerClassName)}
-              style={{ minHeight: 56 }}>
+              className={clsx('relative flex-row items-center py-4', headerClassName)}
+              style={{ minHeight: 56, paddingHorizontal: 24 }}>
               {/* Header Left */}
               {headerLeft && (
                 <View
                   style={{
                     position: 'absolute',
-                    left: 16,
+                    left: 24,
                     top: 0,
                     bottom: 0,
                     justifyContent: 'center',
@@ -129,7 +130,7 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
                       'font-geist-semibold text-2xl text-primary-foreground dark:text-primary-foreground-dark',
                       headerTitleAlign === 'center' ? 'text-center' : 'text-left'
                     )}
-                    style={{ lineHeight: 28 }}>
+                    style={[{ lineHeight: 28, letterSpacing: -0.5 }, headerTitleStyle]}>
                     {headerTitle}
                   </Text>
                 )}
@@ -140,7 +141,7 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
                 <View
                   style={{
                     position: 'absolute',
-                    right: 16,
+                    right: 24,
                     top: 0,
                     bottom: 0,
                     justifyContent: 'center',
@@ -156,7 +157,7 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
                 <View
                   style={{
                     position: 'absolute',
-                    right: 16,
+                    right: 24,
                     top: 0,
                     bottom: 0,
                     justifyContent: 'center',
@@ -173,7 +174,7 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
         {/* Scrollable Content (consumers might provide a BottomSheetFlatList instead) */}
         <BottomSheetScrollView
           contentContainerStyle={{
-            paddingHorizontal: 16,
+            paddingHorizontal: 24,
             paddingTop: headerTitle || headerLeft || headerRight || secondaryAction ? 64 : 16,
             paddingBottom: 18,
           }}

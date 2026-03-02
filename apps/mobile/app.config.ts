@@ -8,7 +8,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   assetBundlePatterns: ['**/*'],
   orientation: 'portrait',
   icon: './assets/app/icon.png',
-  userInterfaceStyle: 'light',
+  userInterfaceStyle: 'automatic',
+  backgroundColor: '#ffffff',
   scheme: 'com.readspace.rss',
   ios: {
     supportsTablet: true,

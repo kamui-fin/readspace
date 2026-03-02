@@ -4,56 +4,57 @@ import { BottomSheetInput } from '@components/ui/input';
 import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
-import { useCreateFolder } from '@readspace/shared';
+import { useUpdateFeed } from '@readspace/shared';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
-export interface CreateFolderModalRef {
-  present: () => void;
+export interface RenameFeedModalRef {
+  present: (feedId: string, currentName: string) => void;
   dismiss: () => void;
 }
 
-export interface CreateFolderModalProps {
+export interface RenameFeedModalProps {
   onSuccess?: () => void;
 }
 
-export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderModalProps>(
+export const RenameFeedModal = forwardRef<RenameFeedModalRef, RenameFeedModalProps>(
   ({ onSuccess }, ref) => {
     const bottomSheetRef = useRef<BottomSheetModal>(null);
-    const createFolder = useCreateFolder();
-    const [folderName, setFolderName] = useState('');
+    const updateFeed = useUpdateFeed();
+    const [feedName, setFeedName] = useState('');
+    const [targetFeedId, setTargetFeedId] = useState<string | null>(null);
 
-    const handleCreateFolder = useCallback(
-      (name?: string) => {
-        const trimmed = name?.trim() ?? folderName.trim();
-        if (trimmed) {
-          createFolder.mutate(
-            { name: trimmed },
-            {
-              onSuccess: () => {
-                toast.success('Folder created successfully');
-                onSuccess?.();
-              },
-              onError: () => {
-                toast.error('Failed to create folder');
-              },
-            }
-          );
-        }
-      },
-      [createFolder, onSuccess, folderName]
-    );
+    const handleUpdateFeed = useCallback(() => {
+      const trimmed = feedName.trim();
+      if (trimmed && targetFeedId) {
+        updateFeed.mutate(
+          {
+            feedId: targetFeedId,
+            data: { custom_title: trimmed },
+          },
+          {
+            onSuccess: () => {
+              toast.success('Feed renamed successfully');
+              onSuccess?.();
+            },
+            onError: () => {
+              toast.error('Failed to rename feed');
+            },
+          }
+        );
+      }
+    }, [updateFeed, onSuccess, feedName, targetFeedId]);
 
     const handleConfirm = useCallback(() => {
-      if (!folderName.trim()) return;
-      handleCreateFolder(folderName);
+      if (!feedName.trim()) return;
+      handleUpdateFeed();
       bottomSheetRef.current?.dismiss();
-      setFolderName('');
-    }, [folderName, handleCreateFolder]);
+    }, [feedName, handleUpdateFeed]);
 
     useImperativeHandle(ref, () => ({
-      present: () => {
-        setFolderName('');
+      present: (feedId: string, currentName: string) => {
+        setTargetFeedId(feedId);
+        setFeedName(currentName);
         bottomSheetRef.current?.present();
       },
       dismiss: () => {
@@ -72,17 +73,17 @@ export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderMo
         <Text
           className="font-geist-bold text-2xl text-primary-foreground dark:text-primary-foreground-dark mb-1"
           style={{ letterSpacing: -0.5 }}>
-          Choose a name
+          Rename feed
         </Text>
         <Text className="font-geist-regular text-base text-grey dark:text-grey mb-5">
-          Create a folder to organize your feeds.
+          Enter a new title for this feed.
         </Text>
 
         {/* Input */}
         <BottomSheetInput
-          value={folderName}
-          onChangeText={setFolderName}
-          placeholder="e.g. Technology"
+          value={feedName}
+          onChangeText={setFeedName}
+          placeholder="Feed title"
           autoFocus
           autoCapitalize="words"
           returnKeyType="done"
@@ -90,16 +91,16 @@ export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderMo
           borderRadius={14}
         />
 
-        {/* Create Button */}
+        {/* Update Button */}
         <View className="mt-5">
           <Button
             variant="primary"
             size="large"
             fullWidth
             onPress={handleConfirm}
-            disabled={!folderName.trim()}
+            disabled={!feedName.trim() || updateFeed.isPending}
             style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
-            Create
+            {updateFeed.isPending ? 'Updating...' : 'Rename'}
           </Button>
         </View>
       </BottomSheet>
@@ -107,4 +108,4 @@ export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderMo
   }
 );
 
-CreateFolderModal.displayName = 'CreateFolderModal';
+RenameFeedModal.displayName = 'RenameFeedModal';

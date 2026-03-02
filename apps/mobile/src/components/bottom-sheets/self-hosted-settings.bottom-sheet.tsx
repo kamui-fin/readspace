@@ -1,18 +1,18 @@
 /** biome-ignore-all assist/source/organizeImports: false positive */
-import 'react-native-url-polyfill/auto';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { forwardRef, useCallback, useEffect, useMemo, useState } from 'react';
 import { Keyboard, Platform, Text, TouchableWithoutFeedback, View } from 'react-native';
+import 'react-native-url-polyfill/auto';
 import { z } from 'zod';
 
-import { Button } from '@components/ui/button';
-import { Input } from '@components/ui/input';
 import { BottomSheet } from '@components/ui/bottom-sheet';
-import { toast } from '@components/ui/toast';
+import { Button } from '@components/ui/button';
+import { BottomSheetInput } from '@components/ui/input';
 import { Spinner } from '@components/ui/spinner';
+import { toast } from '@components/ui/toast';
+import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { validateSupabaseConnection } from '@lib/supabase/client';
-import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 
 // Helper to resolve hostname for Android emulator
 const resolveHostname = (url: string) => {
@@ -214,14 +214,14 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
         onChange={handleSheetChange}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View className="flex-1">
-            <Text className="font-geist mb-6 text-base text-grey dark:text-grey">
+            <Text className="font-geist-medium mb-6 text-base text-grey dark:text-grey">
               Connect to your own Readspace instance
             </Text>
 
             <View className="flex-1 gap-4">
               {/* API URL */}
               <View>
-                <Input
+                <BottomSheetInput
                   label="API URL"
                   value={apiUrl}
                   onChangeText={setApiUrl}
@@ -239,7 +239,7 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
 
               {/* Supabase URL */}
               <View>
-                <Input
+                <BottomSheetInput
                   label="Supabase URL"
                   value={supabaseUrl}
                   onChangeText={setSupabaseUrl}
@@ -257,7 +257,7 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
 
               {/* Supabase Anonymous Key */}
               <View>
-                <Input
+                <BottomSheetInput
                   label="Supabase Anonymous Key"
                   value={supabaseAnonKey}
                   onChangeText={setSupabaseAnonKey}

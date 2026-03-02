@@ -174,10 +174,10 @@ export function ArticleReader({
         // Apply italic font if inside italic context
         const linkStyle = isInsideItalic
           ? {
-            ...tagsStyles.a,
-            fontFamily: 'EBGaramond_500Medium_Italic',
-            fontStyle: 'italic' as const,
-          }
+              ...tagsStyles.a,
+              fontFamily: 'EBGaramond_500Medium_Italic',
+              fontStyle: 'italic' as const,
+            }
           : tagsStyles.a;
 
         // Safely access tbaseStyle with null check

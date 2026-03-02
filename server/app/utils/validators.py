@@ -11,7 +11,8 @@ from app.core.custom_exceptions import ValidationError
 # Pre-compiled regex for performance
 EMAIL_PATTERN = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
 TAG_NAME_PATTERN = re.compile(r"^[a-z0-9_-]+$")
-FOLDER_NAME_PATTERN = re.compile(r"^[\w\s\-_()\[\].]+$", re.UNICODE)
+# Allow letters, digits, spaces, common punctuation (e.g. "!", "?", "&")
+FOLDER_NAME_PATTERN = re.compile(r"^[\w\s\-_()\[\].!?'\",:;&@#]+$", re.UNICODE)
 
 
 def validate_url_format(url: str, required: bool = True) -> str | None:

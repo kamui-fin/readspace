@@ -1,5 +1,6 @@
 import { SelfHostSettingsBottomSheet } from '@components/bottom-sheets/self-hosted-settings.bottom-sheet';
-import { SelfHostSettings } from '@/components/modals/self-hosted-settings';
+import EyeBoldIcon from '@components/icons/solar/eye-bold';
+import EyeClosedBoldIcon from '@components/icons/solar/eye-closed-bold';
 import { Button } from '@components/ui/button';
 import { Input, InputPressable } from '@components/ui/input';
 import { Text } from '@components/ui/text';
@@ -11,8 +12,6 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { type LoginFormData, LoginSchema } from '@lib/validation/auth-schemas';
-import EyeBoldIcon from '@components/icons/solar/eye-bold';
-import EyeClosedBoldIcon from '@components/icons/solar/eye-closed-bold';
 import { useSettingsStore } from '@stores/settings';
 import { router } from 'expo-router';
 import { Formik, type FormikHelpers } from 'formik';
@@ -29,8 +28,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toFormikValidationSchema } from 'zod-formik-adapter';
-
-const isIOS = Platform.OS === 'ios';
 
 export function LoginScreen() {
   const { signIn } = useSession();
@@ -287,15 +284,11 @@ export function LoginScreen() {
           </>
         )}
       </Formik>
-      {isIOS ? (
-        <SelfHostSettings ref={selfHostSettingsRef} onSave={handleSelfHostSave} />
-      ) : (
-        <SelfHostSettingsBottomSheet
-          ref={selfHostSettingsRef}
-          onSave={handleSelfHostSave}
-          onClose={handleModalClose}
-        />
-      )}
+      <SelfHostSettingsBottomSheet
+        ref={selfHostSettingsRef}
+        onSave={handleSelfHostSave}
+        onClose={handleModalClose}
+      />
     </KeyboardAvoidingView>
   );
 }

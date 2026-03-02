@@ -1,18 +1,18 @@
+import BookmarkBoldIcon from '@components/icons/solar/bookmark-bold';
+import CalendarBoldIcon from '@components/icons/solar/calendar-bold';
+import InboxBoldIcon from '@components/icons/solar/inbox-bold';
+import SortBoldIcon from '@components/icons/solar/sort-bold';
+import { Tab } from '@components/navigation/tab';
+import { Button } from '@components/ui/button';
+import { DEVICE_CORNER_RADIUS } from '@lib/constants/app';
+import { COLORS } from '@lib/constants/colors';
+import clsx from 'clsx';
+import { View } from 'react-native';
 import {
   tabsContainerVariants,
   tabsGroupVariants,
   tabsRowVariants,
 } from '@/components/navigation/header/constants/header-variants';
-import { Tab } from '@components/navigation/tab';
-import { Button } from '@components/ui/button';
-import { DEVICE_CORNER_RADIUS } from '@lib/constants/app';
-import { COLORS } from '@lib/constants/colors';
-import SortBoldIcon from '@components/icons/solar/sort-bold';
-import CalendarBoldIcon from '@components/icons/solar/calendar-bold';
-import BookmarkBoldIcon from '@components/icons/solar/bookmark-bold';
-import InboxBoldIcon from '@components/icons/solar/inbox-bold';
-import clsx from 'clsx';
-import { View } from 'react-native';
 
 export const buttonConfigs = [
   { label: 'Today', icon: CalendarBoldIcon },

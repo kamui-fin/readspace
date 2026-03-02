@@ -1,10 +1,10 @@
+import EyeBoldIcon from '@components/icons/solar/eye-bold';
+import EyeClosedBoldIcon from '@components/icons/solar/eye-closed-bold';
 import { Input, InputPressable } from '@components/ui/input';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { PasswordSchema } from '@lib/validation/auth-schemas';
-import EyeBoldIcon from '@components/icons/solar/eye-bold';
-import EyeClosedBoldIcon from '@components/icons/solar/eye-closed-bold';
 import { Formik, type FormikProps } from 'formik';
 import { useEffect, useState } from 'react';
 import { Keyboard, TouchableWithoutFeedback, View } from 'react-native';
@@ -90,7 +90,7 @@ export function PasswordStep({ initialPassword = '', onPasswordChange }: Passwor
     <Formik
       initialValues={{ password: initialPassword || '' }}
       validationSchema={toFormikValidationSchema(PasswordSchema)}
-      onSubmit={() => { }}
+      onSubmit={() => {}}
       validateOnMount={false}
       validateOnChange={false}
       validateOnBlur={true}>

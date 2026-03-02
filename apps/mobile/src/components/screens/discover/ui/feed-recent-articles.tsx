@@ -1,11 +1,11 @@
-import { Button } from '@components/ui/button';
-import { EmptyState } from '@components/ui/empty-state';
-import { Card } from '@components/ui/card';
 import DocumentTextLinearIcon from '@components/icons/solar/document-text-linear';
+import { Button } from '@components/ui/button';
+import { Card } from '@components/ui/card';
+import { EmptyState } from '@components/ui/empty-state';
+import { SectionHeader } from '@components/ui/section-header';
 import { Skeleton } from '@components/ui/skeleton';
 import { Text } from '@components/ui/text';
 import { COLORS } from '@lib/constants/colors';
-import AltArrowRightLinearIcon from '@components/icons/solar/alt-arrow-right-linear';
 import { Feed, FeedDiscoveryResult, formatRelativeDate } from '@readspace/shared';
 import { Dimensions, FlatList, View } from 'react-native';
 
@@ -34,25 +34,12 @@ export function FeedRecentArticles({
 }: FeedRecentArticlesProps) {
   return (
     <View className="mb-8 mt-8">
-      <View className="mb-5 flex-row items-center justify-between px-6">
-        <Text
-          size="lg"
-          fontFamily="geist-medium"
-          variant="heading"
-          className="text-black dark:text-black-dark">
-          Recent articles
-        </Text>
-        {articles.length > 0 && (
-          <Button variant="icon" size="small" fullWidth={false} onPress={onShowMore}>
-            <AltArrowRightLinearIcon
-              width={18}
-              height={18}
-              strokeWidth={2.4}
-              color={greyColor}
-            />
-          </Button>
-        )}
-      </View>
+      <SectionHeader
+        title="Recent articles"
+        onSeeAll={articles.length > 0 ? onShowMore : undefined}
+        className="mb-4 px-6"
+        iconColor={greyColor}
+      />
 
       {isLoading ? (
         <View className="px-6">

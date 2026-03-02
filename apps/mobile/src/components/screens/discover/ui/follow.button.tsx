@@ -2,13 +2,12 @@ import {
   FolderPickerBottomSheet,
   type FolderPickerBottomSheetRef,
 } from '@components/bottom-sheets/folder-picker';
-import { FolderPickerModal, type FolderPickerModalRef } from '@/components/modals/folder-picker';
 import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { useDeleteFeed, useFeeds, useCreateFeed } from '@readspace/shared';
+import { useCreateFeed, useDeleteFeed, useFeeds } from '@readspace/shared';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import * as Haptics from 'expo-haptics';
@@ -91,7 +90,7 @@ export function FollowButton({
 }: FollowButtonProps) {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
-  const folderPickerRef = useRef<FolderPickerModalRef | FolderPickerBottomSheetRef>(null);
+  const folderPickerRef = useRef<FolderPickerBottomSheetRef>(null);
 
   const createFeed = useCreateFeed();
   const deleteFeed = useDeleteFeed();
@@ -101,7 +100,8 @@ export function FollowButton({
   const [optimisticFollowing, setOptimisticFollowing] = useState<boolean | null>(null);
 
   // Check if we're actually subscribed by looking at user's feed list
-  const actuallyFollowing = userFeeds?.subscriptions?.some((sub) => sub.feed.id === feedId) ?? isFollowing;
+  const actuallyFollowing =
+    userFeeds?.subscriptions?.some((sub) => sub.feed.id === feedId) ?? isFollowing;
 
   // Clear optimistic state when actual state catches up and matches it
   useEffect(() => {
@@ -212,12 +212,9 @@ export function FollowButton({
                 : 'Follow'}
         </Text>
       </Pressable>
-      {showFolderPicker &&
-        (Platform.OS === 'ios' ? (
-          <FolderPickerModal ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
-        ) : (
-          <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
-        ))}
+      {showFolderPicker && (
+        <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
+      )}
     </>
   );
 }

@@ -1,9 +1,9 @@
-import { Pressable } from 'react-native';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { COLORS } from '@lib/constants/colors';
 import EyeBoldIcon from '@components/icons/solar/eye-bold';
 import EyeClosedBoldIcon from '@components/icons/solar/eye-closed-bold';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 import type { ArticleFilter } from '@stores/following';
+import { Pressable } from 'react-native';
 
 interface FilterActionButtonProps {
   filter: ArticleFilter;
@@ -31,8 +31,7 @@ export function FilterActionButton({ filter, onFilterChange }: FilterActionButto
         justifyContent: 'center',
         backgroundColor: isUnreadOnly ? colors.muted_green : colors.grey5,
         opacity: pressed ? 0.7 : 1,
-      })}
-    >
+      })}>
       {isUnreadOnly ? (
         <EyeBoldIcon width={18} height={18} color={colors.secondary} />
       ) : (

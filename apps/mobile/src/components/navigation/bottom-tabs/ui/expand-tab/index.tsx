@@ -1,7 +1,7 @@
+import LibraryBoldDuotoneIcon from '@components/icons/solar/library-bold-duotone';
 import { styles } from '@components/navigation/bottom-tabs/ui/expand-tab/expand-tab.styles';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import LibraryBoldDuotoneIcon from '@components/icons/solar/library-bold-duotone';
 import * as Haptics from 'expo-haptics';
 import { TouchableOpacity } from 'react-native';
 import Animated, {

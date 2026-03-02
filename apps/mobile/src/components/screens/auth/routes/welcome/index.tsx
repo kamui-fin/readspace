@@ -1,5 +1,6 @@
 import GoogleIcon from '@components/icons/local/google';
 import ReadspaceLogo from '@components/icons/local/readspace-logo';
+import LetterBoldIcon from '@components/icons/solar/letter-bold';
 import { Button } from '@components/ui/button';
 import { ThreeDotsAnimation } from '@components/ui/three-dots';
 import { toast } from '@components/ui/toast';
@@ -8,7 +9,6 @@ import { useGoogleAuth } from '@hooks/useGoogleAuth';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { SPACING } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import LetterBoldIcon from '@components/icons/solar/letter-bold';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Text, useWindowDimensions, View } from 'react-native';
@@ -135,7 +135,11 @@ export function WelcomeScreen() {
           disabled={isLoading}
           leftIcon={
             !isLoading ? (
-              <GoogleIcon width={20} height={20} fill={isDark ? COLORS.dark.white : COLORS.light.black} />
+              <GoogleIcon
+                width={20}
+                height={20}
+                fill={isDark ? COLORS.dark.white : COLORS.light.black}
+              />
             ) : undefined
           }>
           {isLoading ? (

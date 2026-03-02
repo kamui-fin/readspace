@@ -1,18 +1,14 @@
-import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker';
-import { FolderPickerModal, type FolderPickerModalRef } from '@/components/modals/folder-picker';
-import { FeedPreviewBanner } from '@components/screens/discover/ui/feed-preview.banner';
+import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
+import InboxLineLinearIcon from '@components/icons/solar/inbox-line-linear';
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
 import { Button } from '@components/ui/button';
 import { Card } from '@components/ui/card';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { Text } from '@components/ui/text';
-import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
-import InboxLineLinearIcon from '@components/icons/solar/inbox-line-linear';
-import { ApiClient, type Article, formatRelativeDate, useCreateFeed } from '@readspace/shared';
+import { ApiClient, type Article, formatRelativeDate } from '@readspace/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSegments } from 'expo-router';
 import { useCallback, useRef } from 'react';
@@ -29,11 +25,9 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
   const router = useRouter();
   const segments = useSegments();
   const listRef = useRef<any>(null);
-  const folderPickerRef = useRef<FolderPickerModalRef>(null);
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const insets = useSafeAreaInsets();
-  const createFeed = useCreateFeed();
 
   // Fetch feed details to get the title
   const { data: feedData } = useQuery({
@@ -41,9 +35,6 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
     queryFn: () => ApiClient.getFeed(feedId),
     enabled: !!feedId,
   });
-
-  // Determine if we should show preview mode (feed is not subscribed)
-  const shouldShowPreviewBanner = !!(feedData && feedData.is_subscribed === false);
 
   // Fetch all articles for the feed
   const {
@@ -55,7 +46,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
     queryFn: async () => {
       const response = await ApiClient.getArticles({
         feed_id: feedId,
-        limit: 50, // Get more articles for the full list
+        limit: 50,
       });
       return response;
     },
@@ -72,10 +63,8 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
   const handleArticlePress = useCallback(
     (articleId: string) => {
       const articleRoute = `/(protected)/articles/${articleId}`;
-      // Prevent duplicate navigation - check if already on this route
       const currentPath = segments.join('/');
       const articlePath = `articles/${articleId}`;
-      // Only navigate if not already on this article route
       if (!currentPath.includes(articlePath)) {
         router.push(articleRoute);
       }
@@ -100,8 +89,6 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
                 ? formatRelativeDate(new Date(article.published_at))
                 : 'Unknown date'
             }
-            faviconUrl={feedData?.image_url ?? undefined}
-            feedName={feedData?.title ?? undefined}
             onPress={() => handleArticlePress(article.id)}
             showTopDivider={index > 0}
             showBottomDivider={false}
@@ -110,68 +97,36 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
         </View>
       );
     },
-    [handleArticlePress, feedData]
+    [handleArticlePress]
   );
 
-  const handleFollowFromPreview = useCallback(() => {
-    folderPickerRef.current?.present();
-  }, []);
-
-  const handleFolderSelect = useCallback(
-    (folderId: string | null) => {
-      if (!feedData?.url) {
-        toast.error('Feed URL is missing');
-        return;
-      }
-
-      createFeed.mutate(
-        {
-          url: feedData.url,
-          folder_id: folderId || '',
-        },
-        {
-          onSuccess: () => {
-            toast.success(`Following ${feedData.title}`);
-          },
-          onError: (error: unknown) => {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to follow feed';
-            toast.error(errorMessage);
-          },
-        }
-      );
-    },
-    [feedData, createFeed]
+  const headerSection = (
+    <View style={{ paddingTop: insets.top }}>
+      <View className="px-4 py-3">
+        <View className="flex-row items-center">
+          <Button variant="icon" size="small" fullWidth={false} onPress={handleBack}>
+            <ArrowLeftLinearIcon width={18} height={18} strokeWidth={2.4} color={colors.grey} />
+          </Button>
+          <View className="absolute left-0 right-0 items-center">
+            <Text
+              size="lg"
+              fontFamily="geist-semibold"
+              className="text-black dark:text-black-dark tracking-tight"
+              numberOfLines={1}
+              ellipsizeMode="tail">
+              {feedTitle}
+            </Text>
+          </View>
+          <View style={{ width: 40 }} />
+        </View>
+      </View>
+    </View>
   );
-
-  const contentPaddingTop = 16;
-  const contentPaddingBottom = BOTTOM_TABBAR_BASE_HEIGHT + 16;
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-white dark:bg-white-dark" style={{ paddingTop: insets.top }}>
-        <View className="px-4 pb-2">
-          <View className="flex-row items-center">
-            <Button variant="icon" size="small" fullWidth={false} onPress={handleBack}>
-              <ArrowLeftLinearIcon
-                width={18}
-                height={18}
-                strokeWidth={2.4}
-                color={colors.grey}
-              />
-            </Button>
-            <View className="absolute left-0 right-0 items-center">
-              <Text
-                size="base"
-                fontFamily="geist-medium"
-                className="text-black dark:text-black-dark"
-                numberOfLines={1}
-                ellipsizeMode="tail">
-                {feedTitle}
-              </Text>
-            </View>
-            <View style={{ width: 40 }} />
-          </View>
-        </View>
+      <View className="flex-1 bg-white dark:bg-white-dark">
+        {headerSection}
         <View className="px-6">
           <ArticleCardSkeletonList count={5} />
         </View>
@@ -181,30 +136,8 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
 
   if (isError) {
     return (
-      <View className="flex-1 bg-white dark:bg-white-dark" style={{ paddingTop: insets.top }}>
-        <View className="px-4 pb-2">
-          <View className="flex-row items-center">
-            <Button variant="icon" size="small" fullWidth={false} onPress={handleBack}>
-              <ArrowLeftLinearIcon
-                width={18}
-                height={18}
-                strokeWidth={2.4}
-                color={colors.grey}
-              />
-            </Button>
-            <View className="absolute left-0 right-0 items-center">
-              <Text
-                size="base"
-                fontFamily="geist-medium"
-                className="text-black dark:text-black-dark"
-                numberOfLines={1}
-                ellipsizeMode="tail">
-                Articles from {feedTitle}
-              </Text>
-            </View>
-            <View style={{ width: 40 }} />
-          </View>
-        </View>
+      <View className="flex-1 bg-white dark:bg-white-dark">
+        {headerSection}
         <View className="flex-1 items-center justify-center px-6">
           <Text
             size="base"
@@ -221,25 +154,8 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-white-dark" style={{ paddingTop: insets.top }}>
-      <View className="px-4 pb-2">
-        <View className="flex-row items-center">
-          <Button variant="icon" size="small" fullWidth={false} onPress={handleBack}>
-            <ArrowLeftLinearIcon
-              width={18}
-              height={18}
-              strokeWidth={2.4}
-              color={colors.grey}
-            />
-          </Button>
-          <View className="absolute left-0 right-0 items-center">
-            <Text size="base" fontFamily="geist-medium" className="text-black dark:text-black-dark">
-              {feedTitle}
-            </Text>
-          </View>
-          <View style={{ width: 40 }} />
-        </View>
-      </View>
+    <View className="flex-1 bg-white dark:bg-white-dark">
+      {headerSection}
 
       {articles.length > 0 ? (
         <InfiniteScrollList
@@ -248,10 +164,8 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
           renderItem={renderArticle}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{
-            paddingTop: contentPaddingTop,
-            paddingBottom: shouldShowPreviewBanner
-              ? contentPaddingBottom + 80
-              : contentPaddingBottom,
+            paddingTop: 8,
+            paddingBottom: BOTTOM_TABBAR_BASE_HEIGHT + 16,
           }}
           showsVerticalScrollIndicator={false}
           onEndReachedThreshold={0.5}
@@ -273,27 +187,6 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
             This feed doesn't have any articles yet. Check back later!
           </Text>
         </View>
-      )}
-
-      {/* Preview Mode Banner - Sticky at bottom above tab bar */}
-      {shouldShowPreviewBanner && feedData && feedData.title && (
-        <View
-          className="absolute bottom-0 left-0 right-0"
-          style={{
-            bottom: BOTTOM_TABBAR_BASE_HEIGHT + 0.8 * insets.bottom,
-            zIndex: 100,
-          }}>
-          <View className="items-center pb-2">
-            <FeedPreviewBanner feedTitle={feedData.title} onFollow={handleFollowFromPreview} />
-          </View>
-        </View>
-      )}
-
-      {/* Folder picker modal/bottom sheet */}
-      {isIOS ? (
-        <FolderPickerModal ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
-      ) : (
-        <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
       )}
     </View>
   );

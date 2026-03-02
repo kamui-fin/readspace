@@ -1,10 +1,10 @@
-import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
-import { EmptyState } from '@components/ui/empty-state';
 import FeedLinearIcon from '@components/icons/solar/feed-linear';
+import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { Button } from '@components/ui/button';
+import { EmptyState } from '@components/ui/empty-state';
+import { SectionHeader } from '@components/ui/section-header';
 import { Text } from '@components/ui/text';
 import { COLORS } from '@lib/constants/colors';
-import AltArrowRightLinearIcon from '@components/icons/solar/alt-arrow-right-linear';
 import { View } from 'react-native';
 
 interface FeedSimilarListProps {
@@ -26,21 +26,12 @@ export function FeedSimilarList({
 }: FeedSimilarListProps) {
   return (
     <View className="px-6 pb-8">
-      <View className="mb-2 flex-row items-center justify-between">
-        <Text className="font-geist-medium tracking-heading text-lg text-black dark:text-black-dark">
-          You might also like
-        </Text>
-        {similarFeeds.length > 0 && (
-          <Button variant="icon" size="small" fullWidth={false} onPress={onShowMore}>
-            <AltArrowRightLinearIcon
-              width={18}
-              height={18}
-              strokeWidth={2.4}
-              color={greyColor}
-            />
-          </Button>
-        )}
-      </View>
+      <SectionHeader
+        title="You might also like"
+        onSeeAll={similarFeeds.length > 0 ? onShowMore : undefined}
+        className="mb-4"
+        iconColor={greyColor}
+      />
 
       {isLoading ? (
         <View className="gap-4">

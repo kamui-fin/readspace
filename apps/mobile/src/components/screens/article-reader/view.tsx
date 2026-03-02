@@ -1,4 +1,5 @@
 import { ArticleSummaryBottomSheet } from '@components/bottom-sheets/article-summary';
+import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
 import { ArticleReader } from '@components/screens/article-reader/index';
 import { ArticleActionBar } from '@components/screens/article-reader/ui/article-actions.bar';
 import { ArticleReaderSkeleton } from '@components/screens/article-reader/ui/article-reader.skeleton';
@@ -17,7 +18,6 @@ import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
 import {
   useArticle,
   useExtractFullTextMutation,
@@ -70,7 +70,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   const extractFullText = useCallback(async () => {
     return extractMutation.mutateAsync({
       articleId: articleId || '',
-      articleUrl: article?.link || ''
+      articleUrl: article?.link || '',
     });
   }, [articleId, article?.link, extractMutation]);
 
@@ -87,7 +87,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   const generateSummary = useCallback(async () => {
     return summarizeMutation.mutateAsync({
       articleId: articleId || '',
-      content: currentContent || undefined
+      content: currentContent || undefined,
     });
   }, [articleId, currentContent, summarizeMutation]);
 
@@ -287,7 +287,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
           onClose={handleClose}
           onShare={handleShare}
           onBookmark={handleBookmark}
-          onMenuPress={() => { }}
+          onMenuPress={() => {}}
           isBookmarked={false}
           isClipped={false}
         />
@@ -303,7 +303,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
           onClose={handleClose}
           onShare={handleShare}
           onBookmark={handleBookmark}
-          onMenuPress={() => { }}
+          onMenuPress={() => {}}
           isBookmarked={false}
           isClipped={false}
         />
@@ -335,12 +335,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
             <DropdownMenuTrigger asChild>
               <Button variant="icon" size="small" fullWidth={false} className="h-11 w-11">
                 <View style={{ transform: [{ rotate: '90deg' }] }}>
-                  <MenuDotsBoldIcon
-                    width={18}
-                    height={18}
-                    strokeWidth={2.4}
-                    color={colors.grey}
-                  />
+                  <MenuDotsBoldIcon width={18} height={18} strokeWidth={2.4} color={colors.grey} />
                 </View>
               </Button>
             </DropdownMenuTrigger>

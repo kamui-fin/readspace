@@ -1,6 +1,6 @@
-import { Text } from '@components/ui/text';
-import AltArrowRightLinearIcon from '@components/icons/solar/alt-arrow-right-linear';
 import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
+import AltArrowRightLinearIcon from '@components/icons/solar/alt-arrow-right-linear';
+import { Text } from '@components/ui/text';
 import clsx from 'clsx';
 import { forwardRef } from 'react';
 import { Pressable, type PressableProps, View } from 'react-native';
@@ -40,7 +40,20 @@ export type SettingsItemProps =
   | LinkSettingsItemProps;
 
 export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, SettingsItemProps>(
-  ({ label, variant, value, leftIcon, rightIcon, className, isLast = false, danger = false, ...props }, ref) => {
+  (
+    {
+      label,
+      variant,
+      value,
+      leftIcon,
+      rightIcon,
+      className,
+      isLast = false,
+      danger = false,
+      ...props
+    },
+    ref
+  ) => {
     const renderRightContent = () => {
       switch (variant) {
         case 'select':
@@ -64,10 +77,7 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
     return (
       <Pressable
         ref={ref}
-        className={clsx(
-          'bg-grey6 dark:bg-[#1C1C1E]',
-          className
-        )}
+        className={clsx('bg-grey6 dark:bg-[#1C1C1E]', className)}
         style={({ pressed }) => ({
           opacity: pressed ? 0.7 : 1,
         })}
@@ -86,9 +96,7 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
           </View>
           {renderRightContent()}
         </View>
-        {!isLast && (
-          <View className="mx-5 h-[1px] bg-grey5 dark:bg-[#2C2C2E]" />
-        )}
+        {!isLast && <View className="mx-5 h-[1px] bg-grey5 dark:bg-[#2C2C2E]" />}
       </Pressable>
     );
   }

@@ -1,13 +1,20 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: any is used for compatibility with the toast library */
 
-import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker';
-import { FolderPickerModal, type FolderPickerModalRef } from '@/components/modals/folder-picker';
+import {
+  FolderPickerBottomSheet,
+  type FolderPickerBottomSheetRef,
+} from '@components/bottom-sheets/folder-picker';
+import { ArticleListItem } from '@components/screens/following/components/article-list-item';
+import { EmptyStateView } from '@components/screens/following/components/empty-state-view';
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { toast } from '@components/ui/toast';
+import { useArticleQueries } from '@hooks/useArticleQueries';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { useScrollReset } from '@hooks/useScrollReset';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { createListItems, type ListItem, processArticles } from '@lib/utils/article';
 import {
   useCreateFeed,
   useFeed,
@@ -29,12 +36,6 @@ import {
 import type { SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EmptyStateView } from '@components/screens/following/components/empty-state-view';
-import { ArticleListItem } from '@components/screens/following/components/article-list-item';
-import { useArticleQueries } from '@hooks/useArticleQueries';
-import { useScrollReset } from '@hooks/useScrollReset';
-import { createListItems, processArticles, type ListItem } from '@lib/utils/article';
-
 interface FollowingScreenProps {
   activeTab: number;
   scrollY: SharedValue<number>;
@@ -52,7 +53,7 @@ export function FollowingScreen({
   const insets = useSafeAreaInsets();
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
-  const folderPickerRef = useRef<FolderPickerModalRef>(null);
+  const folderPickerRef = useRef<FolderPickerBottomSheetRef>(null);
 
   // Refs for tracking state
   const isResettingRef = useRef(false);
@@ -380,11 +381,7 @@ export function FollowingScreen({
       />
 
       {/* Folder picker modal/bottom sheet */}
-      {Platform.OS === 'ios' ? (
-        <FolderPickerModal ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
-      ) : (
-        <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
-      )}
+      <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
     </>
   );
 }

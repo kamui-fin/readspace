@@ -11,7 +11,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import React, { useRef } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -92,6 +92,58 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
 
   const blurTint = isDark ? 'systemThickMaterialDark' : 'systemThickMaterialLight';
 
+  const tabsContent = (
+    <Animated.View style={[styles.floatingBar, animatedOriginalTabBarStyle]}>
+      {filteredRouteTabs.map((route, index) => {
+        const { options } = descriptors[route.key];
+        const isFocused = state.index === state.routes.indexOf(route);
+
+        const onPress = (): void => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name, route.params);
+          }
+        };
+
+        const onLongPress = (): void => {
+          navigation.emit({
+            type: 'tabLongPress',
+            target: route.key,
+          });
+        };
+
+        // Insert ExpandTab before the last tab (profile)
+        const isLastTab = index === filteredRouteTabs.length - 1;
+
+        return (
+          <React.Fragment key={route.key}>
+            {isLastTab && (
+              <ExpandTab
+                onPress={handleExpandTabPress}
+                animationProgress={animationProgress}
+                colors={tabBarColors}
+              />
+            )}
+            <AnimatedTab
+              isFocused={isFocused}
+              options={options}
+              colors={tabBarColors}
+              onPress={onPress}
+              onLongPress={onLongPress}
+              animationProgress={animationProgress}
+              index={index}
+            />
+          </React.Fragment>
+        );
+      })}
+    </Animated.View>
+  );
+
   return (
     <View style={styles.gestureContainer}>
       <View
@@ -102,58 +154,32 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
         }}>
         <Animated.View style={styles.container}>
           <Animated.View
-            style={[styles.floatingBarWrapper, animatedFloatingBarStyle, animatedTabBarStyle]}>
-            <BlurView intensity={100} tint={blurTint} style={styles.blurView}>
-              <Animated.View style={[styles.floatingBar, animatedOriginalTabBarStyle]}>
-                {filteredRouteTabs.map((route, index) => {
-                  const { options } = descriptors[route.key];
-                  const isFocused = state.index === state.routes.indexOf(route);
-
-                  const onPress = (): void => {
-                    const event = navigation.emit({
-                      type: 'tabPress',
-                      target: route.key,
-                      canPreventDefault: true,
-                    });
-
-                    if (!isFocused && !event.defaultPrevented) {
-                      navigation.navigate(route.name, route.params);
-                    }
-                  };
-
-                  const onLongPress = (): void => {
-                    navigation.emit({
-                      type: 'tabLongPress',
-                      target: route.key,
-                    });
-                  };
-
-                  // Insert ExpandTab before the last tab (profile)
-                  const isLastTab = index === filteredRouteTabs.length - 1;
-
-                  return (
-                    <React.Fragment key={route.key}>
-                      {isLastTab && (
-                        <ExpandTab
-                          onPress={handleExpandTabPress}
-                          animationProgress={animationProgress}
-                          colors={tabBarColors}
-                        />
-                      )}
-                      <AnimatedTab
-                        isFocused={isFocused}
-                        options={options}
-                        colors={tabBarColors}
-                        onPress={onPress}
-                        onLongPress={onLongPress}
-                        animationProgress={animationProgress}
-                        index={index}
-                      />
-                    </React.Fragment>
-                  );
-                })}
-              </Animated.View>
-            </BlurView>
+            style={[
+              animatedFloatingBarStyle,
+              animatedTabBarStyle,
+              {
+                shadowColor: isDark ? tabBarColors.muted_green : tabBarColors.secondary,
+                shadowOffset: {
+                  width: 0,
+                  height: 10,
+                },
+                shadowOpacity: isDark ? 0.3 : 0.25,
+                shadowRadius: 20,
+                elevation: 15,
+                backgroundColor: Platform.OS === 'android' ? (isDark ? '#141414' : '#ffffff') : undefined,
+              },
+            ]}>
+            <Animated.View style={[styles.floatingBarWrapper, animatedFloatingBarStyle]}>
+              {Platform.OS === 'android' ? (
+                <View style={[styles.blurView, { backgroundColor: isDark ? '#141414' : '#ffffff' }]}>
+                  {tabsContent}
+                </View>
+              ) : (
+                <BlurView intensity={100} tint={blurTint} style={styles.blurView}>
+                  {tabsContent}
+                </BlurView>
+              )}
+            </Animated.View>
           </Animated.View>
         </Animated.View>
       </View>

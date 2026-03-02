@@ -1,12 +1,12 @@
-import { Button } from '@components/ui/button';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { COLORS } from '@lib/constants/colors';
 import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
 import BookmarkBoldIcon from '@components/icons/solar/bookmark-bold';
 import BookmarkLinearIcon from '@components/icons/solar/bookmark-linear';
 import CheckCircleBoldIcon from '@components/icons/solar/check-circle-bold';
 import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
 import ShareBoldIcon from '@components/icons/solar/share-bold';
+import { Button } from '@components/ui/button';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 import { type ReactNode, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
@@ -152,8 +152,8 @@ export function ArticleActionBar({
           style={
             !isClipped && isBookmarked
               ? {
-                backgroundColor: colors.icon_bg_yellow,
-              }
+                  backgroundColor: colors.icon_bg_yellow,
+                }
               : undefined
           }>
           {(() => {

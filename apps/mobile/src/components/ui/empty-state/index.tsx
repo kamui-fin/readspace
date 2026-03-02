@@ -22,7 +22,12 @@ const emptyStateVariants = cva('items-center justify-center px-6', {
 const iconContainerVariants = cva('mb-4');
 
 export interface EmptyStateProps extends VariantProps<typeof emptyStateVariants> {
-  icon: React.ComponentType<{ width?: number; height?: number; color?: string; strokeWidth?: number }>;
+  icon: React.ComponentType<{
+    width?: number;
+    height?: number;
+    color?: string;
+    strokeWidth?: number;
+  }>;
   message: string;
   className?: string;
   style?: StyleProp<ViewStyle>;

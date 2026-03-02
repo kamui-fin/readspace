@@ -87,8 +87,6 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
     transform: [{ translateX: (1 - textOpacity.value) * -10 }],
   }));
 
-
-
   return (
     <Animated.View
       style={[

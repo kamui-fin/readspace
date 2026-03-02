@@ -33,7 +33,12 @@ const tabTextVariants = cva('font-geist-medium text-base', {
 export interface TabProps extends Omit<PressableProps, 'children'> {
   label: string;
   active?: boolean;
-  icon?: React.ComponentType<{ width?: number; height?: number; color?: string; strokeWidth?: number }>;
+  icon?: React.ComponentType<{
+    width?: number;
+    height?: number;
+    color?: string;
+    strokeWidth?: number;
+  }>;
   onPress?: () => void;
 }
 

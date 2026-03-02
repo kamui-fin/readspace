@@ -1,9 +1,5 @@
 import { SelfHostSettingsBottomSheet } from '@components/bottom-sheets/self-hosted-settings.bottom-sheet';
-import { SelfHostSettings } from '@/components/modals/self-hosted-settings';
 import { Stepper, type StepperRef } from '@components/navigation/stepper';
-import { EmailStep } from '@/components/screens/auth/routes/new-account/email';
-import { PasswordStep } from '@/components/screens/auth/routes/new-account/password';
-import { VerificationStep } from '@/components/screens/auth/routes/new-account/verification';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
@@ -17,8 +13,9 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Keyboard, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const isIOS = Platform.OS === 'ios';
+import { EmailStep } from '@/components/screens/auth/routes/new-account/email';
+import { PasswordStep } from '@/components/screens/auth/routes/new-account/password';
+import { VerificationStep } from '@/components/screens/auth/routes/new-account/verification';
 
 export function SignupScreen() {
   const stepperRef = useRef<StepperRef>(null);
@@ -211,11 +208,7 @@ export function SignupScreen() {
       )}
 
       {/* Self-hosting modal/bottom sheet - rendered at screen level */}
-      {isIOS ? (
-        <SelfHostSettings ref={selfHostSettingsRef} onSave={handleSelfHostSave} />
-      ) : (
-        <SelfHostSettingsBottomSheet ref={selfHostSettingsRef} onSave={handleSelfHostSave} />
-      )}
+      <SelfHostSettingsBottomSheet ref={selfHostSettingsRef} onSave={handleSelfHostSave} />
     </View>
   );
 }

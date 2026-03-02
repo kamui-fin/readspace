@@ -1,5 +1,7 @@
-import { FolderPickerModal, type FolderPickerModalRef } from '@/components/modals/folder-picker';
-import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker';
+import {
+  FolderPickerBottomSheet,
+  type FolderPickerBottomSheetRef,
+} from '@components/bottom-sheets/folder-picker';
 import { FeedInfoHeader } from '@components/screens/discover/ui/feed-info-header';
 import { FeedPreviewSkeleton } from '@components/screens/discover/ui/feed-preview-skeleton';
 import { FeedRecentArticles } from '@components/screens/discover/ui/feed-recent-articles';
@@ -18,12 +20,10 @@ import {
   useFeed,
 } from '@readspace/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocalSearchParams, useRootNavigationState, useRouter, useSegments } from 'expo-router';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const isIOS = Platform.OS === 'ios';
 
 interface FeedPreviewScreenProps {
   feedId: string;
@@ -38,73 +38,30 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
   const router = useRouter();
   const segments = useSegments();
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
-  const folderPickerRef = useRef<FolderPickerModalRef>(null);
+  const folderPickerRef = useRef<FolderPickerBottomSheetRef>(null);
   const [pendingSimilarFeedUrl, setPendingSimilarFeedUrl] = useState<string | null>(null);
-  const [isPreviewRefreshing, setIsPreviewRefreshing] = useState(false);
-  const [previewFeedData, setPreviewFeedData] = useState<FeedDiscoveryResult | null>(
-    initialData?.title
-      ? ({
-          id: feedId,
-          url: '', // placeholder
-          title: initialData.title || 'Untitled Feed',
-          description: initialData.description || null,
-          link: null,
-          language: 'en',
-          image_url: initialData.image_url || null,
-          author: null,
-          content_type: null,
-          last_updated_at: null,
-          tags: [],
-          tags_native: [],
-          is_subscribed: false,
-        } as any)
-      : null
-  );
 
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const greyColor = isDark ? COLORS.dark.grey : COLORS.light.grey;
   const insets = useSafeAreaInsets();
 
-  // Local state to track subscription status for immediate UI updates
-  const [localIsSubscribed, setLocalIsSubscribed] = useState<boolean | null>(null);
-
-  // Ref to track if preview refresh has already been triggered
-  const hasRefreshedPreview = useRef(false);
-  // State to track if we need to wait for preview refresh before showing articles
-  const [shouldWaitForPreview, setShouldWaitForPreview] = useState(false);
-
   const queryClient = useQueryClient();
 
-  // Fetch feed data - disable if we're doing preview refresh
-  const { data: fetchedFeedData, isLoading: isFeedLoading } = useFeed(feedId || '', {
-    enabled: !!feedId && !isPreviewRefreshing,
-  });
+  const { data: fetchedFeedData, isLoading: isFeedLoading } = useFeed(feedId || '');
 
   // Use preview feed data if available, otherwise use fetched data.
-  // If we have fetched data, prefer it over the initial metadata.
-  const feed = fetchedFeedData || previewFeedData;
+  const feed = fetchedFeedData;
 
-  // Sync local subscription state with feed data
-  useEffect(() => {
-    if (feed?.is_subscribed !== undefined && localIsSubscribed === null) {
-      setLocalIsSubscribed(feed.is_subscribed);
-    }
-  }, [feed?.is_subscribed, localIsSubscribed]);
+  console.log(feed);
 
-  // Determine if we should show preview mode (feed is not subscribed)
-  const shouldShowPreviewBanner = !!(feed && feed.is_subscribed === false);
+  console.log('rendering');
 
   const createFeed = useCreateFeed();
   const deleteFeed = useDeleteFeed();
 
   // Fetch preview articles for the feed
-  // Don't fetch articles until preview refresh is done (if in preview mode)
-  const {
-    data: articlesData,
-    isLoading: isArticlesLoading,
-    refetch: refetchArticles,
-  } = useQuery({
+  const { data: articlesData, isLoading: isArticlesLoading } = useQuery({
     queryKey: ['feed-articles', feedId],
     queryFn: async () => {
       const response = await ApiClient.getArticles({
@@ -113,7 +70,7 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
       });
       return response;
     },
-    enabled: !!feedId && !shouldWaitForPreview,
+    enabled: !!feedId,
   });
 
   // Fetch similar feeds (top 4 for preview)
@@ -144,13 +101,14 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
     is_subscribed: false,
     is_preview: true,
   }));
-  // Use local state if available, otherwise fall back to feed data
-  const isFollowing = localIsSubscribed !== null ? localIsSubscribed : feed?.is_subscribed || false;
+  const isFollowing = feed?.is_subscribed || false;
 
   const handleFollowPress = useCallback(() => {
     if (isFollowing && feed?.id) {
-      // Immediately update local state
-      setLocalIsSubscribed(false);
+      // Optimistically update
+      queryClient.setQueryData(['feed', feed.id], (old: any) =>
+        old ? { ...old, is_subscribed: false } : old
+      );
 
       // Unfollow
       deleteFeed.mutate(
@@ -161,8 +119,10 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
           },
           onError: () => {
             toast.error('Failed to unfollow feed');
-            // Rollback on error
-            setLocalIsSubscribed(true);
+            // Revert on error
+            queryClient.setQueryData(['feed', feed.id], (old: any) =>
+              old ? { ...old, is_subscribed: true } : old
+            );
           },
         }
       );
@@ -170,40 +130,7 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
       // Show folder picker to follow
       folderPickerRef.current?.present();
     }
-  }, [isFollowing, feed, deleteFeed]);
-
-  // Check if feed is dead (no articles published in last 6 months)
-  const isFeedDead =
-    articles.length > 0 && articles[0].published_at
-      ? Date.now() - new Date(articles[0].published_at).getTime() > 6 * 30 * 24 * 60 * 60 * 1000
-      : false;
-
-  // Preview mode: refresh feed on mount to get latest articles
-  useEffect(() => {
-    if (shouldShowPreviewBanner && feedId && !hasRefreshedPreview.current) {
-      hasRefreshedPreview.current = true;
-      setShouldWaitForPreview(true);
-      setIsPreviewRefreshing(true);
-
-      ApiClient.refreshFeed(feedId, true, true)
-        .then(async (feedData) => {
-          // Store the feed data from refresh response (cast to FeedDiscoveryResult)
-          setPreviewFeedData(feedData as unknown as FeedDiscoveryResult);
-          // Enable articles query and trigger refetch
-          setShouldWaitForPreview(false);
-          // Wait for articles to be fetched before hiding loading state
-          await refetchArticles();
-        })
-        .catch((error) => {
-          console.error('Preview refresh failed:', error);
-          // Enable articles query even on error
-          setShouldWaitForPreview(false);
-        })
-        .finally(() => {
-          setIsPreviewRefreshing(false);
-        });
-    }
-  }, [shouldShowPreviewBanner, feedId, refetchArticles]);
+  }, [isFollowing, feed, deleteFeed, queryClient]);
 
   const handleBack = useCallback(() => {
     // If we have a returnTo param, navigate there instead of going back
@@ -229,9 +156,11 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
         return;
       }
 
-      // Immediately update local state if following the current feed
-      if (!pendingSimilarFeedUrl) {
-        setLocalIsSubscribed(true);
+      // Optimistic update if following current feed
+      if (!pendingSimilarFeedUrl && feed?.id) {
+        queryClient.setQueryData(['feed', feed.id], (old: any) =>
+          old ? { ...old, is_subscribed: true } : old
+        );
       }
 
       createFeed.mutate(
@@ -256,9 +185,11 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
             toast.error(error?.message || 'Failed to follow feed');
             setPendingSimilarFeedUrl(null);
 
-            // Rollback local state on error
-            if (!pendingSimilarFeedUrl) {
-              setLocalIsSubscribed(false);
+            // Revert optimisitic update on error
+            if (!pendingSimilarFeedUrl && feed?.id) {
+              queryClient.setQueryData(['feed', feed.id], (old: any) =>
+                old ? { ...old, is_subscribed: false } : old
+              );
             }
           },
         }
@@ -291,8 +222,15 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
     router.push(`/(protected)/(tabs)/discover/feed/${feedId}/similar`);
   }, [router, feedId]);
 
-  // Only show full skeleton during initial feed loading, not during preview refresh
-  if (isFeedLoading && !isPreviewRefreshing) {
+  // Check if feed is dead (no articles published in last 6 months)
+  const isFeedDead =
+    articles.length > 0 && articles[0].published_at
+      ? Date.now() - new Date(articles[0].published_at).getTime() > 6 * 30 * 24 * 60 * 60 * 1000
+      : false;
+
+  // Only show full skeleton when we have no data at all to display — if we already
+  // have initialData (previewFeedFallback), show that immediately instead of a skeleton
+  if (isFeedLoading) {
     return <FeedPreviewSkeleton />;
   }
 
@@ -332,7 +270,7 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
 
           <FeedRecentArticles
             articles={articles}
-            isLoading={isArticlesLoading || isPreviewRefreshing || shouldWaitForPreview}
+            isLoading={isArticlesLoading}
             feed={feed}
             onShowMore={handleShowMoreArticles}
             onArticlePress={handleArticlePress}
@@ -351,12 +289,7 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
         </ScrollView>
       </View>
 
-      {/* Folder Picker Modal/Bottom Sheet - Shared for main feed and similar feeds */}
-      {isIOS ? (
-        <FolderPickerModal ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
-      ) : (
-        <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
-      )}
+      <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
     </>
   );
 }

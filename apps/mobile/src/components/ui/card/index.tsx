@@ -1,9 +1,8 @@
-import RssIcon from '@components/icons/local/rss';
+import EyeLinearIcon from '@components/icons/solar/eye-linear';
 import { Divider } from '@components/ui/divider';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { stripHtml } from '@lib/utils/html';
-import ClockCircleLinearIcon from '@components/icons/solar/clock-circle-linear';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import { Image as ExpoImage } from 'expo-image';
@@ -15,7 +14,8 @@ const cardVariants = cva('bg-background dark:bg-background-dark', {
   variants: {
     variant: {
       feed: 'flex-row items-center gap-4 py-4 px-4',
-      'image-top': 'overflow-hidden rounded-2xl border border-grey4 dark:border-grey4-dark',
+      'image-top':
+        'w-full rounded-2xl bg-white dark:bg-grey6-dark overflow-hidden border border-black/5 dark:border-white/5',
       article: 'flex-row gap-3 py-4', // Edge-to-edge article card with image on right
       'text-only': 'rounded-2xl border border-grey4 dark:border-grey4-dark p-4',
     },
@@ -27,7 +27,7 @@ const cardVariants = cva('bg-background dark:bg-background-dark', {
 
 export interface CardProps
   extends Omit<PressableProps, 'children'>,
-  VariantProps<typeof cardVariants> {
+    VariantProps<typeof cardVariants> {
   children?: ReactNode;
   className?: string;
   // Feed variant props
@@ -123,7 +123,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
             )}
             {description && (
               <Text
-                size="lg"
+                size="sm"
                 fontFamily="geist"
                 className="text-grey2 dark:text-grey2"
                 numberOfLines={2}>
@@ -161,11 +161,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                     />
                   ) : FallbackComponent ? (
                     <FallbackComponent size={16} className="rounded-sm" />
-                  ) : (
-                    <View className="h-4 w-4 items-center justify-center rounded-sm bg-orange-100 dark:bg-orange-950">
-                      <RssIcon width={12} height={12} fill={isDark ? '#9a3412' : '#ea580c'} />
-                    </View>
-                  )}
+                  ) : null}
 
                   {/* Feed name */}
                   {feedName && (
@@ -180,10 +176,10 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                     </Text>
                   )}
 
-                  {/* Clock icon */}
+                  {/* Read time icon */}
                   {timestamp && (
                     <>
-                      <ClockCircleLinearIcon width={12} height={12} color="#90988B" />
+                      <EyeLinearIcon width={12} height={12} color="#90988B" />
                       <Text
                         size="xs"
                         fontFamily="geist"
@@ -201,10 +197,10 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                   size="base"
                   fontFamily="geist-semibold"
                   className={clsx(
-                    "mb-1 leading-5 tracking-tight",
+                    'mb-1 leading-5 tracking-tight',
                     isRead
-                      ? "text-grey dark:text-grey"
-                      : "text-primary-foreground dark:text-primary-foreground-dark"
+                      ? 'text-grey dark:text-grey'
+                      : 'text-primary-foreground dark:text-primary-foreground-dark'
                   )}
                   numberOfLines={3}>
                   {stripHtml(title)}
@@ -215,10 +211,8 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                   size={13}
                   fontFamily="geist"
                   className={clsx(
-                    "leading-5",
-                    isRead
-                      ? "text-grey/70 dark:text-grey-dark/70"
-                      : "text-grey dark:text-grey-dark"
+                    'leading-5',
+                    isRead ? 'text-grey/70 dark:text-grey-dark/70' : 'text-grey dark:text-grey-dark'
                   )}
                   numberOfLines={2}>
                   {stripHtml(description)}
@@ -250,52 +244,71 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
     // Image-top variant - image fills top, text below
     if (variant === 'image-top') {
       return (
-        <Pressable ref={ref} className={clsx(cardVariants({ variant }), className)} {...props}>
+        <Pressable
+          ref={ref}
+          className={clsx(cardVariants({ variant }), className)}
+          style={[
+            {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.06,
+              shadowRadius: 12,
+              elevation: 3,
+            },
+            props.style as any,
+          ]}
+          {...props}>
           {imageUrl && (
-            <ExpoImage
-              source={{ uri: imageUrl }}
-              style={{ width: '100%', height: 192 }}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              transition={200}
-              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-              placeholderContentFit="cover"
-            />
+            <View className="w-full bg-grey5 dark:bg-grey5-dark" style={{ height: 160 }}>
+              <ExpoImage
+                source={{ uri: imageUrl }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={200}
+                placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                placeholderContentFit="cover"
+              />
+            </View>
           )}
-          <View className="p-4">
-            {timestamp && (
-              <View className="mb-2 flex-row items-center gap-2">
-                <View className="h-2 w-2 rounded-full bg-primary" />
-                <Text
-                  size="md"
-                  fontFamily="geist"
-                  className="text-grey dark:text-grey"
-                  numberOfLines={1}
-                  ellipsizeMode="tail">
-                  {timestamp}
-                </Text>
-              </View>
-            )}
+          <View className="p-4 flex-1">
             {title && (
               <Text
-                size="md"
+                size="base"
                 fontFamily="geist-semibold"
-                className="leading-6 text-primary-foreground dark:text-primary-foreground-dark"
-                numberOfLines={3}
+                className="mb-1.5 leading-5 tracking-tight text-primary-foreground dark:text-primary-foreground-dark"
+                numberOfLines={2}
                 ellipsizeMode="tail">
                 {stripHtml(title)}
               </Text>
             )}
             {description && (
               <Text
-                size="sm"
+                size={13}
                 fontFamily="geist"
-                className="mt-2 leading-5 text-grey2 dark:text-grey2"
-                numberOfLines={3}
+                className="mb-3 leading-5 text-grey2 dark:text-grey2"
+                numberOfLines={2}
                 ellipsizeMode="tail">
                 {stripHtml(description)}
               </Text>
             )}
+
+            {/* Bottom Meta Row */}
+            <View className="mt-auto flex-row items-center justify-between pt-1">
+              {timestamp && (
+                <View className="flex-row items-center gap-1.5">
+                  <EyeLinearIcon width={12} height={12} color="#90988b" />
+                  <Text
+                    size="xs"
+                    fontFamily="geist"
+                    className="text-grey dark:text-grey"
+                    numberOfLines={1}
+                    ellipsizeMode="tail">
+                    {timestamp}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
         </Pressable>
       );

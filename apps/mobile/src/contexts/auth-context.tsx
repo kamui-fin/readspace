@@ -1,4 +1,3 @@
-
 import { configureApiClient } from '@lib/api-client';
 import { supabase } from '@lib/supabase/client';
 import type { Session, User } from '@supabase/supabase-js';
@@ -32,10 +31,10 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   isAuthenticated: false,
   isLoading: true,
-  signOut: async () => { },
-  signIn: async () => { },
-  signUp: async () => { },
-  signInWithGoogle: async () => { },
+  signOut: async () => {},
+  signIn: async () => {},
+  signUp: async () => {},
+  signInWithGoogle: async () => {},
 });
 
 export function useSession() {
@@ -61,7 +60,12 @@ export function SessionProvider({ children }: SessionProviderProps) {
     console.log('[AuthContext] 🚀 Starting initialization...');
 
     supabase.auth.getSession().then(({ data: { session: currentSession }, error }) => {
-      console.log('[AuthContext] 📦 getSession resolved. hasSession:', !!currentSession, 'error:', error?.message);
+      console.log(
+        '[AuthContext] 📦 getSession resolved. hasSession:',
+        !!currentSession,
+        'error:',
+        error?.message
+      );
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       configureApiClient();
@@ -87,7 +91,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
   }, []);
 
   // Note: We deliberately removed the strict manual redirection effect here.
-  // The app's routing is controlled entirely by `app/index.tsx` on initialization, 
+  // The app's routing is controlled entirely by `app/index.tsx` on initialization,
   // and by Expo Router's automatic segmented hierarchy rendering during the session.
 
   const signIn = async (credentials: SignInCredentials) => {
