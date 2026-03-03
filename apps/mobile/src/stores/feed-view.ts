@@ -6,7 +6,7 @@ interface FeedViewState {
   viewType: ViewType;
   selectedId: string | null;
   selectedName: string | null;
-  activeTab: number; // 0=Today, 1=Saved, 2=All, 3=Recent, -1=none when feed/folder selected
+  activeTab: number; // 0=All, 1=Today, 2=Saved, 3=Recent, -1=none when feed/folder selected
   isPreviewMode: boolean; // True when viewing an unsubscribed feed
   previewSourceRoute: string | null; // Route to return to when exiting preview mode
 }

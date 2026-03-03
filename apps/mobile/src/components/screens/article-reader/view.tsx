@@ -1,18 +1,11 @@
+import { ArticleOptionsBottomSheet, type ArticleViewMode } from '@components/bottom-sheets/article-options';
 import { ArticleSummaryBottomSheet } from '@components/bottom-sheets/article-summary';
 import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
 import { ArticleReader } from '@components/screens/article-reader/index';
 import { ArticleActionBar } from '@components/screens/article-reader/ui/article-actions.bar';
 import { ArticleReaderSkeleton } from '@components/screens/article-reader/ui/article-reader.skeleton';
+import { LanguagePicker } from '@components/screens/discover/ui/language-picker.dropdown';
 import { Button } from '@components/ui/button';
-import {
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuItemIcon,
-  DropdownMenuItemTitle,
-  DropdownMenuRoot,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@components/ui/dropdown-menu';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
@@ -22,15 +15,19 @@ import {
   useArticle,
   useExtractFullTextMutation,
   useSummarizeArticleMutation,
+  useTranslateArticleMutation,
   useUpdateArticle,
 } from '@readspace/shared';
+import { SUPPORTED_LANGUAGES } from '@lib/constants/languages';
+import { useTranslationHistory } from '@stores/translation-history';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Share, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
+import type { LanguageOption } from '@components/screens/discover/ui/language-picker.dropdown';
 
 interface ArticleScreenProps {
   articleId: string;
@@ -48,6 +45,8 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
 
   // Bottom sheet refs
   const summaryBottomSheetRef = useRef<BottomSheetModal>(null);
+  const languagePickerRef = useRef<BottomSheetModal>(null);
+  const optionsBottomSheetRef = useRef<BottomSheetModal>(null);
 
   // Fetch article data
   const { data: article, isLoading: isArticleLoading } = useArticle(articleId || '', {
@@ -58,9 +57,14 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   const isClipped = article?.article_type === 'clipped';
 
   // Content source state - prefer extracted content when available
-  const [contentSource, setContentSource] = useState<'original' | 'extracted'>(
+  const [contentSource, setContentSource] = useState<ArticleViewMode>(
     article?.extracted_content ? 'extracted' : 'original'
   );
+
+  const [targetLanguage, setTargetLanguage] = useState<string | null>(null);
+
+  const recentLanguages = useTranslationHistory((state) => state.recentLanguages);
+  const addRecentLanguage = useTranslationHistory((state) => state.addRecentLanguage);
 
   const updateArticle = useUpdateArticle();
 
@@ -80,6 +84,14 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
       ? article?.extracted_content || extractedData?.content
       : article?.content;
 
+  const translateMutation = useTranslateArticleMutation();
+  const translateData = translateMutation.data;
+
+  const activeContent =
+    contentSource === 'translated' && translateData?.translated_content
+      ? translateData.translated_content
+      : currentContent;
+
   // AI Summary hooks
   const summarizeMutation = useSummarizeArticleMutation();
   const summaryData = summarizeMutation.data;
@@ -88,13 +100,24 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     return summarizeMutation.mutateAsync({
       articleId: articleId || '',
       content: currentContent || undefined,
+      languageKey: contentSource,
     });
-  }, [articleId, currentContent, summarizeMutation]);
+  }, [articleId, currentContent, contentSource, summarizeMutation]);
 
   // Sync contentSource with article.extracted_content
   useLayoutEffect(() => {
     setContentSource(article?.extracted_content ? 'extracted' : 'original');
   }, [article?.extracted_content]);
+
+  const sortedLanguages = useMemo(() => {
+    // Put recent languages at the top, followed by the rest
+    const recent = recentLanguages
+      .map((code) => SUPPORTED_LANGUAGES.find((l) => l.value === code))
+      .filter(Boolean) as LanguageOption[];
+
+    const others = SUPPORTED_LANGUAGES.filter((l) => !recentLanguages.includes(l.value));
+    return [...recent, ...others];
+  }, [recentLanguages]);
 
   // Auto-extract content if not already extracted and article has loaded
   useEffect(() => {
@@ -240,8 +263,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   }, [article]);
 
   const handleMenuPress = useCallback(() => {
-    // The dropdown menu will handle opening/closing
-    // This is just a placeholder for the action bar
+    optionsBottomSheetRef.current?.present();
   }, []);
 
   const handleGenerateSummary = useCallback(() => {
@@ -280,6 +302,51 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
       });
   }, [article, generateSummary]);
 
+  const handleTranslateSelect = useCallback(
+    (language: string) => {
+      if (!article) return;
+
+      addRecentLanguage(language);
+      setTargetLanguage(language);
+      toast.info('Translating article...');
+
+      translateMutation
+        .mutateAsync({
+          articleId: articleId || '',
+          targetLanguage: language,
+          content: currentContent || undefined,
+          articleType: article?.article_type,
+        })
+        .then(() => {
+          setContentSource('translated');
+          toast.success('Translation complete!');
+        })
+        .catch((error) => {
+          console.error('Failed to translate:', error);
+          toast.error('Failed to translate article');
+        });
+    },
+    [article, articleId, currentContent, addRecentLanguage, translateMutation]
+  );
+
+  const handleSelectView = useCallback((view: ArticleViewMode) => {
+    if (view === 'extracted' && !(article?.extracted_content || extractedData?.content)) {
+      toast.info('Extracting full text...');
+      extractFullText()
+        .then(() => {
+          setContentSource('extracted');
+          toast.success('Full text extracted!');
+        })
+        .catch(() => {
+          toast.error('Failed to extract text');
+        });
+    } else {
+      setContentSource(view);
+      if (view === 'original') toast.success('Showing original content');
+      if (view === 'extracted') toast.success('Showing extracted content');
+    }
+  }, [article, extractedData, extractFullText]);
+
   if (isArticleLoading) {
     return (
       <View className="flex-1 bg-background dark:bg-background-dark">
@@ -287,7 +354,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
           onClose={handleClose}
           onShare={handleShare}
           onBookmark={handleBookmark}
-          onMenuPress={() => {}}
+          onMenuPress={() => { }}
           isBookmarked={false}
           isClipped={false}
         />
@@ -303,7 +370,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
           onClose={handleClose}
           onShare={handleShare}
           onBookmark={handleBookmark}
-          onMenuPress={() => {}}
+          onMenuPress={() => { }}
           isBookmarked={false}
           isClipped={false}
         />
@@ -330,94 +397,12 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         onMenuPress={handleMenuPress}
         isBookmarked={article.is_saved || false}
         isClipped={isClipped}
-        menuTrigger={
-          <DropdownMenuRoot>
-            <DropdownMenuTrigger asChild>
-              <Button variant="icon" size="small" fullWidth={false} className="h-11 w-11">
-                <View style={{ transform: [{ rotate: '90deg' }] }}>
-                  <MenuDotsBoldIcon width={18} height={18} strokeWidth={2.4} color={colors.grey} />
-                </View>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem key="copy-link" onSelect={handleCopyLink}>
-                <DropdownMenuItemIcon ios={{ name: 'link' }} androidIconName="link" />
-                <DropdownMenuItemTitle>Copy Link</DropdownMenuItemTitle>
-              </DropdownMenuItem>
-              <DropdownMenuItem key="open-browser" onSelect={handleOpenInBrowser}>
-                <DropdownMenuItemIcon ios={{ name: 'safari' }} androidIconName="open_in_browser" />
-                <DropdownMenuItemTitle>Open in Browser</DropdownMenuItemTitle>
-              </DropdownMenuItem>
-              {isClipped && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem key="mark-done" onSelect={handleMarkAsDone}>
-                    <DropdownMenuItemIcon
-                      ios={{ name: 'checkmark.circle.fill' }}
-                      androidIconName="check_circle"
-                    />
-                    <DropdownMenuItemTitle>Mark as Done</DropdownMenuItemTitle>
-                  </DropdownMenuItem>
-                </>
-              )}
-              {isSubscribed && !isClipped && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    key="extract"
-                    onSelect={() => {
-                      if (contentSource === 'extracted') {
-                        setContentSource('original');
-                        toast.success('Showing original content');
-                      } else if (article?.extracted_content || extractedData?.content) {
-                        setContentSource('extracted');
-                        toast.success('Showing extracted content');
-                      } else {
-                        toast.info('Extracting full text...');
-                        extractFullText()
-                          .then(() => {
-                            setContentSource('extracted');
-                            toast.success('Full text extracted!');
-                          })
-                          .catch(() => {
-                            toast.error('Failed to extract text');
-                          });
-                      }
-                    }}>
-                    <DropdownMenuItemIcon ios={{ name: 'doc.text' }} androidIconName="article" />
-                    <DropdownMenuItemTitle>
-                      {contentSource === 'extracted' ? 'Show Original' : 'Extract Full Text'}
-                    </DropdownMenuItemTitle>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem key="summarize" onSelect={handleGenerateSummary}>
-                    <DropdownMenuItemIcon
-                      ios={{ name: 'note.text' }}
-                      androidIconName="description"
-                    />
-                    <DropdownMenuItemTitle>Generate Summary</DropdownMenuItemTitle>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    key="translate"
-                    onSelect={() => {
-                      toast.info('Translate feature coming soon');
-                    }}>
-                    <DropdownMenuItemIcon ios={{ name: 'globe' }} androidIconName="translate" />
-                    <DropdownMenuItemTitle>Translate</DropdownMenuItemTitle>
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenuRoot>
-        }
       />
       <ArticleReader
         article={{
           ...article,
-          // Override content with extracted content when available and selected
-          content:
-            contentSource === 'extracted' && (article.extracted_content || extractedData?.content)
-              ? article.extracted_content || extractedData?.content || article.content
-              : article.content,
+          // Override content with active content
+          content: activeContent || article.content,
         }}
         scrollY={scrollY}
         lastScrollY={lastScrollY}
@@ -431,6 +416,30 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         error={summarizeMutation.error ? String(summarizeMutation.error) : null}
         isLoading={isSummaryLoading}
         onRegenerate={handleRegenerateSummary}
+      />
+
+      {/* Language Picker Bottom Sheet */}
+      <LanguagePicker
+        ref={languagePickerRef}
+        languages={sortedLanguages}
+        title="Translate to..."
+        initialLanguage={targetLanguage || undefined}
+        onLanguageChange={handleTranslateSelect}
+      />
+
+      {/* Options Bottom Sheet */}
+      <ArticleOptionsBottomSheet
+        ref={optionsBottomSheetRef}
+        currentView={contentSource}
+        onSelectView={handleSelectView}
+        onTranslate={() => languagePickerRef.current?.present()}
+        onGenerateSummary={handleGenerateSummary}
+        onCopyLink={handleCopyLink}
+        onOpenInBrowser={handleOpenInBrowser}
+        hasExtractedContent={!!article?.extracted_content || !!extractedData?.content}
+        hasTranslatedContent={!!translateData?.translated_content}
+        canExtractContent={isSubscribed || false}
+        isClipped={isClipped}
       />
     </View>
   );

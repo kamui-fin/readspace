@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { ApiClient } from "../client";
 import { RSS_QUERY_KEYS, mutationKeys, queryKeys } from "../query-keys";
-import type { Folder } from "../types";
+import type { Folder, FeedsResponse } from "../types";
 
 export function useCreateFolder(
   options?: UseMutationOptions<Folder, unknown, { name: string }>,
@@ -61,11 +61,38 @@ export function useDeleteFolder(
       const response = await ApiClient.deleteFolder(folderId);
       return response;
     },
+    onSuccess: (_, folderId) => {
+      console.log('useDeleteFolder onSuccess TRIGGERED for:', folderId);
+      queryClient.setQueriesData<FeedsResponse>(
+        { queryKey: [RSS_QUERY_KEYS.FEEDS] },
+        (old) => {
+          console.log('Updating feeds data, old is:', !!old);
+          if (!old) return old;
+          return {
+            ...old,
+            folders: old.folders.filter((f) => f.id !== folderId),
+            subscriptions: old.subscriptions.filter(
+              (s) => s.folder?.id !== folderId,
+            ),
+          };
+        },
+      );
+      queryClient.setQueriesData<Folder[]>(
+        { queryKey: queryKeys.folders() },
+        (old) => {
+          console.log('Updating folders data, old is:', !!old);
+          if (!old) return old;
+          return old.filter((f) => f.id !== folderId);
+        },
+      );
+    },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.folders() });
-      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
-      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.folders() });
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
+      }, 300);
     },
     ...options,
   });

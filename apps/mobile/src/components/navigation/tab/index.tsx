@@ -18,7 +18,7 @@ const tabVariants = cva('flex-row items-center justify-center px-4 py-2.5 rounde
   },
 });
 
-const tabTextVariants = cva('font-geist-medium text-base', {
+const tabTextVariants = cva('font-geist-medium text-sm', {
   variants: {
     active: {
       true: 'text-secondary',

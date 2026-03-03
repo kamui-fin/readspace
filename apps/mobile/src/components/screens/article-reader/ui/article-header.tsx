@@ -89,7 +89,7 @@ export function ArticleHeader({
         {article.tags && article.tags.length > 0 && (
           <View className="flex-row flex-wrap gap-2">
             {article.tags.slice(0, 5).map((tag) => (
-              <Chip key={tag} label={tag.toLowerCase()} variant="filled" size="small" />
+              <Chip key={tag} label={tag.toLowerCase()} variant="filled" size="small" textClassName="font-geist-mono font-medium text-grey" />
             ))}
           </View>
         )}

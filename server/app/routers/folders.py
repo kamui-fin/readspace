@@ -29,7 +29,9 @@ class FolderReadStatusResponse(BaseModel):
 
 
 # --- Helpers ---
-async def verify_folder_exists(db: AsyncSession, folder_id: UUID, user_id: UUID) -> None:
+async def verify_folder_exists(
+    db: AsyncSession, folder_id: UUID, user_id: UUID
+) -> None:
     """Verifies folder existence or raises NotFoundError."""
     folder = await crud_folder.get_by_id(db, folder_id, user_id)
     if not folder:
@@ -86,13 +88,17 @@ async def update_folder(
     logger.bind(user_id=current_user.sub, folder_id=str(folder_id))
 
     # Service should raise NotFoundError if folder doesn't exist
-    updated = await folder_service.update_folder(db, UUID(current_user.sub), folder_id, folder_in)
+    updated = await folder_service.update_folder(
+        db, UUID(current_user.sub), folder_id, folder_in
+    )
 
     logger.info("Folder updated successfully")
     return updated
 
 
-@router.delete("/{folder_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete folder")
+@router.delete(
+    "/{folder_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete folder"
+)
 async def delete_folder(
     folder_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -105,6 +111,9 @@ async def delete_folder(
 
     # Service handles logic and raises exceptions if needed
     await folder_service.delete_folder(db, UUID(current_user.sub), folder_id)
+
+    # Explicit commit before response to prevent UI refetch race condition
+    await db.commit()
 
     logger.info("Folder deleted successfully")
 

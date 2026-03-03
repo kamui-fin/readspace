@@ -108,7 +108,7 @@ async def fetch_feed_content(
                 if response.status == 304:
                     return {
                         "content": "",
-                        "headers": dict(response.headers),
+                        "headers": {str(k): str(v) for k, v in response.headers.items()},
                         "status_code": 304,
                         "not_modified": True,
                         "error": None,
@@ -166,7 +166,7 @@ async def fetch_feed_content(
 
                 result: FetchResult = {
                     "content": content,
-                    "headers": dict(response.headers),
+                    "headers": {str(k): str(v) for k, v in response.headers.items()},
                     "status_code": response.status,
                     "not_modified": False,
                     "error": None,

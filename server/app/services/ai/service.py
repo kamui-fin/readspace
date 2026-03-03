@@ -61,7 +61,7 @@ async def generate_summary(title: str, content: str, article_id: str, language_k
         client,
         prompt=user_prompt,
         system_instruction=SUMMARY_SYSTEM_PROMPT,
-        max_tokens=400,
+        max_tokens=4000,
         temperature=0.3,
     )
 
@@ -122,6 +122,13 @@ async def _call_gemini(
                 max_output_tokens=max_tokens,
             ),
         )
+        
+        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+            parts = response.candidates[0].content.parts
+            text_parts = [part.text for part in parts if hasattr(part, "text") and part.text]
+            if text_parts:
+                return "".join(text_parts).strip()
+                
         return response.text.strip() if response.text else None
     except Exception as e:
         logger.error("Gemini API error", error=str(e))

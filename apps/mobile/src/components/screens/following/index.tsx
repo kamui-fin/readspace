@@ -21,6 +21,7 @@ import {
   useFeeds,
   useUnreadCounts,
   useUpdateArticle,
+  useRefreshFeed,
 } from '@readspace/shared';
 import { useFeedViewStore } from '@stores/feed-view';
 import { getTabKey, getTabName, useFollowingStore } from '@stores/following';
@@ -107,7 +108,7 @@ export function FollowingScreen({
   const feedFolderParams = useMemo(() => {
     // If viewing a specific feed or feed preview
     if ((viewType === 'feed' || viewType === 'feedPreview') && selectedId) {
-      return { feedIds: [selectedId] };
+      return { feedId: selectedId };
     }
     // If viewing a folder
     if (viewType === 'folder' && selectedId) {
@@ -129,6 +130,7 @@ export function FollowingScreen({
   // Article mutations
   const updateArticle = useUpdateArticle();
   const createFeed = useCreateFeed();
+  const refreshFeed = useRefreshFeed();
 
   // Get unread counts and feeds data - kept for potential future use
   useUnreadCounts();
@@ -216,11 +218,22 @@ export function FollowingScreen({
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
+      // Perform a deep refresh for individual feed views
+      if (viewType === 'feed' && selectedId) {
+        toast.info('Checking for new articles...');
+        try {
+          await refreshFeed.mutateAsync({ feedId: selectedId, forceRefetch: true });
+          toast.success('Check complete! Articles updated.');
+        } catch (error) {
+          console.error('Deep refresh failed:', error);
+          toast.error('Failed to check for new articles. Please try again.');
+        }
+      }
       await activeQuery.refetch();
     } finally {
       setRefreshing(false);
     }
-  }, [activeQuery]);
+  }, [activeQuery, viewType, selectedId, refreshFeed]);
 
   // Sync loading state and article count to store
   useEffect(() => {
@@ -241,6 +254,50 @@ export function FollowingScreen({
     prevIsLoadingRef.current = isLoading;
     prevArticleCountRef.current = allArticles.length;
   }, [isLoading, allArticles.length, isFetchingNextPage, isLoadingMore, setIsLoadingMore]);
+
+  // Track the first article to detect when new articles are added at the top (e.g., after refresh)
+  const previousFirstArticleRef = useRef<{ id: string; published_at?: string | Date | null } | null>(null);
+
+  useEffect(() => {
+    // Only check if we are not actively loading a next page from pagination,
+    // and we aren't already resetting the scroll via useScrollReset
+    if (!isFetchingNextPage && !isLoadingMore && !isResettingRef.current && allArticles.length > 0) {
+      const currentFirst = allArticles[0];
+      const prevFirst = previousFirstArticleRef.current;
+
+      if (
+        prevFirst &&
+        prevFirst.id !== currentFirst.id &&
+        currentFirst.published_at &&
+        prevFirst.published_at
+      ) {
+        const currentTime = new Date(currentFirst.published_at).getTime();
+        const prevTime = new Date(prevFirst.published_at).getTime();
+
+        // If the new first article is newer than the previous first article
+        if (currentTime > prevTime) {
+          // New articles arrived (likely from a refresh), scroll to the top
+          listRef.current?.scrollToOffset({ offset: 0, animated: true });
+          scrollY.value = 0;
+        }
+      }
+
+      previousFirstArticleRef.current = {
+        id: currentFirst.id,
+        published_at: currentFirst.published_at
+      };
+    } else if (allArticles.length === 0) {
+      previousFirstArticleRef.current = null;
+    } else if (allArticles.length > 0) {
+      // Also update the ref if we are just resetting, so we don't inappropriately
+      // trigger a scroll to top when useScrollReset finishes
+      const currentFirst = allArticles[0];
+      previousFirstArticleRef.current = {
+        id: currentFirst.id,
+        published_at: currentFirst.published_at
+      };
+    }
+  }, [allArticles, isFetchingNextPage, isLoadingMore, scrollY]);
 
   const handleEndReached = () => {
     // Prevent multiple simultaneous fetches

@@ -241,11 +241,27 @@ export function useDeleteFeed(
     mutationFn: async ({ feedId }: { feedId: string; silent?: boolean }) => {
       await ApiClient.deleteFeed(feedId);
     },
+    onSuccess: (_, { feedId }) => {
+      queryClient.setQueriesData<FeedsResponse>(
+        { queryKey: [RSS_QUERY_KEYS.FEEDS] },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            subscriptions: old.subscriptions.filter(
+              (s) => s.feed.id !== feedId,
+            ),
+          };
+        },
+      );
+    },
     onSettled: (_data, _error, { feedId }) => {
-      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
-      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.feed(feedId) });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.feed(feedId) });
+      }, 300);
     },
     ...options,
   });
@@ -324,12 +340,28 @@ export function useBulkDeleteFeeds(
     mutationKey: mutationKeys.bulkDeleteFeeds(),
     mutationFn: ({ feedIds }: { feedIds: string[] }) =>
       ApiClient.bulkDeleteFeeds(feedIds),
+    onSuccess: (_, { feedIds }) => {
+      queryClient.setQueriesData<FeedsResponse>(
+        { queryKey: [RSS_QUERY_KEYS.FEEDS] },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            subscriptions: old.subscriptions.filter(
+              (s) => !feedIds.includes(s.feed.id),
+            ),
+          };
+        },
+      );
+    },
     onSettled: () => {
-      return Promise.all([
-        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() }),
-        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] }),
-      ]);
+      setTimeout(() => {
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() }),
+          queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] }),
+        ]);
+      }, 300);
     },
     ...options,
   });

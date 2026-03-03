@@ -47,13 +47,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="recents"
-        options={{
-          title: 'Recents',
-          tabBarIcon: undefined,
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',

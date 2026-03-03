@@ -5,7 +5,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 export type ArticleFilter = 'all' | 'unread' | 'read' | 'read_later';
 
 interface FollowingState {
-  // Active tab index (0: Today, 1: Saved, 2: All, 3: Recent)
+  // Active tab index (0: All, 1: Today, 2: Saved, 3: Recent)
   activeTab: number;
   // Previous tab index (for back button navigation)
   previousTab: number | null;
@@ -43,9 +43,9 @@ const initialState: FollowingState = {
   previousTab: null,
   filter: 'all',
   loadingStates: {
+    all: false,
     today: false,
     saved: false,
-    all: false,
   },
   articleCounts: {
     today: 0,
@@ -118,11 +118,11 @@ export const getActiveTab = () => useFollowingStore.getState().activeTab;
 export const getTabName = (tab: number): string => {
   switch (tab) {
     case 0:
-      return "today's articles";
-    case 1:
-      return 'saved articles';
-    case 2:
       return 'articles';
+    case 1:
+      return "today's articles";
+    case 2:
+      return 'saved articles';
     default:
       return 'articles';
   }
@@ -132,11 +132,11 @@ export const getTabName = (tab: number): string => {
 export const getTabKey = (tab: number): 'today' | 'saved' | 'all' => {
   switch (tab) {
     case 0:
-      return 'today';
-    case 1:
-      return 'saved';
-    case 2:
       return 'all';
+    case 1:
+      return 'today';
+    case 2:
+      return 'saved';
     default:
       return 'all';
   }

@@ -15,9 +15,9 @@ import {
 } from '@/components/navigation/header/constants/header-variants';
 
 export const buttonConfigs = [
+  { label: 'All', icon: InboxBoldIcon },
   { label: 'Today', icon: CalendarBoldIcon },
   { label: 'Saved', icon: BookmarkBoldIcon },
-  { label: 'All', icon: InboxBoldIcon },
 ];
 
 interface HeaderTabsProps {

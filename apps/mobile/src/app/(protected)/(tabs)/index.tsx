@@ -1,4 +1,7 @@
 import { FeedSwitcherBottomSheet } from '@components/bottom-sheets/feed-switcher';
+import RssIcon from '@components/icons/local/rss';
+import FolderBoldDuotoneIcon from '@components/icons/solar/folder-bold-duotone';
+import HashtagBoldDuotoneIcon from '@components/icons/solar/hashtag-bold-duotone';
 import { Header } from '@components/navigation/header';
 import { FollowingScreen } from '@components/screens/following';
 import { FilterActionButton } from '@components/screens/following/ui/filter-action.button';
@@ -6,13 +9,18 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useFeedViewStore } from '@stores/feed-view';
 import { useFollowingStore } from '@stores/following';
 import { useFocusEffect } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Platform, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { COLORS } from '@/lib/constants/colors';
+
 export default function FollowingRoute() {
   const scrollY = useSharedValue(0);
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const activeTab = useFollowingStore((state) => state.activeTab);
   const previousTab = useFollowingStore((state) => state.previousTab);
   const setActiveTab = useFollowingStore((state) => state.setActiveTab);
@@ -37,9 +45,26 @@ export default function FollowingRoute() {
     return 'Following';
   }, [viewType, selectedName]);
 
+  const headerTitleIcon = useMemo(() => {
+    if (viewType === 'folder') {
+      return <FolderBoldDuotoneIcon width={24} height={24} color={COLORS[isDark ? 'dark' : 'light'].primary_foreground} />;
+    }
+    if (viewType === 'feed' || viewType === 'feedPreview') {
+      return <RssIcon width={24} height={24} color={COLORS[isDark ? 'dark' : 'light'].orange} />;
+    }
+    return undefined;
+  }, [viewType, isDark]);
+
   const handleTitlePress = useCallback(() => {
     feedSwitcherRef.current?.present();
   }, []);
+
+  const handleTabChange = useCallback((index: number) => {
+    if (isViewingFeedOrFolder) {
+      clearView();
+    }
+    setActiveTab(index);
+  }, [isViewingFeedOrFolder, clearView, setActiveTab]);
 
   // Calculate safe minimum header height (safe area + title + tabs + padding)
   // This ensures content never appears under header, even if headerHeight is 0
@@ -99,16 +124,16 @@ export default function FollowingRoute() {
           return true; // Prevent default back behavior
         }
 
-        // If not on default tab (tab 2 = "All"), switch to previous tab or default tab
-        if (activeTab !== 2) {
-          const targetTab = previousTab !== null ? previousTab : 2; // Default to "All" tab
+        // If not on default tab (tab 0 = "All"), switch to previous tab or default tab
+        if (activeTab !== 0) {
+          const targetTab = previousTab !== null ? previousTab : 0; // Default to "All" tab
           setActiveTab(targetTab);
           return true; // Prevent default back behavior
         }
 
-        // On default tab (tab 2) with no feed/folder view
+        // On default tab (tab 0) with no feed/folder view
         // If there's a previous tab, switch to it; otherwise prevent exit
-        if (previousTab !== null && previousTab !== 2) {
+        if (previousTab !== null && previousTab !== 0) {
           setActiveTab(previousTab);
           return true; // Prevent default back behavior
         }
@@ -125,26 +150,17 @@ export default function FollowingRoute() {
 
   return (
     <View className="flex-1 bg-background dark:bg-background-dark">
-      {isViewingFeedOrFolder ? (
-        <Header
-          variant="sticky"
-          title={headerTitle}
-          scrollY={scrollY}
-          onHeaderHeightChange={handleHeaderHeightChange}
-          onTitlePress={handleTitlePress}
-        />
-      ) : (
-        <Header
-          variant="tabbed"
-          title={headerTitle}
-          scrollY={scrollY}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          onHeaderHeightChange={handleHeaderHeightChange}
-          actionButton={filterActionButton}
-          onTitlePress={handleTitlePress}
-        />
-      )}
+      <Header
+        variant="tabbed"
+        title={headerTitle}
+        titleIcon={headerTitleIcon}
+        scrollY={scrollY}
+        activeTab={isViewingFeedOrFolder ? -1 : activeTab}
+        onTabChange={handleTabChange}
+        onHeaderHeightChange={handleHeaderHeightChange}
+        actionButton={filterActionButton}
+        onTitlePress={handleTitlePress}
+      />
       <FollowingScreen
         activeTab={activeTab}
         scrollY={scrollY}

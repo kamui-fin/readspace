@@ -69,6 +69,7 @@
     "react-native-ios-context-menu": "^3.2.0",
     "react-native-ios-utilities": "^5.2.0",
     "react-native-keyboard-controller": "1.18.5",
+    "react-native-markdown-display": "^7.0.2",
     "react-native-page-indicator": "^2.4.3",
     "react-native-reanimated": "~4.1.1",
     "react-native-render-html": "^6.3.4",

@@ -14,6 +14,7 @@ import {
 
 interface HeaderForegroundProps {
   title: string;
+  titleIcon?: React.ReactNode;
   subtitle?: string;
   showBackButton?: boolean;
   onBackPress?: () => void;
@@ -36,6 +37,7 @@ interface HeaderForegroundProps {
 
 export function HeaderForeground({
   title,
+  titleIcon,
   subtitle,
   showBackButton = false,
   onBackPress,
@@ -61,12 +63,15 @@ export function HeaderForeground({
         )}
 
         <View className="flex-1 items-center px-16">
-          <Text
-            className={clsx(titleVariants({ fontWeight: titleFontWeight, size: titleSize }))}
-            numberOfLines={1}
-            ellipsizeMode="tail">
-            {title}
-          </Text>
+          <View className="flex-row items-center gap-1.5">
+            {titleIcon}
+            <Text
+              className={clsx(titleVariants({ fontWeight: titleFontWeight, size: titleSize }))}
+              numberOfLines={1}
+              ellipsizeMode="tail">
+              {title}
+            </Text>
+          </View>
         </View>
       </View>
     );
@@ -90,6 +95,7 @@ export function HeaderForeground({
           <TouchableOpacity
             onPress={onTitlePress}
             className="flex-row items-center gap-0.5 active:opacity-70">
+            {titleIcon && <View className="mr-1.5">{titleIcon}</View>}
             <Text
               className={clsx(
                 titleVariants({
@@ -108,12 +114,15 @@ export function HeaderForeground({
             </View>
           </TouchableOpacity>
         ) : (
-          <Text
-            className={clsx(titleVariants({ fontWeight: titleFontWeight, size: titleSize }))}
-            numberOfLines={1}
-            ellipsizeMode="tail">
-            {title}
-          </Text>
+          <View className="flex-row items-center gap-1.5">
+            {titleIcon}
+            <Text
+              className={clsx(titleVariants({ fontWeight: titleFontWeight, size: titleSize }))}
+              numberOfLines={1}
+              ellipsizeMode="tail">
+              {title}
+            </Text>
+          </View>
         )}
         {subtitle && (
           <Text className={clsx(subtitleVariants())} numberOfLines={1} ellipsizeMode="tail">

@@ -1,3 +1,4 @@
+import { Button } from '@components/ui/button';
 import { Radio } from '@components/ui/radio';
 import { Text } from '@components/ui/text';
 import {
@@ -5,11 +6,13 @@ import {
   type BottomSheetBackdropProps,
   BottomSheetModal,
   BottomSheetScrollView,
+  BottomSheetFooter,
 } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { forwardRef, useCallback, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type Language = 'english' | 'chinese' | 'japanese';
 
@@ -39,22 +42,35 @@ export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(
   ) => {
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
-    // Use the first language's value as default if initialLanguage is not provided
-    const [selectedLanguage, setSelectedLanguage] = useState<string>(
-      initialLanguage || languages[0]?.value || 'english'
+    const insets = useSafeAreaInsets();
+
+    // Internal state for selection before confirming
+    const [selectedLanguage, setSelectedLanguage] = useState<string | null>(
+      initialLanguage || null
     );
+
+    // Reset selection when bottom sheet is opened with a new string
+    useEffect(() => {
+      if (initialLanguage) {
+        setSelectedLanguage(initialLanguage);
+      }
+    }, [initialLanguage]);
 
     const handleLanguageSelect = useCallback(
       (language: string) => {
         setSelectedLanguage(language);
-        onLanguageChange?.(language);
-        // Close the bottom sheet
+      },
+      []
+    );
+
+    const handleConfirm = useCallback(() => {
+      if (selectedLanguage) {
+        onLanguageChange?.(selectedLanguage);
         if (ref && typeof ref !== 'function' && ref.current) {
           ref.current.dismiss();
         }
-      },
-      [onLanguageChange, ref]
-    );
+      }
+    }, [selectedLanguage, onLanguageChange, ref]);
 
     const renderBackdrop = useCallback(
       (props: BottomSheetBackdropProps) => (
@@ -63,11 +79,33 @@ export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(
       []
     );
 
+    const renderFooter = useCallback(
+      (props: any) => (
+        <BottomSheetFooter {...props} bottomInset={16}>
+          <View
+            className="border-t border-divider bg-background px-6 pt-4 dark:border-divider-dark dark:bg-background-dark"
+            style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+          >
+            <Button
+              variant="primary"
+              size="large"
+              onPress={handleConfirm}
+              disabled={!selectedLanguage}
+            >
+              Confirm
+            </Button>
+          </View>
+        </BottomSheetFooter>
+      ),
+      [insets.bottom, handleConfirm, selectedLanguage]
+    );
+
     return (
       <BottomSheetModal
         ref={ref}
         snapPoints={['50%']}
         enablePanDownToClose
+        footerComponent={renderFooter}
         backdropComponent={renderBackdrop}
         backgroundStyle={{ backgroundColor: colors.white }}
         handleIndicatorStyle={{ backgroundColor: colors.muted_green }}>

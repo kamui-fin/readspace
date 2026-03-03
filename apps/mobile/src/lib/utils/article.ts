@@ -32,18 +32,18 @@ export function processArticles(
   let result = Array.from(uniqueArticles.values());
 
   // When viewing a feed/folder, apply tab-specific filters client-side
-  if (isViewingFeedOrFolder && activeTab !== 2) {
+  if (isViewingFeedOrFolder && activeTab !== 0) {
     const now = new Date();
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    if (activeTab === 0) {
+    if (activeTab === 1) {
       // Today: articles published in last 24 hours
       result = result.filter((article) => {
         if (!article.published_at) return false;
         const publishedDate = new Date(article.published_at);
         return publishedDate >= twentyFourHoursAgo && publishedDate <= now;
       });
-    } else if (activeTab === 1) {
+    } else if (activeTab === 2) {
       // Saved: articles marked as read_later
       result = result.filter((article) => article.is_saved);
     } else if (activeTab === 3) {

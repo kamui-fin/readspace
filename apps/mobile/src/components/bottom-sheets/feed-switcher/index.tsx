@@ -37,6 +37,7 @@ import { useFeedViewStore } from '@stores/feed-view';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, Text, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 const PINNED_YELLOW = '#EAB308';
 
@@ -82,6 +83,8 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
       () => unreadCountsData?.feed_counts || {},
       [unreadCountsData?.feed_counts]
     );
+
+    const router = useRouter();
 
     const updateFeed = useUpdateFeed();
     const deleteFeed = useDeleteFeed();
@@ -175,9 +178,10 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
         if (sub) {
           selectFeed(feedId, sub.custom_title || sub.feed.title);
           bottomSheetRef.current?.dismiss();
+          router.navigate('/(protected)/(tabs)');
         }
       },
-      [feeds, selectFeed, isSelectionMode]
+      [feeds, selectFeed, isSelectionMode, router]
     );
 
     const handleFolderPress = useCallback(
@@ -223,9 +227,10 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
         if (folder) {
           selectFolder(folderId, folder.name);
           bottomSheetRef.current?.dismiss();
+          router.navigate('/(protected)/(tabs)');
         }
       },
-      [folders, selectFolder, listData, isSelectionMode, selectedFolderIds, selectedFeedIds]
+      [folders, selectFolder, listData, isSelectionMode, selectedFolderIds, selectedFeedIds, router]
     );
 
     const handleToggleFavorite = useCallback(

@@ -21,6 +21,7 @@ import type { HeaderProps } from '@/components/navigation/header/types';
 export const Header: React.FC<HeaderProps> = (props) => {
   const {
     title,
+    titleIcon,
     subtitle,
     showBackButton = false,
     onBackPress,
@@ -148,10 +149,28 @@ export const Header: React.FC<HeaderProps> = (props) => {
       Extrapolation.CLAMP
     );
 
+    const isSticky = scrollY.value > 50; // Threshold to consider sticky
+    const animatedPaddingTop = withTiming(isSticky ? insets.top : insets.top + 10, {
+      duration: 250,
+      easing: Easing.out(Easing.quad),
+    });
+
+    const shadowOpacity = withTiming(isSticky ? (isDark ? 0.3 : 0.25) : 0, {
+      duration: 250,
+    });
+
     return {
       position: 'absolute' as const,
       zIndex: 10,
       transform: [{ translateY: translation }],
+      paddingTop: animatedPaddingTop,
+      borderBottomWidth: 0,
+      borderBottomColor: 'transparent',
+      shadowColor: isDark ? colors.muted_green : colors.secondary,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: shadowOpacity,
+      shadowRadius: 20,
+      elevation: isSticky ? 15 : 0,
     };
   });
 
@@ -367,6 +386,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
   const renderForeground = () => (
     <HeaderForeground
       title={title}
+      titleIcon={titleIcon}
       subtitle={subtitle}
       showBackButton={showBackButton}
       onBackPress={onBackPress}

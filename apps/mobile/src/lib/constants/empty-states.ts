@@ -15,15 +15,15 @@ export interface EmptyStateConfig {
 export const EMPTY_STATE_CONFIGS: Record<number, EmptyStateConfig> = {
   0: {
     icon: InboxBrokenIcon,
-    message: 'No articles for today yet. Check back later!',
+    message: 'No articles yet. Add some feeds to get started!',
   },
   1: {
-    icon: BookmarkBrokenIcon,
-    message: 'No saved articles. Swipe right on articles to bookmark them.',
+    icon: InboxBrokenIcon,
+    message: 'No articles for today yet. Check back later!',
   },
   2: {
-    icon: InboxBrokenIcon,
-    message: 'No articles yet. Add some feeds to get started!',
+    icon: BookmarkBrokenIcon,
+    message: 'No saved articles. Swipe right on articles to bookmark them.',
   },
   3: {
     icon: HistoryBrokenIcon,

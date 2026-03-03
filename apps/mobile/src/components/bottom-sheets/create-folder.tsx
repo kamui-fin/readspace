@@ -14,7 +14,7 @@ export interface CreateFolderModalRef {
 }
 
 export interface CreateFolderModalProps {
-  onSuccess?: () => void;
+  onSuccess?: (folder: any) => void;
 }
 
 export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderModalProps>(
@@ -30,9 +30,9 @@ export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderMo
           createFolder.mutate(
             { name: trimmed },
             {
-              onSuccess: () => {
+              onSuccess: (folder) => {
                 toast.success('Folder created successfully');
-                onSuccess?.();
+                onSuccess?.(folder);
               },
               onError: () => {
                 toast.error('Failed to create folder');

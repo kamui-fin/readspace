@@ -15,6 +15,7 @@ export interface HeaderAction {
 
 export interface BaseHeaderProps {
   title: string;
+  titleIcon?: ReactNode;
   subtitle?: string;
   showBackButton?: boolean;
   onBackPress?: () => void;
