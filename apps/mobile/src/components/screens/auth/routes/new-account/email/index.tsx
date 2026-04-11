@@ -23,7 +23,7 @@ function EmailFormContent({
   errors,
   touched,
   handleChange,
-  handleBlur,
+  setFieldTouched,
   onEmailChange,
   initialEmail,
   isSelfHosted,
@@ -56,7 +56,7 @@ function EmailFormContent({
             className="text-primary_foreground dark:text-primary_foreground mb-2">
             What's your email?
           </Text>
-          <Text size="lg" fontFamily="geist-medium" className="text-grey dark:text-grey">
+          <Text size="lg" fontFamily="geist-regular" className="text-grey dark:text-grey">
             We'll use this to create your account
           </Text>
         </View>
@@ -66,12 +66,12 @@ function EmailFormContent({
           placeholder="address@example.com"
           value={values.email}
           onChangeText={handleChange('email')}
-          onBlur={handleBlur('email')}
+          onBlur={() => setFieldTouched('email', true, true)}
           keyboardType="email-address"
           autoCapitalize="none"
           autoComplete="email"
           textContentType="emailAddress"
-          autoFocus
+          // autoFocus
           type="email"
           isInvalid={touched.email && !!errors.email}
           errorText={touched.email && errors.email ? errors.email : undefined}
@@ -81,22 +81,9 @@ function EmailFormContent({
         {/* Self-hosting option */}
         <View className="mt-4 flex-row items-center justify-between">
           {isSelfHosted ? (
-            <>
-              <View className="flex-1">
-                <Text
-                  size="md"
-                  fontFamily="geist-medium"
-                  className="text-primary-foreground dark:text-primary-foreground-dark">
-                  Using{' '}
-                  <Text size="md" fontFamily="mono" className="text-grey dark:text-grey">
-                    {settings.readspace_url}
-                  </Text>
-                </Text>
-              </View>
-              <Button variant="text" size="medium" fullWidth={false} onPress={handleSwitchToCloud}>
-                Switch to cloud
-              </Button>
-            </>
+            <Button variant="text" size="medium" fullWidth={false} onPress={handleSwitchToCloud}>
+              Switch to cloud
+            </Button>
           ) : (
             <Button variant="text" size="medium" fullWidth={false} onPress={handleSelfHosting}>
               Self-hosting?
@@ -129,13 +116,14 @@ export function EmailStep({
     <Formik
       initialValues={{ email: initialEmail || '' }}
       validationSchema={toFormikValidationSchema(EmailSchema)}
-      onSubmit={() => {}}
+      onSubmit={() => { }}
       validateOnMount={false}
       validateOnChange={false}
-      validateOnBlur={true}>
+      validateOnBlur={false}>
       {(formikProps) => (
         <EmailFormContent
           {...formikProps}
+          {...(formikProps as unknown as { setFieldTouched: any })}
           onEmailChange={onEmailChange}
           initialEmail={initialEmail}
           isSelfHosted={isSelfHosted}

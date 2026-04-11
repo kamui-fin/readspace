@@ -68,14 +68,14 @@ export const FeedListItem = ({
         <Text
           size="base"
           fontFamily="geist-semibold"
-          className="dark:text-black-dark mb-1 text-black tracking-tight"
+          className="mb-1 text-black tracking-tight"
           numberOfLines={1}>
           {stripHtml(title)}
         </Text>
         <Text
           size="sm"
           fontFamily="geist"
-          className="text-grey dark:text-grey-dark"
+          className="text-grey"
           numberOfLines={2}>
           {stripHtml(description)}
         </Text>

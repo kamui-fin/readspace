@@ -15,7 +15,7 @@ import { Animated, Keyboard, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmailStep } from '@/components/screens/auth/routes/new-account/email';
 import { PasswordStep } from '@/components/screens/auth/routes/new-account/password';
-import { VerificationStep } from '@/components/screens/auth/routes/new-account/verification';
+// import { VerificationStep } from '@/components/screens/auth/routes/new-account/verification';
 
 export function SignupScreen() {
   const stepperRef = useRef<StepperRef>(null);
@@ -74,8 +74,14 @@ export function SignupScreen() {
       selfHostSettingsRef={selfHostSettingsRef}
     />,
     <PasswordStep key="password" initialPassword={password} onPasswordChange={setPassword} />,
-    <VerificationStep key="verification" email={email} />,
+    // <VerificationStep key="verification" email={email} />,
   ];
+
+  const isValid = () => {
+    if (currentStep === 0) return EmailSchema.safeParse({ email }).success;
+    if (currentStep === 1) return PasswordSchema.safeParse({ password }).success;
+    return true;
+  };
 
   const validateCurrentStep = () => {
     try {
@@ -113,7 +119,7 @@ export function SignupScreen() {
       setIsLoading(true);
       try {
         await signUp({ email: email.trim(), password });
-        toast.success('Verification email sent! Check your inbox.');
+        // toast.success('Verification email sent! Check your inbox.');
         // Move to verification screen
         stepperRef.current?.goToNext();
       } catch (error) {
@@ -138,7 +144,6 @@ export function SignupScreen() {
   };
 
   const getButtonText = () => {
-    if (currentStep === pages.length - 1) return null; // No button on verification screen
     if (currentStep === 1) return 'Create Account';
     return 'Continue';
   };
@@ -146,11 +151,11 @@ export function SignupScreen() {
   const buttonText = getButtonText();
 
   return (
-    <View className="dark:bg-screen_background flex-1 bg-background">
+    <View className="flex-1 bg-screen">
       <Stepper ref={stepperRef} pages={pages} onStepChange={setCurrentStep} initialStep={0} />
 
       {/* Fixed Buttons at Bottom - Hide on verification screen - Adjusts for keyboard with smooth animation */}
-      {currentStep < pages.length - 1 && (
+      {currentStep < pages.length && (
         <Animated.View
           className="absolute left-0 right-0"
           style={{
@@ -170,6 +175,7 @@ export function SignupScreen() {
                 variant="primary"
                 size="large"
                 onPress={handleNext}
+                disabled={!isValid() || isLoading}
                 loading={isLoading}
                 style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
                 {buttonText}
@@ -177,16 +183,7 @@ export function SignupScreen() {
             )}
 
             {/* Back Button or Sign In Link - Hide sign in link when keyboard is visible */}
-            {currentStep > 0 ? (
-              <Button
-                variant="secondary"
-                size="large"
-                onPress={handleBack}
-                disabled={isLoading}
-                style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
-                Back
-              </Button>
-            ) : (
+            {currentStep === 0 && (
               keyboardHeight === 0 && (
                 <View className="flex-row items-center justify-center gap-1 py-3">
                   <Text size="base" fontFamily="geist" className="text-grey dark:text-grey">

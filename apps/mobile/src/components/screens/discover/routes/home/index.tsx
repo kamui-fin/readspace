@@ -1,20 +1,29 @@
 import {
+  AddFeedBottomSheet,
+  type AddFeedBottomSheetRef,
+} from '@components/bottom-sheets/add-feed';
+import {
   CreateFolderModal,
   type CreateFolderModalRef,
 } from '@components/bottom-sheets/create-folder';
+import {
+  FolderPickerBottomSheet,
+  type FolderPickerBottomSheetRef,
+} from '@components/bottom-sheets/folder-picker';
 import PlusIcon from '@components/icons/local/plus';
 import { LanguagePicker } from '@components/screens/discover/ui/language-picker.dropdown';
 import { RecentSearches } from '@components/screens/discover/ui/recent-searches';
 import { type Language, SearchBar } from '@components/screens/discover/ui/search-bar.input';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
+import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { createSearchClient, FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import type { FeedSummary } from '@readspace/shared';
-import { MOBILE_CATEGORY_NAMES } from '@readspace/shared';
+import { MOBILE_CATEGORY_NAMES, useCreateFeed } from '@readspace/shared';
 import { useSearchHistory } from '@stores/search-history';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
@@ -67,13 +76,18 @@ function DiscoverScreenInner() {
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('english');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
+  const addFeedModalRef = useRef<AddFeedBottomSheetRef>(null);
+  const folderPickerModalRef = useRef<FolderPickerBottomSheetRef>(null);
+  const [pendingAddFeedUrl, setPendingAddFeedUrl] = useState<string | null>(null);
+
   const searchBarRef = useRef<RNTextInput>(null);
   const categoryScrollRef = useRef<ScrollView>(null);
   const createFolderModalRef = useRef<CreateFolderModalRef>(null);
   const languagePickerRef = useRef<BottomSheetModal>(null);
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
-  const { searches: recentSearches, addSearch } = useSearchHistory();
+  const { searches: recentSearches, addSearch, clearHistory } = useSearchHistory();
+  const createFeed = useCreateFeed();
 
   // Compute bottom padding to account for tab bar
   // Tab bar height = BOTTOM_TABBAR_BASE_HEIGHT + 0.8 * safeAreaBottom (from BottomTabbar component)
@@ -151,6 +165,27 @@ function DiscoverScreenInner() {
     Keyboard.dismiss();
   }, [searchQuery, addSearch, refineQuery, selectedCategory, refineCategory]);
 
+  const handleAddFeedConfirm = useCallback((url: string) => {
+    setPendingAddFeedUrl(url);
+    folderPickerModalRef.current?.present();
+  }, []);
+
+  const handleFolderSelect = useCallback((folderId: string | null) => {
+    if (!pendingAddFeedUrl) return;
+    createFeed.mutate({
+      url: pendingAddFeedUrl,
+      folder_id: folderId || undefined,
+    }, {
+      onSuccess: () => {
+        toast.success("Feed subscribed successfully!");
+      },
+      onError: () => {
+        toast.error("Failed to subscribe to feed.");
+      }
+    });
+    setPendingAddFeedUrl(null);
+  }, [pendingAddFeedUrl, createFeed]);
+
   const handleSearchChange = useCallback(
     (text: string) => {
       setSearchQuery(text);
@@ -168,8 +203,11 @@ function DiscoverScreenInner() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsSearchFocused(true);
     setViewState('focused');
+    if (selectedCategory) {
+      refineCategory(selectedCategory);
+    }
     setSelectedCategory(null);
-  }, []);
+  }, [selectedCategory, refineCategory]);
 
   const handleSearchCancel = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -241,7 +279,7 @@ function DiscoverScreenInner() {
   const hasTypedQuery = searchQuery.trim().length > 0;
 
   return (
-    <View className="flex-1 bg-white dark:bg-white-dark" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
       <TouchableWithoutFeedback onPress={handleOutsidePress}>
         <View className="flex-1">
           {/* In non-default states (focused/search/category), search bar is at top */}
@@ -260,7 +298,7 @@ function DiscoverScreenInner() {
                   onCancel={handleSearchCancel}
                   onSubmit={handleSearchSubmit}
                   showCancelButton={showCancelButton}
-                  autoFocus={false}
+                  autoFocus={viewState === 'focused'}
                 />
               </Pressable>
             </View>
@@ -273,6 +311,7 @@ function DiscoverScreenInner() {
               <RecentSearches
                 recentSearches={recentSearches}
                 onRecentSearchPress={handleRecentSearchPress}
+                onClearHistory={clearHistory}
                 contentPaddingBottom={contentPaddingBottom}
                 colors={colors}
               />
@@ -291,21 +330,21 @@ function DiscoverScreenInner() {
                   <Text
                     size="3xl"
                     fontFamily="geist-bold"
-                    className="tracking-heading text-black dark:text-black-dark">
+                    className="tracking-heading text-black">
                     Discover
                   </Text>
                   <Button
                     variant="icon"
                     size="small"
-                    className="bg-grey6 dark:bg-grey6-dark"
+                    className="bg-grey6"
                     fullWidth={false}
-                    onPress={() => createFolderModalRef.current?.present()}>
+                    onPress={() => addFeedModalRef.current?.present()}>
                     <PlusIcon width={22} height={22} fill={colors.black} strokeWidth={2} />
                   </Button>
                 </View>
 
                 {/* Child 1 — search bar, becomes sticky once header is gone */}
-                <View className="bg-white dark:bg-white-dark px-6 pb-4">
+                <View className="bg-white px-6 pb-4">
                   <Pressable onPress={(e) => e.stopPropagation()}>
                     <SearchBar
                       ref={searchBarRef}
@@ -361,8 +400,10 @@ function DiscoverScreenInner() {
         </View>
       </TouchableWithoutFeedback>
 
-      {/* Create Folder Modal */}
+      {/* Modals & Bottom Sheets */}
       <CreateFolderModal ref={createFolderModalRef} />
+      <AddFeedBottomSheet ref={addFeedModalRef} onConfirm={handleAddFeedConfirm} />
+      <FolderPickerBottomSheet ref={folderPickerModalRef} onFolderSelect={handleFolderSelect} />
 
       {/* Language Picker Bottom Sheet */}
       <LanguagePicker

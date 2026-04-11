@@ -18,6 +18,7 @@ const textVariants = cva('', {
     },
     fontFamily: {
       geist: 'font-geist-regular',
+      'geist-regular': 'font-geist-regular',
       'geist-medium': 'font-geist-medium',
       'geist-semibold': 'font-geist-semibold',
       'geist-bold': 'font-geist-bold',
@@ -50,7 +51,7 @@ export type TextSize = 'xs' | 'sm' | 'base' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
 
 export interface TextProps
   extends Omit<RNTextProps, 'className'>,
-    Omit<VariantProps<typeof textVariants>, 'size'> {
+  Omit<VariantProps<typeof textVariants>, 'size'> {
   size?: TextSize;
   className?: string;
   variant?: 'heading' | 'body';

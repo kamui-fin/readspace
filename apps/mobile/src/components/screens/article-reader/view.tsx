@@ -349,7 +349,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
 
   if (isArticleLoading) {
     return (
-      <View className="flex-1 bg-background dark:bg-background-dark">
+      <View className="flex-1 bg-background">
         <ArticleActionBar
           onClose={handleClose}
           onShare={handleShare}
@@ -365,7 +365,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
 
   if (!article) {
     return (
-      <View className="flex-1 bg-background dark:bg-background-dark">
+      <View className="flex-1 bg-background">
         <ArticleActionBar
           onClose={handleClose}
           onShare={handleShare}
@@ -378,7 +378,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
           <Text
             size="base"
             fontFamily="geist"
-            className="text-center text-grey dark:text-grey-dark">
+            className="text-center text-grey">
             Article not found
           </Text>
         </View>
@@ -387,7 +387,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   }
 
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
+    <View className="flex-1 bg-background">
       <ArticleActionBar
         scrollY={scrollY}
         scrollDirection={scrollDirection}

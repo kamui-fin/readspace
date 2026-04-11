@@ -33,7 +33,7 @@ export const Divider: React.FC<DividerProps> = ({
   ...rest
 }) => (
   <View
-    className={`bg-divider dark:bg-divider-dark ${className || ''}`}
+    className={`bg-divider  ${className || ''}`}
     style={[
       orientation === 'horizontal'
         ? { width: width as DimensionValue, height: 1 }

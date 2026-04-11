@@ -39,8 +39,12 @@ api_router.include_router(users_router)
 # Note: Order matters! More specific routes must come before generic /{article_id} routes
 api_router.include_router(articles_views_router, prefix="/articles", tags=["Articles"])
 api_router.include_router(articles_counts_router, prefix="/articles", tags=["Articles"])
-api_router.include_router(articles_clipped_router, prefix="/articles", tags=["Articles"])
-api_router.include_router(articles_enhancements_router, prefix="/articles", tags=["Articles"])
+api_router.include_router(
+    articles_clipped_router, prefix="/articles", tags=["Articles"]
+)
+api_router.include_router(
+    articles_enhancements_router, prefix="/articles", tags=["Articles"]
+)
 api_router.include_router(articles_router, prefix="/articles", tags=["Articles"])
 
 # Include feed routers with prefix

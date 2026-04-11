@@ -1,4 +1,4 @@
-import { OPMLImportBottomSheet } from '@components/bottom-sheets/opml-import';
+
 import DiscordIcon from '@components/icons/local/discord';
 import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
 import GitHubIcon from '@components/icons/local/github';
@@ -30,14 +30,14 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { exportFeedsToOPML, readFileContent, validateOPMLFile } from '@lib/utils/opml';
+import { exportFeedsToOPML } from '@lib/utils/opml';
 import { useFeeds } from '@readspace/shared';
 import { useSettingsStore } from '@stores/settings';
 import { type Theme, useThemeStore } from '@stores/theme';
 import { useQueryClient } from '@tanstack/react-query';
-import * as DocumentPicker from 'expo-document-picker';
+
 import { useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { Linking, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -48,12 +48,18 @@ export function ProfileScreen() {
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const insets = useSafeAreaInsets();
-  const importSheetRef = useRef<BottomSheetModal>(null);
-  const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
-  const [feedCount, setFeedCount] = useState(0);
 
   const { theme, setTheme } = useThemeStore();
   const { settings } = useSettingsStore();
+
+  const previousUserRef = useRef(user);
+  useEffect(() => {
+    if (user) {
+      previousUserRef.current = user;
+    }
+  }, [user]);
+
+  const displayUser = user || previousUserRef.current;
 
   // Fetch feeds and folders for OPML export
   const { data: feedsData } = useFeeds();
@@ -96,50 +102,7 @@ export function ProfileScreen() {
     });
   };
 
-  const handleOPMLImport = useCallback(async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        multiple: false,
-        type: 'text/xml',
-      });
 
-      if (result.canceled) {
-        return;
-      }
-
-      const file = result.assets[0];
-      if (!file) return;
-
-      // Read and validate the file
-      const content = await readFileContent(file.uri);
-      const validation = await validateOPMLFile(content);
-
-      if (!validation.isValid) {
-        toast.error(validation.error || 'Invalid OPML file');
-        return;
-      }
-
-      if (validation.hasNestedCategories) {
-        toast.error(
-          'OPML files with nested categories are not supported. Please flatten your categories before importing.'
-        );
-        return;
-      }
-
-      // Store file and feed count, then show confirmation sheet
-      setSelectedFile(file);
-      setFeedCount(validation.feedCount);
-      importSheetRef.current?.present();
-    } catch (error) {
-      console.error('Error picking document:', error);
-      toast.error('Failed to select file. Please try again.');
-    }
-  }, []);
-
-  const handleCancelImport = useCallback(() => {
-    setSelectedFile(null);
-    setFeedCount(0);
-  }, []);
 
   const handleOPMLExport = useCallback(async () => {
     try {
@@ -165,7 +128,7 @@ export function ProfileScreen() {
   const discordColor = '#5865F2';
 
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
+    <View className="flex-1 bg-background">
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
@@ -178,12 +141,12 @@ export function ProfileScreen() {
         </View>
         <View className="px-6">
           {/* User Profile */}
-          {user && (
+          {displayUser && (
             <View className="mb-8 flex-row items-center justify-between">
               <UserProfile
-                name={user.user_metadata?.full_name || 'User'}
-                email={user.email || ''}
-                avatarUrl={user.user_metadata?.avatar_url}
+                name={displayUser.user_metadata?.full_name || 'User'}
+                email={displayUser.email || ''}
+                avatarUrl={displayUser.user_metadata?.avatar_url}
                 className="flex-1"
               />
               <Chip
@@ -269,7 +232,7 @@ export function ProfileScreen() {
               label="Import Subscriptions"
               variant="button"
               leftIcon={<DownloadLinearIcon width={22} height={22} color={colors.black} />}
-              onPress={handleOPMLImport}
+              onPress={() => router.push('/(protected)/settings/import-opml')}
             />
 
             <SettingsItem
@@ -302,7 +265,7 @@ export function ProfileScreen() {
           </SettingsGroup>
 
           {/* Developer Tools */}
-          <ToastTester />
+          {/* <ToastTester /> */}
 
           {/* Account Section */}
           <SettingsGroup title="Account" className="mb-8">
@@ -319,13 +282,7 @@ export function ProfileScreen() {
         </View>
       </ScrollView>
 
-      {/* OPML Import Bottom Sheet */}
-      <OPMLImportBottomSheet
-        ref={importSheetRef}
-        file={selectedFile}
-        feedCount={feedCount}
-        onCancel={handleCancelImport}
-      />
+
     </View>
   );
 }

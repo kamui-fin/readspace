@@ -199,7 +199,7 @@ export function ArticleReader({
 
   return (
     <ScrollView
-      className="flex-1 bg-background dark:bg-background-dark"
+      className="flex-1 bg-background"
       contentContainerStyle={{
         paddingBottom: 80,
       }}

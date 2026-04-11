@@ -60,7 +60,6 @@
     "formik": "^2.4.8",
     "meilisearch": "^0.55.0",
     "moti": "^0.30.0",
-    "nativewind": "latest",
     "react": "19.1.0",
     "react-instantsearch": "^7.24.0",
     "react-native": "0.81.5",

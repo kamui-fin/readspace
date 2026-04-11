@@ -74,7 +74,7 @@ const FeedListItemComponent = ({
             {isSelected ? (
               <CheckCircleBoldIcon width={28} height={28} color={colors.primary} />
             ) : (
-              <View className="w-6 h-6 rounded-full border-[1.5px] border-grey3 dark:border-grey3-dark" />
+              <View className="w-6 h-6 rounded-full border-[1.5px] border-grey3" />
             )}
           </View>
         ) : isActive ? (
@@ -91,8 +91,8 @@ const FeedListItemComponent = ({
             />
           </View>
         ) : (
-          <View className="h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-grey4 dark:bg-grey4-dark">
-            <Text className="font-geist-medium text-base text-grey dark:text-grey-dark">
+          <View className="h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-grey4">
+            <Text className="font-geist-medium text-base text-grey">
               {feed.title.charAt(0).toUpperCase()}
             </Text>
           </View>
@@ -101,7 +101,7 @@ const FeedListItemComponent = ({
 
       <View className="flex-1 min-w-0 justify-center">
         <Text
-          className="font-geist-medium text-base text-black dark:text-black-dark truncate"
+          className="font-geist-medium text-base text-black truncate"
           numberOfLines={1}
           ellipsizeMode="tail">
           {title}
@@ -109,19 +109,19 @@ const FeedListItemComponent = ({
         {!isSelectionMode && (unreadCount > 0 || showFolder) && (
           <View className="flex-row items-center gap-2 mt-0.5">
             {unreadCount > 0 && (
-              <Text className="font-geist-medium text-sm text-grey2 dark:text-grey2-dark">
+              <Text className="font-geist-medium text-sm text-grey2">
                 {unreadCount} unread
               </Text>
             )}
             {showFolder && (
               <>
                 {unreadCount > 0 && (
-                  <Text className="font-geist-medium text-xs text-grey3 dark:text-grey3-dark">
+                  <Text className="font-geist-medium text-xs text-grey3">
                     •
                   </Text>
                 )}
                 <Text
-                  className="font-geist-medium text-sm text-grey2 dark:text-grey2-dark truncate"
+                  className="font-geist-medium text-sm text-grey2 truncate"
                   numberOfLines={1}>
                   {sub.folder?.name || 'No folder'}
                 </Text>

@@ -35,7 +35,7 @@ export function ArticleListItem({
         <Text
           size="md"
           fontFamily="geist-semibold"
-          className="text-secondary dark:text-secondary-dark">
+          className="text-secondary">
           {item.sectionTitle}
         </Text>
       </View>

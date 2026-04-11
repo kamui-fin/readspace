@@ -22,7 +22,7 @@ function PasswordFormContent({
   errors,
   touched,
   handleChange,
-  handleBlur,
+  setFieldTouched,
   onPasswordChange,
   initialPassword,
 }: FormikProps<PasswordFormValues> & {
@@ -51,8 +51,8 @@ function PasswordFormContent({
             className="text-primary_foreground dark:text-primary_foreground mb-2">
             Create a password
           </Text>
-          <Text size="lg" fontFamily="geist-medium" className="text-grey dark:text-grey">
-            Your password must be at least 6 characters
+          <Text size="lg" fontFamily="geist-regular" className="text-grey dark:text-grey">
+            Must be atleast 6 characters
           </Text>
         </View>
 
@@ -61,12 +61,11 @@ function PasswordFormContent({
           placeholder="Enter your password"
           value={values.password}
           onChangeText={handleChange('password')}
-          onBlur={handleBlur('password')}
+          onBlur={() => setFieldTouched('password', true, true)}
           secureTextEntry={!showPassword}
           autoCapitalize="none"
           autoComplete="password-new"
           textContentType="newPassword"
-          autoFocus
           type="text"
           isInvalid={touched.password && !!errors.password}
           errorText={touched.password && errors.password ? errors.password : undefined}
@@ -90,13 +89,14 @@ export function PasswordStep({ initialPassword = '', onPasswordChange }: Passwor
     <Formik
       initialValues={{ password: initialPassword || '' }}
       validationSchema={toFormikValidationSchema(PasswordSchema)}
-      onSubmit={() => {}}
+      onSubmit={() => { }}
       validateOnMount={false}
       validateOnChange={false}
-      validateOnBlur={true}>
+      validateOnBlur={false}>
       {(formikProps) => (
         <PasswordFormContent
           {...formikProps}
+          {...(formikProps as unknown as { setFieldTouched: any })}
           onPasswordChange={onPasswordChange}
           initialPassword={initialPassword}
         />

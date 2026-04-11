@@ -11,7 +11,7 @@ export const getToastBackgroundColor = (
     return custom.backgroundColor;
   }
   if (type === 'success') {
-    return '#e2f0daff';
+    return colors.icon_bg_green;
   }
   if (type === 'promise') {
     return colors.icon_bg_blue;

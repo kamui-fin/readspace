@@ -27,7 +27,7 @@ export function SectionLabel({
         className={
           accentYellow
             ? 'font-geist-bold text-[11px] tracking-widest uppercase'
-            : 'font-geist-bold text-[11px] text-grey2 dark:text-grey2-dark tracking-widest uppercase opacity-60'
+            : 'font-geist-bold text-[11px] text-grey2  tracking-widest uppercase opacity-60'
         }
         style={accentYellow ? { color: PINNED_YELLOW } : undefined}>
         {label}

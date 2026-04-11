@@ -29,7 +29,7 @@ const followButtonVariants = cva('flex-row items-center gap-2 border', {
     {
       variant: 'default',
       following: true,
-      class: 'border-grey4 dark:border-grey4-dark',
+      class: 'border-grey4 ',
     },
     {
       variant: 'default',
@@ -39,7 +39,7 @@ const followButtonVariants = cva('flex-row items-center gap-2 border', {
     {
       variant: 'large',
       following: true,
-      class: 'border border-grey4 bg-white dark:border-grey4-dark dark:bg-white-dark',
+      class: 'border border-grey4 bg-white  ',
     },
     {
       variant: 'large',
@@ -60,7 +60,7 @@ const followButtonTextVariants = cva('', {
       large: '',
     },
     following: {
-      true: 'text-grey dark:text-grey-dark',
+      true: 'text-grey ',
       false: 'text-white dark:text-white',
     },
   },

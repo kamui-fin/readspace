@@ -6,7 +6,7 @@ import { forwardRef } from 'react';
 import { Pressable, type PressableProps, Text, View } from 'react-native';
 
 const radioVariants = cva(
-  'flex-row items-center gap-3 rounded-2xl bg-grey6 px-5 py-4 transition-opacity active:opacity-80 dark:bg-grey6-dark',
+  'flex-row items-center gap-3 rounded-2xl bg-grey6 px-5 py-4 transition-opacity active:opacity-80 ',
   {
     variants: {},
     defaultVariants: {},
@@ -45,7 +45,7 @@ export const Radio = forwardRef<React.ElementRef<typeof Pressable>, RadioProps>(
         </View>
         <Text
           className={clsx(
-            'font-geist-medium text-base text-black dark:text-black-dark',
+            'font-geist-medium text-base text-black ',
             labelClassName
           )}>
           {label}

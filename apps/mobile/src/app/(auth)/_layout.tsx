@@ -14,15 +14,9 @@ export default function AuthLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen
         name="login/index"
-        options={{
-          animation: 'slide_from_right',
-        }}
       />
       <Stack.Screen
         name="signup/index"
-        options={{
-          animation: 'slide_from_right',
-        }}
       />
     </Stack>
   );

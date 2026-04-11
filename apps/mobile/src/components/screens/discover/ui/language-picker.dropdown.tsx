@@ -83,7 +83,7 @@ export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(
       (props: any) => (
         <BottomSheetFooter {...props} bottomInset={16}>
           <View
-            className="border-t border-divider bg-background px-6 pt-4 dark:border-divider-dark dark:bg-background-dark"
+            className="border-t border-divider bg-background px-6 pt-4"
             style={{ paddingBottom: Math.max(insets.bottom, 24) }}
           >
             <Button
@@ -104,19 +104,20 @@ export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(
       <BottomSheetModal
         ref={ref}
         snapPoints={['50%']}
+        enableDynamicSizing={false}
         enablePanDownToClose
         footerComponent={renderFooter}
         backdropComponent={renderBackdrop}
         backgroundStyle={{ backgroundColor: colors.white }}
         handleIndicatorStyle={{ backgroundColor: colors.muted_green }}>
         <BottomSheetScrollView
-          className="flex-1 bg-white px-6 dark:bg-white-dark"
+          className="flex-1 bg-white px-6"
           contentContainerStyle={{ paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}>
           <Text
             size="2xl"
             fontFamily="geist-bold"
-            className="mb-6 tracking-heading text-black dark:text-black-dark">
+            className="mb-6 tracking-heading text-black">
             {title}
           </Text>
 

@@ -89,7 +89,7 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
               size={15}
               fontFamily="geist-medium"
               className={clsx(
-                danger ? 'text-red dark:text-red' : 'text-black dark:text-black-dark'
+                danger ? 'text-red dark:text-red' : 'text-black '
               )}>
               {label}
             </Text>

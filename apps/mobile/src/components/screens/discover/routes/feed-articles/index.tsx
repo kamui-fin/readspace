@@ -107,11 +107,11 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
           <Button variant="icon" size="small" fullWidth={false} onPress={handleBack}>
             <ArrowLeftLinearIcon width={18} height={18} strokeWidth={2.4} color={colors.grey} />
           </Button>
-          <View className="absolute left-0 right-0 items-center">
+          <View className="absolute inset-x-12 items-center justify-center">
             <Text
               size="lg"
               fontFamily="geist-semibold"
-              className="text-black dark:text-black-dark tracking-tight"
+              className="text-black tracking-tight"
               numberOfLines={1}
               ellipsizeMode="tail">
               {feedTitle}
@@ -125,7 +125,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-white dark:bg-white-dark">
+      <View className="flex-1 bg-white">
         {headerSection}
         <View className="px-6">
           <ArticleCardSkeletonList count={5} />
@@ -136,13 +136,13 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
 
   if (isError) {
     return (
-      <View className="flex-1 bg-white dark:bg-white-dark">
+      <View className="flex-1 bg-white">
         {headerSection}
         <View className="flex-1 items-center justify-center px-6">
           <Text
             size="base"
             fontFamily="geist"
-            className="mb-4 text-center text-grey dark:text-grey-dark">
+            className="mb-4 text-center text-grey">
             Failed to load articles
           </Text>
           <Button variant="primary" size="medium" fullWidth={false} onPress={handleBack}>
@@ -154,7 +154,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-white-dark">
+    <View className="flex-1 bg-white">
       {headerSection}
 
       {articles.length > 0 ? (
@@ -177,13 +177,13 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
           <Text
             size="lg"
             fontFamily="geist-semibold"
-            className="mt-4 text-center tracking-heading text-black dark:text-black-dark">
+            className="mt-4 text-center tracking-heading text-black">
             No articles yet
           </Text>
           <Text
             size="base"
             fontFamily="geist"
-            className="mt-2 text-center text-grey dark:text-grey-dark">
+            className="mt-2 text-center text-grey">
             This feed doesn't have any articles yet. Check back later!
           </Text>
         </View>

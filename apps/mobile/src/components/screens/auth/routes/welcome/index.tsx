@@ -11,8 +11,9 @@ import { SPACING } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { View, Text, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 
 export function WelcomeScreen() {
   const insets = useSafeAreaInsets();
@@ -93,29 +94,38 @@ export function WelcomeScreen() {
 
   return (
     <View
-      className="dark:bg-screen_background flex-1 bg-background"
+      className="flex-1 bg-screen"
       style={{ paddingTop: insets.top }}>
+
       <View
         className="flex-1 items-start justify-center"
         style={{ paddingHorizontal: horizontalPadding, paddingTop: topPadding }}>
-        <View className="mb-6 flex-row items-center">
+        <View className="mb-8 flex-row items-center">
           <View
             className="items-center justify-center rounded-xl bg-black dark:bg-black"
             style={{ width: logoSize, height: logoSize }}>
             <ReadspaceLogo width={logoSize} height={logoSize} />
           </View>
-          <Text className="text-primary_foreground dark:text-primary_foreground ml-4 font-figtree-medium text-4xl">
+          <Text className="text-primary_foreground dark:text-primary_foreground ml-4 font-figtree-semibold text-4xl">
             readspace
           </Text>
         </View>
 
-        <Text className="text-primary_foreground dark:text-primary_foreground font-geist-semibold text-[28px] leading-9">
-          Your favorite interests, blogs, and news in a distraction-free inbox
-        </Text>
+        <View>
+          <Text className="text-grey2 dark:text-grey font-figtree-medium text-[24px] leading-9 ">
+            follow your favorite news, blogs, people in a{' '}
+            <Text
+              className="font-geist-semibold"
+              style={{ color: isDark ? COLORS.dark.secondary : COLORS.light.secondary }}>
+              calm
+            </Text>{' '}
+            inbox.
+          </Text>
+        </View>
       </View>
 
       <View
-        className="items-center justify-center gap-3"
+        className="items-center justify-center gap-3 w-full"
         style={{
           paddingBottom: Math.max(insets.bottom + 20, 40),
           paddingHorizontal: horizontalPadding,

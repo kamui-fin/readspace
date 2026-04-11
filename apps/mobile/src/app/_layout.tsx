@@ -75,7 +75,7 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
-  const { session, isLoading: isAuthLoading } = useSession();
+  const { session, isLoading: isAuthLoading, isNewSignup } = useSession();
   const segments = useSegments();
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [fontError, setFontError] = useState<Error | null>(null);
@@ -146,9 +146,13 @@ function RootNavigator() {
       router.replace('/(auth)');
     } else if (session && (inAuthGroup || isRoot)) {
       // Logged in but in auth area (or root) - redirect to protected area
-      router.replace('/(protected)/(tabs)');
+      if (isNewSignup) {
+        router.replace('/(protected)/onboarding');
+      } else {
+        router.replace('/(protected)/(tabs)');
+      }
     }
-  }, [session, segments, isAuthLoading, router]);
+  }, [session, segments, isAuthLoading, router, isNewSignup]);
 
   // Handle splash screen hiding
   useEffect(() => {

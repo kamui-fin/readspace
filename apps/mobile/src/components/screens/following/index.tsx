@@ -220,13 +220,10 @@ export function FollowingScreen({
     try {
       // Perform a deep refresh for individual feed views
       if (viewType === 'feed' && selectedId) {
-        toast.info('Checking for new articles...');
         try {
           await refreshFeed.mutateAsync({ feedId: selectedId, forceRefetch: true });
-          toast.success('Check complete! Articles updated.');
         } catch (error) {
           console.error('Deep refresh failed:', error);
-          toast.error('Failed to check for new articles. Please try again.');
         }
       }
       await activeQuery.refetch();

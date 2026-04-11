@@ -101,7 +101,7 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
         {...props}>
         <BottomSheetView
           className={clsx(
-            'flex-1 bg-white dark:bg-screen-dark',
+            'flex-1 bg-white ',
             isIOS && 'overflow-hidden rounded-3xl',
             containerClassName
           )}>

@@ -10,14 +10,14 @@ import type { ReactNode } from 'react';
 import { forwardRef, useState } from 'react';
 import { Pressable, type PressableProps, View } from 'react-native';
 
-const cardVariants = cva('bg-background dark:bg-background-dark', {
+const cardVariants = cva('bg-background ', {
   variants: {
     variant: {
       feed: 'flex-row items-center gap-4 py-4 px-4',
       'image-top':
-        'w-full rounded-2xl bg-white dark:bg-grey6-dark overflow-hidden border border-black/5 dark:border-white/5',
+        'w-full rounded-2xl bg-white  overflow-hidden border border-black/5 dark:border-white/5',
       article: 'flex-row gap-3 py-4', // Edge-to-edge article card with image on right
-      'text-only': 'rounded-2xl border border-grey4 dark:border-grey4-dark p-4',
+      'text-only': 'rounded-2xl border border-grey4  p-4',
     },
   },
   defaultVariants: {
@@ -89,7 +89,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
       return (
         <Pressable ref={ref} className={clsx(cardVariants({ variant }), className)} {...props}>
           {/* Icon */}
-          <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-grey5 dark:bg-grey5-dark">
+          <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-grey5">
             {iconUrl && !imageError ? (
               <ExpoImage
                 source={{ uri: iconUrl }}
@@ -212,7 +212,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                   fontFamily="geist"
                   className={clsx(
                     'leading-5',
-                    isRead ? 'text-grey/70 dark:text-grey-dark/70' : 'text-grey dark:text-grey-dark'
+                    isRead ? 'text-grey/70 /70' : 'text-grey '
                   )}
                   numberOfLines={2}>
                   {stripHtml(description)}
@@ -222,7 +222,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
 
             {/* Thumbnail on right - only show if imageUrl exists */}
             {imageUrl && (
-              <View className="h-24 w-24 overflow-hidden rounded-xl bg-grey5 dark:bg-grey5-dark">
+              <View className="h-24 w-24 overflow-hidden rounded-xl bg-grey5">
                 <ExpoImage
                   source={{ uri: imageUrl }}
                   style={{ width: 96, height: 96 }}
@@ -259,7 +259,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
           ]}
           {...props}>
           {imageUrl && (
-            <View className="w-full bg-grey5 dark:bg-grey5-dark" style={{ height: 160 }}>
+            <View className="w-full bg-grey5" style={{ height: 160 }}>
               <ExpoImage
                 source={{ uri: imageUrl }}
                 style={{ width: '100%', height: '100%' }}

@@ -11,6 +11,7 @@ export const COLORS = {
   white_high_opacity: 'rgba(255, 255, 255, 0.67)',
   light: {
     primary: '#386641',
+    primary_light: 'rgba(56, 102, 65, 0.1)',
     primary_foreground: '#232222',
     secondary: '#6A994E',
     grey6: 'rgb(243, 243, 243)',
@@ -51,6 +52,7 @@ export const COLORS = {
   },
   dark: {
     primary: '#386641',
+    primary_light: 'rgba(56, 102, 65, 0.2)',
     primary_foreground: '#ffffff',
     secondary: '#6A994E',
     grey6: 'rgb(12, 13, 12)',

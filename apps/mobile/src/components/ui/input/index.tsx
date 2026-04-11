@@ -80,7 +80,7 @@ const InputBase = forwardRef((props: InputProps & { TextInputComponent: any }, r
         <>
           <Text
             nativeID={inputId}
-            className={clsx('text-sm font-bold text-gray-900 dark:text-white')}>
+            className={clsx('text-sm font-geist-medium text-gray-900 dark:text-white')}>
             {label}
           </Text>
           <View className="h-2" />
@@ -106,7 +106,7 @@ const InputBase = forwardRef((props: InputProps & { TextInputComponent: any }, r
         ]}>
         {leftElement}
         <TextInputComponent
-          className={clsx('text-gray-900 dark:text-white')}
+          className={clsx('text-gray-900 dark:text-white', 'font-geist-medium', props.className)}
           style={[
             Platform.select({
               web: {
@@ -115,7 +115,8 @@ const InputBase = forwardRef((props: InputProps & { TextInputComponent: any }, r
               default: undefined,
             }),
             {
-              flexGrow: 1,
+              flex: 1,
+              flexShrink: 1,
               paddingTop: Platform.select({
                 ios: 16,
                 default: 16,
@@ -126,8 +127,9 @@ const InputBase = forwardRef((props: InputProps & { TextInputComponent: any }, r
               }),
               paddingLeft: leftElement ? 0 : 16,
               paddingRight: rightElement ? 0 : 16,
-              fontFamily: 'Geist_500Medium',
-              fontWeight: '500',
+              fontFamily: props.className?.includes('font-geist-mono')
+                ? 'GeistMono_500Medium'
+                : 'Geist_500Medium',
             },
             props.inputStyle,
           ]}
@@ -135,8 +137,18 @@ const InputBase = forwardRef((props: InputProps & { TextInputComponent: any }, r
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          onFocus={onFocus}
-          onBlur={onBlur}
+          onFocus={(e: any) => {
+            onFocus();
+            if (rest.onFocus) {
+              (rest.onFocus as any)(e);
+            }
+          }}
+          onBlur={(e: any) => {
+            onBlur();
+            if (rest.onBlur) {
+              (rest.onBlur as any)(e);
+            }
+          }}
           nativeID={inputId}
           selectionColor={isDark ? COLORS.dark.grey3 : COLORS.light.grey3}
           inputMode={type}
@@ -160,23 +172,22 @@ const InputBase = forwardRef((props: InputProps & { TextInputComponent: any }, r
           multiline={multiline}
           {...rest}
         />
-        {rightElement && <View style={{ marginLeft: 'auto' }}>{rightElement}</View>}
+        {rightElement && <View style={{ marginLeft: 'auto', paddingRight: 8 }}>{rightElement}</View>}
       </View>
       {helperText ? (
         <Text
           nativeID={helperTextId}
-          className={clsx('text-sm text-gray-600 dark:text-gray-400')}
-          style={{ marginTop: 4, fontWeight: '600' }}>
+          className={clsx('text-sm font-geist-medium text-gray-600 dark:text-gray-400')}
+          style={{ marginTop: 4 }}>
           {helperText}
         </Text>
       ) : null}
       {errorText ? (
         <Text
           nativeID={errorTextId}
-          className={clsx('text-sm')}
+          className={clsx('text-sm font-geist-medium')}
           style={{
             marginTop: 4,
-            fontWeight: '600',
             color: isDark ? COLORS.dark.destructive : COLORS.light.destructive,
           }}>
           {errorText}

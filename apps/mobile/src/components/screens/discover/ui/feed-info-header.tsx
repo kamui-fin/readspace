@@ -114,7 +114,7 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
           <Text
             size="xl"
             fontFamily="geist-bold"
-            className="mb-1 tracking-heading text-black dark:text-black-dark"
+            className="mb-1 tracking-heading text-black"
             numberOfLines={2}>
             {feed.title || 'Untitled Feed'}
           </Text>
@@ -158,14 +158,14 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
               <Text
                 size="sm"
                 fontFamily="geist"
-                className="leading-6 text-grey dark:text-grey-dark">
+                className="leading-6 text-grey">
                 {isDescriptionExpanded ? feed.description : `${feed.description.slice(0, 120)}... `}
                 {!isDescriptionExpanded && (
                   <Text
                     size="sm"
                     fontFamily="geist-medium"
                     onPress={toggleDescription}
-                    className="text-black dark:text-black-dark">
+                    className="text-black">
                     more
                   </Text>
                 )}
@@ -176,13 +176,13 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
                   size="small"
                   onPress={toggleDescription}
                   className="mt-1 h-auto self-start px-0"
-                  textClassName="text-sm font-geist-medium text-black dark:text-black-dark">
+                  textClassName="text-sm font-geist-medium text-black ">
                   less
                 </Button>
               )}
             </>
           ) : (
-            <Text size="sm" fontFamily="geist" className="leading-6 text-grey dark:text-grey-dark">
+            <Text size="sm" fontFamily="geist" className="leading-6 text-grey">
               {feed.description}
             </Text>
           )}

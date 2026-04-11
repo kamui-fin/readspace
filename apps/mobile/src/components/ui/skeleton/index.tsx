@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-const skeletonVariants = cva('bg-grey6 dark:bg-grey6-dark', {
+const skeletonVariants = cva('bg-grey6 ', {
   variants: {
     variant: {
       rectangle: 'rounded-lg',

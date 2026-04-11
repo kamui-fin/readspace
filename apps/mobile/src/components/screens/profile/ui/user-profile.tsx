@@ -17,7 +17,7 @@ export function UserProfile({ name, email, avatarUrl, className }: UserProfilePr
 
       {/* User Info */}
       <View className="flex-1">
-        <Text size="xl" fontFamily="geist-semibold" className="text-black dark:text-black-dark">
+        <Text size="xl" fontFamily="geist-semibold" className="text-black">
           {name}
         </Text>
         <Text size="lg" fontFamily="geist" className="text-grey dark:text-grey">

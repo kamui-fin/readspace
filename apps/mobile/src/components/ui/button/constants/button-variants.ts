@@ -4,10 +4,10 @@ export const buttonVariants = cva('flex-row items-center justify-center relative
   variants: {
     variant: {
       primary: 'bg-primary border-0',
-      secondary: 'bg-grey6 dark:bg-grey6-dark border-0',
+      secondary: 'bg-grey6  border-0',
       text: 'bg-transparent border-0',
-      ghost: 'bg-transparent border border-grey4 dark:border-grey4-dark',
-      icon: 'bg-grey5 dark:bg-grey5-dark border-0',
+      ghost: 'bg-transparent border border-grey4 ',
+      icon: 'bg-grey5  border-0',
     },
     size: {
       small: 'h-10 px-3',

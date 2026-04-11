@@ -6,8 +6,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # Environment
-    ENVIRONMENT: str = Field(default="development", pattern="^(development|staging|production|test)$")
-    LOG_LEVEL: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
+    ENVIRONMENT: str = Field(
+        default="development", pattern="^(development|staging|production|test)$"
+    )
+    LOG_LEVEL: str = Field(
+        default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$"
+    )
 
     # Supabase Configuration (validated URLs)
     SUPABASE_URL: AnyUrl
@@ -69,7 +73,9 @@ class Settings(BaseSettings):
         if not v:
             raise ValueError("DATABASE_URL_API is required")
         if not v.startswith("postgresql"):
-            raise ValueError("DATABASE_URL_API must be a valid PostgreSQL connection string")
+            raise ValueError(
+                "DATABASE_URL_API must be a valid PostgreSQL connection string"
+            )
         return v
 
     @field_validator("DATABASE_URL_WORKER")
@@ -79,7 +85,9 @@ class Settings(BaseSettings):
         if not v:
             raise ValueError("DATABASE_URL_WORKER is required")
         if not v.startswith("postgresql"):
-            raise ValueError("DATABASE_URL_WORKER must be a valid PostgreSQL connection string")
+            raise ValueError(
+                "DATABASE_URL_WORKER must be a valid PostgreSQL connection string"
+            )
         return v
 
     @field_validator("REDIS_URL")
@@ -119,7 +127,10 @@ class Settings(BaseSettings):
     @property
     def is_supabase_cloud(self) -> bool:
         """Detect if using Supabase Cloud by URL pattern."""
-        return ".pooler.supabase.com" in self.DATABASE_URL_API or ".supabase.co" in self.DATABASE_URL_API
+        return (
+            ".pooler.supabase.com" in self.DATABASE_URL_API
+            or ".supabase.co" in self.DATABASE_URL_API
+        )
 
 
 @cache

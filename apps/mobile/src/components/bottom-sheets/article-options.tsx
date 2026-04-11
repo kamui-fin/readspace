@@ -85,11 +85,11 @@ export const ArticleOptionsBottomSheet = forwardRef<
                         <Text
                             size="base"
                             fontFamily="geist-semibold"
-                            className={isActive ? 'text-primary dark:text-primary-dark' : 'text-primary_foreground dark:text-primary_foreground-dark'}>
+                            className={isActive ? 'text-primary ' : 'text-primary_foreground '}>
                             {title}
                         </Text>
                         {subtitle && (
-                            <Text size="sm" fontFamily="geist" className="mt-0.5 text-grey dark:text-grey-dark">
+                            <Text size="sm" fontFamily="geist" className="mt-0.5 text-grey">
                                 {subtitle}
                             </Text>
                         )}
@@ -105,11 +105,11 @@ export const ArticleOptionsBottomSheet = forwardRef<
                 enablePanDownToClose
                 onDismiss={onClose}>
                 <BottomSheetScrollView
-                    className="flex-1 bg-white dark:bg-white-dark"
+                    className="flex-1 bg-white"
                     showsVerticalScrollIndicator={false}>
 
                     {/* View Mode Section */}
-                    <Text size="sm" fontFamily="geist-bold" className="mb-2 ml-4 mt-2 tracking-wide text-grey dark:text-grey-dark uppercase">
+                    <Text size="sm" fontFamily="geist-bold" className="mb-2 ml-4 mt-2 tracking-wide text-grey uppercase">
                         Viewing Mode
                     </Text>
                     <View className="mb-4">
@@ -140,10 +140,10 @@ export const ArticleOptionsBottomSheet = forwardRef<
                         )}
                     </View>
 
-                    <View className="mx-4 mb-4 h-px bg-divider dark:bg-divider-dark" />
+                    <View className="mx-4 mb-4 h-px bg-divider" />
 
                     {/* Actions Section */}
-                    <Text size="sm" fontFamily="geist-bold" className="mb-2 ml-4 tracking-wide text-grey dark:text-grey-dark uppercase">
+                    <Text size="sm" fontFamily="geist-bold" className="mb-2 ml-4 tracking-wide text-grey uppercase">
                         Actions
                     </Text>
                     <View className="mb-8">

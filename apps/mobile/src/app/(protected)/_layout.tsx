@@ -10,6 +10,7 @@ export default function ProtectedLayout() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor } }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="onboarding" />
       <Stack.Screen name="articles/[id]" />
     </Stack>
   );

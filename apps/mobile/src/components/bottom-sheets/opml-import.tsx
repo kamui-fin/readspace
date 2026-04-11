@@ -18,21 +18,23 @@ export interface OPMLImportBottomSheetProps {
   file: DocumentPicker.DocumentPickerAsset | null;
   feedCount: number;
   onCancel?: () => void;
+  onImportStarted?: (taskId: string) => void;
 }
 
 export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBottomSheetProps>(
-  ({ file, feedCount, onCancel }, ref) => {
+  ({ file, feedCount, onCancel, onImportStarted }, ref) => {
     const router = useRouter();
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
-    const [isImporting, setIsImporting] = useState(false);
 
     const importOPML = useImportOPML();
 
-    const handleImport = useCallback(async () => {
+    const handleImport = useCallback(() => {
       if (!file) return;
 
-      setIsImporting(true);
+      if (ref && typeof ref !== 'function' && ref.current) {
+        ref.current.dismiss();
+      }
 
       try {
         const formData = new FormData();
@@ -46,28 +48,23 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
           onSuccess: (data) => {
             toast.success(`OPML import started! Processing ${data.estimated_feeds} feeds...`);
 
-            if (ref && typeof ref !== 'function' && ref.current) {
-              ref.current.dismiss();
+            if (onImportStarted) {
+              onImportStarted(data.task_id);
             }
-
-            router.push(`/(protected)/settings/opml-status/${data.task_id}` as never);
           },
           onError: (error: unknown) => {
             const errorMessage =
               error instanceof Error ? error.message : 'Failed to import OPML. Please try again.';
             toast.error(errorMessage);
-            setIsImporting(false);
           },
         });
       } catch (error) {
         console.error('Error importing OPML:', error);
         toast.error('Failed to import OPML. Please try again.');
-        setIsImporting(false);
       }
-    }, [file, importOPML, ref, router]);
+    }, [file, importOPML, ref, onImportStarted]);
 
     const handleCancel = useCallback(() => {
-      setIsImporting(false);
       if (ref && typeof ref !== 'function' && ref.current) {
         ref.current.dismiss();
       }
@@ -75,30 +72,35 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
     }, [ref, onCancel]);
 
     return (
-      <BottomSheet ref={ref} headerTitle="Confirm Import" enablePanDownToClose={!isImporting}>
+      <BottomSheet ref={ref} headerTitle="Confirm Import">
         <View>
           <Text className="mb-6 font-geist-medium text-base text-grey dark:text-grey">
             Review the details below before importing your feeds.
           </Text>
 
           {/* File Info Card */}
-          <View className="mb-6 rounded-xl bg-grey5 p-4 dark:bg-grey5-dark">
+          <View className="mb-6 rounded-xl bg-grey5 p-4 dark:bg-grey5">
             <View className="flex-row items-center gap-3">
               <DocumentTextBoldIcon width={24} height={24} color={colors.primary} />
-              <Text className="flex-1 font-geist-semibold text-base text-black dark:text-black-dark">
-                {file?.name || 'Unknown file'}
-              </Text>
+              <View className="flex-1">
+                <Text className="font-geist-semibold text-base text-black dark:text-white">
+                  {file?.name || 'Unknown file'}
+                </Text>
+                <Text className="font-geist text-sm text-grey dark:text-grey">
+                  {feedCount} {feedCount === 1 ? 'subscription' : 'subscriptions'}
+                </Text>
+              </View>
             </View>
           </View>
 
           {/* Import Info */}
-          <View className="mb-6 rounded-xl bg-grey6 p-4 dark:bg-grey6-dark">
+          <View className="mb-6 rounded-xl bg-grey6 p-4">
             <View className="flex-row gap-2">
               <View style={{ marginTop: 2 }}>
                 <InfoCircleBoldIcon width={16} height={16} color={colors.grey} />
               </View>
               <Text className="flex-1 font-geist-medium text-sm text-grey dark:text-grey">
-                The import will run in the background. You can track progress on the status page.
+                The import will run in the background. You can track its progress immediately after.
               </Text>
             </View>
           </View>
@@ -111,7 +113,6 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
               fullWidth={false}
               className="flex-1"
               onPress={handleCancel}
-              disabled={isImporting}
               style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
               Cancel
             </Button>
@@ -122,16 +123,8 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
               fullWidth={false}
               className="flex-1"
               onPress={handleImport}
-              disabled={isImporting}
               style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
-              {isImporting ? (
-                <View className="flex-row items-center gap-2">
-                  <Spinner size="small" color={COLORS.white} />
-                  <Text className="font-geist-semibold text-base text-white">Importing...</Text>
-                </View>
-              ) : (
-                `Import ${feedCount} ${feedCount === 1 ? 'feed' : 'feeds'}`
-              )}
+              Import
             </Button>
           </View>
         </View>

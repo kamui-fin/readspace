@@ -87,7 +87,7 @@ const FolderGroupComponent = ({
 
   return (
     <View>
-      <View className="rounded-xl bg-grey6 dark:bg-grey6-dark">
+      <View className="rounded-xl bg-grey6">
         <Button
           variant="secondary"
           size="large"
@@ -107,7 +107,7 @@ const FolderGroupComponent = ({
                   {isSelected ? (
                     <CheckCircleBoldIcon width={28} height={28} color={colors.primary} />
                   ) : (
-                    <View className="w-6 h-6 rounded-full border-[1.5px] border-grey3 dark:border-grey3-dark" />
+                    <View className="w-6 h-6 rounded-full border-[1.5px] border-grey3" />
                   )}
                 </View>
               ) : isFolderViewing ? (
@@ -119,7 +119,7 @@ const FolderGroupComponent = ({
 
             <View className="flex-1 flex-row items-center justify-between min-w-0">
               <Text
-                className="font-geist-semibold text-lg text-grey dark:text-grey-dark mr-3"
+                className="font-geist-semibold text-lg text-grey mr-3"
                 numberOfLines={1}
                 style={{ flexShrink: 1 }}>
                 {folder.name}
@@ -131,7 +131,7 @@ const FolderGroupComponent = ({
                     label={unreadCount.toString()}
                     size="small"
                     selected={false}
-                    className="bg-grey4 dark:bg-grey4-dark"
+                    className="bg-grey4"
                   />
                 )}
                 {/* Dropdown Menu trigger instead of Context Menu */}

@@ -88,14 +88,19 @@ export function SearchResults({
           }}
         />
       ) : (
-        <View
-          className="flex-1 items-center justify-center px-6"
-          style={{ paddingBottom: contentPaddingBottom }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          className="flex-1"
+          contentContainerStyle={{
+            paddingBottom: contentPaddingBottom,
+          }}>
           {categoryHeader}
-          <Text size="base" fontFamily="geist" className="text-grey text-center">
-            No feeds found matching your search
-          </Text>
-        </View>
+          <View className="flex-1 pt-24 px-6 items-center">
+            <Text size="base" fontFamily="geist" className="text-grey text-center">
+              No feeds found matching your search
+            </Text>
+          </View>
+        </ScrollView>
       )}
     </View>
   );

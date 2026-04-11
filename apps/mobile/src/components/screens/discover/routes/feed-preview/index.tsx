@@ -236,12 +236,12 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
 
   if (!feed) {
     return (
-      <View className="dark:bg-white-dark flex-1 bg-white" style={{ paddingTop: insets.top }}>
+      <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
         <View className="flex-1 items-center justify-center px-6">
           <Text
             size="base"
             fontFamily="geist"
-            className="text-grey dark:text-grey-dark text-center">
+            className="text-grey text-center">
             Feed not found
           </Text>
         </View>
@@ -251,7 +251,7 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
 
   return (
     <>
-      <View className="dark:bg-white-dark flex-1 bg-white" style={{ paddingTop: insets.top }}>
+      <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{

@@ -20,6 +20,7 @@ interface AuthContextType {
   session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isNewSignup: boolean;
   signOut: () => Promise<void>;
   signIn: (credentials: SignInCredentials) => Promise<void>;
   signUp: (credentials: SignUpCredentials) => Promise<void>;
@@ -31,10 +32,11 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   isAuthenticated: false,
   isLoading: true,
-  signOut: async () => {},
-  signIn: async () => {},
-  signUp: async () => {},
-  signInWithGoogle: async () => {},
+  isNewSignup: false,
+  signOut: async () => { },
+  signIn: async () => { },
+  signUp: async () => { },
+  signInWithGoogle: async () => { },
 });
 
 export function useSession() {
@@ -53,6 +55,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isNewSignup, setIsNewSignup] = useState(false);
   const router = useRouter();
   const segments = useSegments();
 
@@ -95,6 +98,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
   // and by Expo Router's automatic segmented hierarchy rendering during the session.
 
   const signIn = async (credentials: SignInCredentials) => {
+    setIsNewSignup(false);
     const { error } = await supabase.auth.signInWithPassword({
       email: credentials.email,
       password: credentials.password,
@@ -106,21 +110,25 @@ export function SessionProvider({ children }: SessionProviderProps) {
   };
 
   const signUp = async (credentials: SignUpCredentials) => {
+    setIsNewSignup(true);
     const { error } = await supabase.auth.signUp({
       email: credentials.email,
       password: credentials.password,
     });
 
     if (error) {
+      setIsNewSignup(false);
       throw new Error(error.message);
     }
   };
 
   const signOut = async () => {
+    setIsNewSignup(false);
     await supabase.auth.signOut();
   };
 
   const signInWithGoogle = async (idToken: string, accessToken: string) => {
+    setIsNewSignup(false);
     const { error } = await supabase.auth.signInWithIdToken({
       provider: 'google',
       token: idToken,
@@ -141,6 +149,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     session,
     isAuthenticated: !!session,
     isLoading,
+    isNewSignup,
     signOut,
     signIn,
     signUp,

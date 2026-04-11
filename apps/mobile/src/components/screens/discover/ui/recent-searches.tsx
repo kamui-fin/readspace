@@ -6,6 +6,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 interface RecentSearchesProps {
   recentSearches: string[];
   onRecentSearchPress: (query: string) => void;
+  onClearHistory: () => void;
   contentPaddingBottom: number;
   colors: typeof COLORS.light | typeof COLORS.dark;
 }
@@ -13,6 +14,7 @@ interface RecentSearchesProps {
 export function RecentSearches({
   recentSearches,
   onRecentSearchPress,
+  onClearHistory,
   contentPaddingBottom,
   colors,
 }: RecentSearchesProps) {
@@ -26,9 +28,16 @@ export function RecentSearches({
       }}>
       {recentSearches.length > 0 ? (
         <>
-          <Text size="base" fontFamily="geist-semibold" className="mb-4 text-black">
-            Recent searches
-          </Text>
+          <View className="flex-row items-center justify-between mb-4">
+            <Text size="base" fontFamily="geist-semibold" className="text-black">
+              Recent searches
+            </Text>
+            <Pressable onPress={onClearHistory} className="active:opacity-60">
+              <Text size="sm" fontFamily="geist-medium" className="text-danger">
+                Clear
+              </Text>
+            </Pressable>
+          </View>
           <View className="gap-3">
             {recentSearches.map((query) => (
               <Pressable

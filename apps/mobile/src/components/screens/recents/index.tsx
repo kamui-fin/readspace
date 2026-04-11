@@ -205,7 +205,7 @@ export function RecentsScreen() {
   );
 
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
+    <View className="flex-1 bg-background">
       <InfiniteScrollList
         ref={listRef}
         data={listItems}
@@ -219,7 +219,7 @@ export function RecentsScreen() {
         ListEmptyComponent={renderEmpty}
         estimatedItemSize={200}
         showsVerticalScrollIndicator={false}
-        className="bg-background dark:bg-background-dark"
+        className="bg-background"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

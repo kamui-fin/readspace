@@ -149,7 +149,7 @@ export default function FollowingRoute() {
   );
 
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
+    <View className="flex-1 bg-background">
       <Header
         variant="tabbed"
         title={headerTitle}

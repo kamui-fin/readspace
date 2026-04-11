@@ -27,7 +27,7 @@ const AUTH_ERROR_MESSAGES: Record<string, { signin: string; signup: string }> = 
   },
   user_already_exists: {
     signin: 'This account already exists.',
-    signup: 'This email is already registered. Try signing in instead.',
+    signup: 'This email is already registered.',
   },
   weak_password: {
     signin: 'Password is too weak.',

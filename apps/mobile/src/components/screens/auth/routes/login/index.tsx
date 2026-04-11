@@ -82,7 +82,6 @@ export function LoginScreen() {
   ) => {
     try {
       await signIn({ email: values.email.trim(), password: values.password });
-      toast.success('Welcome back!');
       // Auth provider will handle redirect to protected routes automatically
     } catch (error) {
       handleAuthError(error, 'signin');
@@ -123,7 +122,7 @@ export function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="dark:bg-screen_background flex-1 bg-background"
+      className="flex-1 bg-screen"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       enabled={!isModalOpen}>
       <Formik
@@ -132,8 +131,8 @@ export function LoginScreen() {
         onSubmit={handleSubmit}
         validateOnMount={false}
         validateOnChange={false}
-        validateOnBlur={true}>
-        {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting }) => (
+        validateOnBlur={false}>
+        {({ values, errors, touched, handleChange, setFieldTouched, handleSubmit, isSubmitting }) => (
           <>
             <ScrollView
               contentContainerStyle={{
@@ -166,7 +165,7 @@ export function LoginScreen() {
                       placeholder="address@example.com"
                       value={values.email}
                       onChangeText={handleChange('email')}
-                      onBlur={handleBlur('email')}
+                      onBlur={() => setFieldTouched('email', true, true)}
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoComplete="email"
@@ -182,7 +181,7 @@ export function LoginScreen() {
                       placeholder="your password"
                       value={values.password}
                       onChangeText={handleChange('password')}
-                      onBlur={handleBlur('password')}
+                      onBlur={() => setFieldTouched('password', true, true)}
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
                       autoComplete="password"
@@ -206,26 +205,13 @@ export function LoginScreen() {
                   {/* Self-hosting option */}
                   <View className="mt-4 flex-row items-center justify-between">
                     {isSelfHosted ? (
-                      <>
-                        <View className="flex-1">
-                          <Text
-                            size="md"
-                            fontFamily="geist-medium"
-                            className="text-primary-foreground dark:text-primary-foreground-dark">
-                            Using{' '}
-                            <Text size="md" fontFamily="mono" className="text-grey dark:text-grey">
-                              {settings.readspace_url}
-                            </Text>
-                          </Text>
-                        </View>
-                        <Button
-                          variant="text"
-                          size="medium"
-                          fullWidth={false}
-                          onPress={handleSwitchToCloud}>
-                          Switch to cloud
-                        </Button>
-                      </>
+                      <Button
+                        variant="text"
+                        size="medium"
+                        fullWidth={false}
+                        onPress={handleSwitchToCloud}>
+                        Switch to cloud
+                      </Button>
                     ) : (
                       <Button
                         variant="text"
@@ -251,7 +237,6 @@ export function LoginScreen() {
               }}
               pointerEvents="box-none">
               <View className="gap-3">
-                {/* Sign In Button */}
                 <Button
                   variant="primary"
                   size="large"

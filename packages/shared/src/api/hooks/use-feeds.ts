@@ -95,34 +95,33 @@ export function useCreateFeed(
     unknown,
     {
       url: string;
-      folder_id: string;
+      folder_id?: string;
     }
   >,
 ) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: mutationKeys.createFeed(),
-    mutationFn: (feed: { url: string; folder_id: string }) =>
+    mutationFn: (feed: { url: string; folder_id?: string }) =>
       ApiClient.createFeed(feed),
     onSuccess: (newSubscription) => {
-      // Update feeds list with new subscription
-      queryClient.setQueryData<FeedsResponse>(queryKeys.feeds(), (old) => {
-        if (!old) {
+      // Update feeds list with new subscription across all variations
+      queryClient.setQueriesData<FeedsResponse>(
+        { queryKey: [RSS_QUERY_KEYS.FEEDS] },
+        (old) => {
+          if (!old) return old;
           return {
-            subscriptions: [newSubscription],
-            folders: [],
+            ...old,
+            subscriptions: [...old.subscriptions, newSubscription],
           };
         }
-        return {
-          ...old,
-          subscriptions: [...old.subscriptions, newSubscription],
-        };
-      });
+      );
     },
     onSettled: (data) => {
-      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
-      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
+      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts(), refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FOLDERS], refetchType: 'all' });
 
       // Invalidate specific feed cache
       if (data?.feed?.id) {

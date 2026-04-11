@@ -24,7 +24,7 @@ export function SectionHeader({
         size="xl"
         fontFamily="geist-semibold"
         variant="heading"
-        className="tracking-tight text-black dark:text-black-dark">
+        className="tracking-tight text-black">
         {title}
       </Text>
       {onSeeAll && (

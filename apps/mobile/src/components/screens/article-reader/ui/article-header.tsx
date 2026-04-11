@@ -63,7 +63,7 @@ export function ArticleHeader({
             <Text
               size="sm"
               fontFamily="geist"
-              className="uppercase tracking-wide text-grey dark:text-grey-dark">
+              className="uppercase tracking-wide text-grey">
               {displaySource || 'Unknown Source'}
             </Text>
           </Pressable>
@@ -79,7 +79,7 @@ export function ArticleHeader({
             <Text
               size="sm"
               fontFamily="geist"
-              className="uppercase tracking-wide text-grey dark:text-grey-dark">
+              className="uppercase tracking-wide text-grey">
               {displaySource || 'Unknown Source'}
             </Text>
           </View>
@@ -106,11 +106,11 @@ export function ArticleHeader({
 
       {/* Note for clipped articles */}
       {isClipped && article.user_note && (
-        <View className="mb-3 rounded-lg border border-grey4 bg-grey6 px-3 py-2 dark:border-grey4-dark dark:bg-grey6-dark">
+        <View className="mb-3 rounded-lg border border-grey4 bg-grey6 px-3 py-2">
           <Text
             size="sm"
             fontFamily="geist"
-            className="leading-relaxed text-grey dark:text-grey-dark">
+            className="leading-relaxed text-grey">
             {article.user_note}
           </Text>
         </View>
@@ -123,11 +123,11 @@ export function ArticleHeader({
             <Text
               size="sm"
               fontFamily="geist"
-              className="flex-shrink text-grey dark:text-grey-dark"
+              className="flex-shrink text-grey"
               numberOfLines={1}>
               By {article.author}
             </Text>
-            <Text size="sm" fontFamily="geist" className="text-grey dark:text-grey-dark">
+            <Text size="sm" fontFamily="geist" className="text-grey">
               /
             </Text>
           </>
@@ -135,12 +135,12 @@ export function ArticleHeader({
         <Text
           size="sm"
           fontFamily="geist"
-          className="flex-shrink text-grey dark:text-grey-dark"
+          className="flex-shrink text-grey"
           numberOfLines={1}>
           {displayDate}
         </Text>
         {readTime && (
-          <Text size="sm" fontFamily="geist" className="text-grey dark:text-grey-dark">
+          <Text size="sm" fontFamily="geist" className="text-grey">
             /
           </Text>
         )}
@@ -148,7 +148,7 @@ export function ArticleHeader({
           <Text
             size="sm"
             fontFamily="geist"
-            className="flex-shrink text-grey dark:text-grey-dark"
+            className="flex-shrink text-grey"
             numberOfLines={1}>
             {readTime}
           </Text>

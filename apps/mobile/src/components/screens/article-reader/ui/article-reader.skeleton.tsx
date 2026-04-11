@@ -12,7 +12,7 @@ export function ArticleReaderSkeleton({ article }: ArticleReaderSkeletonProps) {
   const insets = useSafeAreaInsets();
 
   return (
-    <View className="flex-1 bg-background dark:bg-background-dark">
+    <View className="flex-1 bg-background">
       {/* Featured Image placeholder - Edge-to-edge */}
       {(article?.image_url || !article) && (
         <View style={{ marginTop: insets.top }}>

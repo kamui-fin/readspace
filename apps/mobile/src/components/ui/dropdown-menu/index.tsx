@@ -24,7 +24,7 @@ const DropdownMenuSub = DropdownMenu.Sub;
 const dropdownMenuContentVariants = cva('animate-zoom-in rounded-2xl p-2 shadow', {
   variants: {
     disableBlurEffect: {
-      true: 'bg-white dark:bg-grey5-dark',
+      true: 'bg-white ',
       false: 'bg-white/80 shadow backdrop-blur-md backdrop-saturate-150 dark:bg-black/80',
     },
   },
@@ -166,7 +166,7 @@ const DropdownMenuSeparator = DropdownMenu.create(
   }: { className?: string } & ComponentProps<typeof DropdownMenu.Separator>) => (
     <DropdownMenu.Separator
       {...props}
-      className={clsx('my-1 h-px bg-grey4 dark:bg-grey4-dark', className)}
+      className={clsx('my-1 h-px bg-grey4 ', className)}
     />
   ),
   'Separator'
@@ -216,7 +216,7 @@ const DropdownMenuLabel = DropdownMenu.create(
     <DropdownMenu.Label
       {...props}
       className={clsx(
-        'px-2 py-1.5 font-geist-semibold text-sm text-grey dark:text-grey-dark',
+        'px-2 py-1.5 font-geist-semibold text-sm text-grey ',
         className
       )}
     />

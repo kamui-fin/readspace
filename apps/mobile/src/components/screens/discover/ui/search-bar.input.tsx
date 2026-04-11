@@ -6,7 +6,7 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { forwardRef, useCallback } from 'react';
-import { Platform, TextInput, type TextInputProps, TouchableOpacity, View } from 'react-native';
+import { Platform, TextInput, type TextInputProps, TouchableOpacity, View, Keyboard } from 'react-native';
 
 export type Language = 'english' | 'chinese' | 'japanese';
 
@@ -73,7 +73,7 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
           activeOpacity={isFocused ? 0.6 : 1}
           style={{ padding: 8, paddingLeft: 12 }}>
           {isFocused ? (
-            <ArrowLeftLinearIcon width={20} height={20} color={colors.black} strokeWidth={2.4} />
+            <ArrowLeftLinearIcon width={20} height={20} color={colors.grey} strokeWidth={2.4} />
           ) : (
             <MagniferLinearIcon width={20} height={20} color={colors.grey} strokeWidth={2.4} />
           )}
@@ -114,7 +114,10 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              onPress={() => languagePickerRef?.current?.present()}
+              onPress={() => {
+                Keyboard.dismiss();
+                languagePickerRef?.current?.present();
+              }}
               style={{ padding: 8 }}>
               <LanguageIcon width={20} height={20} fill={colors.black} />
             </TouchableOpacity>

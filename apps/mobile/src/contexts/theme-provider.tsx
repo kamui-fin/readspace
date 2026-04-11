@@ -1,6 +1,7 @@
 import { useThemeStore } from '@stores/theme';
 import { useEffect } from 'react';
 import { Appearance } from 'react-native';
+import { Uniwind } from 'uniwind';
 
 /**
  * ThemeProvider sets up system theme listener and initializes theme store
@@ -26,6 +27,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       subscription.remove();
     };
   }, [setSystemColorScheme, setHydrated]);
+
+  // Sync Uniwind theme
+  const { theme, getEffectiveColorScheme } = useThemeStore();
+
+  useEffect(() => {
+    // Uniwind.setTheme handles "system", "dark", or "light"
+    Uniwind.setTheme(theme);
+  }, [theme]);
 
   return <>{children}</>;
 }

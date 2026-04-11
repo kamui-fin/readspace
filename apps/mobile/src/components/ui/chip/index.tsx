@@ -30,7 +30,7 @@ const chipVariants = cva('flex-row items-center rounded-full', {
     {
       variant: 'filled',
       selected: false,
-      class: 'bg-grey5 dark:bg-grey5-dark',
+      class: 'bg-grey5 ',
     },
   ],
   defaultVariants: {

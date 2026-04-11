@@ -5,6 +5,7 @@ import { Keyboard, Platform, Text, TouchableWithoutFeedback, View } from 'react-
 import 'react-native-url-polyfill/auto';
 import { z } from 'zod';
 
+import { BottomSheetFooter } from '@gorhom/bottom-sheet';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { BottomSheetInput } from '@components/ui/input';
@@ -204,21 +205,51 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
       [onClose]
     );
 
+    const renderFooter = useCallback(
+      (props: any) => (
+        <BottomSheetFooter {...props} bottomInset={16}>
+          <View className="px-6 pb-6 pt-2 bg-screen">
+            <Button
+              variant="primary"
+              size="large"
+              fullWidth
+              onPress={handleSave}
+              disabled={!isValid || isValidating}
+              style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
+              {isValidating ? (
+                <View className="flex-row items-center justify-center gap-2">
+                  <Spinner size="small" color={COLORS.white} />
+                  <Text className="font-geist-semibold text-base text-white">Validating...</Text>
+                </View>
+              ) : (
+                'Save'
+              )}
+            </Button>
+          </View>
+        </BottomSheetFooter>
+      ),
+      [handleSave, isValid, isValidating]
+    );
+
     return (
       <BottomSheet
         ref={ref}
         headerTitle="Self-hosted connection"
-        snapPoints={['90%']}
+        headerTitleAlign="left"
+        snapPoints={['50%', '90%']}
         enablePanDownToClose={true}
-        enableContentPanningGesture={false}
-        onChange={handleSheetChange}>
+        onChange={handleSheetChange}
+        keyboardBehavior="extend"
+        keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustResize"
+        footerComponent={renderFooter}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View className="flex-1">
-            <Text className="font-geist-medium mb-6 text-base text-grey dark:text-grey">
+          <View style={{ paddingBottom: 60 }}>
+            <Text className="font-geist-medium mb-4 text-base text-grey dark:text-grey">
               Connect to your own Readspace instance
             </Text>
 
-            <View className="flex-1 gap-4">
+            <View className="gap-4">
               {/* API URL */}
               <View>
                 <BottomSheetInput
@@ -273,26 +304,6 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
                   borderRadius={12}
                 />
               </View>
-            </View>
-
-            {/* Save Button at Bottom */}
-            <View className="mt-6 pb-16">
-              <Button
-                variant="primary"
-                size="large"
-                fullWidth
-                onPress={handleSave}
-                disabled={!isValid || isValidating}
-                style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
-                {isValidating ? (
-                  <View className="flex-row items-center justify-center gap-2">
-                    <Spinner size="small" color={COLORS.white} />
-                    <Text className="font-geist-semibold text-base text-white">Validating...</Text>
-                  </View>
-                ) : (
-                  'Save'
-                )}
-              </Button>
             </View>
           </View>
         </TouchableWithoutFeedback>
