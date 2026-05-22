@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useFollowingStore } from './following';
 
 type ViewType = 'default' | 'feed' | 'folder' | 'feedPreview';
 
@@ -35,6 +36,7 @@ export const useFeedViewStore = create<FeedViewStore>((set) => ({
   ...initialState,
 
   selectFeed: (feedId, feedName) => {
+    useFollowingStore.getState().setActiveTab(0);
     set({
       viewType: 'feed',
       selectedId: feedId,
@@ -46,6 +48,7 @@ export const useFeedViewStore = create<FeedViewStore>((set) => ({
   },
 
   selectFolder: (folderId, folderName) => {
+    useFollowingStore.getState().setActiveTab(0);
     set({
       viewType: 'folder',
       selectedId: folderId,
@@ -57,6 +60,7 @@ export const useFeedViewStore = create<FeedViewStore>((set) => ({
   },
 
   selectFeedPreview: (feedId, feedName, sourceRoute) => {
+    useFollowingStore.getState().setActiveTab(0);
     set({
       viewType: 'feedPreview',
       selectedId: feedId,

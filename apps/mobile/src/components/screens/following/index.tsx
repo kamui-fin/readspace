@@ -86,8 +86,8 @@ export function FollowingScreen({
   // This handles all edge cases: initial render, tab switches, remeasurements
   const contentPaddingTop = useMemo(() => {
     const effectiveHeight = headerHeight > 0 ? headerHeight : safeMinimumHeight;
-    // Reduce extra spacing when viewing feed/folder (8px vs 64px)
-    const extraSpacing = isViewingFeedOrFolder ? 8 : 64;
+    // Reduce extra spacing when viewing feed/folder (0px vs 64px)
+    const extraSpacing = isViewingFeedOrFolder ? 0 : 64;
     return effectiveHeight + extraSpacing;
   }, [headerHeight, safeMinimumHeight, isViewingFeedOrFolder]);
 

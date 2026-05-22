@@ -66,12 +66,12 @@ export const Header: React.FC<HeaderProps> = (props) => {
 
   useEffect(() => {
     if (variant === 'tabbed') {
-      const totalHeight = foregroundHeightState + tabsHeight;
+      const totalHeight = insets.top + 10 + foregroundHeightState + tabsHeight;
       if (totalHeight > 0 && onHeaderHeightChange) {
         onHeaderHeightChange(totalHeight);
       }
     }
-  }, [foregroundHeightState, tabsHeight, onHeaderHeightChange, variant]);
+  }, [foregroundHeightState, tabsHeight, onHeaderHeightChange, variant, insets.top]);
 
   const handleForegroundLayout = useCallback(
     (e: { nativeEvent: { layout: { height: number } } }) => {

@@ -68,12 +68,11 @@ export default function FollowingRoute() {
 
   // Calculate safe minimum header height (safe area + title + tabs + padding)
   // This ensures content never appears under header, even if headerHeight is 0
-  // When viewing feed/folder (no tabs), reduce height by 50px (tab height)
   const safeMinimumHeight = useMemo(() => {
-    const baseHeight = insets.top + 10 + 80 + 16; // safe area + padding + title + bottom padding
-    const tabsHeight = isViewingFeedOrFolder ? 0 : 50; // Only include tabs when not viewing feed/folder
+    const baseHeight = insets.top + 10 + 80; // safe area + padding + title
+    const tabsHeight = 50; // Tabbed header always renders tabs
     return baseHeight + tabsHeight;
-  }, [insets.top, isViewingFeedOrFolder]);
+  }, [insets.top]);
 
   // Persist header height - only update when we get a valid (> 0) height
   // This prevents headerHeight from dropping to 0 during remeasurements
