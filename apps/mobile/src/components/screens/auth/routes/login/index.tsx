@@ -241,8 +241,7 @@ export function LoginScreen() {
                   variant="primary"
                   size="large"
                   onPress={() => handleSubmit()}
-                  loading={isSubmitting}
-                  style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
+                  loading={isSubmitting}>
                   Sign In
                 </Button>
 
@@ -274,6 +273,6 @@ export function LoginScreen() {
         onSave={handleSelfHostSave}
         onClose={handleModalClose}
       />
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingView >
   );
 }

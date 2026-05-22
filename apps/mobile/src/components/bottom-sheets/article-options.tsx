@@ -10,6 +10,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { forwardRef, useMemo } from 'react';
 import { Pressable, View } from 'react-native';
+import clsx from 'clsx';
 
 export type ArticleViewMode = 'original' | 'extracted' | 'translated';
 
@@ -50,7 +51,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
         const isDark = useIsDarkMode();
         const colors = COLORS[isDark ? 'dark' : 'light'];
         const greyColor = isDark ? COLORS.dark.grey : COLORS.light.grey;
-        const activeColor = colors.primary;
+        const activeColor = colors.secondary;
 
         const snapPoints = useMemo(() => ['50%', '75%'], []);
 
@@ -73,8 +74,8 @@ export const ArticleOptionsBottomSheet = forwardRef<
                     }
                 }}
                 disabled={isDisabled}
-                className={`flex-row items-center justify-between rounded-xl px-4 py-3 ${isActive ? 'bg-primary/10' : ''
-                    } ${isDisabled ? 'opacity-50' : 'active:bg-grey6 dark:active:bg-grey6-dark'}`}>
+                className={`flex-row items-center justify-between rounded-xl py-3 ${isDisabled ? 'opacity-50' : 'active:bg-grey6 dark:active:bg-grey6-dark'
+                    }`}>
                 <View className="flex-row items-center gap-3">
                     <View
                         className="items-center justify-center rounded-lg"
@@ -84,8 +85,8 @@ export const ArticleOptionsBottomSheet = forwardRef<
                     <View>
                         <Text
                             size="base"
-                            fontFamily="geist-semibold"
-                            className={isActive ? 'text-primary ' : 'text-primary_foreground '}>
+                            fontFamily="geist-medium"
+                            className={clsx(isActive ? 'text-secondary ' : 'text-primary_secondary ')}>
                             {title}
                         </Text>
                         {subtitle && (
@@ -108,8 +109,42 @@ export const ArticleOptionsBottomSheet = forwardRef<
                     className="flex-1 bg-white"
                     showsVerticalScrollIndicator={false}>
 
+                    {/* Actions Section */}
+                    <Text size="sm" fontFamily="geist-semibold" className=" tracking-wide text-grey uppercase">
+                        Actions
+                    </Text>
+                    <View className="mb-4">
+                        {!isClipped && renderOption(
+                            <SparkleIcon width={22} height={22} fill={greyColor} />,
+                            'Generate AI Summary',
+                            undefined,
+                            onGenerateSummary
+                        )}
+
+                        {!isClipped && renderOption(
+                            <EarthBoldIcon width={22} height={22} color={greyColor} />,
+                            hasTranslatedContent ? 'Translate to a different language' : 'Translate Article',
+                            hasTranslatedContent ? 'Change current language' : 'Pick a language',
+                            onTranslate
+                        )}
+
+                        {renderOption(
+                            <CopyBoldIcon width={22} height={22} color={greyColor} />,
+                            'Copy Link',
+                            undefined,
+                            onCopyLink
+                        )}
+
+                        {renderOption(
+                            <GlobalBoldIcon width={22} height={22} color={greyColor} />,
+                            'Open in Browser',
+                            undefined,
+                            onOpenInBrowser
+                        )}
+                    </View>
+
                     {/* View Mode Section */}
-                    <Text size="sm" fontFamily="geist-bold" className="mb-2 ml-4 mt-2 tracking-wide text-grey uppercase">
+                    <Text size="sm" fontFamily="geist-semibold" className="mb-2 mt-2 tracking-wide text-grey uppercase">
                         Viewing Mode
                     </Text>
                     <View className="mb-4">
@@ -140,41 +175,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
                         )}
                     </View>
 
-                    <View className="mx-4 mb-4 h-px bg-divider" />
 
-                    {/* Actions Section */}
-                    <Text size="sm" fontFamily="geist-bold" className="mb-2 ml-4 tracking-wide text-grey uppercase">
-                        Actions
-                    </Text>
-                    <View className="mb-8">
-                        {!isClipped && renderOption(
-                            <SparkleIcon width={22} height={22} fill={greyColor} />,
-                            'Generate AI Summary',
-                            undefined,
-                            onGenerateSummary
-                        )}
-
-                        {!isClipped && renderOption(
-                            <EarthBoldIcon width={22} height={22} color={greyColor} />,
-                            hasTranslatedContent ? 'Translate to a different language' : 'Translate Article',
-                            hasTranslatedContent ? 'Change current language' : 'Pick a language',
-                            onTranslate
-                        )}
-
-                        {renderOption(
-                            <CopyBoldIcon width={22} height={22} color={greyColor} />,
-                            'Copy Link',
-                            undefined,
-                            onCopyLink
-                        )}
-
-                        {renderOption(
-                            <GlobalBoldIcon width={22} height={22} color={greyColor} />,
-                            'Open in Browser',
-                            undefined,
-                            onOpenInBrowser
-                        )}
-                    </View>
                 </BottomSheetScrollView>
             </BottomSheet>
         );

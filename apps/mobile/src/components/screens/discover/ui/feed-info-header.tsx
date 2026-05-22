@@ -61,6 +61,7 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
 
   const contentType = (feed as FeedDiscoveryResult).content_type;
   const author = (feed as FeedDiscoveryResult).author || (feed as any).author;
+  const trimmedDescription = feed.description?.trim();
 
   console.log(feed.image_url, imageError);
 
@@ -151,39 +152,25 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
       </View>
 
       {/* Feed Description */}
-      {feed.description && (
+      {trimmedDescription && (
         <View className="mb-4">
-          {feed.description.length > 120 ? (
-            <>
+          {trimmedDescription.length > 120 ? (
+            <Text
+              size="sm"
+              fontFamily="geist"
+              className="leading-6 text-grey">
+              {isDescriptionExpanded ? trimmedDescription : `${trimmedDescription.slice(0, 120)}... `}
               <Text
                 size="sm"
-                fontFamily="geist"
-                className="leading-6 text-grey">
-                {isDescriptionExpanded ? feed.description : `${feed.description.slice(0, 120)}... `}
-                {!isDescriptionExpanded && (
-                  <Text
-                    size="sm"
-                    fontFamily="geist-medium"
-                    onPress={toggleDescription}
-                    className="text-black">
-                    more
-                  </Text>
-                )}
+                fontFamily="geist-medium"
+                onPress={toggleDescription}
+                className="text-black">
+                {isDescriptionExpanded ? ' less' : 'more'}
               </Text>
-              {isDescriptionExpanded && (
-                <Button
-                  variant="text"
-                  size="small"
-                  onPress={toggleDescription}
-                  className="mt-1 h-auto self-start px-0"
-                  textClassName="text-sm font-geist-medium text-black ">
-                  less
-                </Button>
-              )}
-            </>
+            </Text>
           ) : (
             <Text size="sm" fontFamily="geist" className="leading-6 text-grey">
-              {feed.description}
+              {trimmedDescription}
             </Text>
           )}
         </View>

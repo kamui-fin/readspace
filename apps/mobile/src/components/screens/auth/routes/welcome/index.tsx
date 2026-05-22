@@ -115,7 +115,7 @@ export function WelcomeScreen() {
           <Text className="text-grey2 dark:text-grey font-figtree-medium text-[24px] leading-9 ">
             follow your favorite news, blogs, people in a{' '}
             <Text
-              className="font-geist-semibold"
+              className="font-figtree-semibold"
               style={{ color: isDark ? COLORS.dark.secondary : COLORS.light.secondary }}>
               calm
             </Text>{' '}

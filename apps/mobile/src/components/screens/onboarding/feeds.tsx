@@ -1,7 +1,8 @@
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
-import { useOnboardingFeeds } from '@hooks/use-onboarding-feeds';
+import { useOnboardingFeeds } from '@/hooks/useOnboardingFeeds';
+import { useCreateFeed } from '@readspace/shared';
 import { useOnboardingStore } from '@stores/onboarding';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -18,11 +19,15 @@ export function FeedSelectionStep({ onNext }: { onNext: () => void }) {
     const { displayedFeeds, isLoading, error, fetchSimilarFeeds } =
         useOnboardingFeeds(onboardingData.selectedCategories);
 
-    const handleFeedSubscribed = async (feedId: string) => {
+    const createFeed = useCreateFeed();
+
+    const handleFeedSubscribed = (feedId: string, feedUrl: string) => {
         const newFollowedFeeds = [...followedFeeds, feedId];
         setFollowedFeeds(newFollowedFeeds);
         updateOnboardingData({ followedFeeds: newFollowedFeeds });
-        await fetchSimilarFeeds(feedId);
+
+        createFeed.mutate({ url: feedUrl, folder_id: '' });
+        fetchSimilarFeeds(feedId);
     };
 
     const router = useRouter();
@@ -66,8 +71,7 @@ export function FeedSelectionStep({ onNext }: { onNext: () => void }) {
                             isFollowing={followedFeeds.includes(feed.id)}
                             showFolderPicker={false}
                             disableNavigation={true}
-                            onFollowRequest={() => handleFeedSubscribed(feed.id)}
-                            className="bg-white rounded-xl border border-grey/10 px-4 mt-2"
+                            onFollowRequest={() => handleFeedSubscribed(feed.id, feed.url)}
                         />
                     ))}
                 </View>

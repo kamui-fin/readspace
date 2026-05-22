@@ -5,10 +5,12 @@ import { MOBILE_CATEGORY_NAMES } from '@readspace/shared';
 import { useOnboardingStore } from '@stores/onboarding';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CATEGORIES = Object.keys(MOBILE_CATEGORY_NAMES);
 
 export function CategorySelectionStep({ onNext }: { onNext: () => void }) {
+    const insets = useSafeAreaInsets();
     const { onboardingData, updateOnboardingData } = useOnboardingStore();
     const [selectedCategories, setSelectedCategories] = useState<string[]>(
         onboardingData.selectedCategories || []
@@ -56,18 +58,12 @@ export function CategorySelectionStep({ onNext }: { onNext: () => void }) {
                 </View>
             </ScrollView>
 
-            <View className="py-2">
-                {selectedCategories.length > 0 && (
-                    <Text size="sm" fontFamily="geist-medium" className="text-center text-primary dark:text-primary mb-4">
-                        {selectedCategories.length} topic{selectedCategories.length === 1 ? '' : 's'} selected
-                    </Text>
-                )}
+            <View className="pt-4 mt-auto" style={{ paddingBottom: Math.max(insets.bottom + 16, 24) }}>
                 <Button
                     variant="primary"
                     size="large"
                     onPress={handleNext}
-                    disabled={selectedCategories.length === 0}
-                    style={{ borderRadius: 12 }}>
+                    disabled={selectedCategories.length === 0}>
                     Continue
                 </Button>
             </View>

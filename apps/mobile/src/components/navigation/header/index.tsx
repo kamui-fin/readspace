@@ -10,6 +10,7 @@ import Animated, {
   Easing,
   Extrapolation,
   interpolate,
+  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -132,31 +133,35 @@ export const Header: React.FC<HeaderProps> = (props) => {
     // This ensures header is never slightly sticky when scroll is at top
     const clampedScrollY = scrollY.value < 1 ? 0 : scrollY.value;
 
-    // If foregroundHeight is 0 or scrollY is 0, ensure translation is 0
-    // This prevents header from being stuck in mid-scroll
-    if (foregroundHeight.value === 0 || clampedScrollY === 0) {
-      return {
-        position: 'absolute' as const,
-        zIndex: 10,
-        transform: [{ translateY: 0 }],
-      };
-    }
+    const translation = foregroundHeight.value > 0
+      ? interpolate(
+          clampedScrollY,
+          [0, foregroundHeight.value],
+          [0, -foregroundHeight.value],
+          Extrapolation.CLAMP
+        )
+      : 0;
 
-    const translation = interpolate(
-      clampedScrollY,
-      [0, foregroundHeight.value],
-      [0, -foregroundHeight.value],
-      Extrapolation.CLAMP
-    );
-
-    const isSticky = scrollY.value > 50; // Threshold to consider sticky
+    const isSticky = clampedScrollY > 50; // Threshold to consider sticky
     const animatedPaddingTop = withTiming(isSticky ? insets.top : insets.top + 10, {
-      duration: 250,
+      duration: 200,
       easing: Easing.out(Easing.quad),
     });
 
-    const shadowOpacity = withTiming(isSticky ? (isDark ? 0.3 : 0.25) : 0, {
-      duration: 250,
+    const shadowOpacity = withTiming(isSticky ? (isDark ? 0.22 : 0.06) : 0, {
+      duration: 200,
+    });
+
+    const shadowRadius = withTiming(isSticky ? 8 : 0, {
+      duration: 200,
+    });
+
+    const shadowOffsetHeight = withTiming(isSticky ? 3 : 0, {
+      duration: 200,
+    });
+
+    const elevation = withTiming(isSticky ? 4 : 0, {
+      duration: 200,
     });
 
     return {
@@ -165,12 +170,11 @@ export const Header: React.FC<HeaderProps> = (props) => {
       transform: [{ translateY: translation }],
       paddingTop: animatedPaddingTop,
       borderBottomWidth: 0,
-      borderBottomColor: 'transparent',
-      shadowColor: isDark ? colors.muted_green : colors.secondary,
-      shadowOffset: { width: 0, height: 10 },
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: shadowOffsetHeight },
       shadowOpacity: shadowOpacity,
-      shadowRadius: 20,
-      elevation: isSticky ? 15 : 0,
+      shadowRadius: shadowRadius,
+      elevation: elevation,
     };
   });
 
