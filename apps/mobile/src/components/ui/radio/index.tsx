@@ -3,7 +3,8 @@ import { COLORS } from '@lib/constants/colors';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import { forwardRef } from 'react';
-import { Pressable, type PressableProps, Text, View } from 'react-native';
+import { Pressable, type PressableProps, View } from 'react-native';
+import { Text } from '@components/ui/text';
 
 const radioVariants = cva(
   'flex-row items-center gap-3 rounded-2xl bg-grey6 px-5 py-4 transition-opacity active:opacity-80 ',
@@ -28,11 +29,19 @@ export const Radio = forwardRef<React.ElementRef<typeof Pressable>, RadioProps>(
     const colors = COLORS[isDark ? 'dark' : 'light'];
 
     return (
-      <Pressable ref={ref} className={clsx(radioVariants(), className)} {...props}>
+      <Pressable
+        ref={ref}
+        className={clsx(radioVariants(), className)}
+        style={{
+          backgroundColor: colors.grey6,
+          borderWidth: 1,
+          borderColor: isDark ? colors.grey5 : 'transparent',
+        }}
+        {...props}>
         <View
           className="h-6 w-6 items-center justify-center rounded-full border-2"
           style={{
-            borderColor: colors.muted_green,
+            borderColor: selected ? colors.secondary : (isDark ? colors.grey4 : colors.grey3),
           }}>
           {selected && (
             <View

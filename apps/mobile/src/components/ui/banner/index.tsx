@@ -4,7 +4,8 @@ import type { VariantProps } from 'class-variance-authority';
 import { cva } from 'class-variance-authority';
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@components/ui/text';
 
 const bannerVariants = cva('flex-row items-center px-4 py-2 rounded-xl', {
   variants: {

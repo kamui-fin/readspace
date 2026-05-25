@@ -12,7 +12,8 @@ import { useImportOPML } from '@readspace/shared';
 import type * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { forwardRef, useCallback, useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@components/ui/text';
 
 export interface OPMLImportBottomSheetProps {
   file: DocumentPicker.DocumentPickerAsset | null;

@@ -25,6 +25,7 @@ import {
 } from '@readspace/shared';
 import { useFeedViewStore } from '@stores/feed-view';
 import { getTabKey, getTabName, useFollowingStore } from '@stores/following';
+import { useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -62,6 +63,9 @@ export function FollowingScreen({
   const prevIsLoadingRef = useRef(false);
   const prevArticleCountRef = useRef(0);
   const [refreshing, setRefreshing] = useState(false);
+  const prevRefreshingRef = useRef(false);
+  const firstArticleIdBeforeRefreshRef = useRef<string | undefined>(undefined);
+  const articleCountBeforeRefreshRef = useRef<number>(0);
 
   // Get state and actions from Zustand stores
   const tabKey = getTabKey(activeTab);
@@ -85,11 +89,8 @@ export function FollowingScreen({
   // Uses headerHeight if available (> 0), otherwise falls back to safeMinimumHeight
   // This handles all edge cases: initial render, tab switches, remeasurements
   const contentPaddingTop = useMemo(() => {
-    const effectiveHeight = headerHeight > 0 ? headerHeight : safeMinimumHeight;
-    // Reduce extra spacing when viewing feed/folder (0px vs 64px)
-    const extraSpacing = isViewingFeedOrFolder ? 0 : 64;
-    return effectiveHeight + extraSpacing;
-  }, [headerHeight, safeMinimumHeight, isViewingFeedOrFolder]);
+    return headerHeight > 0 ? headerHeight : safeMinimumHeight;
+  }, [headerHeight, safeMinimumHeight]);
 
   // Compute bottom padding to account for tab bar
   // Tab bar height = BOTTOM_TABBAR_BASE_HEIGHT + 0.8 * safeAreaBottom (from BottomTabbar component)
@@ -133,8 +134,8 @@ export function FollowingScreen({
   const refreshFeed = useRefreshFeed();
 
   // Get unread counts and feeds data - kept for potential future use
-  useUnreadCounts();
-  useFeeds();
+  const { refetch: refetchUnread } = useUnreadCounts();
+  const { refetch: refetchFeeds } = useFeeds();
 
   // Process articles: flatten, deduplicate, and apply filters
   const allArticles = useMemo(() => {
@@ -217,6 +218,8 @@ export function FollowingScreen({
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
+    firstArticleIdBeforeRefreshRef.current = allArticles[0]?.id;
+    articleCountBeforeRefreshRef.current = allArticles.length;
     try {
       // Perform a deep refresh for individual feed views
       if (viewType === 'feed' && selectedId) {
@@ -230,7 +233,7 @@ export function FollowingScreen({
     } finally {
       setRefreshing(false);
     }
-  }, [activeQuery, viewType, selectedId, refreshFeed]);
+  }, [activeQuery, viewType, selectedId, refreshFeed, allArticles]);
 
   // Sync loading state and article count to store
   useEffect(() => {
@@ -251,6 +254,56 @@ export function FollowingScreen({
     prevIsLoadingRef.current = isLoading;
     prevArticleCountRef.current = allArticles.length;
   }, [isLoading, allArticles.length, isFetchingNextPage, isLoadingMore, setIsLoadingMore]);
+
+  // Refetch active query and associated data when screen receives focus
+  useFocusEffect(
+    useCallback(() => {
+      activeQuery.refetch();
+      refetchUnread();
+      refetchFeeds();
+    }, [activeQuery, refetchUnread, refetchFeeds])
+  );
+
+  // Handle automatic scroll to top after a manual refresh completes and finds new/more articles
+  useEffect(() => {
+    let t1: NodeJS.Timeout;
+    let t2: NodeJS.Timeout;
+
+    if (prevRefreshingRef.current && !refreshing) {
+      const currentFirstId = allArticles[0]?.id;
+      const currentCount = allArticles.length;
+
+      const foundNewArticles =
+        (currentFirstId && currentFirstId !== firstArticleIdBeforeRefreshRef.current) ||
+        currentCount > articleCountBeforeRefreshRef.current;
+
+      if (foundNewArticles) {
+        const scrollToTop = () => {
+          try {
+            listRef.current?.scrollToOffset({ offset: 0, animated: true });
+            scrollY.value = 0;
+          } catch {
+            // Ignore if list/ref is not ready yet
+          }
+        };
+
+        // Try immediately
+        scrollToTop();
+
+        // Try after 100ms (to let the refresh control dismiss animation start)
+        t1 = setTimeout(scrollToTop, 100);
+
+        // Try after 300ms (to let the refresh control dismiss animation finish and layout settle)
+        t2 = setTimeout(scrollToTop, 300);
+      }
+    }
+    prevRefreshingRef.current = refreshing;
+
+    return () => {
+      if (t1) clearTimeout(t1);
+      if (t2) clearTimeout(t2);
+    };
+  }, [refreshing, allArticles, scrollY]);
 
   // Track the first article to detect when new articles are added at the top (e.g., after refresh)
   const previousFirstArticleRef = useRef<{ id: string; published_at?: string | Date | null } | null>(null);
@@ -397,7 +450,9 @@ export function FollowingScreen({
   return (
     <>
       <InfiniteScrollList
+        key={isDark ? 'dark' : 'light'}
         ref={listRef}
+        style={{ backgroundColor: colors.background }}
         data={listItems}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
@@ -416,9 +471,11 @@ export function FollowingScreen({
             onRefresh={handleRefresh}
             tintColor={colors.secondary}
             colors={[colors.secondary]}
+            progressBackgroundColor={isDark ? colors.grey6 : '#ffffff'}
           />
         }
         contentContainerStyle={{
+          backgroundColor: colors.background,
           // Always apply paddingTop to account for header height
           // Header is always absolute for tabbed variant, so content needs padding
           // Uses computed safe padding that handles all edge cases:

@@ -1,9 +1,84 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import { forwardRef } from 'react';
-import { Text as RNText, type TextProps as RNTextProps } from 'react-native';
+import { Text as RNText, type TextProps as RNTextProps, StyleSheet } from 'react-native';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 
-const textVariants = cva('', {
+const hasColorStyle = (style: any): boolean => {
+  if (!style) return false;
+  if (Array.isArray(style)) {
+    return style.some((s) => hasColorStyle(s));
+  }
+  return typeof style === 'object' && 'color' in style && style.color !== undefined;
+};
+
+const getExplicitColorAndOpacity = (
+  className: string | undefined,
+  colors: any,
+  isDark: boolean
+): { color?: string; opacity?: number } => {
+  if (!className) return { color: colors.primary_foreground };
+
+  const classes = className.split(/\s+/);
+  let color: string | undefined = undefined;
+  let opacity: number | undefined = undefined;
+  
+  for (let i = classes.length - 1; i >= 0; i--) {
+    const cls = classes[i];
+    if (cls.startsWith('text-')) {
+      const baseClass = cls.split('/')[0];
+      
+      // Skip text alignment and sizes
+      const isSizeOrAlign = [
+        'text-xs', 'text-sm', 'text-base', 'text-md', 'text-lg', 'text-xl', 'text-2xl', 'text-3xl', 'text-4xl',
+        'text-left', 'text-center', 'text-right', 'text-justify'
+      ].includes(baseClass);
+      
+      if (isSizeOrAlign) {
+        continue;
+      }
+      
+      let cleanCls = cls;
+      let opacityValue: number | undefined = undefined;
+      
+      if (cls.includes('/')) {
+        const parts = cls.split('/');
+        cleanCls = parts[0];
+        const parsedOpacity = parseInt(parts[1], 10);
+        if (!isNaN(parsedOpacity)) {
+          opacityValue = parsedOpacity / 100;
+        }
+      }
+      
+      if (cleanCls === 'text-primary') color = isDark ? colors.secondary : colors.primary;
+      else if (cleanCls === 'text-primary-foreground') color = colors.primary_foreground;
+      else if (cleanCls === 'text-secondary') color = colors.secondary;
+      else if (cleanCls === 'text-grey') color = colors.grey;
+      else if (cleanCls === 'text-grey2') color = colors.grey2;
+      else if (cleanCls === 'text-grey3') color = colors.grey3;
+      else if (cleanCls === 'text-grey4') color = colors.grey4;
+      else if (cleanCls === 'text-grey5') color = colors.grey5;
+      else if (cleanCls === 'text-grey6') color = colors.grey6;
+      else if (cleanCls === 'text-black') color = colors.black;
+      else if (cleanCls === 'text-white') color = '#ffffff';
+      else if (cleanCls === 'text-destructive') color = colors.destructive;
+      else if (cleanCls === 'text-red') color = colors.red;
+      else if (cleanCls === 'text-blue') color = colors.blue;
+      
+      if (color) {
+        opacity = opacityValue;
+        break;
+      }
+    }
+  }
+
+  return { color: color || colors.primary_foreground, opacity };
+};
+
+
+
+const textVariants = cva('text-primary-foreground', {
   variants: {
     size: {
       xs: 'text-xs',
@@ -59,6 +134,9 @@ export interface TextProps
 
 export const Text = forwardRef<RNText, TextProps>(
   ({ className, size = 'base', fontFamily, variant, style, ...props }, ref) => {
+    const isDark = useIsDarkMode();
+    const colors = COLORS[isDark ? 'dark' : 'light'];
+
     // Automatically apply heading variant for large text sizes if variant not specified
     const effectiveVariant =
       variant ??
@@ -66,7 +144,22 @@ export const Text = forwardRef<RNText, TextProps>(
 
     const sizeVariant =
       typeof size === 'string' ? (size as VariantProps<typeof textVariants>['size']) : undefined;
-    const customStyle = typeof size === 'number' ? { fontSize: size } : undefined;
+    
+    // Build combined style, appending JS-backed color overrides when not specified inline
+    const customStyle: any = typeof size === 'number' ? { fontSize: size } : {};
+    
+    if (!hasColorStyle(style)) {
+      const { color, opacity } = getExplicitColorAndOpacity(className, colors, isDark);
+      if (color) {
+        customStyle.color = color;
+      }
+      if (opacity !== undefined) {
+        const flatStyle = style ? StyleSheet.flatten(style) : {};
+        if (flatStyle.opacity === undefined) {
+          customStyle.opacity = opacity;
+        }
+      }
+    }
 
     return (
       <RNText

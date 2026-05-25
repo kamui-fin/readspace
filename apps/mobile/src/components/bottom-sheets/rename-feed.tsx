@@ -6,7 +6,8 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { useUpdateFeed } from '@readspace/shared';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@components/ui/text';
 
 export interface RenameFeedModalRef {
   present: (feedId: string, currentName: string) => void;
@@ -71,7 +72,7 @@ export const RenameFeedModal = forwardRef<RenameFeedModalRef, RenameFeedModalPro
         keyboardBlurBehavior="restore">
         {/* Heading */}
         <Text
-          className="font-geist-bold text-2xl text-primary-foreground dark:text-primary-foreground-dark mb-1"
+          className="font-geist-bold text-2xl text-primary-foreground mb-1"
           style={{ letterSpacing: -0.5 }}>
           Rename feed
         </Text>

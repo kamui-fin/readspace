@@ -1,6 +1,8 @@
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { EmptyState } from '@/components/ui/empty-state';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 
 import {
   DEFAULT_EMPTY_STATE_CONFIG,
@@ -23,12 +25,15 @@ export function EmptyStateView({
   onRefresh,
   refreshColor,
 }: EmptyStateViewProps) {
+  const isDark = useIsDarkMode();
+  const colors = COLORS[isDark ? 'dark' : 'light'];
   if (isLoading) {
     return (
       <View
         style={{
           flex: 1,
           minHeight: 400,
+          backgroundColor: colors.background,
         }}>
         <ArticleCardSkeletonList count={8} />
       </View>
@@ -42,8 +47,10 @@ export function EmptyStateView({
   return (
     <ScrollView
       className="flex-1 bg-background"
+      style={{ backgroundColor: colors.background }}
       contentContainerStyle={{
         flexGrow: 1,
+        backgroundColor: colors.background,
       }}
       refreshControl={
         <RefreshControl
@@ -51,6 +58,7 @@ export function EmptyStateView({
           onRefresh={onRefresh}
           tintColor={refreshColor}
           colors={[refreshColor]}
+          progressBackgroundColor={isDark ? colors.grey6 : '#ffffff'}
         />
       }
       showsVerticalScrollIndicator={false}>

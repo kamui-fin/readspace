@@ -1,6 +1,7 @@
 import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
 import LayersMinimalisticLinearIcon from '@components/icons/solar/layers-minimalistic-linear';
 import LinkMinimalistic2BoldIcon from '@components/icons/solar/link-minimalistic-2-bold';
+import TrashBinTrashBoldIcon from '@components/icons/solar/trash-bin-trash-bold';
 import UserCircleLinearIcon from '@components/icons/solar/user-circle-linear';
 import { Button } from '@components/ui/button';
 import { Chip } from '@components/ui/chip';
@@ -232,7 +233,21 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
         variant={isFollowing ? 'secondary' : 'primary'}
         fullWidth
         disabled={isFollowLoading}
-        loading={isFollowLoading}>
+        loading={isFollowLoading}
+        leftIcon={
+          isFollowing && !isFollowLoading ? (
+            <TrashBinTrashBoldIcon width={16} height={16} color={colors === COLORS.dark ? '#fe4336' : '#EA4335'} />
+          ) : undefined
+        }
+        style={
+          isFollowing
+            ? {
+                backgroundColor: colors.grey6,
+                borderWidth: 0,
+              }
+            : undefined
+        }
+        textClassName={isFollowing ? (colors === COLORS.dark ? 'text-destructive' : 'text-[#EA4335]') : undefined}>
         {isFollowLoading
           ? isFollowing
             ? 'Unfollowing...'

@@ -30,10 +30,13 @@ export const Header: React.FC<HeaderProps> = (props) => {
     variant,
     bottomContent,
     titleFontWeight = 'bold',
+    titleSize,
+    transparentBackground = false,
   } = props;
 
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+  const headerBgColor = transparentBackground ? 'transparent' : colors.card;
   const insets = useSafeAreaInsets();
 
   const [foregroundHeightState, setForegroundHeight] = useState(0);
@@ -397,6 +400,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
       actions={actions}
       titleFontWeight={titleFontWeight}
       onTitlePress={onTitlePress}
+      titleSize={titleSize}
       colors={colors}
       onLayout={handleForegroundLayout}
     />
@@ -432,6 +436,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
             right: 0,
             zIndex: 10,
             paddingTop: insets.top + 10,
+            backgroundColor: headerBgColor,
           }}>
           {renderForeground()}
           {bottomContent && <View onLayout={handleBottomContentLayout}>{bottomContent}</View>}
@@ -443,7 +448,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
     return (
       <Animated.View
         className={clsx(headerContainerVariants({ variant }))}
-        style={animatedContainerStyle}>
+        style={[animatedContainerStyle, { backgroundColor: headerBgColor }]}>
         <Animated.View style={animatedForegroundStyle}>
           {renderForeground()}
           {bottomContent && <View onLayout={handleBottomContentLayout}>{bottomContent}</View>}
@@ -460,7 +465,12 @@ export const Header: React.FC<HeaderProps> = (props) => {
   // Static variant - no animations, no absolute positioning
   if (variant === 'static') {
     return (
-      <View className={clsx(headerContainerVariants({ variant }), 'pt-6 pb-3')}>
+      <View
+        className={clsx(headerContainerVariants({ variant }), 'pb-5')}
+        style={{
+          backgroundColor: headerBgColor,
+          paddingTop: insets.top + 10,
+        }}>
         {renderForeground()}
       </View>
     );
@@ -470,7 +480,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
   return (
     <Animated.View
       className={clsx(headerContainerVariants({ variant }))}
-      style={[{ paddingTop: insets.top + 10 }, animatedHeaderStyle]}>
+      style={[{ paddingTop: insets.top + 10, backgroundColor: headerBgColor }, animatedHeaderStyle]}>
       <Animated.View style={animatedForegroundStyle}>{renderForeground()}</Animated.View>
       {renderTabs()}
     </Animated.View>

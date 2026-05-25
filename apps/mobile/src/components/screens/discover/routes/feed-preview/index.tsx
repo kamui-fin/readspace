@@ -147,7 +147,7 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
   }, []);
 
   const handleFolderSelect = useCallback(
-    (folderId: string | null) => {
+    async (folderId: string | null) => {
       // Determine which feed to follow: main feed or a similar feed
       const feedUrlToFollow = pendingSimilarFeedUrl || feed?.url;
 
@@ -163,37 +163,38 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
         );
       }
 
-      createFeed.mutate(
-        {
-          url: feedUrlToFollow,
-          folder_id: folderId || '',
-        },
-        {
-          onSuccess: () => {
-            toast.success(pendingSimilarFeedUrl ? 'Following feed!' : `Following ${feed?.title}`);
-            setPendingSimilarFeedUrl(null);
+      try {
+        await toast.promise(
+          createFeed.mutateAsync({
+            url: feedUrlToFollow,
+            folder_id: folderId || '',
+          }),
+          {
+            loading: 'Following feed...',
+            success: pendingSimilarFeedUrl ? 'Following feed!' : `Following ${feed?.title || 'feed'}!`,
+            error: 'Failed to follow feed',
+          }
+        );
 
-            // If we just followed the current feed (not a similar feed)
-            if (!pendingSimilarFeedUrl && feed?.id) {
-              // Invalidate the feed cache to ensure the Following screen gets updated data
-              queryClient.invalidateQueries({
-                queryKey: ['feeds', feed.id],
-              });
-            }
-          },
-          onError: (error: any) => {
-            toast.error(error?.message || 'Failed to follow feed');
-            setPendingSimilarFeedUrl(null);
+        setPendingSimilarFeedUrl(null);
 
-            // Revert optimisitic update on error
-            if (!pendingSimilarFeedUrl && feed?.id) {
-              queryClient.setQueryData(['feed', feed.id], (old: any) =>
-                old ? { ...old, is_subscribed: false } : old
-              );
-            }
-          },
+        // If we just followed the current feed (not a similar feed)
+        if (!pendingSimilarFeedUrl && feed?.id) {
+          // Invalidate the feed cache to ensure the Following screen gets updated data
+          queryClient.invalidateQueries({
+            queryKey: ['feeds', feed.id],
+          });
         }
-      );
+      } catch (error: any) {
+        setPendingSimilarFeedUrl(null);
+
+        // Revert optimistic update on error
+        if (!pendingSimilarFeedUrl && feed?.id) {
+          queryClient.setQueryData(['feed', feed.id], (old: any) =>
+            old ? { ...old, is_subscribed: false } : old
+          );
+        }
+      }
     },
     [feed, createFeed, pendingSimilarFeedUrl, queryClient]
   );
@@ -236,7 +237,7 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
 
   if (!feed) {
     return (
-      <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
+      <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
         <View className="flex-1 items-center justify-center px-6">
           <Text
             size="base"
@@ -251,7 +252,7 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
 
   return (
     <>
-      <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
+      <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{

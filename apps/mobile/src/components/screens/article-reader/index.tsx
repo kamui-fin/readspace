@@ -11,11 +11,12 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   ScrollView,
+  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
-import RenderHTML from 'react-native-render-html';
+import { RenderHTML } from '@native-html/render';
 
 export interface ArticleReaderProps {
   article: Article;
@@ -174,10 +175,10 @@ export function ArticleReader({
         // Apply italic font if inside italic context
         const linkStyle = isInsideItalic
           ? {
-              ...tagsStyles.a,
-              fontFamily: 'EBGaramond_500Medium_Italic',
-              fontStyle: 'italic' as const,
-            }
+            ...tagsStyles.a,
+            fontFamily: 'EBGaramond_500Medium_Italic',
+            fontStyle: 'italic' as const,
+          }
           : tagsStyles.a;
 
         // Safely access tbaseStyle with null check

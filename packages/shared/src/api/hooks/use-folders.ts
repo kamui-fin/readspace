@@ -64,14 +64,14 @@ export function useDeleteFolder(
     onSuccess: (_, folderId) => {
       console.log('useDeleteFolder onSuccess TRIGGERED for:', folderId);
       queryClient.setQueriesData<FeedsResponse>(
-        { queryKey: [RSS_QUERY_KEYS.FEEDS] },
+        { queryKey: [RSS_QUERY_KEYS.FEEDS, "list"] },
         (old) => {
           console.log('Updating feeds data, old is:', !!old);
           if (!old) return old;
           return {
             ...old,
-            folders: old.folders.filter((f) => f.id !== folderId),
-            subscriptions: old.subscriptions.filter(
+            folders: (old.folders || []).filter((f) => f.id !== folderId),
+            subscriptions: (old.subscriptions || []).filter(
               (s) => s.folder?.id !== folderId,
             ),
           };
@@ -82,14 +82,14 @@ export function useDeleteFolder(
         (old) => {
           console.log('Updating folders data, old is:', !!old);
           if (!old) return old;
-          return old.filter((f) => f.id !== folderId);
+          return (old || []).filter((f) => f.id !== folderId);
         },
       );
     },
     onSettled: () => {
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: queryKeys.folders() });
-        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, "list"] });
         queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
         queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
       }, 300);

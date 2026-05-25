@@ -5,6 +5,7 @@ import { Text } from '@components/ui/text';
 import type { FeedSummary } from '@readspace/shared';
 import { ScrollView, View } from 'react-native';
 import { CategoriesList } from './categories.list';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
 interface SearchResultsProps {
   showSearchSkeleton: boolean;
@@ -29,6 +30,7 @@ export function SearchResults({
   onClearCategory,
   categoryScrollRef,
 }: SearchResultsProps) {
+  const isDark = useIsDarkMode();
   const categoryHeader = selectedCategory ? (
     <View className="mb-6">
       <CategoriesList
@@ -67,6 +69,7 @@ export function SearchResults({
         </ScrollView>
       ) : hits && hits.filter(Boolean).length > 0 ? (
         <InfiniteScrollList
+          key={isDark ? 'dark' : 'light'}
           data={hits.filter(Boolean)}
           estimatedItemSize={80}
           ListHeaderComponent={categoryHeader}

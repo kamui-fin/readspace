@@ -124,22 +124,20 @@ export function ProfileScreen() {
     }
   }, [feeds, folders]);
 
-  const githubColor = '#161614';
+  const githubColor = isDark ? '#ffffff' : '#161614';
   const discordColor = '#5865F2';
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-background" style={{ backgroundColor: colors.background }}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
           paddingBottom: insets.bottom + BOTTOM_TABBAR_BASE_HEIGHT + 20,
         }}
         showsVerticalScrollIndicator={false}>
-        {/* Header with safe area padding - scrolls with content */}
-        <View style={{ paddingTop: insets.top }}>
-          <Header variant="static" title="Profile" subtitle="Your account settings" />
-        </View>
-        <View className="px-6">
+        {/* Header - scrolls with content */}
+        <Header variant="static" title="Profile" titleFontWeight="semibold" subtitle="Your account settings" />
+        <View className="mt-4 px-6">
           {/* User Profile */}
           {displayUser && (
             <View className="mb-8 flex-row items-center justify-between">
@@ -251,7 +249,7 @@ export function ProfileScreen() {
             <SettingsItem
               label="GitHub"
               variant="link"
-              leftIcon={<GitHubIcon width={22} height={22} fill={githubColor} />}
+              leftIcon={<GitHubIcon width={22} height={22} color={githubColor} fill={githubColor} />}
               onPress={handleGithubPress}
             />
 

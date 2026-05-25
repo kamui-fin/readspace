@@ -177,6 +177,42 @@ class TestFeedAdd:
 
         assert response.status_code == 422
 
+    @pytest.mark.asyncio
+    async def test_add_feed_empty_folder_id(
+        self, async_client: AsyncClient
+    ):
+        """Test adding a feed with an empty folder_id string (should fall back to default folder)."""
+        response = await async_client.post(
+            "/api/feeds/",
+            json={
+                "url": "https://techcrunch.com/feed?empty_folder_test=1",
+                "folder_id": "",
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert "id" in data
+        assert "feed" in data
+
+    @pytest.mark.asyncio
+    async def test_add_feed_invalid_uuid_folder_id(
+        self, async_client: AsyncClient
+    ):
+        """Test adding a feed with an invalid UUID folder_id string (should fall back to default folder)."""
+        response = await async_client.post(
+            "/api/feeds/",
+            json={
+                "url": "https://techcrunch.com/feed?invalid_folder_test=1",
+                "folder_id": "not-a-valid-uuid",
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert "id" in data
+        assert "feed" in data
+
 
 class TestFeedList:
     """Test feed listing endpoint."""
@@ -239,7 +275,9 @@ class TestFeedList:
         assert response.status_code == 200
         data = response.json()
         assert len(data["subscriptions"]) >= 1
-        assert all(sub["folder"]["id"] == str(test_folder.id) for sub in data["subscriptions"])
+        assert all(
+            sub["folder"]["id"] == str(test_folder.id) for sub in data["subscriptions"]
+        )
 
     @pytest.mark.asyncio
     async def test_list_feeds_filter_by_favorite(

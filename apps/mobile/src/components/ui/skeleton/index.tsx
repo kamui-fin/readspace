@@ -10,6 +10,8 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 
 const skeletonVariants = cva('bg-grey6 ', {
   variants: {
@@ -44,6 +46,8 @@ export function Skeleton({
   height,
   animate = true,
 }: SkeletonProps) {
+  const isDark = useIsDarkMode();
+  const colors = COLORS[isDark ? 'dark' : 'light'];
   const opacity = useSharedValue(1);
 
   useEffect(() => {
@@ -78,7 +82,7 @@ export function Skeleton({
   return (
     <Animated.View
       className={clsx(skeletonVariants({ variant, size }), className)}
-      style={[customStyle as object, animate ? animatedStyle : undefined]}
+      style={[customStyle as object, animate ? animatedStyle : undefined, { backgroundColor: colors.grey5 }]}
     />
   );
 }

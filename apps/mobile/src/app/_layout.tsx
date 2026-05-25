@@ -32,9 +32,11 @@ import {
 } from '@expo-google-fonts/geist-mono';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { COLORS } from '@lib/constants/colors';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useThemeStore } from '@stores/theme';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import clsx from 'clsx';
+import { StatusBar } from 'expo-status-bar';
 import * as Font from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -79,8 +81,8 @@ function RootNavigator() {
   const segments = useSegments();
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [fontError, setFontError] = useState<Error | null>(null);
-  const getEffectiveColorScheme = useThemeStore((state) => state.getEffectiveColorScheme);
-  const isDark = getEffectiveColorScheme() === 'dark';
+  const isDark = useIsDarkMode();
+  const isHydrated = useThemeStore((state) => state.isHydrated);
 
   useEffect(() => {
     async function loadFonts() {
@@ -156,7 +158,7 @@ function RootNavigator() {
 
   // Handle splash screen hiding
   useEffect(() => {
-    if ((fontsLoaded || fontError) && !isAuthLoading) {
+    if ((fontsLoaded || fontError) && !isAuthLoading && isHydrated) {
       const inAuthGroup = segments[0] === '(auth)';
       const inProtectedGroup = segments[0] === '(protected)';
 
@@ -167,7 +169,7 @@ function RootNavigator() {
 
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, fontError, isAuthLoading, session, segments]);
+  }, [fontsLoaded, fontError, isAuthLoading, session, segments, isHydrated]);
 
   // Prevent rendering until the fonts have loaded (or errored)
   if (!fontsLoaded && !fontError) {
@@ -181,7 +183,8 @@ function RootNavigator() {
       <KeyboardProvider>
         <BottomSheetModalProvider>
           <ToastProvider>
-            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor } }}>
+            <StatusBar style={isDark ? 'light' : 'dark'} />
+            <Stack key={isDark ? 'dark' : 'light'} screenOptions={{ headerShown: false, contentStyle: { backgroundColor } }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="(protected)" />
               <Stack.Screen name="(auth)" />

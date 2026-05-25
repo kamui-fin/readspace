@@ -6,8 +6,8 @@ export const textVariants = cva('text-center leading-tight', {
       primary: 'text-white',
       secondary: 'text-grey dark:text-grey',
       text: 'text-primary dark:text-primary',
-      ghost: 'text-primary-foreground dark:text-primary-foreground-dark',
-      icon: 'text-primary-foreground dark:text-primary-foreground-dark',
+      ghost: 'text-primary-foreground',
+      icon: 'text-primary-foreground',
     },
     size: {
       small: 'text-sm font-geist-medium leading-5',

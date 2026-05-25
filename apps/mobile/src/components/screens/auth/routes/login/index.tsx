@@ -110,6 +110,8 @@ export function LoginScreen() {
     apiUrl: string;
     supabaseUrl: string;
     supabaseAnonKey: string;
+    meilisearchUrl?: string;
+    meilisearchSearchKey?: string;
   }) => {
     setSelfHosted(data);
     toast.success('Self-hosted instance configured');
@@ -124,7 +126,8 @@ export function LoginScreen() {
     <KeyboardAvoidingView
       className="flex-1 bg-screen"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      enabled={!isModalOpen}>
+      enabled={!isModalOpen}
+      style={{ backgroundColor: colors.background }}>
       <Formik
         initialValues={initialValues}
         validationSchema={toFormikValidationSchema(LoginSchema)}
@@ -165,7 +168,7 @@ export function LoginScreen() {
                       placeholder="address@example.com"
                       value={values.email}
                       onChangeText={handleChange('email')}
-                      onBlur={() => setFieldTouched('email', true, true)}
+                      onBlur={() => setFieldTouched('email', true, false)}
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoComplete="email"
@@ -181,7 +184,7 @@ export function LoginScreen() {
                       placeholder="your password"
                       value={values.password}
                       onChangeText={handleChange('password')}
-                      onBlur={() => setFieldTouched('password', true, true)}
+                      onBlur={() => setFieldTouched('password', true, false)}
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
                       autoComplete="password"

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export function FeedPreviewSkeleton() {
   const insets = useSafeAreaInsets();
   return (
-    <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
       <ScrollView showsVerticalScrollIndicator={false} className="px-6 pt-2">
         <View className="mb-6" />
         <View className="mb-4">

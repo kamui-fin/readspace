@@ -1,6 +1,7 @@
 import { useClampText } from '@hooks/useClampText';
 import { ReactNode, useRef } from 'react';
-import { Platform, Text } from 'react-native';
+import { Platform, Text as RNText } from 'react-native';
+import { Text } from '@components/ui/text';
 
 export type ClampTextProps = {
   text?: string | Iterable<ReactNode> | null;
@@ -21,7 +22,7 @@ export const ClampText = ({
   foldText = 'less',
   expandText = 'more',
 }: ClampTextProps) => {
-  const textRef = useRef<Text>(null);
+  const textRef = useRef<RNText>(null);
 
   const isPureText = typeof text === 'string';
 

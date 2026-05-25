@@ -24,7 +24,7 @@ const ContextMenuSub = ContextMenu.Sub;
 const contextMenuContentVariants = cva('animate-zoom-in rounded-2xl p-2 shadow', {
   variants: {
     disableBlurEffect: {
-      true: 'bg-white ',
+      true: 'bg-white dark:bg-black ',
       false: 'bg-white/80 shadow backdrop-blur-md backdrop-saturate-150 dark:bg-black/80',
     },
   },

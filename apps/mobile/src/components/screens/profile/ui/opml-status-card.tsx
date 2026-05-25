@@ -205,7 +205,7 @@ export function OPMLStatusCard({
         <View>
             {/* Pending State */}
             {status === 'pending' && (
-                <View className="rounded-3xl bg-grey6 p-5 dark:bg-grey6">
+                <View className="rounded-3xl p-5" style={{ backgroundColor: colors.grey6 }}>
                     <View className="mb-4 items-center">
                         <ClockCircleLinearIcon width={48} height={48} color={colors.grey} />
                         <Text className="mt-3 font-geist-bold text-xl text-black dark:text-white">
@@ -233,7 +233,7 @@ export function OPMLStatusCard({
 
             {/* In Progress State */}
             {status === 'in_progress' && (
-                <View className="rounded-3xl bg-grey6 p-5 dark:bg-grey6">
+                <View className="rounded-3xl p-5" style={{ backgroundColor: colors.grey6 }}>
                     {/* File Info Header */}
                     <View className="mb-8 flex-row items-start gap-3">
                         <DocumentTextBoldIcon width={48} height={48} color={colors.secondary} />
@@ -311,7 +311,7 @@ export function OPMLStatusCard({
             {/* Completed State */}
             {status === 'completed' && (
                 <View>
-                    <View className="mb-6 rounded-3xl bg-grey6 p-5 dark:bg-grey6">
+                    <View className="mb-6 rounded-3xl p-5" style={{ backgroundColor: colors.grey6 }}>
                         <View className="mb-4 items-center">
                             <CheckCircleLinearIcon width={48} height={48} color={colors.secondary} />
                             <Text className="mt-3 font-geist-bold text-xl text-black dark:text-white">
@@ -325,7 +325,7 @@ export function OPMLStatusCard({
                         {/* Statistics */}
                         {progress && (
                             <View className="gap-2.5">
-                                <View className="flex-row items-center justify-between rounded-2xl bg-white px-4 py-3 dark:bg-black border border-grey5 dark:border-grey4">
+                                <View className="flex-row items-center justify-between rounded-2xl px-4 py-3 border" style={{ backgroundColor: colors.card, borderColor: colors.grey4 }}>
                                     <View className="flex-row items-center gap-2.5">
                                         <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.secondary }} />
                                         <Text className="font-geist-medium text-sm text-grey dark:text-grey">
@@ -337,8 +337,8 @@ export function OPMLStatusCard({
                                     </Text>
                                 </View>
 
-                                {progress.already_existed > 0 && (
-                                    <View className="flex-row items-center justify-between rounded-2xl bg-white px-4 py-3 dark:bg-black border border-grey5 dark:border-grey4">
+                                 {progress.already_existed > 0 && (
+                                    <View className="flex-row items-center justify-between rounded-2xl px-4 py-3 border" style={{ backgroundColor: colors.card, borderColor: colors.grey4 }}>
                                         <View className="flex-row items-center gap-2.5">
                                             <View
                                                 className="h-2 w-2 rounded-full"
@@ -356,8 +356,8 @@ export function OPMLStatusCard({
                                     </View>
                                 )}
 
-                                {progress.failed > 0 && (
-                                    <View className="flex-row items-center justify-between rounded-2xl bg-white px-4 py-3 dark:bg-black border border-grey5 dark:border-grey4">
+                                 {progress.failed > 0 && (
+                                    <View className="flex-row items-center justify-between rounded-2xl px-4 py-3 border" style={{ backgroundColor: colors.card, borderColor: colors.grey4 }}>
                                         <View className="flex-row items-center gap-2.5">
                                             <View className="h-2 w-2 rounded-full" style={{ backgroundColor: colors.red }} />
                                             <Text className="font-geist-medium text-sm text-grey dark:text-grey">
@@ -389,7 +389,7 @@ export function OPMLStatusCard({
 
             {/* Failed State */}
             {status === 'failed' && (
-                <View className="rounded-3xl bg-grey6 p-5 dark:bg-grey6">
+                <View className="rounded-3xl p-5" style={{ backgroundColor: colors.grey6 }}>
                     <View className="mb-4 items-center">
                         <CloseCircleLinearIcon width={48} height={48} color={colors.red} />
                         <Text className="mt-3 font-geist-bold text-xl text-black dark:text-white">

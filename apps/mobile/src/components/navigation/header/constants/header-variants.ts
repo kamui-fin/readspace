@@ -16,7 +16,7 @@ export const headerContainerVariants = cva('w-full bg-background ', {
 export const foregroundVariants = cva('flex-row items-center pb-3', {
   variants: {
     layout: {
-      default: 'justify-between px-4',
+      default: 'justify-between px-6',
       centered: 'justify-center',
     },
   },
@@ -38,7 +38,7 @@ export const titleContainerVariants = cva('', {
 });
 
 export const titleVariants = cva(
-  'leading-8 text-primary-foreground dark:text-primary-foreground-dark tracking-tight',
+  'leading-8 text-primary-foreground tracking-tight',
   {
     variants: {
       fontWeight: {
@@ -49,6 +49,7 @@ export const titleVariants = cva(
         default: 'text-3xl',
         medium: 'text-2xl',
         small: 'text-xl',
+        xs: 'text-lg',
       },
     },
     defaultVariants: {

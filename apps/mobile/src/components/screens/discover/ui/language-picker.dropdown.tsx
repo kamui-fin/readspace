@@ -81,10 +81,13 @@ export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(
 
     const renderFooter = useCallback(
       (props: any) => (
-        <BottomSheetFooter {...props} bottomInset={16}>
+        <BottomSheetFooter {...props} bottomInset={0}>
           <View
-            className="border-t border-divider bg-background px-6 pt-4"
-            style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+            className="px-6 pt-4"
+            style={{
+              paddingBottom: Math.max(insets.bottom, 24),
+              backgroundColor: colors.background,
+            }}
           >
             <Button
               variant="primary"
@@ -97,7 +100,7 @@ export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(
           </View>
         </BottomSheetFooter>
       ),
-      [insets.bottom, handleConfirm, selectedLanguage]
+      [insets.bottom, handleConfirm, selectedLanguage, colors]
     );
 
     return (
@@ -108,10 +111,10 @@ export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(
         enablePanDownToClose
         footerComponent={renderFooter}
         backdropComponent={renderBackdrop}
-        backgroundStyle={{ backgroundColor: colors.white }}
-        handleIndicatorStyle={{ backgroundColor: colors.muted_green }}>
+        backgroundStyle={{ backgroundColor: colors.background }}
+        handleIndicatorStyle={{ backgroundColor: colors.grey4 }}>
         <BottomSheetScrollView
-          className="flex-1 bg-white px-6"
+          className="flex-1 bg-background px-6"
           contentContainerStyle={{ paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}>
           <Text

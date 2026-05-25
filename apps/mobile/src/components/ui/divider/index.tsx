@@ -1,7 +1,10 @@
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 import type React from 'react';
 import {
   type DimensionValue,
   type StyleProp,
+  StyleSheet,
   View,
   type ViewProps,
   type ViewStyle,
@@ -31,17 +34,22 @@ export const Divider: React.FC<DividerProps> = ({
   width = '100%',
   height = 'auto',
   ...rest
-}) => (
-  <View
-    className={`bg-divider  ${className || ''}`}
-    style={[
-      orientation === 'horizontal'
-        ? { width: width as DimensionValue, height: 1 }
-        : { width: 1, height: height as DimensionValue },
-      style,
-    ]}
-    {...rest}
-  />
-);
+}) => {
+  const isDark = useIsDarkMode();
+  const colors = COLORS[isDark ? 'dark' : 'light'];
+
+  return (
+    <View
+      style={[
+        orientation === 'horizontal'
+          ? { width: width as DimensionValue, height: StyleSheet.hairlineWidth }
+          : { width: StyleSheet.hairlineWidth, height: height as DimensionValue },
+        { backgroundColor: colors.divider },
+        style,
+      ]}
+      {...rest}
+    />
+  );
+};
 
 Divider.displayName = 'Divider';

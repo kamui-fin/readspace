@@ -28,13 +28,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
   }, [setSystemColorScheme, setHydrated]);
 
-  // Sync Uniwind theme
-  const { theme, getEffectiveColorScheme } = useThemeStore();
-
-  useEffect(() => {
-    // Uniwind.setTheme handles "system", "dark", or "light"
-    Uniwind.setTheme(theme);
-  }, [theme]);
-
   return <>{children}</>;
 }
+
+

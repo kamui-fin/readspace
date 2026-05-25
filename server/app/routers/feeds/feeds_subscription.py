@@ -27,12 +27,18 @@ router = APIRouter()
 
 
 # --- Helpers ---
-async def resolve_target_folder(db: AsyncSession, user_id: UUID, folder_id_input: UUID | str | None) -> UUID:
+async def resolve_target_folder(
+    db: AsyncSession, user_id: UUID, folder_id_input: UUID | str | None
+) -> UUID:
     """Resolves 'default' string or None to the user's default folder UUID."""
-    if folder_id_input is None or folder_id_input == "default":
+    if folder_id_input is None or folder_id_input == "default" or str(folder_id_input).strip() == "":
         default_folder = await ensure_default_folder(db, user_id)
         return default_folder.id
-    return UUID(str(folder_id_input))
+    try:
+        return UUID(str(folder_id_input))
+    except ValueError:
+        default_folder = await ensure_default_folder(db, user_id)
+        return default_folder.id
 
 
 async def verify_feed_exists(db: AsyncSession, feed_id: UUID) -> Feed:

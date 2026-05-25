@@ -15,6 +15,8 @@ export interface AppSettings {
   readspace_url: string;
   supabase_url: string;
   supabase_anon_key: string;
+  meilisearch_url?: string;
+  meilisearch_search_key?: string;
 }
 
 interface SettingsState {
@@ -24,7 +26,13 @@ interface SettingsState {
 interface SettingsActions {
   updateSettings: (newSettings: Partial<AppSettings>) => void;
   resetToCloud: () => void;
-  setSelfHosted: (config: { apiUrl: string; supabaseUrl: string; supabaseAnonKey: string }) => void;
+  setSelfHosted: (config: {
+    apiUrl: string;
+    supabaseUrl: string;
+    supabaseAnonKey: string;
+    meilisearchUrl?: string;
+    meilisearchSearchKey?: string;
+  }) => void;
 }
 
 export type SettingsStore = SettingsState & SettingsActions;
@@ -64,6 +72,8 @@ export const useSettingsStore = create<SettingsStore>()(
             readspace_url: config.apiUrl,
             supabase_url: config.supabaseUrl,
             supabase_anon_key: config.supabaseAnonKey,
+            meilisearch_url: config.meilisearchUrl,
+            meilisearch_search_key: config.meilisearchSearchKey,
           },
         });
       },

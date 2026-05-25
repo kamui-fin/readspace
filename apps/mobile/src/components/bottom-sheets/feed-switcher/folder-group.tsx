@@ -19,7 +19,9 @@ import { COLORS } from '@lib/constants/colors';
 import type { Folder, Subscription } from '@readspace/shared';
 import { AnimatePresence, MotiView } from 'moti';
 import { memo } from 'react';
-import { Text, useColorScheme, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@components/ui/text';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { FeedListItem } from './feed-list-item';
 
 export interface FolderGroupProps {
@@ -67,8 +69,7 @@ const FolderGroupComponent = ({
   selectedFeedIds,
   selectedFolderIds,
 }: FolderGroupProps) => {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
   const FolderIcon = isExpanded
@@ -87,7 +88,7 @@ const FolderGroupComponent = ({
 
   return (
     <View>
-      <View className="rounded-xl bg-grey6">
+      <View className="rounded-xl" style={{ backgroundColor: colors.grey6 }}>
         <Button
           variant="secondary"
           size="large"
@@ -105,9 +106,12 @@ const FolderGroupComponent = ({
               {isSelectionMode ? (
                 <View className="w-7 h-7 justify-center items-center">
                   {isSelected ? (
-                    <CheckCircleBoldIcon width={28} height={28} color={colors.primary} />
+                    <CheckCircleBoldIcon width={28} height={28} color={colors.secondary} />
                   ) : (
-                    <View className="w-6 h-6 rounded-full border-[1.5px] border-grey3" />
+                    <View
+                      className="w-6 h-6 rounded-full border-[1.5px]"
+                      style={{ borderColor: isDark ? colors.grey4 : colors.grey3 }}
+                    />
                   )}
                 </View>
               ) : isFolderViewing ? (
@@ -125,7 +129,7 @@ const FolderGroupComponent = ({
                 {folder.name}
               </Text>
 
-              <View className="flex-row items-center shrink-0">
+              <View className="flex-row items-center gap-2 shrink-0">
                 {!isSelectionMode && unreadCount > 0 && (
                   <Chip
                     label={unreadCount.toString()}
@@ -176,7 +180,7 @@ const FolderGroupComponent = ({
                         onToggleExpand(folder.id);
                       }}
                       className="h-10 w-10 flex items-center justify-center bg-transparent dark:bg-transparent">
-                      <ExpandVerticalIcon width={20} height={20} fill={colors.grey2} />
+                      <ExpandVerticalIcon width={20} height={20} color={colors.grey2} fill={colors.grey2} />
                     </Button>
                   </MotiView>
                 )}

@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     SUPABASE_URL: AnyUrl
     SUPABASE_JWT_SECRET: SecretStr
     SUPABASE_SERVICE_ROLE_KEY: SecretStr
+    SUPABASE_ANON_KEY: str = ""
 
     # Database Configuration
     # API uses Session Mode (port 5432) with QueuePool for persistent connections

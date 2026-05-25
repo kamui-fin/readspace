@@ -4,6 +4,11 @@ import type { Session, User } from '@supabase/supabase-js';
 import { useRouter, useSegments } from 'expo-router';
 import type React from 'react';
 import { createContext, use, useEffect, useState } from 'react';
+import { useFeedViewStore } from '@stores/feed-view';
+import { useFollowingStore } from '@stores/following';
+import { useFeedSwitcherStore } from '@stores/feed-switcher';
+import { useOnboardingStore } from '@stores/onboarding';
+import { useSearchHistory } from '@stores/search-history';
 
 interface SignUpCredentials {
   email: string;
@@ -81,6 +86,15 @@ export function SessionProvider({ children }: SessionProviderProps) {
       console.log('[AuthContext] 🔄 onAuthStateChange:', _event, 'hasSession:', !!newSession);
       // Don't update state on INITIAL_SESSION as getSession handles the initial load
       if (_event === 'INITIAL_SESSION') return;
+
+      if (_event === 'SIGNED_OUT') {
+        console.log('[AuthContext] 🧹 User signed out. Clearing local stores...');
+        useFeedViewStore.getState().reset();
+        useFollowingStore.getState().reset();
+        useFeedSwitcherStore.getState().setExpandedFolders(new Set());
+        useOnboardingStore.getState().resetOnboarding();
+        useSearchHistory.getState().clearHistory();
+      }
 
       setSession(newSession);
       setUser(newSession?.user ?? null);

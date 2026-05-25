@@ -34,4 +34,4 @@ android
 expo-env.d.ts
 # @end expo-cli
 
-src/components/icons
+src/components/icons/solar

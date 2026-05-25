@@ -3,7 +3,8 @@ import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
 import { Button } from '@components/ui/button';
 import { COLORS } from '@lib/constants/colors';
 import clsx from 'clsx';
-import { Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, TouchableOpacity, View } from 'react-native';
+import { Text } from '@components/ui/text';
 import {
   actionsContainerVariants,
   foregroundVariants,
@@ -30,6 +31,7 @@ interface HeaderForegroundProps {
     disabled?: boolean;
   }[];
   titleFontWeight?: 'bold' | 'semibold';
+  titleSize?: 'default' | 'medium' | 'small' | 'xs';
   onTitlePress?: () => void;
   colors: typeof COLORS.light | typeof COLORS.dark;
   onLayout: (e: { nativeEvent: { layout: { height: number } } }) => void;
@@ -43,13 +45,14 @@ export function HeaderForeground({
   onBackPress,
   actions = [],
   titleFontWeight = 'bold',
+  titleSize: titleSizeProp,
   onTitlePress,
   colors,
   onLayout,
 }: HeaderForegroundProps) {
   // Determine if we should use centered layout (for similar feeds with back button and no actions)
   const useCenteredLayout = showBackButton && actions.length === 0 && !subtitle;
-  const titleSize = useCenteredLayout ? 'small' : 'default';
+  const titleSize = titleSizeProp ?? (useCenteredLayout ? 'small' : 'default');
 
   if (useCenteredLayout) {
     return (
@@ -110,7 +113,7 @@ export function HeaderForeground({
             <View
               className="justify-center"
               style={{ marginBottom: Platform.OS === 'ios' ? 6 : 2 }}>
-              <ExpandVerticalIcon width={24} height={24} fill={colors.black} />
+              <ExpandVerticalIcon width={24} height={24} color={colors.black} fill={colors.black} />
             </View>
           </TouchableOpacity>
         ) : (

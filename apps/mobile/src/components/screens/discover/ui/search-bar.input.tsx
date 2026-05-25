@@ -119,7 +119,7 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
                 languagePickerRef?.current?.present();
               }}
               style={{ padding: 8 }}>
-              <LanguageIcon width={20} height={20} fill={colors.black} />
+              <LanguageIcon width={20} height={20} color={colors.black} fill="none" />
             </TouchableOpacity>
           )}
         </View>

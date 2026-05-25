@@ -9,8 +9,10 @@ import {
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
 import { forwardRef, useCallback } from 'react';
-import { Platform, Text, useColorScheme, View } from 'react-native';
+import { Platform, View } from 'react-native';
+import { Text } from '@components/ui/text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
 import CloseCircleIcon from '@components/icons/local/close-circle';
 import { Button } from '@components/ui/button';
@@ -54,8 +56,8 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
     ref
   ) => {
     const insets = useSafeAreaInsets();
-    const colorScheme = useColorScheme();
-    const isDark = colorScheme === 'dark';
+    const isDark = useIsDarkMode();
+    const colors = COLORS[isDark ? 'dark' : 'light'];
     const isIOS = Platform.OS === 'ios';
 
     const renderBackdrop = useCallback(
@@ -101,10 +103,11 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
         {...props}>
         <BottomSheetView
           className={clsx(
-            'flex-1 bg-white ',
+            'flex-1 bg-background ',
             isIOS && 'overflow-hidden rounded-3xl',
             containerClassName
-          )}>
+          )}
+          style={{ backgroundColor: colors.background }}>
           {/* Header Container */}
           {(headerTitle ||
             headerLeft ||
@@ -136,7 +139,7 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
                   {headerTitle && (
                     <Text
                       className={clsx(
-                        'font-geist-semibold text-2xl text-primary-foreground dark:text-primary-foreground-dark',
+                        'font-geist-semibold text-2xl text-primary-foreground',
                         headerTitleAlign === 'center' ? 'text-center' : 'text-left'
                       )}
                       style={{ lineHeight: 28 }}>

@@ -1,7 +1,4 @@
-import {
-  AddFeedBottomSheet,
-  type AddFeedBottomSheetRef,
-} from '@components/bottom-sheets/add-feed';
+import { AddFeedBottomSheet, type AddFeedBottomSheetRef } from '@components/bottom-sheets/add-feed';
 import {
   CreateFolderModal,
   type CreateFolderModalRef,
@@ -170,21 +167,30 @@ function DiscoverScreenInner() {
     folderPickerModalRef.current?.present();
   }, []);
 
-  const handleFolderSelect = useCallback((folderId: string | null) => {
-    if (!pendingAddFeedUrl) return;
-    createFeed.mutate({
-      url: pendingAddFeedUrl,
-      folder_id: folderId || undefined,
-    }, {
-      onSuccess: () => {
-        toast.success("Feed subscribed successfully!");
-      },
-      onError: () => {
-        toast.error("Failed to subscribe to feed.");
+  const handleFolderSelect = useCallback(
+    async (folderId: string | null) => {
+      if (!pendingAddFeedUrl) return;
+      const urlToSubscribe = pendingAddFeedUrl;
+      setPendingAddFeedUrl(null);
+
+      try {
+        await toast.promise(
+          createFeed.mutateAsync({
+            url: urlToSubscribe,
+            folder_id: folderId || undefined,
+          }),
+          {
+            loading: 'Subscribing to feed...',
+            success: 'Subscribed successfully!',
+            error: 'Failed to subscribe to feed',
+          }
+        );
+      } catch (e) {
+        console.log('Error subscribing to feed:', e);
       }
-    });
-    setPendingAddFeedUrl(null);
-  }, [pendingAddFeedUrl, createFeed]);
+    },
+    [pendingAddFeedUrl, createFeed]
+  );
 
   const handleSearchChange = useCallback(
     (text: string) => {
@@ -228,6 +234,9 @@ function DiscoverScreenInner() {
     setSearchQuery('');
     setActiveQuery('');
     refineQuery('');
+    setIsSearchFocused(true);
+    setViewState('focused');
+    searchBarRef.current?.focus();
   }, [refineQuery]);
 
   const handleLanguageChange = useCallback(
@@ -256,7 +265,7 @@ function DiscoverScreenInner() {
     [addSearch, refineQuery, selectedCategory, refineCategory]
   );
 
-  const showCancelButton = isSearchFocused;
+  const showCancelButton = viewState !== 'default';
 
   const handleOutsidePress = useCallback(() => {
     // Only cancel search when in focused mode
@@ -279,7 +288,7 @@ function DiscoverScreenInner() {
   const hasTypedQuery = searchQuery.trim().length > 0;
 
   return (
-    <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-background" style={{ paddingTop: insets.top, backgroundColor: colors.background }}>
       <TouchableWithoutFeedback onPress={handleOutsidePress}>
         <View className="flex-1">
           {/* In non-default states (focused/search/category), search bar is at top */}
@@ -327,10 +336,7 @@ function DiscoverScreenInner() {
                 }}>
                 {/* Child 0 — Discover header, scrolls away */}
                 <View className="pt-3 pb-4 flex-row items-center justify-between px-6">
-                  <Text
-                    size="3xl"
-                    fontFamily="geist-bold"
-                    className="tracking-heading text-black">
+                  <Text size="3xl" fontFamily="geist-bold" className="tracking-heading text-primary-foreground">
                     Discover
                   </Text>
                   <Button
@@ -339,12 +345,12 @@ function DiscoverScreenInner() {
                     className="bg-grey6"
                     fullWidth={false}
                     onPress={() => addFeedModalRef.current?.present()}>
-                    <PlusIcon width={22} height={22} fill={colors.black} strokeWidth={2} />
+                    <PlusIcon width={34} height={34} color={colors.black} strokeWidth={2} />
                   </Button>
                 </View>
 
                 {/* Child 1 — search bar, becomes sticky once header is gone */}
-                <View className="bg-white px-6 pb-4">
+                <View className="bg-background px-6 pb-4">
                   <Pressable onPress={(e) => e.stopPropagation()}>
                     <SearchBar
                       ref={searchBarRef}

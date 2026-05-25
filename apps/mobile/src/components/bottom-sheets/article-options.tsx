@@ -86,7 +86,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
                         <Text
                             size="base"
                             fontFamily="geist-medium"
-                            className={clsx(isActive ? 'text-secondary ' : 'text-primary_secondary ')}>
+                            className={clsx(isActive ? 'text-secondary ' : 'text-primary-foreground ')}>
                             {title}
                         </Text>
                         {subtitle && (
@@ -106,7 +106,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
                 enablePanDownToClose
                 onDismiss={onClose}>
                 <BottomSheetScrollView
-                    className="flex-1 bg-white"
+                    className="flex-1 bg-background"
                     showsVerticalScrollIndicator={false}>
 
                     {/* Actions Section */}
@@ -115,7 +115,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
                     </Text>
                     <View className="mb-4">
                         {!isClipped && renderOption(
-                            <SparkleIcon width={22} height={22} fill={greyColor} />,
+                            <SparkleIcon width={22} height={22} color={greyColor} fill={greyColor} />,
                             'Generate AI Summary',
                             undefined,
                             onGenerateSummary

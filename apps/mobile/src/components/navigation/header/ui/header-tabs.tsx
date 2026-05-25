@@ -8,6 +8,7 @@ import { DEVICE_CORNER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import clsx from 'clsx';
 import { View } from 'react-native';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import {
   tabsContainerVariants,
   tabsGroupVariants,
@@ -39,8 +40,10 @@ export function HeaderTabs({
   colors,
   onLayout,
 }: HeaderTabsProps) {
+  const tabRowBgColor = colors.card;
+
   return (
-    <View className={clsx(tabsRowVariants())} onLayout={onLayout}>
+    <View className={clsx(tabsRowVariants())} onLayout={onLayout} style={{ backgroundColor: tabRowBgColor }}>
       <View className={clsx(tabsContainerVariants())}>
         <View className={clsx(tabsGroupVariants())}>
           {buttonConfigs.map((btn, index) => (

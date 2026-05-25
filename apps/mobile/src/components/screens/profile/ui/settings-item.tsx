@@ -3,7 +3,9 @@ import AltArrowRightLinearIcon from '@components/icons/solar/alt-arrow-right-lin
 import { Text } from '@components/ui/text';
 import clsx from 'clsx';
 import { forwardRef } from 'react';
-import { Pressable, type PressableProps, View } from 'react-native';
+import { Pressable, type PressableProps, View, StyleSheet } from 'react-native';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 
 type SettingsItemVariant = 'select' | 'button' | 'link';
 
@@ -62,7 +64,7 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
               <Text size={15} fontFamily="geist" className="text-grey dark:text-grey">
                 {value}
               </Text>
-              <ExpandVerticalIcon width={18} height={18} fill="#9FA29F" />
+              <ExpandVerticalIcon width={18} height={18} color="#9FA29F" fill="#9FA29F" />
             </View>
           );
         case 'button':
@@ -74,11 +76,18 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
       }
     };
 
+    const isDark = useIsDarkMode();
+    const colors = COLORS[isDark ? 'dark' : 'light'];
+
+    const itemBgColor = isDark ? 'rgb(32, 32, 32)' : colors.grey6;
+    const dividerBgColor = isDark ? 'rgb(46, 46, 46)' : colors.grey5;
+
     return (
       <Pressable
         ref={ref}
-        className={clsx('bg-grey6 dark:bg-[#1C1C1E]', className)}
+        className={className}
         style={({ pressed }) => ({
+          backgroundColor: itemBgColor,
           opacity: pressed ? 0.7 : 1,
         })}
         {...props}>
@@ -96,7 +105,7 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
           </View>
           {renderRightContent()}
         </View>
-        {!isLast && <View className="mx-5 h-[1px] bg-grey5 dark:bg-[#2C2C2E]" />}
+        {!isLast && <View className="mx-5 h-[1px]" style={{ backgroundColor: dividerBgColor }} />}
       </Pressable>
     );
   }

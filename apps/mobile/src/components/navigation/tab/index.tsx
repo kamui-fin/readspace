@@ -4,7 +4,8 @@ import { COLORS } from '@lib/constants/colors';
 import { cva } from 'class-variance-authority';
 import clsx from 'clsx';
 import type { PressableProps } from 'react-native';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from '@components/ui/text';
 
 const tabVariants = cva('flex-row items-center justify-center px-4 py-2.5 rounded-lg', {
   variants: {

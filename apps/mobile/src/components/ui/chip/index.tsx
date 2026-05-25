@@ -3,7 +3,8 @@ import { COLORS } from '@lib/constants/colors';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import React, { type ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from '@components/ui/text';
 
 const chipVariants = cva('flex-row items-center rounded-full', {
   variants: {
@@ -79,10 +80,22 @@ export const Chip = ({
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
-  const textColor = selected ? colors.white : textClassName ? undefined : colors.grey;
+  const textColor = selected
+    ? '#ffffff' // Guarantee crisp white text when selected
+    : textClassName
+      ? undefined
+      : isDark ? colors.grey2 : colors.grey;
+
+  const chipBgColor = variant === 'filled'
+    ? selected
+      ? colors.secondary
+      : colors.grey6 // Soft Notion panel grey
+    : undefined;
 
   const content = (
-    <View className={clsx(chipVariants({ variant, size, selected }), className)}>
+    <View
+      className={clsx(chipVariants({ variant, size, selected }), className)}
+      style={chipBgColor ? { backgroundColor: chipBgColor } : undefined}>
       {React.isValidElement(icon) && <View className="mr-1.5">{icon}</View>}
       <Text
         className={clsx(chipTextVariants({ size, selected }), textClassName)}

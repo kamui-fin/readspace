@@ -1,6 +1,11 @@
 import { useThemeStore } from '@stores/theme';
 
 export const useIsDarkMode = () => {
-  const getEffectiveColorScheme = useThemeStore((state) => state.getEffectiveColorScheme);
-  return getEffectiveColorScheme() === 'dark';
+  return useThemeStore((state) => {
+    if (state.theme === 'system') {
+      return state.systemColorScheme === 'dark';
+    }
+    return state.theme === 'dark';
+  });
 };
+

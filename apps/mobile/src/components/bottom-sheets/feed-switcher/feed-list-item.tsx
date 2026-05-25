@@ -13,7 +13,9 @@ import { COLORS } from '@lib/constants/colors';
 import type { Subscription } from '@readspace/shared';
 import { Image as ExpoImage } from 'expo-image';
 import { memo } from 'react';
-import { Text, useColorScheme, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@components/ui/text';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
 function getFaviconUrl(feed: { link?: string | null; image_url?: string | null }): string | null {
   if (feed.image_url) return feed.image_url;
@@ -58,8 +60,7 @@ const FeedListItemComponent = ({
   isSelectionMode = false,
   isSelected = false,
 }: FeedListItemProps) => {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
   const feed = sub.feed;
@@ -72,9 +73,12 @@ const FeedListItemComponent = ({
         {isSelectionMode ? (
           <View className="h-10 w-10 items-center justify-center">
             {isSelected ? (
-              <CheckCircleBoldIcon width={28} height={28} color={colors.primary} />
+              <CheckCircleBoldIcon width={28} height={28} color={colors.secondary} />
             ) : (
-              <View className="w-6 h-6 rounded-full border-[1.5px] border-grey3" />
+              <View
+                className="w-6 h-6 rounded-full border-[1.5px]"
+                style={{ borderColor: isDark ? colors.grey4 : colors.grey3 }}
+              />
             )}
           </View>
         ) : isActive ? (
@@ -139,7 +143,7 @@ const FeedListItemComponent = ({
               size="small"
               fullWidth={false}
               className="h-10 w-10 items-center justify-center bg-transparent dark:bg-transparent">
-              <MenuDotsBoldIcon width={20} height={20} color={colors.grey2} />
+              <MenuDotsBoldIcon width={20} height={20} color={colors.grey2} style={{ transform: [{ rotate: '90deg' }] }} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>

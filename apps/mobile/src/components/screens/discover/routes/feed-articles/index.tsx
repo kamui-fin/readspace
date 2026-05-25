@@ -111,7 +111,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
             <Text
               size="lg"
               fontFamily="geist-semibold"
-              className="text-black tracking-tight"
+              className="text-primary-foreground tracking-tight"
               numberOfLines={1}
               ellipsizeMode="tail">
               {feedTitle}
@@ -125,7 +125,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-white">
+      <View className="flex-1 bg-background">
         {headerSection}
         <View className="px-6">
           <ArticleCardSkeletonList count={5} />
@@ -136,7 +136,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
 
   if (isError) {
     return (
-      <View className="flex-1 bg-white">
+      <View className="flex-1 bg-background">
         {headerSection}
         <View className="flex-1 items-center justify-center px-6">
           <Text
@@ -154,11 +154,12 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
   }
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1 bg-background">
       {headerSection}
 
       {articles.length > 0 ? (
         <InfiniteScrollList
+          key={isDark ? 'dark' : 'light'}
           ref={listRef}
           data={articles}
           renderItem={renderArticle}
@@ -177,7 +178,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
           <Text
             size="lg"
             fontFamily="geist-semibold"
-            className="mt-4 text-center tracking-heading text-black">
+            className="mt-4 text-center tracking-heading text-primary-foreground">
             No articles yet
           </Text>
           <Text

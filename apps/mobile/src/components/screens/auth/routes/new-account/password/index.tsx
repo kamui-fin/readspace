@@ -61,7 +61,7 @@ function PasswordFormContent({
           placeholder="Enter your password"
           value={values.password}
           onChangeText={handleChange('password')}
-          onBlur={() => setFieldTouched('password', true, true)}
+          onBlur={() => setFieldTouched('password', true, false)}
           secureTextEntry={!showPassword}
           autoCapitalize="none"
           autoComplete="password-new"

@@ -6,6 +6,8 @@ import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 
 interface ArticleHeaderProps {
   article: Article;
@@ -30,11 +32,16 @@ export function ArticleHeader({
 }: ArticleHeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isDark = useIsDarkMode();
+  const colors = COLORS[isDark ? 'dark' : 'light'];
 
   return (
     <View
-      className="mb-6 mx-6 border-b border-divider pb-6"
-      style={{ marginTop: article.image_url ? 24 : insets.top + 80 }}>
+      className="mb-6 mx-6 border-b pb-6"
+      style={{
+        marginTop: article.image_url ? 24 : insets.top + 80,
+        borderBottomColor: colors.divider,
+      }}>
       {/* Source & Tags */}
       <View className="mb-2 gap-2">
         {!isClipped && feedId ? (
@@ -99,7 +106,7 @@ export function ArticleHeader({
       <Text
         size="lg"
         fontFamily="geist-bold"
-        className="mb-3 text-primary-foreground dark:text-primary-foreground-dark"
+        className="mb-3 text-primary-foreground"
         style={{ letterSpacing: -1.2, fontSize: 30, lineHeight: 38 }}>
         {stripHtml(article.title)}
       </Text>

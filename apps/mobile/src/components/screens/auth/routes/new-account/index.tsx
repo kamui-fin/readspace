@@ -6,6 +6,8 @@ import { toast } from '@components/ui/toast';
 import { useSession } from '@contexts/auth-context';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useAuthErrorHandler } from '@hooks/useAuthErrorHandler';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 import { BUTTON_BORDER_RADIUS, SPACING } from '@lib/constants/app';
 import { EmailSchema, PasswordSchema } from '@lib/validation/auth-schemas';
 import { useSettingsStore } from '@stores/settings';
@@ -61,6 +63,8 @@ export function SignupScreen() {
     apiUrl: string;
     supabaseUrl: string;
     supabaseAnonKey: string;
+    meilisearchUrl?: string;
+    meilisearchSearchKey?: string;
   }) => {
     setSelfHosted(data);
     toast.success('Self-hosted instance configured');
@@ -149,9 +153,11 @@ export function SignupScreen() {
   };
 
   const buttonText = getButtonText();
+  const isDark = useIsDarkMode();
+  const colors = COLORS[isDark ? 'dark' : 'light'];
 
   return (
-    <View className="flex-1 bg-screen">
+    <View className="flex-1 bg-screen" style={{ backgroundColor: colors.background }}>
       <Stepper ref={stepperRef} pages={pages} onStepChange={setCurrentStep} initialStep={0} />
 
       {/* Fixed Buttons at Bottom - Hide on verification screen - Adjusts for keyboard with smooth animation */}

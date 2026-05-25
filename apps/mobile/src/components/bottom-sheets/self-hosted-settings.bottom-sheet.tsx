@@ -1,64 +1,84 @@
 /** biome-ignore-all assist/source/organizeImports: false positive */
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BottomSheetTextInput, type BottomSheetModal } from '@gorhom/bottom-sheet';
 import { forwardRef, useCallback, useEffect, useMemo, useState } from 'react';
-import { Keyboard, Platform, Text, TouchableWithoutFeedback, View } from 'react-native';
+import { Keyboard, Platform, View } from 'react-native';
+import { Text } from '@components/ui/text';
 import 'react-native-url-polyfill/auto';
 import { z } from 'zod';
 
-import { BottomSheetFooter } from '@gorhom/bottom-sheet';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
-import { BottomSheetInput } from '@components/ui/input';
 import { Spinner } from '@components/ui/spinner';
 import { toast } from '@components/ui/toast';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { validateSupabaseConnection } from '@lib/supabase/client';
 
 // Helper to resolve hostname for Android emulator
 const resolveHostname = (url: string) => {
-  const _url = new URL(url);
-  if (_url.hostname === 'localhost' && Platform.OS === 'android') {
-    _url.hostname = '10.0.2.2';
+  try {
+    const _url = new URL(url);
+    if (_url.hostname === 'localhost' && Platform.OS === 'android') {
+      _url.hostname = '10.0.2.2';
+    }
+    // Remove trailing slash to prevent double slashes in API paths
+    return _url.toString().replace(/\/$/, '');
+  } catch {
+    if (url.includes('localhost') && Platform.OS === 'android') {
+      return url.replace('localhost', '10.0.2.2').replace(/\/$/, '');
+    }
+    return url.replace(/\/$/, '');
   }
-  // Remove trailing slash to prevent double slashes in API paths
-  return _url.toString().replace(/\/$/, '');
+};
+
+// Helper to wrap a promise in a timeout
+const withTimeout = <T,>(promise: Promise<T>, ms: number, message: string): Promise<T> => {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(message));
+    }, ms);
+
+    promise
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
 };
 
 const selfHostSchema = z.object({
   apiUrl: z
     .url('Please enter a valid URL (e.g., http://localhost:8008)')
     .min(1, 'API URL is required'),
-  supabaseUrl: z
-    .url('Please enter a valid URL (e.g., http://localhost:18000)')
-    .min(1, 'Supabase URL is required'),
-  supabaseAnonKey: z
-    .string()
-    .min(1, 'Supabase Anonymous Key is required')
-    .refine((token) => {
-      const parts = token.split('.');
-      if (parts.length !== 3) return false;
-      // Check that each part is base64url encoded (alphanumeric, -, _)
-      const base64urlPattern = /^[A-Za-z0-9_-]+$/;
-      return parts.every((part) => part.length > 0 && base64urlPattern.test(part));
-    }, 'Invalid JWT format - should have three parts separated by dots'),
 });
 
 export interface SelfHostSettingsProps {
-  onSave?: (data: { apiUrl: string; supabaseUrl: string; supabaseAnonKey: string }) => void;
+  onSave?: (data: {
+    apiUrl: string;
+    supabaseUrl: string;
+    supabaseAnonKey: string;
+    meilisearchUrl?: string;
+    meilisearchSearchKey?: string;
+  }) => void;
   onClose?: () => void;
   initialData?: {
     apiUrl?: string;
     supabaseUrl?: string;
     supabaseAnonKey?: string;
+    meilisearchUrl?: string;
+    meilisearchSearchKey?: string;
   };
 }
 
 export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHostSettingsProps>(
   ({ onSave, onClose, initialData }, ref) => {
+    const isDark = useIsDarkMode();
     const [apiUrl, setApiUrl] = useState(initialData?.apiUrl || '');
-    const [supabaseUrl, setSupabaseUrl] = useState(initialData?.supabaseUrl || '');
-    const [supabaseAnonKey, setSupabaseAnonKey] = useState(initialData?.supabaseAnonKey || '');
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isValidating, setIsValidating] = useState(false);
 
@@ -68,21 +88,20 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
       return () => console.log('[SelfHostSettingsBottomSheet] Component unmounted');
     }, []);
 
-    // Validate form
+    // Validate form schema
     const isValid = useMemo(() => {
       try {
         selfHostSchema.parse({
           apiUrl,
-          supabaseUrl,
-          supabaseAnonKey,
         });
         return true;
       } catch {
         return false;
       }
-    }, [apiUrl, supabaseUrl, supabaseAnonKey]);
+    }, [apiUrl]);
 
     const handleSave = useCallback(async () => {
+      Keyboard.dismiss();
       setIsValidating(true);
       setErrors({});
 
@@ -90,47 +109,103 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
         // Validate form schema first
         const data = selfHostSchema.parse({
           apiUrl,
-          supabaseUrl,
-          supabaseAnonKey,
         });
 
-        // Wrap validation in promise for toast.promise
+        // Test API endpoint and retrieve configuration
         const validationPromise = (async () => {
           console.log('[SelfHostSettingsBottomSheet] Starting validation...');
           console.log('[SelfHostSettingsBottomSheet] API URL:', data.apiUrl);
-          console.log('[SelfHostSettingsBottomSheet] Supabase URL:', data.supabaseUrl);
           console.log('[SelfHostSettingsBottomSheet] Platform:', Platform.OS);
 
-          // Test API endpoint
-          console.log('[SelfHostSettingsBottomSheet] Testing API endpoint...');
           const resolvedApiUrl = resolveHostname(data.apiUrl);
           console.log('[SelfHostSettingsBottomSheet] Resolved API URL:', resolvedApiUrl);
 
+          // 1. Fetch config from server
+          let configResponse: Response;
           try {
-            const apiResponse = await fetch(`${resolvedApiUrl}/api/health`, {
+            configResponse = await fetch(`${resolvedApiUrl}/api/config`, {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' },
             });
-
-            if (!apiResponse.ok) {
-              console.log('[SelfHostSettingsBottomSheet] API endpoint failed:', apiResponse.status);
-              throw new Error(
-                `API endpoint returned ${apiResponse.status}: ${apiResponse.statusText}`
-              );
-            }
-            console.log('[SelfHostSettingsBottomSheet] API endpoint OK');
           } catch (error) {
-            console.log('[SelfHostSettingsBottomSheet] API fetch error:', error);
-            const errorMsg =
-              error instanceof Error ? error.message : 'Unable to connect to API endpoint';
-            throw new Error(errorMsg);
+            console.log('[SelfHostSettingsBottomSheet] Config fetch error:', error);
+            throw new Error('Unable to connect to the Readspace server. Check the URL and try again.');
           }
 
-          // Test Supabase connection
+          if (!configResponse.ok) {
+            console.log('[SelfHostSettingsBottomSheet] Config endpoint failed:', configResponse.status);
+            throw new Error(`Server returned error status ${configResponse.status}`);
+          }
+
+          let serverConfig: {
+            supabase_url: string;
+            supabase_anon_key: string;
+            meilisearch_url: string;
+            meilisearch_search_key: string;
+          };
+
+          try {
+            serverConfig = await configResponse.json();
+          } catch (e) {
+            console.log('[SelfHostSettingsBottomSheet] Failed to parse config JSON:', e);
+            throw new Error('Received invalid config response from the server.');
+          }
+
+          console.log('[SelfHostSettingsBottomSheet] Server config retrieved:', serverConfig);
+
+          if (!serverConfig.supabase_url || !serverConfig.supabase_anon_key) {
+            throw new Error('Server configuration is incomplete (missing Supabase credentials).');
+          }
+
+          // 2. Resolve internal docker networks / localhost back to entered API host
+          const apiParsed = new URL(data.apiUrl);
+          
+          const isDockerOrLocalhost = (urlStr: string) => {
+            try {
+              const parsed = new URL(urlStr);
+              return (
+                parsed.hostname === 'localhost' ||
+                parsed.hostname === '127.0.0.1' ||
+                parsed.hostname === 'kong' ||
+                parsed.hostname === 'meilisearch' ||
+                parsed.hostname.endsWith('.local')
+              );
+            } catch {
+              return true;
+            }
+          };
+
+          let resolvedSupabaseUrl = serverConfig.supabase_url;
+          if (isDockerOrLocalhost(resolvedSupabaseUrl)) {
+            try {
+              const supabaseParsed = new URL(resolvedSupabaseUrl);
+              const port = supabaseParsed.port || '18000';
+              resolvedSupabaseUrl = `${apiParsed.protocol}//${apiParsed.hostname}:${port}`;
+            } catch {
+              resolvedSupabaseUrl = `${apiParsed.protocol}//${apiParsed.hostname}:18000`;
+            }
+          }
+
+          let resolvedMeilisearchUrl = serverConfig.meilisearch_url;
+          if (isDockerOrLocalhost(resolvedMeilisearchUrl)) {
+            try {
+              const meiliParsed = new URL(resolvedMeilisearchUrl);
+              const port = meiliParsed.port || '7700';
+              resolvedMeilisearchUrl = `${apiParsed.protocol}//${apiParsed.hostname}:${port}`;
+            } catch {
+              resolvedMeilisearchUrl = `${apiParsed.protocol}//${apiParsed.hostname}:7700`;
+            }
+          }
+
+          console.log('[SelfHostSettingsBottomSheet] Resolved Supabase URL:', resolvedSupabaseUrl);
+          console.log('[SelfHostSettingsBottomSheet] Resolved Meilisearch URL:', resolvedMeilisearchUrl);
+
+          // 3. Test Supabase connection
           console.log('[SelfHostSettingsBottomSheet] Testing Supabase connection...');
+          const validationSupabaseUrl = resolveHostname(resolvedSupabaseUrl);
           const supabaseValidation = await validateSupabaseConnection(
-            data.supabaseUrl,
-            data.supabaseAnonKey
+            validationSupabaseUrl,
+            serverConfig.supabase_anon_key
           );
 
           console.log(
@@ -139,21 +214,34 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
           );
 
           if (!supabaseValidation.valid) {
-            throw new Error(supabaseValidation.error || 'Connection failed');
+            throw new Error(supabaseValidation.error || 'Database connection failed');
           }
 
-          return data;
+          return {
+            apiUrl: data.apiUrl,
+            supabaseUrl: resolvedSupabaseUrl,
+            supabaseAnonKey: serverConfig.supabase_anon_key,
+            meilisearchUrl: resolvedMeilisearchUrl,
+            meilisearchSearchKey: serverConfig.meilisearch_search_key,
+          };
         })();
 
         // Use toast.promise for validation
-        await toast.promise(validationPromise, {
-          loading: 'Validating configuration...',
-          success: 'Configuration validated successfully',
-          error: 'Validation failed',
-        });
+        const finalConfig = await toast.promise(
+          withTimeout(
+            validationPromise,
+            4000,
+            'Connection timed out. Please check the URL or host availability.'
+          ),
+          {
+            loading: 'Connecting to server...',
+            success: 'Connected!',
+            error: 'Connection failed',
+          }
+        );
 
-        // All validations passed
-        onSave?.(data);
+        // Save
+        onSave?.(finalConfig);
 
         if (ref && typeof ref !== 'function' && ref.current) {
           ref.current.dismiss();
@@ -169,31 +257,17 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
           setErrors(newErrors);
           toast.error('Please check your input');
         } else if (error instanceof Error) {
-          // Handle validation errors
-          if (error.message.includes('API endpoint')) {
-            setErrors((prev) => ({ ...prev, apiUrl: error.message }));
-          } else {
-            setErrors((prev) => ({ ...prev, supabaseUrl: error.message }));
-          }
+          setErrors({ apiUrl: error.message });
         }
       } finally {
         setIsValidating(false);
       }
-    }, [apiUrl, supabaseUrl, supabaseAnonKey, onSave, ref]);
+    }, [apiUrl, onSave, ref]);
 
-    // Clear errors when values change
+    // Clear errors when value changes
     useEffect(() => {
       if (errors.apiUrl && apiUrl) setErrors((prev) => ({ ...prev, apiUrl: '' }));
     }, [apiUrl, errors.apiUrl]);
-
-    useEffect(() => {
-      if (errors.supabaseUrl && supabaseUrl) setErrors((prev) => ({ ...prev, supabaseUrl: '' }));
-    }, [supabaseUrl, errors.supabaseUrl]);
-
-    useEffect(() => {
-      if (errors.supabaseAnonKey && supabaseAnonKey)
-        setErrors((prev) => ({ ...prev, supabaseAnonKey: '' }));
-    }, [supabaseAnonKey, errors.supabaseAnonKey]);
 
     const handleSheetChange = useCallback(
       (index: number) => {
@@ -205,10 +279,73 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
       [onClose]
     );
 
-    const renderFooter = useCallback(
-      (props: any) => (
-        <BottomSheetFooter {...props} bottomInset={16}>
-          <View className="px-6 pb-6 pt-2 bg-screen">
+    const snapPoints = useMemo(() => ['35%', '72%'], []);
+
+    return (
+      <BottomSheet
+        ref={ref}
+        headerTitle="Self-hosted connection"
+        headerTitleAlign="left"
+        snapPoints={snapPoints}
+        enableDynamicSizing={false}
+        enablePanDownToClose={true}
+        onChange={handleSheetChange}
+        keyboardBehavior="extend"
+        keyboardBlurBehavior="restore">
+        <View style={{ gap: 16 }}>
+          <Text className="font-geist-medium text-base text-grey dark:text-grey">
+            Connect to your own Readspace instance URL
+          </Text>
+
+          <View className="gap-4">
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderRadius: 12,
+                backgroundColor: isDark ? COLORS.dark.grey6 : COLORS.light.grey6,
+                borderColor: errors.apiUrl
+                  ? isDark
+                    ? COLORS.dark.destructive
+                    : COLORS.light.destructive
+                  : undefined,
+                borderWidth: errors.apiUrl ? 1 : undefined,
+              }}>
+              <BottomSheetTextInput
+                value={apiUrl}
+                onChangeText={setApiUrl}
+                placeholder="e.g., http://192.168.1.42:18008"
+                keyboardType="url"
+                autoCapitalize="none"
+                autoComplete="off"
+                autoCorrect={false}
+                placeholderTextColor={isDark ? COLORS.dark.grey2 : COLORS.light.grey2}
+                style={{
+                  flex: 1,
+                  paddingTop: 16,
+                  paddingBottom: 16,
+                  paddingLeft: 16,
+                  paddingRight: 16,
+                  color: isDark ? '#fff' : '#000',
+                  fontFamily: 'GeistMono_500Medium',
+                  fontSize: 15,
+                }}
+              />
+            </View>
+            {errors.apiUrl ? (
+              <Text
+                className="text-sm font-geist-medium"
+                style={{
+                  marginTop: -4,
+                  color: isDark ? COLORS.dark.destructive : COLORS.light.destructive,
+                }}>
+                {errors.apiUrl}
+              </Text>
+            ) : null}
+          </View>
+
+          {/* Inline Action Button */}
+          <View className="mt-4 mb-1">
             <Button
               variant="primary"
               size="large"
@@ -219,94 +356,14 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
               {isValidating ? (
                 <View className="flex-row items-center justify-center gap-2">
                   <Spinner size="small" color={COLORS.white} />
-                  <Text className="font-geist-semibold text-base text-white">Validating...</Text>
+                  <Text className="font-geist-semibold text-base text-white">Connecting...</Text>
                 </View>
               ) : (
-                'Save'
+                'Save and Connect'
               )}
             </Button>
           </View>
-        </BottomSheetFooter>
-      ),
-      [handleSave, isValid, isValidating]
-    );
-
-    return (
-      <BottomSheet
-        ref={ref}
-        headerTitle="Self-hosted connection"
-        headerTitleAlign="left"
-        snapPoints={['50%', '90%']}
-        enablePanDownToClose={true}
-        onChange={handleSheetChange}
-        keyboardBehavior="extend"
-        keyboardBlurBehavior="restore"
-        android_keyboardInputMode="adjustResize"
-        footerComponent={renderFooter}>
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={{ paddingBottom: 60 }}>
-            <Text className="font-geist-medium mb-4 text-base text-grey dark:text-grey">
-              Connect to your own Readspace instance
-            </Text>
-
-            <View className="gap-4">
-              {/* API URL */}
-              <View>
-                <BottomSheetInput
-                  label="API URL"
-                  value={apiUrl}
-                  onChangeText={setApiUrl}
-                  placeholder="http://localhost:18008"
-                  keyboardType="url"
-                  autoCapitalize="none"
-                  autocomplete="off"
-                  autoCorrect={false}
-                  isInvalid={!!errors.apiUrl}
-                  errorText={errors.apiUrl}
-                  className="font-geist-mono"
-                  borderRadius={12}
-                />
-              </View>
-
-              {/* Supabase URL */}
-              <View>
-                <BottomSheetInput
-                  label="Supabase URL"
-                  value={supabaseUrl}
-                  onChangeText={setSupabaseUrl}
-                  placeholder="http://localhost:18000"
-                  keyboardType="url"
-                  autoCapitalize="none"
-                  autocomplete="off"
-                  autoCorrect={false}
-                  isInvalid={!!errors.supabaseUrl}
-                  errorText={errors.supabaseUrl}
-                  className="font-geist-mono"
-                  borderRadius={12}
-                />
-              </View>
-
-              {/* Supabase Anonymous Key */}
-              <View>
-                <BottomSheetInput
-                  label="Supabase Anonymous Key"
-                  value={supabaseAnonKey}
-                  onChangeText={setSupabaseAnonKey}
-                  placeholder="Your anonymous key"
-                  autoCapitalize="none"
-                  autocomplete="off"
-                  autoCorrect={false}
-                  multiline
-                  isInvalid={!!errors.supabaseAnonKey}
-                  errorText={errors.supabaseAnonKey}
-                  className="font-geist-mono"
-                  inputStyle={{ height: 80, textAlignVertical: 'top' }}
-                  borderRadius={12}
-                />
-              </View>
-            </View>
-          </View>
-        </TouchableWithoutFeedback>
+        </View>
       </BottomSheet>
     );
   }

@@ -29,7 +29,7 @@ export function FilterActionButton({ filter, onFilterChange }: FilterActionButto
         borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: isUnreadOnly ? colors.muted_green : colors.grey5,
+        backgroundColor: isUnreadOnly ? (isDark ? 'rgba(106, 153, 78, 0.25)' : colors.muted_green) : colors.grey5,
         opacity: pressed ? 0.7 : 1,
       })}>
       {isUnreadOnly ? (

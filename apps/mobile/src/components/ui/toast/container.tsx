@@ -214,6 +214,8 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
         {
           position: 'absolute',
           alignSelf: 'center',
+          maxWidth: '85%',
+          marginHorizontal: 16,
           ...(toast.from === 'top'
             ? { top: insets.top + 16 }
             : {
@@ -234,11 +236,11 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
             shadowRadius: 12,
             elevation: 3,
           }}>
-          <Animated.View className="mr-1" style={iconAnimatedStyle}>
+          <Animated.View className="mr-1 flex-shrink-0" style={iconAnimatedStyle}>
             {renderIcon()}
           </Animated.View>
 
-          <Animated.View style={textAnimatedStyle}>
+          <Animated.View style={[{ flexShrink: 1 }, textAnimatedStyle]}>
             <Text
               className="text-[14px]"
               style={{

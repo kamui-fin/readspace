@@ -11,10 +11,10 @@ import {
   TextInput as ReactNativeTextInput,
   type TextInputProps as RNTextInputProps,
   type StyleProp,
-  Text,
   type TextStyle,
   View,
 } from 'react-native';
+import { Text } from '@components/ui/text';
 
 type InputProps = Omit<RNTextInputProps, 'style' | 'className'> & {
   leftElement?: JSX.Element;
@@ -88,7 +88,6 @@ const InputBase = forwardRef((props: InputProps & { TextInputComponent: any }, r
       ) : null}
 
       <View
-        className={clsx('transition-all duration-300')}
         style={[
           {
             flexDirection: 'row',
@@ -117,6 +116,7 @@ const InputBase = forwardRef((props: InputProps & { TextInputComponent: any }, r
             {
               flex: 1,
               flexShrink: 1,
+              color: isDark ? '#ffffff' : '#232222',
               paddingTop: Platform.select({
                 ios: 16,
                 default: 16,

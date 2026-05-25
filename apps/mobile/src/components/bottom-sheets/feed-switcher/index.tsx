@@ -35,8 +35,10 @@ import {
 import { type FeedSwitcherStore, useFeedSwitcherStore } from '@stores/feed-switcher';
 import { useFeedViewStore } from '@stores/feed-view';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, Text, useColorScheme, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
+import { Text } from '@components/ui/text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useRouter } from 'expo-router';
 
 const PINNED_YELLOW = '#EAB308';
@@ -68,8 +70,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
     const renameFolderModalRef = useRef<RenameFolderModalRef>(null);
     const renameFeedModalRef = useRef<RenameFeedModalRef>(null);
     const folderPickerModalRef = useRef<FolderPickerBottomSheetRef>(null);
-    const colorScheme = useColorScheme();
-    const isDark = colorScheme === 'dark';
+    const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
 
     const [isSelectionMode, setIsSelectionMode] = useState(false);

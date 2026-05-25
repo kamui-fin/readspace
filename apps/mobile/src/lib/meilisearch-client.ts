@@ -1,6 +1,8 @@
 import { instantMeiliSearch } from '@meilisearch/instant-meilisearch';
 import type { HybridSearchConfig } from '@readspace/shared';
 import { MeiliSearch } from 'meilisearch';
+import { Platform } from 'react-native';
+import { getSettings } from '@stores/settings';
 
 export const MEILISEARCH_URL = process.env.EXPO_PUBLIC_MEILISEARCH_URL || 'http://localhost:7700';
 export const MEILISEARCH_SEARCH_KEY = process.env.EXPO_PUBLIC_MEILISEARCH_SEARCH_KEY || '';
@@ -10,6 +12,35 @@ if (!MEILISEARCH_SEARCH_KEY) {
     'EXPO_PUBLIC_MEILISEARCH_SEARCH_KEY is not set. Search functionality may not work correctly.'
   );
 }
+
+// Helper to resolve hostname for Android emulator
+const resolveHostname = (url: string): string => {
+  try {
+    const _url = new URL(url);
+    if (_url.hostname === 'localhost' && Platform.OS === 'android') {
+      _url.hostname = '10.0.2.2';
+    }
+    return _url.toString().replace(/\/$/, '');
+  } catch (e) {
+    if (url.includes('localhost') && Platform.OS === 'android') {
+      return url.replace('localhost', '10.0.2.2').replace(/\/$/, '');
+    }
+    return url.replace(/\/$/, '');
+  }
+};
+
+const getMeiliSearchConfig = () => {
+  const settings = getSettings();
+  const host =
+    settings?.instance_type === 'self-hosted' && settings?.meilisearch_url
+      ? resolveHostname(settings.meilisearch_url)
+      : resolveHostname(MEILISEARCH_URL);
+  const apiKey =
+    settings?.instance_type === 'self-hosted' && settings?.meilisearch_search_key
+      ? settings.meilisearch_search_key
+      : MEILISEARCH_SEARCH_KEY;
+  return { host, apiKey };
+};
 
 export const FEEDS_INDEX_NAME = 'feeds';
 
@@ -102,43 +133,51 @@ export function createSearchClient(getHybridConfig?: () => HybridSearchConfig | 
     finitePagination: true,
   };
 
-  const baseClient = instantMeiliSearch(MEILISEARCH_URL, MEILISEARCH_SEARCH_KEY, config);
+  const searchClientObject = {
+    search(requests: SearchRequest[]) {
+      const { host, apiKey } = getMeiliSearchConfig();
+      const baseClient = instantMeiliSearch(host, apiKey, config);
+
+      const hybridConfig = getHybridConfig?.();
+      let processedRequests = requests;
+
+      if (hybridConfig) {
+        processedRequests = requests.map((request) =>
+          applyHybridSearchParams(request, hybridConfig)
+        );
+      }
+
+      const hasAnyMeaningfulSearch = processedRequests.some(({ params }) =>
+        hasMeaningfulCriteria(params)
+      );
+
+      if (!hasAnyMeaningfulSearch) {
+        return Promise.resolve({
+          results: requests.map(() => createEmptyResult()),
+        });
+      }
+
+      return baseClient.searchClient.search(processedRequests as any);
+    },
+  };
 
   return {
-    ...baseClient,
-    searchClient: {
-      ...baseClient.searchClient,
-      search(requests: SearchRequest[]) {
-        const hybridConfig = getHybridConfig?.();
-        let processedRequests = requests;
-
-        if (hybridConfig) {
-          processedRequests = requests.map((request) =>
-            applyHybridSearchParams(request, hybridConfig)
-          );
-        }
-
-        const hasAnyMeaningfulSearch = processedRequests.some(({ params }) =>
-          hasMeaningfulCriteria(params)
-        );
-
-        if (!hasAnyMeaningfulSearch) {
-          return Promise.resolve({
-            results: requests.map(() => createEmptyResult()),
-          });
-        }
-
-        return baseClient.searchClient.search(processedRequests as any);
-      },
-    },
+    searchClient: searchClientObject,
   };
 }
 
 export const { searchClient }: { searchClient: any } = createSearchClient();
 
-export const meilisearchClient = new MeiliSearch({
-  host: MEILISEARCH_URL,
-  apiKey: MEILISEARCH_SEARCH_KEY,
+export const meilisearchClient = new Proxy({} as MeiliSearch, {
+  get(target, prop, receiver) {
+    const { host, apiKey } = getMeiliSearchConfig();
+    const client = new MeiliSearch({ host, apiKey });
+    const value = Reflect.get(client, prop, receiver);
+    if (typeof value === 'function') {
+      return value.bind(client);
+    }
+    return value;
+  },
 });
 
 export {

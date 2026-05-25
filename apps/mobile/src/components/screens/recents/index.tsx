@@ -199,15 +199,15 @@ export function RecentsScreen() {
   };
 
   const renderHeader = () => (
-    <View style={{ paddingTop: insets.top }}>
-      <Header variant="static" title="Recents" subtitle="Articles you've read" />
-    </View>
+    <Header variant="static" title="Recents" subtitle="Articles you've read" />
   );
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-background" style={{ backgroundColor: colors.background }}>
       <InfiniteScrollList
+        key={isDark ? 'dark' : 'light'}
         ref={listRef}
+        style={{ backgroundColor: colors.background }}
         data={listItems}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
@@ -226,6 +226,7 @@ export function RecentsScreen() {
             onRefresh={handleRefresh}
             tintColor={colors.secondary}
             colors={[colors.secondary]}
+            progressBackgroundColor={isDark ? colors.grey6 : '#ffffff'}
           />
         }
         contentContainerStyle={{

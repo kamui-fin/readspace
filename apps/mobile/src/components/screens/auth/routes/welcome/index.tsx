@@ -11,7 +11,8 @@ import { SPACING } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { View, Text, useWindowDimensions } from 'react-native';
+import { View, useWindowDimensions, Text as RNText } from 'react-native';
+import { Text } from '@components/ui/text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 
@@ -92,10 +93,12 @@ export function WelcomeScreen() {
     }
   };
 
+  const colors = COLORS[isDark ? 'dark' : 'light'];
+
   return (
     <View
       className="flex-1 bg-screen"
-      style={{ paddingTop: insets.top }}>
+      style={{ paddingTop: insets.top, backgroundColor: colors.background }}>
 
       <View
         className="flex-1 items-start justify-center"
@@ -106,19 +109,19 @@ export function WelcomeScreen() {
             style={{ width: logoSize, height: logoSize }}>
             <ReadspaceLogo width={logoSize} height={logoSize} />
           </View>
-          <Text className="text-primary_foreground dark:text-primary_foreground ml-4 font-figtree-semibold text-4xl">
+          <Text className="text-primary-foreground ml-4 font-figtree-semibold text-4xl">
             readspace
           </Text>
         </View>
 
         <View>
-          <Text className="text-grey2 dark:text-grey font-figtree-medium text-[24px] leading-9 ">
+          <Text className="text-grey2 font-figtree-medium text-[24px] leading-9 ">
             follow your favorite news, blogs, people in a{' '}
-            <Text
+            <RNText
               className="font-figtree-semibold"
               style={{ color: isDark ? COLORS.dark.secondary : COLORS.light.secondary }}>
               calm
-            </Text>{' '}
+            </RNText>{' '}
             inbox.
           </Text>
         </View>
@@ -148,7 +151,7 @@ export function WelcomeScreen() {
               <GoogleIcon
                 width={20}
                 height={20}
-                fill={isDark ? COLORS.dark.white : COLORS.light.black}
+                fill={isDark ? '#ffffff' : COLORS.light.black}
               />
             ) : undefined
           }>

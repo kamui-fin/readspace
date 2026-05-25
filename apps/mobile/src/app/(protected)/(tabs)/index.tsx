@@ -9,7 +9,7 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useFeedViewStore } from '@stores/feed-view';
 import { useFollowingStore } from '@stores/following';
 import { useFocusEffect } from 'expo-router';
-import { useColorScheme } from 'nativewind';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Platform, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
@@ -19,8 +19,8 @@ import { COLORS } from '@/lib/constants/colors';
 
 export default function FollowingRoute() {
   const scrollY = useSharedValue(0);
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = useIsDarkMode();
+  const colors = COLORS[isDark ? 'dark' : 'light'];
   const activeTab = useFollowingStore((state) => state.activeTab);
   const previousTab = useFollowingStore((state) => state.previousTab);
   const setActiveTab = useFollowingStore((state) => state.setActiveTab);
@@ -148,7 +148,7 @@ export default function FollowingRoute() {
   );
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-background" style={{ backgroundColor: colors.background }}>
       <Header
         variant="tabbed"
         title={headerTitle}

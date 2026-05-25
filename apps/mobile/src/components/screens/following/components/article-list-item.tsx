@@ -1,4 +1,5 @@
 import { ArticleItemCard } from '@components/screens/following/ui/article-item.card';
+import { Divider } from '@components/ui/divider';
 import { Text } from '@components/ui/text';
 import { useFavicon } from '@hooks/useFavicon';
 import type { ListItem } from '@lib/utils/article';
@@ -43,7 +44,7 @@ export function ArticleListItem({
   }
 
   if (item.type === 'divider') {
-    return <View className="mx-4 h-[1px] bg-light-grey dark:bg-mid-grey-dark" />;
+    return <Divider className="mx-4" />;
   }
 
   if (item.type === 'article' && item.data) {

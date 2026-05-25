@@ -66,7 +66,7 @@ function EmailFormContent({
           placeholder="address@example.com"
           value={values.email}
           onChangeText={handleChange('email')}
-          onBlur={() => setFieldTouched('email', true, true)}
+          onBlur={() => setFieldTouched('email', true, false)}
           keyboardType="email-address"
           autoCapitalize="none"
           autoComplete="email"

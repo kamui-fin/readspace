@@ -11,8 +11,9 @@ import { useCreateFeed, useDeleteFeed, useFeeds } from '@readspace/shared';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { Platform, Pressable, View } from 'react-native';
+import TrashBinTrashBoldIcon from '@components/icons/solar/trash-bin-trash-bold';
 
 const followButtonVariants = cva('flex-row items-center gap-2 border', {
   variants: {
@@ -39,7 +40,7 @@ const followButtonVariants = cva('flex-row items-center gap-2 border', {
     {
       variant: 'large',
       following: true,
-      class: 'border border-grey4 bg-white  ',
+      class: 'border border-grey4 bg-background  ',
     },
     {
       variant: 'large',
@@ -174,6 +175,34 @@ export function FollowButton({
     }
   };
 
+  // Use starting state (actuallyFollowing) during loading to prevent abrupt color transitions
+  const isStylingFollowing = isLoading ? actuallyFollowing : displayFollowing;
+
+  // Dynamically resolve follow button style to guarantee perfect contrast and visibility
+  const buttonStyle = useMemo(() => {
+    if (isStylingFollowing) {
+      return {
+        backgroundColor: colors.grey6, // Solid gray surface for high contrast
+        borderWidth: 0, // Borderless
+      };
+    }
+    return {
+      backgroundColor: colors.primary, // Notion brand green
+      borderColor: colors.primary,
+    };
+  }, [isStylingFollowing, colors]);
+
+  const textStyle = useMemo(() => {
+    if (isStylingFollowing) {
+      return {
+        color: isDark ? colors.grey2 : colors.grey, // Clean grey text, no red!
+      };
+    }
+    return {
+      color: '#ffffff', // High contrast white text on green
+    };
+  }, [isStylingFollowing, colors, isDark]);
+
   return (
     <>
       <Pressable
@@ -182,29 +211,29 @@ export function FollowButton({
         className={clsx(
           followButtonVariants({
             variant: variant || 'default',
-            following: displayFollowing,
+            following: isStylingFollowing,
           }),
           isLoading && 'opacity-50',
           className
-        )}>
-        {isLoading && (
-          <View style={{ transform: [{ scale: 0.75 }] }}>
-            <Spinner size="small" color={displayFollowing ? colors.grey : colors.white} />
-          </View>
         )}
+        style={buttonStyle}>
+        {isLoading ? (
+          <View style={{ transform: [{ scale: 0.75 }] }}>
+            <Spinner size="small" color={isStylingFollowing ? (isDark ? colors.grey2 : colors.grey) : '#ffffff'} />
+          </View>
+        ) : null}
         <Text
           size={variant === 'large' ? 'base' : 'sm'}
           fontFamily="geist-semibold"
           className={followButtonTextVariants({
             variant: variant || 'default',
-            following: displayFollowing,
-          })}>
+            following: isStylingFollowing,
+          })}
+          style={textStyle}>
           {createFeed.isPending
             ? 'Following...'
             : deleteFeed.isPending
-              ? variant === 'large'
-                ? 'Unfollowing...'
-                : 'Unfollowing...'
+              ? 'Unfollowing...'
               : displayFollowing
                 ? variant === 'large'
                   ? 'Unfollow'

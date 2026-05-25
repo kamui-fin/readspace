@@ -154,23 +154,24 @@ export default function ImportOPMLScreen() {
     }, []);
 
     return (
-        <View className="flex-1 bg-background dark:bg-background-dark">
-            <View style={{ paddingTop: insets.top }}>
-                <Header
-                    variant="static"
-                    title="Import OPML"
-                    showBackButton={true}
-                    onBackPress={() => router.back()}
-                />
-            </View>
+        <View className="flex-1 bg-background" style={{ backgroundColor: colors.background }}>
+            <Header
+                variant="static"
+                title="Import OPML"
+                titleFontWeight="semibold"
+                titleSize="xs"
+                transparentBackground={true}
+                showBackButton={true}
+                onBackPress={() => router.back()}
+            />
 
-            <ScrollView className="flex-1 pt-4">
+            <ScrollView className="flex-1">
                 {isCheckingTask ? (
                     <View className="flex-1 items-center justify-center">
                         <Spinner size="large" color={colors.secondary} />
                     </View>
                 ) : currentTaskId && taskStatus ? (
-                    <Animated.View entering={FadeIn} exiting={FadeOut} className="px-5">
+                    <Animated.View entering={FadeIn} exiting={FadeOut} className="px-6">
                         <OPMLStatusCard
                             taskStatus={taskStatus}
                             isCancelling={isCancelling}
@@ -179,10 +180,10 @@ export default function ImportOPMLScreen() {
                         />
                     </Animated.View>
                 ) : (
-                    <View className="px-5">
+                    <View className="px-6">
                         <SettingsGroup title="Source File" className="mb-2">
                             {isPicking ? (
-                                <View className="bg-grey6 dark:bg-[#1C1C1E] rounded-2xl py-4 items-center justify-center">
+                                <View className="rounded-2xl py-4 items-center justify-center" style={{ backgroundColor: colors.grey6 }}>
                                     <Spinner size="small" color={colors.primary} />
                                 </View>
                             ) : (

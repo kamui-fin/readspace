@@ -26,7 +26,7 @@ export function FeedSelectionStep({ onNext }: { onNext: () => void }) {
         setFollowedFeeds(newFollowedFeeds);
         updateOnboardingData({ followedFeeds: newFollowedFeeds });
 
-        createFeed.mutate({ url: feedUrl, folder_id: '' });
+        createFeed.mutate({ url: feedUrl });
         fetchSimilarFeeds(feedId);
     };
 
@@ -42,7 +42,7 @@ export function FeedSelectionStep({ onNext }: { onNext: () => void }) {
     if (isLoading) {
         return (
             <View className="flex-1 items-center justify-center p-6">
-                <ActivityIndicator size="large" color="#000" />
+                <ActivityIndicator size="large" color="#6A994E" />
             </View>
         );
     }

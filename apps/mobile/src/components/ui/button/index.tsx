@@ -4,8 +4,10 @@ import { ThreeDotsAnimation } from '@components/ui/three-dots';
 import { COLORS } from '@lib/constants/colors';
 import type { VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
-import type { ReactNode } from 'react';
-import { Pressable, type PressableProps, StyleSheet, Text, View } from 'react-native';
+import { type ReactNode, useMemo } from 'react';
+import { Pressable, type PressableProps, StyleSheet, View } from 'react-native';
+import { Text } from '@components/ui/text';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
 export interface ButtonProps
   extends Omit<PressableProps, 'children'>,
@@ -71,6 +73,24 @@ export function Button({
   // For medium/small buttons, center everything together
   const useCenteredLayout = size !== 'large';
 
+  const isDark = useIsDarkMode();
+  const colors = COLORS[isDark ? 'dark' : 'light'];
+
+  const dynamicBgColor = useMemo(() => {
+    if (variant === 'primary') return isDark ? colors.secondary : colors.primary;
+    if (variant === 'secondary') return colors.grey6;
+    if (variant === 'icon') return colors.grey5;
+    return undefined;
+  }, [variant, colors, isDark]);
+
+  const resolvedStyle = useMemo(() => {
+    return (state: any) => {
+      const baseStyle = typeof style === 'function' ? style(state) : style;
+      if (!dynamicBgColor) return baseStyle;
+      return [StyleSheet.flatten(baseStyle), { backgroundColor: dynamicBgColor }];
+    };
+  }, [dynamicBgColor, style]);
+
   return (
     <Pressable
       className={clsx(
@@ -78,7 +98,7 @@ export function Button({
         isDisabled && 'opacity-50',
         className
       )}
-      style={style}
+      style={resolvedStyle}
       disabled={isDisabled}
       {...props}>
       {loading ? (

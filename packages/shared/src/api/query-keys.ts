@@ -41,8 +41,8 @@ export const queryKeys = {
     folderId?: string;
     tagNames?: string[];
     isFavorite?: boolean;
-  }) => [RSS_QUERY_KEYS.FEEDS, params] as const,
-  feed: (feedId: string) => [RSS_QUERY_KEYS.FEEDS, feedId] as const,
+  }) => [RSS_QUERY_KEYS.FEEDS, "list", params] as const,
+  feed: (feedId: string) => [RSS_QUERY_KEYS.FEEDS, "detail", feedId] as const,
 
   // Articles
   articles: (params?: {

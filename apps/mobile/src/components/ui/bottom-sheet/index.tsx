@@ -10,7 +10,9 @@ import {
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
 import { forwardRef, useCallback } from 'react';
-import { type StyleProp, Text, type TextStyle, useColorScheme, View } from 'react-native';
+import { type StyleProp, type TextStyle, View } from 'react-native';
+import { Text } from '@components/ui/text';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
 import { COLORS } from '@lib/constants/colors';
 
@@ -49,8 +51,8 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
     },
     ref
   ) => {
-    const colorScheme = useColorScheme();
-    const isDark = colorScheme === 'dark';
+    const isDark = useIsDarkMode();
+    const colors = COLORS[isDark ? 'dark' : 'light'];
 
     const renderBackdrop = useCallback(
       (backdropProps: BottomSheetBackdropProps) => (
@@ -127,7 +129,7 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
                 {headerTitle && (
                   <Text
                     className={clsx(
-                      'font-geist-semibold text-2xl text-primary-foreground dark:text-primary-foreground-dark',
+                      'font-geist-semibold text-2xl text-primary-foreground',
                       headerTitleAlign === 'center' ? 'text-center' : 'text-left'
                     )}
                     style={[{ lineHeight: 28, letterSpacing: -0.5 }, headerTitleStyle]}>
@@ -173,6 +175,7 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
 
         {/* Scrollable Content (consumers might provide a BottomSheetFlatList instead) */}
         <BottomSheetScrollView
+          style={{ backgroundColor: colors.background }}
           contentContainerStyle={{
             paddingHorizontal: 24,
             paddingTop: headerTitle || headerLeft || headerRight || secondaryAction ? 64 : 16,
