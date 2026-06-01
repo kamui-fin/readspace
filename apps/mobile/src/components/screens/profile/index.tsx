@@ -1,4 +1,3 @@
-
 import DiscordIcon from '@components/icons/local/discord';
 import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
 import GitHubIcon from '@components/icons/local/github';
@@ -102,8 +101,6 @@ export function ProfileScreen() {
     });
   };
 
-
-
   const handleOPMLExport = useCallback(async () => {
     try {
       if (!feeds || feeds.length === 0) {
@@ -128,7 +125,7 @@ export function ProfileScreen() {
   const discordColor = '#5865F2';
 
   return (
-    <View className="flex-1 bg-background" style={{ backgroundColor: colors.background }}>
+    <View className="bg-background flex-1" style={{ backgroundColor: colors.background }}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
@@ -136,7 +133,12 @@ export function ProfileScreen() {
         }}
         showsVerticalScrollIndicator={false}>
         {/* Header - scrolls with content */}
-        <Header variant="static" title="Profile" titleFontWeight="semibold" subtitle="Your account settings" />
+        <Header
+          variant="static"
+          title="Profile"
+          titleFontWeight="semibold"
+          subtitle="Your account settings"
+        />
         <View className="mt-4 px-6">
           {/* User Profile */}
           {displayUser && (
@@ -249,7 +251,9 @@ export function ProfileScreen() {
             <SettingsItem
               label="GitHub"
               variant="link"
-              leftIcon={<GitHubIcon width={22} height={22} color={githubColor} fill={githubColor} />}
+              leftIcon={
+                <GitHubIcon width={22} height={22} color={githubColor} fill={githubColor} />
+              }
               onPress={handleGithubPress}
             />
 
@@ -279,8 +283,6 @@ export function ProfileScreen() {
           </SettingsGroup>
         </View>
       </ScrollView>
-
-
     </View>
   );
 }

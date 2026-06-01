@@ -85,7 +85,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
             <Text
               size="lg"
               fontFamily="geist-semibold"
-              className="text-black tracking-tight"
+              className="tracking-tight text-black"
               numberOfLines={1}
               ellipsizeMode="tail">
               Similar feeds
@@ -131,7 +131,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-background">
+      <View className="bg-background flex-1">
         {headerSection}
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -158,13 +158,10 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
 
   if (error) {
     return (
-      <View className="flex-1 bg-background">
+      <View className="bg-background flex-1">
         {headerSection}
         <View className="flex-1 items-center justify-center px-6">
-          <Text
-            size="base"
-            fontFamily="geist"
-            className="mb-4 text-center text-grey">
+          <Text size="base" fontFamily="geist" className="text-grey mb-4 text-center">
             Failed to load similar feeds
           </Text>
         </View>
@@ -174,7 +171,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
 
   return (
     <>
-      <View className="flex-1 bg-background">
+      <View className="bg-background flex-1">
         {headerSection}
         {similarFeeds.length > 0 ? (
           <ScrollView
@@ -205,13 +202,10 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
             <Text
               size="lg"
               fontFamily="geist-semibold"
-              className="mt-4 text-center tracking-heading text-black">
+              className="tracking-heading mt-4 text-center text-black">
               No similar feeds found
             </Text>
-            <Text
-              size="base"
-              fontFamily="geist"
-              className="mt-2 text-center text-grey">
+            <Text size="base" fontFamily="geist" className="text-grey mt-2 text-center">
               This feed might be unique, or similar feeds may not have embeddings yet.
             </Text>
           </View>

@@ -69,11 +69,11 @@ export const RenameFolderModal = forwardRef<RenameFolderModalRef, RenameFolderMo
         keyboardBlurBehavior="restore">
         {/* Heading */}
         <Text
-          className="font-geist-bold text-2xl text-primary-foreground mb-1"
+          className="font-geist-bold text-primary-foreground mb-1 text-2xl"
           style={{ letterSpacing: -0.5 }}>
           Rename folder
         </Text>
-        <Text className="font-geist-regular text-base text-grey dark:text-grey mb-5">
+        <Text className="font-geist-regular text-grey dark:text-grey mb-5 text-base">
           Enter a new name for your folder.
         </Text>
 

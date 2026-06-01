@@ -45,10 +45,10 @@ export const TrendingSection = memo(
           </View>
         ) : trendingError ? (
           <View className="items-center justify-center px-6 py-12">
-            <Text size="base" fontFamily="geist" className="mb-2 text-center text-red">
+            <Text size="base" fontFamily="geist" className="text-red mb-2 text-center">
               Error loading trending feeds
             </Text>
-            <Text size="sm" fontFamily="geist" className="text-center text-grey">
+            <Text size="sm" fontFamily="geist" className="text-grey text-center">
               {trendingError.message}
             </Text>
           </View>
@@ -69,7 +69,7 @@ export const TrendingSection = memo(
           </View>
         ) : (
           <View className="items-center justify-center px-6 py-12">
-            <Text size="base" fontFamily="geist" className="text-center text-grey">
+            <Text size="base" fontFamily="geist" className="text-grey text-center">
               No trending feeds available
             </Text>
           </View>

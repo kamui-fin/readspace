@@ -63,11 +63,30 @@ async def trigger_batch_enrich() -> None:
     logger.info("Task queued: Batch enrich feeds")
 
 
+async def trigger_reset_failed() -> None:
+    """Reset all feeds that were marked as failed enrichment."""
+    logger.info("Triggering: Reset failed enrichment feeds")
+    from app.workers.common import worker_db
+    from app.models.feed import Feed
+    from sqlalchemy import update
+
+    async with worker_db() as db:
+        stmt = (
+            update(Feed)
+            .where(Feed.tags.contains(["failed-enrichment"]))
+            .values(tags=None, content_type=None)
+        )
+        res = await db.execute(stmt)
+        logger.info("Failed enrichments reset successfully", count=res.rowcount)
+        print(f"\nSuccess: Reset {res.rowcount} feeds from failed enrichment state!")
+
+
 TASKS = {
     "refresh-all": trigger_refresh_all,
     "compact-unread": trigger_compact_unread,
     "compact-old": trigger_compact_old,
     "batch-enrich": trigger_batch_enrich,
+    "reset-failed": trigger_reset_failed,
 }
 
 
@@ -79,6 +98,7 @@ def print_usage() -> None:
     print("  compact-unread - Compact unread articles")
     print("  compact-old    - Delete old articles")
     print("  batch-enrich   - Batch enrich feeds")
+    print("  reset-failed   - Reset all feeds marked as 'failed-enrichment'")
     print("\nExample:")
     print("  python scripts/trigger_task.py refresh-all")
     print("  poe trigger refresh-all")

@@ -25,3 +25,18 @@ export interface TokenData {
   email?: string;
   role?: string;
 }
+
+export interface UserLimits {
+  role: UserRole;
+  limits: {
+    max_subscriptions: number;
+    max_daily_ai_calls: number;
+    semantic_search: boolean;
+    read_later_retention_days: number;
+  };
+  usage: {
+    subscriptions: number;
+    daily_ai_calls: number;
+  };
+}
+

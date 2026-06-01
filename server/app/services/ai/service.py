@@ -24,9 +24,16 @@ logger = structlog.get_logger(__name__)
 def _get_client() -> genai.Client | None:
     """Lazy load the Gemini client."""
     settings = get_settings()
-    if settings.ENABLE_AI and settings.GEMINI_API_KEY:
+    if settings.ENABLE_AI:
         try:
-            return genai.Client(api_key=settings.GEMINI_API_KEY)
+            if settings.GOOGLE_CLOUD_PROJECT:
+                return genai.Client(
+                    vertexai=True,
+                    project=settings.GOOGLE_CLOUD_PROJECT,
+                    location=settings.GOOGLE_CLOUD_LOCATION,
+                )
+            elif settings.GEMINI_API_KEY:
+                return genai.Client(api_key=settings.GEMINI_API_KEY)
         except Exception as e:
             logger.error("Failed to initialize Gemini client", error=str(e))
     return None
@@ -110,11 +117,11 @@ async def _call_gemini(
     max_tokens: int,
     temperature: float,
 ) -> str | None:
-    """Raw API call wrapper."""
+    """Raw API call wrapper using the fast processing model."""
     settings = get_settings()
     try:
         response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
+            model=settings.GEMINI_FAST_MODEL,
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
@@ -122,13 +129,13 @@ async def _call_gemini(
                 max_output_tokens=max_tokens,
             ),
         )
-        
+
         if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
             parts = response.candidates[0].content.parts
             text_parts = [part.text for part in parts if hasattr(part, "text") and part.text]
             if text_parts:
                 return "".join(text_parts).strip()
-                
+
         return response.text.strip() if response.text else None
     except Exception as e:
         logger.error("Gemini API error", error=str(e))

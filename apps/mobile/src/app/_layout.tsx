@@ -184,7 +184,9 @@ function RootNavigator() {
         <BottomSheetModalProvider>
           <ToastProvider>
             <StatusBar style={isDark ? 'light' : 'dark'} />
-            <Stack key={isDark ? 'dark' : 'light'} screenOptions={{ headerShown: false, contentStyle: { backgroundColor } }}>
+            <Stack
+              key={isDark ? 'dark' : 'light'}
+              screenOptions={{ headerShown: false, contentStyle: { backgroundColor } }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="(protected)" />
               <Stack.Screen name="(auth)" />

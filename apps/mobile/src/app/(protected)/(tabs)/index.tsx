@@ -47,7 +47,13 @@ export default function FollowingRoute() {
 
   const headerTitleIcon = useMemo(() => {
     if (viewType === 'folder') {
-      return <FolderBoldDuotoneIcon width={24} height={24} color={COLORS[isDark ? 'dark' : 'light'].primary_foreground} />;
+      return (
+        <FolderBoldDuotoneIcon
+          width={24}
+          height={24}
+          color={COLORS[isDark ? 'dark' : 'light'].primary_foreground}
+        />
+      );
     }
     if (viewType === 'feed' || viewType === 'feedPreview') {
       return <RssIcon width={24} height={24} color={COLORS[isDark ? 'dark' : 'light'].orange} />;
@@ -59,12 +65,15 @@ export default function FollowingRoute() {
     feedSwitcherRef.current?.present();
   }, []);
 
-  const handleTabChange = useCallback((index: number) => {
-    if (isViewingFeedOrFolder) {
-      clearView();
-    }
-    setActiveTab(index);
-  }, [isViewingFeedOrFolder, clearView, setActiveTab]);
+  const handleTabChange = useCallback(
+    (index: number) => {
+      if (isViewingFeedOrFolder) {
+        clearView();
+      }
+      setActiveTab(index);
+    },
+    [isViewingFeedOrFolder, clearView, setActiveTab]
+  );
 
   // Calculate safe minimum header height (safe area + title + tabs + padding)
   // This ensures content never appears under header, even if headerHeight is 0
@@ -148,7 +157,7 @@ export default function FollowingRoute() {
   );
 
   return (
-    <View className="flex-1 bg-background" style={{ backgroundColor: colors.background }}>
+    <View className="bg-background flex-1" style={{ backgroundColor: colors.background }}>
       <Header
         variant="tabbed"
         title={headerTitle}

@@ -1,7 +1,24 @@
-import { QueryClient } from "@tanstack/react-query"
+import { QueryClient, QueryCache, MutationCache } from "@tanstack/react-query"
+import { ApiError } from "@readspace/shared"
+import { useUpgradeDialog } from "@/stores/upgrade-dialog"
 
 function makeQueryClient() {
+    const handleGlobalError = (error: unknown) => {
+        if (error instanceof ApiError && error.status === 429) {
+            useUpgradeDialog.getState().open({
+                title: "Upgrade to Readspace Pro",
+                description: error.message || "You have reached a limit on your current plan.",
+            })
+        }
+    }
+
     return new QueryClient({
+        queryCache: new QueryCache({
+            onError: handleGlobalError,
+        }),
+        mutationCache: new MutationCache({
+            onError: handleGlobalError,
+        }),
         defaultOptions: {
             queries: {
                 retry: 1,
@@ -18,6 +35,7 @@ function makeQueryClient() {
         },
     })
 }
+
 
 let browserQueryClient: QueryClient | undefined = undefined
 

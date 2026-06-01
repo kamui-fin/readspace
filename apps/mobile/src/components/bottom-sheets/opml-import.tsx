@@ -75,19 +75,19 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
     return (
       <BottomSheet ref={ref} headerTitle="Confirm Import">
         <View>
-          <Text className="mb-6 font-geist-medium text-base text-grey dark:text-grey">
+          <Text className="font-geist-medium text-grey dark:text-grey mb-6 text-base">
             Review the details below before importing your feeds.
           </Text>
 
           {/* File Info Card */}
-          <View className="mb-6 rounded-xl bg-grey5 p-4 dark:bg-grey5">
+          <View className="bg-grey5 dark:bg-grey5 mb-6 rounded-xl p-4">
             <View className="flex-row items-center gap-3">
               <DocumentTextBoldIcon width={24} height={24} color={colors.primary} />
               <View className="flex-1">
                 <Text className="font-geist-semibold text-base text-black dark:text-white">
                   {file?.name || 'Unknown file'}
                 </Text>
-                <Text className="font-geist text-sm text-grey dark:text-grey">
+                <Text className="font-geist text-grey dark:text-grey text-sm">
                   {feedCount} {feedCount === 1 ? 'subscription' : 'subscriptions'}
                 </Text>
               </View>
@@ -95,12 +95,12 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
           </View>
 
           {/* Import Info */}
-          <View className="mb-6 rounded-xl bg-grey6 p-4">
+          <View className="bg-grey6 mb-6 rounded-xl p-4">
             <View className="flex-row gap-2">
               <View style={{ marginTop: 2 }}>
                 <InfoCircleBoldIcon width={16} height={16} color={colors.grey} />
               </View>
-              <Text className="flex-1 font-geist-medium text-sm text-grey dark:text-grey">
+              <Text className="font-geist-medium text-grey dark:text-grey flex-1 text-sm">
                 The import will run in the background. You can track its progress immediately after.
               </Text>
             </View>

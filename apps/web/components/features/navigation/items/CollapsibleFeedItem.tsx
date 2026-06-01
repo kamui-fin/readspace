@@ -1,11 +1,8 @@
-"use client"
-
 import * as React from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
-    SidebarLeftMenuButton,
     SidebarMenuItem,
     SidebarMenuSub,
 } from "@/components/ui/sidebar"
@@ -13,6 +10,7 @@ import { ChevronRight } from "lucide-react"
 import { SubFeedItem, type SubFeedItemData } from "./SubFeedItem"
 import { FeedDropdownMenu } from "../menus/FeedContextMenu"
 import { usePersistentState } from "@/hooks/use-persistent-state"
+import { cn } from "@/lib/utils"
 
 interface CollapsibleFeedItemData {
     /** Unique identifier for the folder */
@@ -76,12 +74,17 @@ function useFeedNavigation(
 // Sub-components
 interface FeedItemRootProps {
     children: React.ReactNode
+    isActive: boolean
 }
 
-function FeedItemRoot({ children }: FeedItemRootProps) {
+function FeedItemRoot({ children, isActive }: FeedItemRootProps) {
     return (
         <SidebarMenuItem>
-            <div className="flex items-center w-full group/item">
+            <div className={cn(
+                "relative flex items-center w-full group/item h-8 rounded-md text-sm transition-colors duration-150 px-1",
+                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                isActive && "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+            )}>
                 {children}
             </div>
         </SidebarMenuItem>
@@ -103,14 +106,14 @@ function FeedItemToggle({ isOpen, title }: FeedItemToggleProps) {
                         ? `Collapse folder ${title}`
                         : `Expand folder ${title}`
                 }
-                className="p-1 mr-1 rounded hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring shrink-0"
+                className="p-1 mr-1 rounded-sm hover:bg-muted-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring shrink-0 text-muted-foreground transition-colors"
             >
                 <motion.div
                     animate={{ rotate: isOpen ? 90 : 0 }}
                     transition={{ duration: 0.2, ease: "easeInOut" }}
                     className="flex items-center justify-center"
                 >
-                    <ChevronRight className="h-4 w-4 shrink-0" />
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0" />
                 </motion.div>
             </button>
         </CollapsibleTrigger>
@@ -119,28 +122,26 @@ function FeedItemToggle({ isOpen, title }: FeedItemToggleProps) {
 
 interface FeedItemButtonProps {
     onClick: () => void
-    isActive: boolean
     title: string
     children: React.ReactNode
 }
 
 function FeedItemButton({
     onClick,
-    isActive,
     title,
     children,
 }: FeedItemButtonProps) {
     return (
-        <SidebarLeftMenuButton
-            className="justify-start flex-1"
-            isActive={isActive}
+        <button
+            type="button"
             aria-label={`Navigate to folder ${title}`}
             onClick={onClick}
+            className="flex flex-1 items-center overflow-hidden h-full text-left pr-10 pl-1 outline-none select-none cursor-pointer"
         >
-            <div className="flex flex-grow items-center overflow-hidden pl-2">
+            <div className="flex flex-grow items-center overflow-hidden">
                 {children}
             </div>
-        </SidebarLeftMenuButton>
+        </button>
     )
 }
 
@@ -165,11 +166,10 @@ export function CollapsibleFeedItem({
 
     return (
         <Collapsible open={isOpen} onOpenChange={toggle}>
-            <FeedItemRoot>
+            <FeedItemRoot isActive={isActive}>
                 <FeedItemToggle isOpen={isOpen} title={feed.title} />
                 <FeedItemButton
                     onClick={handleNavigate}
-                    isActive={isActive}
                     title={feed.title}
                 >
                     {feed.icon &&
@@ -179,7 +179,7 @@ export function CollapsibleFeedItem({
                     <span className="ml-1 truncate">{feed.title}</span>
                 </FeedItemButton>
 
-                <div className="shrink-0 flex items-center pr-2">
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-auto">
                     <FeedDropdownMenu
                         isFolder={true}
                         itemActive={isActive}

@@ -219,7 +219,10 @@ export function FollowButton({
         style={buttonStyle}>
         {isLoading ? (
           <View style={{ transform: [{ scale: 0.75 }] }}>
-            <Spinner size="small" color={isStylingFollowing ? (isDark ? colors.grey2 : colors.grey) : '#ffffff'} />
+            <Spinner
+              size="small"
+              color={isStylingFollowing ? (isDark ? colors.grey2 : colors.grey) : '#ffffff'}
+            />
           </View>
         ) : null}
         <Text

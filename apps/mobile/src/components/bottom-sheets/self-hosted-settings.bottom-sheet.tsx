@@ -129,11 +129,16 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
             });
           } catch (error) {
             console.log('[SelfHostSettingsBottomSheet] Config fetch error:', error);
-            throw new Error('Unable to connect to the Readspace server. Check the URL and try again.');
+            throw new Error(
+              'Unable to connect to the Readspace server. Check the URL and try again.'
+            );
           }
 
           if (!configResponse.ok) {
-            console.log('[SelfHostSettingsBottomSheet] Config endpoint failed:', configResponse.status);
+            console.log(
+              '[SelfHostSettingsBottomSheet] Config endpoint failed:',
+              configResponse.status
+            );
             throw new Error(`Server returned error status ${configResponse.status}`);
           }
 
@@ -159,7 +164,7 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
 
           // 2. Resolve internal docker networks / localhost back to entered API host
           const apiParsed = new URL(data.apiUrl);
-          
+
           const isDockerOrLocalhost = (urlStr: string) => {
             try {
               const parsed = new URL(urlStr);
@@ -198,7 +203,10 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
           }
 
           console.log('[SelfHostSettingsBottomSheet] Resolved Supabase URL:', resolvedSupabaseUrl);
-          console.log('[SelfHostSettingsBottomSheet] Resolved Meilisearch URL:', resolvedMeilisearchUrl);
+          console.log(
+            '[SelfHostSettingsBottomSheet] Resolved Meilisearch URL:',
+            resolvedMeilisearchUrl
+          );
 
           // 3. Test Supabase connection
           console.log('[SelfHostSettingsBottomSheet] Testing Supabase connection...');
@@ -293,7 +301,7 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
         keyboardBehavior="extend"
         keyboardBlurBehavior="restore">
         <View style={{ gap: 16 }}>
-          <Text className="font-geist-medium text-base text-grey dark:text-grey">
+          <Text className="font-geist-medium text-grey dark:text-grey text-base">
             Connect to your own Readspace instance URL
           </Text>
 
@@ -334,7 +342,7 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
             </View>
             {errors.apiUrl ? (
               <Text
-                className="text-sm font-geist-medium"
+                className="font-geist-medium text-sm"
                 style={{
                   marginTop: -4,
                   color: isDark ? COLORS.dark.destructive : COLORS.light.destructive,
@@ -345,7 +353,7 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
           </View>
 
           {/* Inline Action Button */}
-          <View className="mt-4 mb-1">
+          <View className="mb-1 mt-4">
             <Button
               variant="primary"
               size="large"

@@ -76,7 +76,7 @@ const FeedListItemComponent = ({
               <CheckCircleBoldIcon width={28} height={28} color={colors.secondary} />
             ) : (
               <View
-                className="w-6 h-6 rounded-full border-[1.5px]"
+                className="h-6 w-6 rounded-full border-[1.5px]"
                 style={{ borderColor: isDark ? colors.grey4 : colors.grey3 }}
               />
             )}
@@ -95,38 +95,30 @@ const FeedListItemComponent = ({
             />
           </View>
         ) : (
-          <View className="h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-grey4">
-            <Text className="font-geist-medium text-base text-grey">
+          <View className="bg-grey4 h-10 w-10 items-center justify-center overflow-hidden rounded-lg">
+            <Text className="font-geist-medium text-grey text-base">
               {feed.title.charAt(0).toUpperCase()}
             </Text>
           </View>
         )}
       </View>
 
-      <View className="flex-1 min-w-0 justify-center">
+      <View className="min-w-0 flex-1 justify-center">
         <Text
-          className="font-geist-medium text-base text-black truncate"
+          className="font-geist-medium truncate text-base text-black"
           numberOfLines={1}
           ellipsizeMode="tail">
           {title}
         </Text>
         {!isSelectionMode && (unreadCount > 0 || showFolder) && (
-          <View className="flex-row items-center gap-2 mt-0.5">
+          <View className="mt-0.5 flex-row items-center gap-2">
             {unreadCount > 0 && (
-              <Text className="font-geist-medium text-sm text-grey2">
-                {unreadCount} unread
-              </Text>
+              <Text className="font-geist-medium text-grey2 text-sm">{unreadCount} unread</Text>
             )}
             {showFolder && (
               <>
-                {unreadCount > 0 && (
-                  <Text className="font-geist-medium text-xs text-grey3">
-                    •
-                  </Text>
-                )}
-                <Text
-                  className="font-geist-medium text-sm text-grey2 truncate"
-                  numberOfLines={1}>
+                {unreadCount > 0 && <Text className="font-geist-medium text-grey3 text-xs">•</Text>}
+                <Text className="font-geist-medium text-grey2 truncate text-sm" numberOfLines={1}>
                   {sub.folder?.name || 'No folder'}
                 </Text>
               </>
@@ -143,7 +135,12 @@ const FeedListItemComponent = ({
               size="small"
               fullWidth={false}
               className="h-10 w-10 items-center justify-center bg-transparent dark:bg-transparent">
-              <MenuDotsBoldIcon width={20} height={20} color={colors.grey2} style={{ transform: [{ rotate: '90deg' }] }} />
+              <MenuDotsBoldIcon
+                width={20}
+                height={20}
+                color={colors.grey2}
+                style={{ transform: [{ rotate: '90deg' }] }}
+              />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>

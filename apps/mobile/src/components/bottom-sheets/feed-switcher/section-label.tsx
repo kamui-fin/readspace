@@ -22,13 +22,13 @@ export function SectionLabel({
   accentYellow = false,
 }: SectionLabelProps) {
   return (
-    <View className={`flex-row items-center gap-2 mb-3 px-1 ${className}`.trim()}>
+    <View className={`mb-3 flex-row items-center gap-2 px-1 ${className}`.trim()}>
       {icon}
       <Text
         className={
           accentYellow
-            ? 'font-geist-bold text-[11px] tracking-widest uppercase'
-            : 'font-geist-bold text-[11px] text-grey2  tracking-widest uppercase opacity-60'
+            ? 'font-geist-bold text-[11px] uppercase tracking-widest'
+            : 'font-geist-bold text-grey2 text-[11px]  uppercase tracking-widest opacity-60'
         }
         style={accentYellow ? { color: PINNED_YELLOW } : undefined}>
         {label}

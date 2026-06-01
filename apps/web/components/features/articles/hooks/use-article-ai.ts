@@ -87,14 +87,16 @@ export function useArticleAI({
 
         // Actions
         handleExtractContent: async () => {
+            if (extractMutation.isPending) return
             try {
+                setContentView(ContentView.Extracted)
                 await extractMutation.mutateAsync({
                     articleId: article.id,
                     articleUrl: article.link,
                     articleType: article.article_type,
                 })
-                setContentView(ContentView.Extracted)
             } catch {
+                setContentView(ContentView.Original)
                 toast.error("Failed to extract article content", {
                     id: "extract-error",
                 })

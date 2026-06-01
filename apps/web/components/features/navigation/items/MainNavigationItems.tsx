@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation"
 import {
     SidebarGroup,
     SidebarMenu,
-    SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { useUnreadCounts } from "@readspace/shared"
+import { cn } from "@/lib/utils"
 
 interface MainNavItem {
     /** Display title for the navigation item */
@@ -22,10 +22,6 @@ interface MainNavItem {
 interface MainNavigationItemsProps {
     /** Array of main navigation items */
     items: MainNavItem[]
-    /** Whether the interface is in mobile mode */
-    isMobile: boolean
-    /** Function to toggle sidebar on mobile */
-    toggleSidebar: () => void
 }
 
 /**
@@ -34,8 +30,6 @@ interface MainNavigationItemsProps {
  */
 export function MainNavigationItems({
     items,
-    isMobile,
-    toggleSidebar,
 }: MainNavigationItemsProps) {
     const pathname = usePathname()
 
@@ -75,32 +69,28 @@ export function MainNavigationItems({
 
                     return (
                         <SidebarMenuItem key={item.title}>
-                            <div className="flex items-center w-full group/item">
-                                <SidebarMenuButton
-                                    asChild
-                                    tooltip={item.title}
-                                    isMobile={isMobile}
-                                    toggleSidebar={toggleSidebar}
-                                    isActive={isActive}
-                                    className="flex-1 pl-2"
+                            <div className={cn(
+                                "relative flex items-center w-full group/item h-8 rounded-md text-sm transition-colors duration-150 px-1 pl-2",
+                                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                                isActive && "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                            )}>
+                                <Link
+                                    href={item.url}
+                                    aria-label={`Navigate to ${item.title}`}
+                                    className="flex flex-grow items-center overflow-hidden h-full pr-10 outline-none select-none text-sidebar-foreground pl-1"
                                 >
-                                    <Link
-                                        href={item.url}
-                                        aria-label={`Navigate to ${item.title}`}
-                                    >
-                                        <item.icon className="h-4 w-4" />
-                                        <span>{item.title}</span>
-                                    </Link>
-                                </SidebarMenuButton>
+                                    <item.icon className="h-4 w-4 shrink-0" />
+                                    <span className="ml-2 truncate">{item.title}</span>
+                                </Link>
 
-                                {/* Count badge for applicable items */}
-                                <div className="shrink-0 flex items-center pr-2">
-                                    {count != null && count > 0 && (
-                                        <span className="ml-1 text-xs text-muted-foreground">
+                                {/* Count badge for applicable items positioned absolutely on the right */}
+                                {count != null && count > 0 && (
+                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none select-none flex items-center pr-1">
+                                        <span className="text-xs font-semibold text-muted-foreground/80 px-1.5 py-0.5 rounded-full bg-muted/40 backdrop-blur-xs">
                                             {count}
                                         </span>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         </SidebarMenuItem>
                     )

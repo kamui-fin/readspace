@@ -14,6 +14,7 @@ import { ArticlesDetail } from "./ArticlesDetail"
 import { useArticlesStore } from "./stores/use-articles-store"
 import { useDeepRefresh } from "./hooks/use-deep-refresh"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useArticleGrouping } from "./hooks/use-article-grouping"
 
 import { useFeed, useUpdateArticle, ArticleFilterMode } from "@readspace/shared"
 import type { Article } from "@readspace/shared"
@@ -105,6 +106,7 @@ export function ArticlesView({
     // Derived State
     const isRecentlyReadMode = mode === ArticleFilterMode.RecentlyRead
     const isReadLaterMode = mode === ArticleFilterMode.ReadLater
+    const isTodayMode = mode === ArticleFilterMode.Today
 
     const filteredArticles = useMemo(() => {
         if (showUnreadOnly && !isReadLaterMode) {
@@ -117,6 +119,83 @@ export function ArticlesView({
         () => articles.find((a) => a.id === selectedArticleId),
         [articles, selectedArticleId]
     )
+
+    const { allRows } = useArticleGrouping({
+        articles,
+        showUnreadOnly,
+        isRecentlyReadMode,
+        isTodayMode,
+    })
+
+    const displayedArticles = useMemo(() => {
+        return allRows.filter((row): row is Article => row !== null && !("type" in row))
+    }, [allRows])
+
+    // Keyboard Shortcuts for navigation
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            // Avoid triggering shortcuts when typing in inputs/textareas
+            const activeElement = document.activeElement
+            if (
+                activeElement &&
+                (activeElement.tagName === "INPUT" ||
+                    activeElement.tagName === "TEXTAREA" ||
+                    activeElement.hasAttribute("contenteditable") ||
+                    activeElement.getAttribute("contenteditable") === "true")
+            ) {
+                return
+            }
+
+            // Avoid modifier keys
+            if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
+                return
+            }
+
+            const key = event.key.toLowerCase()
+
+            if (key === "j" || key === "n" || key === "l") {
+                // Next article
+                if (displayedArticles.length === 0) return
+                event.preventDefault()
+
+                const currentIndex = displayedArticles.findIndex(
+                    (a) => a.id === selectedArticleId
+                )
+
+                let nextIndex = 0
+                if (currentIndex !== -1) {
+                    nextIndex = currentIndex + 1
+                }
+
+                if (nextIndex < displayedArticles.length) {
+                    const nextArticle = displayedArticles[nextIndex]
+                    if (nextArticle?.id) {
+                        selectArticle(nextArticle.id)
+                    }
+                }
+            } else if (key === "k" || key === "p" || key === "h") {
+                // Previous article
+                if (displayedArticles.length === 0) return
+                event.preventDefault()
+
+                const currentIndex = displayedArticles.findIndex(
+                    (a) => a.id === selectedArticleId
+                )
+
+                if (currentIndex > 0) {
+                    const prevArticle = displayedArticles[currentIndex - 1]
+                    if (prevArticle?.id) {
+                        selectArticle(prevArticle.id)
+                    }
+                }
+            }
+        }
+
+        window.addEventListener("keydown", handleKeyDown)
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown)
+        }
+    }, [displayedArticles, selectedArticleId, selectArticle])
 
     const shouldShowPreviewBanner = !!(
         feedId &&

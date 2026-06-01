@@ -30,7 +30,6 @@ from app.crud.folder import get_by_id as get_folder
 from app.models.feed import Feed
 from app.services.feeds import fetching, parsing, scheduling
 from app.services.feeds.domain_authority import get_domain_authority_score
-from app.services.feeds.favicon import extract_favicon_and_canonical_url
 from app.services.feeds.http_cache import parse_ttl_from_headers
 from app.services.feeds.language_detection import detect_feed_language
 from app.services.feeds.meilisearch import sync_feed
@@ -115,16 +114,6 @@ async def add_feed(
         except Exception as e:
             raise FeedParsingError(f"Failed to parse feed: {e}") from e
 
-        # Extract Favicon / Key Image
-        try:
-            # Prefer the website link, fall back to feed URL
-            target_url = parsed.link or final_url
-            favicon_result = await extract_favicon_and_canonical_url(target_url)
-            if favicon_result.image_url:
-                parsed.image_url = favicon_result.image_url
-        except Exception as e:
-            logger.warning("Favicon extraction failed", url=final_url, error=str(e))
-
         # Detect Language if missing
         language = parsed.language
         if not language:
@@ -208,6 +197,18 @@ async def add_feed(
         logger.warning(
             "Meilisearch sync failed", feed_id=str(created_feed.id), error=str(e)
         )
+
+    # Queue background task to fetch favicon if not already set
+    if created_feed and not created_feed.image_url:
+        try:
+            from app.workers.feed_tasks import fetch_favicon_task
+            await fetch_favicon_task.kiq(feed_id=str(created_feed.id))
+        except Exception as e:
+            logger.warning(
+                "Failed to queue background favicon task",
+                feed_id=str(created_feed.id),
+                error=str(e),
+            )
 
     return sub, created
 

@@ -101,10 +101,13 @@ async def test_extract_and_upload_favicon_real(favicon_server):
     # assert "favicons" in result.image_url # verify bucket in path
     
     # 4. Verify Download
+    from app.core.config import get_settings
+    settings = get_settings()
+    full_url = f"{settings.SUPABASE_URL}/storage/v1/object/public/favicons/{result.image_url}"
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(result.image_url)
-            assert response.status_code == 200, f"Failed to download from {result.image_url}"
+            response = await client.get(full_url)
+            assert response.status_code == 200, f"Failed to download from {full_url}"
             # Check for PNG signature since re-encoding might change bytes
             assert response.content.startswith(b'\x89PNG'), "Downloaded content is not a PNG"
         except Exception as e:
@@ -116,3 +119,58 @@ async def test_extract_and_upload_favicon_real(favicon_server):
         await supabase.storage.from_(bucket_name).remove([filename])
     except Exception as e:
         logger.warning(f"Cleanup failed: {e}")
+
+
+@pytest.mark.asyncio
+async def test_background_favicon_fetch_success(favicon_server, db_session, test_user):
+    """
+    Test background favicon extraction and database persistence.
+    1. Create a feed using the local favicon_server URL.
+    2. Execute fetch_feed_favicon on it.
+    3. Assert the feed's image_url is populated with the Supabase storage path.
+    """
+    from app.models.feed import Feed
+    from app.workers.feed.favicon import fetch_feed_favicon
+    from app.services.feeds.favicon import _get_async_supabase
+
+    # 1. Setup: Ensure bucket exists (using real client)
+    supabase = await _get_async_supabase()
+    bucket_name = "favicons"
+    try:
+        await supabase.storage.get_bucket(bucket_name)
+    except Exception:
+        try:
+            await supabase.storage.create_bucket(bucket_name, options={"public": True})
+        except Exception as e:
+            logger.warning(f"Bucket creation encountered error (ignoring): {e}")
+
+    # 2. Create feed in database
+    feed = Feed(
+        url=favicon_server,
+        title="Favicon Test Feed",
+        description="Testing background favicon fetch",
+        link=favicon_server,
+        language="en",
+        tags=[],
+        tags_native=[],
+    )
+    db_session.add(feed)
+    await db_session.flush()
+
+    # 3. Call the background task worker directly
+    await fetch_feed_favicon(feed_id=feed.id)
+
+    # 4. Verify DB was updated
+    await db_session.refresh(feed)
+    assert feed.image_url is not None, "Favicon image_url was not updated by background worker"
+    
+    # Verify the favicon was uploaded and is a relative path (e.g. UUID.png)
+    assert not feed.image_url.startswith("http"), "Image URL should be stored as relative storage path"
+    assert feed.image_url.endswith(".png") or feed.image_url.endswith(".ico")
+
+    # 5. Cleanup
+    try:
+        await supabase.storage.from_(bucket_name).remove([feed.image_url])
+    except Exception as e:
+        logger.warning(f"Cleanup failed: {e}")
+

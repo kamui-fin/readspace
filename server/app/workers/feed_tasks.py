@@ -31,7 +31,7 @@ async def schedule_all_feed_refreshes_task() -> None:
 
 @broker.task(
     task_name="feed_tasks.batch_enrich_feeds",
-    schedule=[{"cron": "0 4 * * 0"}],
+    schedule=[{"cron": "0 4 * * *"}],
 )
 async def batch_enrich_feeds_task() -> dict[str, Any]:
     """Cron: Batch enrichment (Wrapper)."""
@@ -54,3 +54,11 @@ async def compact_unread_articles_task() -> dict[str, int]:
 async def compact_old_articles_task() -> dict[str, int]:
     """Cron: Article cleanup (Wrapper)."""
     return await compact_old_articles()
+
+
+@broker.task(task_name="feed_tasks.fetch_favicon")
+async def fetch_favicon_task(feed_id: UUID | str) -> None:
+    """Fetch and save favicon for a feed in the background."""
+    from app.workers.feed.favicon import fetch_feed_favicon
+    await fetch_feed_favicon(feed_id=ensure_uuid(feed_id))
+

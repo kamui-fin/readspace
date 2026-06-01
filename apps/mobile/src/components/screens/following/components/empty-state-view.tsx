@@ -46,7 +46,7 @@ export function EmptyStateView({
 
   return (
     <ScrollView
-      className="flex-1 bg-background"
+      className="bg-background flex-1"
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={{
         flexGrow: 1,

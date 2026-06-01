@@ -171,7 +171,9 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
           }),
           {
             loading: 'Following feed...',
-            success: pendingSimilarFeedUrl ? 'Following feed!' : `Following ${feed?.title || 'feed'}!`,
+            success: pendingSimilarFeedUrl
+              ? 'Following feed!'
+              : `Following ${feed?.title || 'feed'}!`,
             error: 'Failed to follow feed',
           }
         );
@@ -237,12 +239,9 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
 
   if (!feed) {
     return (
-      <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
+      <View className="bg-background flex-1" style={{ paddingTop: insets.top }}>
         <View className="flex-1 items-center justify-center px-6">
-          <Text
-            size="base"
-            fontFamily="geist"
-            className="text-grey text-center">
+          <Text size="base" fontFamily="geist" className="text-grey text-center">
             Feed not found
           </Text>
         </View>
@@ -252,7 +251,7 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
 
   return (
     <>
-      <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
+      <View className="bg-background flex-1" style={{ paddingTop: insets.top }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{

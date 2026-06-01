@@ -13,6 +13,7 @@ from app.services.articles.scrape import extract_full_content
 from app.services.articles.service import get_article_details
 from app.services.feeds.service import SessionFactory
 from app.services.user.auth import get_current_user
+from app.services.user.resource_limits import enforce_daily_ai_limit
 from app.typing.enhancements import (
     ExtractionResponse,
     SummarizeRequest,
@@ -120,6 +121,9 @@ async def summarize_article(
     """
     logger.bind(article_id=str(article_id), user_id=user.sub)
 
+    async with db_factory() as db:
+        await enforce_daily_ai_limit(db, UUID(user.sub))
+
     # 1. Fetch & Resolve Content
     article = await get_article_or_404(db_factory, article_id, UUID(user.sub), is_clipped=clipped)
     content_to_use = resolve_content(request.content, article)
@@ -166,6 +170,9 @@ async def translate_article(
         user_id=user.sub,
         target_lang=str(request.target_language),
     )
+
+    async with db_factory() as db:
+        await enforce_daily_ai_limit(db, UUID(user.sub))
 
     # 1. Fetch & Resolve Content
     article = await get_article_or_404(db_factory, article_id, UUID(user.sub), is_clipped=clipped)

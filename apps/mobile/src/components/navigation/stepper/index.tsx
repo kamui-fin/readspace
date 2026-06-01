@@ -106,7 +106,7 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View className="flex-1 bg-screen">
+        <View className="bg-screen flex-1">
           {/* Page Indicator */}
           <View
             style={{
@@ -125,7 +125,7 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
           </View>
 
           {/* Current Page with Transition */}
-          <View className="flex-1 pt-22">
+          <View className="pt-22 flex-1">
             <Animated.View
               className="relative flex-1"
               style={{

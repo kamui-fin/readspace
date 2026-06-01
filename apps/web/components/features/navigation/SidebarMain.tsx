@@ -81,24 +81,26 @@ export function FeedsNavigation({
             )}
 
             {/* Header with actions */}
-            <div className="flex items-center justify-between pr-2">
-                <SidebarGroupLabel>Feeds</SidebarGroupLabel>
-                <div>
+            <div className="flex items-center justify-between pr-2 group/header h-8 mb-1">
+                <SidebarGroupLabel className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground/60 select-none">
+                    Feeds
+                </SidebarGroupLabel>
+                <div className="flex items-center gap-0.5 opacity-60 hover:opacity-100 transition-opacity duration-150">
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 transition-all duration-150 hover:bg-[var(--nav-hover)] rounded-full"
+                        className="h-5.5 w-5.5 p-0 transition-all duration-150 hover:bg-muted-foreground/10 text-muted-foreground rounded-md cursor-pointer flex items-center justify-center"
                         onClick={() => setIsSearchOpen(true)}
                         title="Search feeds (Cmd/Ctrl + K)"
                     >
-                        <Search className="h-4 w-4 transition-colors duration-150" />
+                        <Search className="h-3.5 w-3.5 transition-colors duration-150" />
                         <span className="sr-only">Search</span>
                     </Button>
                     <Link href="/manage-feeds">
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0 transition-all duration-150 hover:bg-[var(--nav-hover)] rounded-full"
+                            className="h-5.5 w-5.5 p-0 transition-all duration-150 hover:bg-muted-foreground/10 text-muted-foreground rounded-md cursor-pointer flex items-center justify-center"
                             title="Manage Feeds"
                             onClick={() => {
                                 if (isMobile) {
@@ -106,18 +108,18 @@ export function FeedsNavigation({
                                 }
                             }}
                         >
-                            <Settings2 className="h-4 w-4 transition-colors duration-150" />
+                            <Settings2 className="h-3.5 w-3.5 transition-colors duration-150" />
                             <span className="sr-only">Settings</span>
                         </Button>
                     </Link>
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0 transition-all duration-150 hover:bg-[var(--nav-hover)] rounded-full"
+                        className="h-5.5 w-5.5 p-0 transition-all duration-150 hover:bg-muted-foreground/10 text-muted-foreground rounded-md cursor-pointer flex items-center justify-center"
                         onClick={handleAddFolder}
                         title="Add new folder"
                     >
-                        <FolderPlus className="h-4 w-4 transition-colors duration-150" />
+                        <FolderPlus className="h-3.5 w-3.5 transition-colors duration-150" />
                         <span className="sr-only">Add</span>
                     </Button>
                 </div>
@@ -191,8 +193,6 @@ export function SidebarMain() {
         <>
             <MainNavigationItems
                 items={mainNavItems}
-                isMobile={isMobile}
-                toggleSidebar={toggleSidebar}
             />
             <FeedsNavigation
                 isMobile={isMobile}

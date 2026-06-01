@@ -28,7 +28,7 @@ export function RecentSearches({
       }}>
       {recentSearches.length > 0 ? (
         <>
-          <View className="flex-row items-center justify-between mb-4">
+          <View className="mb-4 flex-row items-center justify-between">
             <Text size="base" fontFamily="geist-semibold" className="text-black">
               Recent searches
             </Text>
@@ -54,10 +54,10 @@ export function RecentSearches({
         </>
       ) : (
         <View className="py-12">
-          <Text size="base" fontFamily="geist" className="text-center text-grey">
+          <Text size="base" fontFamily="geist" className="text-grey text-center">
             No recent searches yet
           </Text>
-          <Text size="sm" fontFamily="geist" className="mt-2 text-center text-grey">
+          <Text size="sm" fontFamily="geist" className="text-grey mt-2 text-center">
             Your search history will appear here
           </Text>
         </View>

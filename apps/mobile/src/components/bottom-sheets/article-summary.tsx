@@ -51,9 +51,27 @@ export const ArticleSummaryBottomSheet = forwardRef<
           lineHeight: 26,
           color: colors.primary_foreground,
         },
-        heading1: { fontFamily: 'Geist_700Bold', fontSize: 22, marginTop: 16, marginBottom: 8, color: colors.primary_foreground },
-        heading2: { fontFamily: 'Geist_600SemiBold', fontSize: 18, marginTop: 16, marginBottom: 6, color: colors.primary_foreground },
-        heading3: { fontFamily: 'Geist_600SemiBold', fontSize: 16, marginTop: 12, marginBottom: 6, color: colors.primary_foreground },
+        heading1: {
+          fontFamily: 'Geist_700Bold',
+          fontSize: 22,
+          marginTop: 16,
+          marginBottom: 8,
+          color: colors.primary_foreground,
+        },
+        heading2: {
+          fontFamily: 'Geist_600SemiBold',
+          fontSize: 18,
+          marginTop: 16,
+          marginBottom: 6,
+          color: colors.primary_foreground,
+        },
+        heading3: {
+          fontFamily: 'Geist_600SemiBold',
+          fontSize: 16,
+          marginTop: 12,
+          marginBottom: 6,
+          color: colors.primary_foreground,
+        },
         strong: { fontFamily: 'Geist_600SemiBold' },
         em: { fontFamily: 'Geist_400Regular', fontStyle: 'italic' },
         list_item: { marginTop: 4, marginBottom: 4 },
@@ -74,7 +92,7 @@ export const ArticleSummaryBottomSheet = forwardRef<
       headerLeft={headerLeft}
       onDismiss={onClose}>
       {isLoading ? (
-        <View className="py-4 w-full">
+        <View className="w-full py-4">
           <Skeleton variant="text" height={20} width="100%" className="mb-2" />
           <Skeleton variant="text" height={20} width="100%" className="mb-2" />
           <Skeleton variant="text" height={20} width="90%" className="mb-2" />
@@ -86,9 +104,7 @@ export const ArticleSummaryBottomSheet = forwardRef<
         </View>
       ) : summary?.summary ? (
         <BottomSheetScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 48 }}>
-          <Markdown style={markdownStyles}>
-            {summary.summary}
-          </Markdown>
+          <Markdown style={markdownStyles}>{summary.summary}</Markdown>
         </BottomSheetScrollView>
       ) : error ? (
         <View className="items-center justify-center py-12">
@@ -111,11 +127,7 @@ export const ArticleSummaryBottomSheet = forwardRef<
             {error}
           </Text>
           {onRegenerate && (
-            <Button
-              variant="primary"
-              size="medium"
-              onPress={onRegenerate}
-              className="mt-6">
+            <Button variant="primary" size="medium" onPress={onRegenerate} className="mt-6">
               Try Again
             </Button>
           )}

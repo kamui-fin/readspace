@@ -43,7 +43,10 @@ export function HeaderTabs({
   const tabRowBgColor = colors.card;
 
   return (
-    <View className={clsx(tabsRowVariants())} onLayout={onLayout} style={{ backgroundColor: tabRowBgColor }}>
+    <View
+      className={clsx(tabsRowVariants())}
+      onLayout={onLayout}
+      style={{ backgroundColor: tabRowBgColor }}>
       <View className={clsx(tabsContainerVariants())}>
         <View className={clsx(tabsGroupVariants())}>
           {buttonConfigs.map((btn, index) => (

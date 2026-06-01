@@ -90,6 +90,8 @@ export const viewport: Viewport = {
     userScalable: true,
 }
 
+import UpgradeDialog from "@/components/UpgradeDialog"
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -112,9 +114,11 @@ export default function RootLayout({
                 <PosthogProvider>
                     <QueryProvider>
                         <main className="w-full">{children}</main>
+                        <UpgradeDialog />
                     </QueryProvider>
                 </PosthogProvider>
             </body>
         </html>
     )
 }
+

@@ -10,6 +10,9 @@ export const env = createEnv({
         NODE_ENV: z
             .enum(["development", "test", "production"])
             .default("development"),
+        SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+        POLAR_ACCESS_TOKEN: z.string().optional(),
+        POLAR_WEBHOOK_SECRET: z.string().optional(),
     },
 
     /**
@@ -25,6 +28,8 @@ export const env = createEnv({
             .url()
             .default("http://localhost:8008"),
         NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:8042"),
+        NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID: z.string().optional(),
+        NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID: z.string().optional(),
     },
 
     /**
@@ -43,5 +48,8 @@ export const env = createEnv({
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
         NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+        NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID: process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID,
+        NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID: process.env.NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID,
     },
 })
+

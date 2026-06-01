@@ -12,12 +12,8 @@ export default function AuthLayout() {
         animation: 'fade',
       }}>
       <Stack.Screen name="index" />
-      <Stack.Screen
-        name="login/index"
-      />
-      <Stack.Screen
-        name="signup/index"
-      />
+      <Stack.Screen name="login/index" />
+      <Stack.Screen name="signup/index" />
     </Stack>
   );
 }

@@ -239,6 +239,7 @@ async def db_session(
         ("app.workers.feed.refresh.worker_db_factory", _worker_db),
         ("app.workers.feed.compaction.worker_db", _worker_db),
         ("app.workers.feed.enrichment.worker_db", _worker_db),
+        ("app.workers.feed.favicon.worker_db_factory", _worker_db),
     )
     for target, replacement in patch_map:
         monkeypatch.setattr(target, replacement, raising=False)
@@ -525,3 +526,15 @@ async def cleanup_redis_keys(pattern: str):
         keys = await client.keys(pattern)
         if keys:
             await client.delete(*keys)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_fetch_favicon_task(monkeypatch):
+    """Globally mock fetch_favicon_task.kiq in integration tests to prevent unwanted bg network/db execution."""
+    from app.workers.feed_tasks import fetch_favicon_task
+
+    async def fake_kiq(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(fetch_favicon_task, "kiq", fake_kiq, raising=False)
+

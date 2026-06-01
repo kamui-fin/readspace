@@ -9,7 +9,7 @@ from app.core.constants import (
     MIN_ARTICLES_PER_FEED,
     UNREAD_RETENTION_DAYS,
 )
-from app.crud.article.actions import delete_old_article_contents
+from app.crud.article.actions import delete_old_article_contents, expire_basic_read_later_entries
 from app.crud.feed.subscription import compact_unread_subscriptions
 from app.workers.common import worker_db
 
@@ -29,7 +29,7 @@ async def compact_unread_articles() -> dict[str, int]:
 
 
 async def compact_old_articles() -> dict[str, int]:
-    """Hard delete old article content."""
+    """Hard delete old article content and expire basic users old read-later items."""
     logger.info(
         "Starting article compaction",
         retention=ARTICLE_RETENTION_DAYS,
@@ -37,11 +37,17 @@ async def compact_old_articles() -> dict[str, int]:
     )
 
     async with worker_db() as db:
+        # 1. Expire basic user old saved read-later articles (30 days)
+        expired_saved = await expire_basic_read_later_entries(db, retention_days=30)
+        logger.info("Expired basic user read-later entries", expired=expired_saved)
+
+        # 2. Hard delete old article content
         deleted_count = await delete_old_article_contents(
             db,
             retention_days=ARTICLE_RETENTION_DAYS,
             min_articles_per_feed=MIN_ARTICLES_PER_FEED,
         )
 
-    logger.info("Article compaction completed", deleted=deleted_count)
-    return {"deleted_articles": deleted_count}
+    logger.info("Article compaction completed", deleted=deleted_count, expired_read_later=expired_saved)
+    return {"deleted_articles": deleted_count, "expired_read_later": expired_saved}
+

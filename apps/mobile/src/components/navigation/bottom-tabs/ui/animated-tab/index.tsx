@@ -97,7 +97,9 @@ export const AnimatedTab: React.FC<AnimatedTabProps> = ({
           styles.tabBackground,
           animatedBackgroundStyle,
           {
-            backgroundColor: isDark ? tabBarColors.primary_light || 'rgba(106, 153, 78, 0.2)' : 'rgba(106, 153, 78, 0.15)',
+            backgroundColor: isDark
+              ? tabBarColors.primary_light || 'rgba(106, 153, 78, 0.2)'
+              : 'rgba(106, 153, 78, 0.15)',
           },
         ]}
       />

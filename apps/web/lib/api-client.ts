@@ -1,6 +1,7 @@
 import { env } from "@/env"
 import { getAuthToken } from "@/lib/auth/token-cache"
 import { ApiClient } from "@readspace/shared"
+export { ApiClient } from "@readspace/shared"
 
 // Configure the shared ApiClient once with global token cache
 export const configureApiClient = () => {

@@ -84,13 +84,16 @@ export const Chip = ({
     ? '#ffffff' // Guarantee crisp white text when selected
     : textClassName
       ? undefined
-      : isDark ? colors.grey2 : colors.grey;
+      : isDark
+        ? colors.grey2
+        : colors.grey;
 
-  const chipBgColor = variant === 'filled'
-    ? selected
-      ? colors.secondary
-      : colors.grey6 // Soft Notion panel grey
-    : undefined;
+  const chipBgColor =
+    variant === 'filled'
+      ? selected
+        ? colors.secondary
+        : colors.grey6 // Soft Notion panel grey
+      : undefined;
 
   const content = (
     <View

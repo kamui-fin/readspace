@@ -63,18 +63,34 @@ async def _sync_feeds_to_meilisearch(
     bulk_update_mappings: list[dict[str, Any]],
     feed_snapshot_list: list[Any],
 ) -> None:
-    """Batch sync enriched feeds to Meilisearch."""
+    """Batch sync enriched feeds to Meilisearch with retry fallback."""
     if not bulk_update_mappings:
         return
 
-    try:
-        settings = get_settings()
-        feeds_to_sync = _build_enriched_feed_documents(bulk_update_mappings, feed_snapshot_list)
-        if feeds_to_sync:
+    settings = get_settings()
+    feeds_to_sync = _build_enriched_feed_documents(bulk_update_mappings, feed_snapshot_list)
+    if not feeds_to_sync:
+        return
+
+    import asyncio
+    max_attempts = 3
+    for attempt in range(max_attempts):
+        try:
             await sync_feeds_batch(settings, feeds_to_sync)
             logger.info("Synced enriched feeds to Meilisearch", count=len(feeds_to_sync))
-    except Exception as e:
-        logger.error("Failed to sync feeds to Meilisearch", error=str(e))
+            return
+        except Exception as e:
+            if attempt == max_attempts - 1:
+                logger.error("Failed to sync enriched feeds to Meilisearch after retries", error=str(e))
+                raise
+            wait_time = 2 ** (attempt + 1)
+            logger.warning(
+                "Meilisearch sync failed, retrying...",
+                attempt=attempt + 1,
+                wait_time=wait_time,
+                error=str(e),
+            )
+            await asyncio.sleep(wait_time)
 
 
 async def _process_enrichment_chunk(chunk_feeds: list[Any]) -> tuple[int, int]:

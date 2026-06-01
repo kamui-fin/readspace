@@ -28,7 +28,7 @@ async def get_meilisearch_search_key(settings: Settings) -> str:
             api_key=settings.MEILISEARCH_MASTER_KEY.get_secret_value(),
         )
         keys = await client.get_keys()
-        
+
         # 1. Look for the exact default search API key name
         for key_obj in keys.results:
             if key_obj.name == "Default Search API Key":
@@ -38,11 +38,11 @@ async def get_meilisearch_search_key(settings: Settings) -> str:
         for key_obj in keys.results:
             if "search" in key_obj.actions or "search" in key_obj.name.lower():
                 return key_obj.key
-                
+
         # 3. Fallback to the first available key if any exist
         if keys.results:
             return keys.results[0].key
-            
+
     except Exception as e:
         logger.warning("Failed to fetch search key from Meilisearch", error=str(e))
     finally:

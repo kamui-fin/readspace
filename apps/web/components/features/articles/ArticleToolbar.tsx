@@ -147,7 +147,7 @@ export function ArticleToolbar({
                                     const newView = value as ContentView
 
                                     // If switching to extracted and no content exists yet, trigger extraction
-                                    // and let the handler switch the view on success
+                                    // which switches the view to Extracted immediately
                                     if (
                                         newView === ContentView.Extracted &&
                                         !article.extracted_content
@@ -174,7 +174,6 @@ export function ArticleToolbar({
                                             value={ContentView.Extracted}
                                             title="Full article content"
                                             className="h-7 px-2"
-                                            disabled={isExtracting}
                                         >
                                             {isExtracting ? (
                                                 <Loader2 className="h-4 w-4 animate-spin" />

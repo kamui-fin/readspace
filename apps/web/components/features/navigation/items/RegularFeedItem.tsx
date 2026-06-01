@@ -1,10 +1,9 @@
-"use client"
-
 import * as React from "react"
 import Link from "next/link"
-import { SidebarLeftMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
+import { SidebarMenuItem } from "@/components/ui/sidebar"
 import { FeedDropdownMenu } from "../menus/FeedContextMenu"
 import { Inbox, Star } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface RegularFeedItemData {
     /** Unique identifier for the feed */
@@ -39,39 +38,39 @@ export function RegularFeedItem({ feed }: RegularFeedItemProps) {
 
     return (
         <SidebarMenuItem>
-            <div className="flex items-center w-full group/item">
-                <SidebarLeftMenuButton
-                    asChild
-                    className="justify-start flex-1"
-                    isActive={feed.isActive}
+            <div className={cn(
+                "relative flex items-center w-full group/item h-8 rounded-md text-sm transition-colors duration-150 px-1",
+                isAll ? "pl-2" : "pl-[28px]",
+                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                feed.isActive && "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+            )}>
+                <Link
+                    href={feed.url}
+                    aria-label={`Navigate to ${feed.title} feed`}
+                    className="flex flex-grow items-center overflow-hidden h-full pr-10 outline-none select-none text-sidebar-foreground"
                 >
-                    <Link
-                        href={feed.url}
-                        aria-label={`Navigate to ${feed.title} feed`}
-                    >
-                        <div className="flex flex-grow items-center overflow-hidden pl-2">
-                            {/* Feed icon */}
-                            {feed.icon &&
-                                React.createElement(feed.icon, {
-                                    className: "h-4 w-4 mr-1 shrink-0",
-                                })}
-                            {!feed.icon && isAll && (
-                                <Inbox className="h-4 w-4 mr-1 shrink-0" />
-                            )}
-                            {!feed.icon && !isAll && (
-                                <div className="w-4 mr-1 shrink-0" />
-                            )}
-                            <span className="ml-1 truncate">{feed.title}</span>
-                            {/* Star indicator for favorited feeds */}
-                            {feed.isFavorite && !isAll && (
-                                <Star className="h-3 w-3 ml-2 shrink-0 fill-yellow-500 text-yellow-500" />
-                            )}
-                        </div>
-                    </Link>
-                </SidebarLeftMenuButton>
+                    <div className="flex flex-grow items-center overflow-hidden pl-1">
+                        {/* Feed icon */}
+                        {feed.icon &&
+                            React.createElement(feed.icon, {
+                                className: "h-4 w-4 mr-1 shrink-0",
+                            })}
+                        {!feed.icon && isAll && (
+                            <Inbox className="h-4 w-4 mr-1 shrink-0" />
+                        )}
+                        {!feed.icon && !isAll && (
+                            <div className="w-4 mr-1 shrink-0" />
+                        )}
+                        <span className="ml-1 truncate">{feed.title}</span>
+                        {/* Star indicator for favorited feeds */}
+                        {feed.isFavorite && !isAll && (
+                            <Star className="h-3 w-3 ml-2 shrink-0 fill-yellow-500 text-yellow-500" />
+                        )}
+                    </div>
+                </Link>
 
-                {/* Context menu and count */}
-                <div className="shrink-0 flex items-center pr-2">
+                {/* Context menu and count positioned absolutely on the right */}
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-auto">
                     <FeedDropdownMenu
                         isFolder={false}
                         itemActive={feed.isActive}

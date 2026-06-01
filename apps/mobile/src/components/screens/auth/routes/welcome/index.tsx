@@ -97,9 +97,8 @@ export function WelcomeScreen() {
 
   return (
     <View
-      className="flex-1 bg-screen"
+      className="bg-screen flex-1"
       style={{ paddingTop: insets.top, backgroundColor: colors.background }}>
-
       <View
         className="flex-1 items-start justify-center"
         style={{ paddingHorizontal: horizontalPadding, paddingTop: topPadding }}>
@@ -109,7 +108,7 @@ export function WelcomeScreen() {
             style={{ width: logoSize, height: logoSize }}>
             <ReadspaceLogo width={logoSize} height={logoSize} />
           </View>
-          <Text className="text-primary-foreground ml-4 font-figtree-semibold text-4xl">
+          <Text className="text-primary-foreground font-figtree-semibold ml-4 text-4xl">
             readspace
           </Text>
         </View>
@@ -128,7 +127,7 @@ export function WelcomeScreen() {
       </View>
 
       <View
-        className="items-center justify-center gap-3 w-full"
+        className="w-full items-center justify-center gap-3"
         style={{
           paddingBottom: Math.max(insets.bottom + 20, 40),
           paddingHorizontal: horizontalPadding,
@@ -148,11 +147,7 @@ export function WelcomeScreen() {
           disabled={isLoading}
           leftIcon={
             !isLoading ? (
-              <GoogleIcon
-                width={20}
-                height={20}
-                fill={isDark ? '#ffffff' : COLORS.light.black}
-              />
+              <GoogleIcon width={20} height={20} fill={isDark ? '#ffffff' : COLORS.light.black} />
             ) : undefined
           }>
           {isLoading ? (

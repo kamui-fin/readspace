@@ -105,7 +105,7 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
               label="Dead"
               variant="filled"
               size="small"
-              className="absolute -right-1 -top-1 bg-red"
+              className="bg-red absolute -right-1 -top-1"
               textClassName="text-white"
             />
           )}
@@ -116,7 +116,7 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
           <Text
             size="xl"
             fontFamily="geist-bold"
-            className="mb-1 tracking-heading text-black"
+            className="tracking-heading mb-1 text-black"
             numberOfLines={2}>
             {feed.title || 'Untitled Feed'}
           </Text>
@@ -156,11 +156,10 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
       {trimmedDescription && (
         <View className="mb-4">
           {trimmedDescription.length > 120 ? (
-            <Text
-              size="sm"
-              fontFamily="geist"
-              className="leading-6 text-grey">
-              {isDescriptionExpanded ? trimmedDescription : `${trimmedDescription.slice(0, 120)}... `}
+            <Text size="sm" fontFamily="geist" className="text-grey leading-6">
+              {isDescriptionExpanded
+                ? trimmedDescription
+                : `${trimmedDescription.slice(0, 120)}... `}
               <Text
                 size="sm"
                 fontFamily="geist-medium"
@@ -170,7 +169,7 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
               </Text>
             </Text>
           ) : (
-            <Text size="sm" fontFamily="geist" className="leading-6 text-grey">
+            <Text size="sm" fontFamily="geist" className="text-grey leading-6">
               {trimmedDescription}
             </Text>
           )}
@@ -204,17 +203,44 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
       {/* Feed Tags */}
       {(() => {
         const fallBackTags = (feed as any).tags;
-        const displayTags =
+        const displayTagsRaw =
           feed.tags_native && feed.tags_native.length > 0 ? feed.tags_native : fallBackTags;
-        if (!displayTags || displayTags.length === 0) return null;
+        if (!displayTagsRaw || displayTagsRaw.length === 0) return null;
+
+        const displayTags: string[] = Array.from(
+          new Set<string>(
+            displayTagsRaw
+              .flatMap((tag: string | { name: string }) => {
+                const tagName = typeof tag === 'string' ? tag : (tag as any)?.name || '';
+                return tagName.split(',');
+              })
+              .map((tag: string) => {
+                const decoded = tag
+                  .replace(/&amp;/g, '&')
+                  .replace(/&lt;/g, '<')
+                  .replace(/&gt;/g, '>')
+                  .replace(/&quot;/g, '"')
+                  .replace(/&#39;/g, "'")
+                  .replace(/&apos;/g, "'")
+                  .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+                  .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
+                    String.fromCharCode(parseInt(hex, 16))
+                  );
+                return decoded.trim();
+              })
+              .filter(Boolean)
+          )
+        );
+
+        if (displayTags.length === 0) return null;
+
         return (
           <View className="mb-5 flex-row flex-wrap items-center gap-2">
-            {displayTags.slice(0, 5).map((tag: string | { name: string }, index: number) => {
-              const tagName = typeof tag === 'string' ? tag : (tag as any)?.name || 'Tag';
-              const formattedTag = tagName.replace(/\s+/g, '-');
+            {displayTags.slice(0, 5).map((tag: string, index: number) => {
+              const formattedTag = tag.replace(/\s+/g, '-');
               return (
                 <View
-                  key={`${tagName}-${index.toString()}`}
+                  key={`${tag}-${index.toString()}`}
                   className="flex-row items-center gap-1.5 rounded-full px-3 py-1"
                   style={{ backgroundColor: colors.grey5 }}>
                   <Text size="sm" fontFamily="geist" style={{ color: colors.grey, fontSize: 11 }}>
@@ -236,7 +262,11 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
         loading={isFollowLoading}
         leftIcon={
           isFollowing && !isFollowLoading ? (
-            <TrashBinTrashBoldIcon width={16} height={16} color={colors === COLORS.dark ? '#fe4336' : '#EA4335'} />
+            <TrashBinTrashBoldIcon
+              width={16}
+              height={16}
+              color={colors === COLORS.dark ? '#fe4336' : '#EA4335'}
+            />
           ) : undefined
         }
         style={
@@ -247,7 +277,9 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
               }
             : undefined
         }
-        textClassName={isFollowing ? (colors === COLORS.dark ? 'text-destructive' : 'text-[#EA4335]') : undefined}>
+        textClassName={
+          isFollowing ? (colors === COLORS.dark ? 'text-destructive' : 'text-[#EA4335]') : undefined
+        }>
         {isFollowLoading
           ? isFollowing
             ? 'Unfollowing...'

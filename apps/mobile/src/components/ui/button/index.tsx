@@ -10,8 +10,7 @@ import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
 export interface ButtonProps
-  extends Omit<PressableProps, 'children'>,
-    VariantProps<typeof buttonVariants> {
+  extends Omit<PressableProps, 'children'>, VariantProps<typeof buttonVariants> {
   children: ReactNode;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;

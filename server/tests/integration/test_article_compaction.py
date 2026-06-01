@@ -548,3 +548,94 @@ async def test_compaction_task_wrapper_e2e(
     assert (
         len(articles_after) == 50
     ), f"Expected 50 articles for test feed, got {len(articles_after)}"
+
+
+async def test_compaction_expires_basic_read_later_e2e(
+    db_session: AsyncSession,
+) -> None:
+    """Test that compaction expires old read-later entries (>30 days) for BASIC users only."""
+    from uuid import uuid4
+    from app.models.user import Profile
+    from app.models.article import ArticleContent, UserEntry
+    from app.models.enums import UserRole
+    from app.crud.article.actions import expire_basic_read_later_entries
+
+    # 1. Create a BASIC user and a PRO user
+    basic_user = Profile(
+        id=uuid4(),
+        email=f"basic-{uuid4()}@example.com",
+        role=UserRole.BASIC,
+    )
+    pro_user = Profile(
+        id=uuid4(),
+        email=f"pro-{uuid4()}@example.com",
+        role=UserRole.PRO,
+    )
+    db_session.add_all([basic_user, pro_user])
+    await db_session.commit()
+
+    # 2. Create article contents
+    c1 = ArticleContent(id=uuid4(), title="Basic Old", content_hash=f"h1-{uuid4()}")
+    c2 = ArticleContent(id=uuid4(), title="Pro Old", content_hash=f"h2-{uuid4()}")
+    c3 = ArticleContent(id=uuid4(), title="Basic New", content_hash=f"h3-{uuid4()}")
+    db_session.add_all([c1, c2, c3])
+    await db_session.commit()
+
+    # 3. Create UserEntries with mock creation dates
+    # basic_old: >30 days (should expire)
+    basic_old = UserEntry(
+        id=uuid4(),
+        user_id=basic_user.id,
+        content_id=c1.id,
+        is_saved=True,
+        created_at=datetime.now(timezone.utc) - timedelta(days=32),
+    )
+    # pro_old: >30 days (should NOT expire because PRO)
+    pro_old = UserEntry(
+        id=uuid4(),
+        user_id=pro_user.id,
+        content_id=c2.id,
+        is_saved=True,
+        created_at=datetime.now(timezone.utc) - timedelta(days=32),
+    )
+    # basic_new: <30 days (should NOT expire because recent)
+    basic_new = UserEntry(
+        id=uuid4(),
+        user_id=basic_user.id,
+        content_id=c3.id,
+        is_saved=True,
+        created_at=datetime.now(timezone.utc) - timedelta(days=5),
+    )
+
+    db_session.add_all([basic_old, pro_old, basic_new])
+    await db_session.commit()
+
+    # 4. Run the cleanup action
+    expired_count = await expire_basic_read_later_entries(db_session, retention_days=30)
+    await db_session.commit()
+
+    # Verify return count (should be exactly 1)
+    assert expired_count == 1
+
+    # 5. Fetch and assert final states
+    # basic_old should be is_saved = False (or deleted if no other state, but here is_read=False, user_note=None so deleted)
+    result = await db_session.execute(
+        select(UserEntry).where(UserEntry.id == basic_old.id)
+    )
+    basic_old_after = result.scalar_one_or_none()
+    assert basic_old_after is None or not basic_old_after.is_saved
+
+    # pro_old should remain is_saved = True
+    result = await db_session.execute(
+        select(UserEntry).where(UserEntry.id == pro_old.id)
+    )
+    pro_old_after = result.scalar_one()
+    assert pro_old_after.is_saved is True
+
+    # basic_new should remain is_saved = True
+    result = await db_session.execute(
+        select(UserEntry).where(UserEntry.id == basic_new.id)
+    )
+    basic_new_after = result.scalar_one()
+    assert basic_new_after.is_saved is True
+

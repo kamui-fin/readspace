@@ -116,7 +116,7 @@ export function EmailStep({
     <Formik
       initialValues={{ email: initialEmail || '' }}
       validationSchema={toFormikValidationSchema(EmailSchema)}
-      onSubmit={() => { }}
+      onSubmit={() => {}}
       validateOnMount={false}
       validateOnChange={false}
       validateOnBlur={false}>

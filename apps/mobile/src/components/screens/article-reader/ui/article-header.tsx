@@ -35,9 +35,31 @@ export function ArticleHeader({
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
+  const processedTags = article.tags
+    ? Array.from(
+        new Set(
+          article.tags
+            .flatMap((tag) => tag.split(','))
+            .map((tag) => {
+              const decoded = tag
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/&apos;/g, "'")
+                .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+                .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+              return decoded.trim();
+            })
+            .filter(Boolean)
+        )
+      )
+    : [];
+
   return (
     <View
-      className="mb-6 mx-6 border-b pb-6"
+      className="mx-6 mb-6 border-b pb-6"
       style={{
         marginTop: article.image_url ? 24 : insets.top + 80,
         borderBottomColor: colors.divider,
@@ -67,10 +89,7 @@ export function ArticleHeader({
                 contentFit="contain"
               />
             )}
-            <Text
-              size="sm"
-              fontFamily="geist"
-              className="uppercase tracking-wide text-grey">
+            <Text size="sm" fontFamily="geist" className="text-grey uppercase tracking-wide">
               {displaySource || 'Unknown Source'}
             </Text>
           </Pressable>
@@ -83,20 +102,23 @@ export function ArticleHeader({
                 contentFit="contain"
               />
             )}
-            <Text
-              size="sm"
-              fontFamily="geist"
-              className="uppercase tracking-wide text-grey">
+            <Text size="sm" fontFamily="geist" className="text-grey uppercase tracking-wide">
               {displaySource || 'Unknown Source'}
             </Text>
           </View>
         )}
 
         {/* Article Tags */}
-        {article.tags && article.tags.length > 0 && (
+        {processedTags.length > 0 && (
           <View className="flex-row flex-wrap gap-2">
-            {article.tags.slice(0, 5).map((tag) => (
-              <Chip key={tag} label={tag.toLowerCase()} variant="filled" size="small" textClassName="font-geist-mono font-medium text-grey" />
+            {processedTags.slice(0, 5).map((tag) => (
+              <Chip
+                key={tag}
+                label={tag.toLowerCase()}
+                variant="filled"
+                size="small"
+                textClassName="font-geist-mono font-medium text-grey"
+              />
             ))}
           </View>
         )}
@@ -106,18 +128,15 @@ export function ArticleHeader({
       <Text
         size="lg"
         fontFamily="geist-bold"
-        className="mb-3 text-primary-foreground"
+        className="text-primary-foreground mb-3"
         style={{ letterSpacing: -1.2, fontSize: 30, lineHeight: 38 }}>
         {stripHtml(article.title)}
       </Text>
 
       {/* Note for clipped articles */}
       {isClipped && article.user_note && (
-        <View className="mb-3 rounded-lg border border-grey4 bg-grey6 px-3 py-2">
-          <Text
-            size="sm"
-            fontFamily="geist"
-            className="leading-relaxed text-grey">
+        <View className="border-grey4 bg-grey6 mb-3 rounded-lg border px-3 py-2">
+          <Text size="sm" fontFamily="geist" className="text-grey leading-relaxed">
             {article.user_note}
           </Text>
         </View>
@@ -127,11 +146,7 @@ export function ArticleHeader({
       <View className="flex-row flex-wrap items-center gap-2">
         {article.author && !isClipped && (
           <>
-            <Text
-              size="sm"
-              fontFamily="geist"
-              className="flex-shrink text-grey"
-              numberOfLines={1}>
+            <Text size="sm" fontFamily="geist" className="text-grey flex-shrink" numberOfLines={1}>
               By {article.author}
             </Text>
             <Text size="sm" fontFamily="geist" className="text-grey">
@@ -139,11 +154,7 @@ export function ArticleHeader({
             </Text>
           </>
         )}
-        <Text
-          size="sm"
-          fontFamily="geist"
-          className="flex-shrink text-grey"
-          numberOfLines={1}>
+        <Text size="sm" fontFamily="geist" className="text-grey flex-shrink" numberOfLines={1}>
           {displayDate}
         </Text>
         {readTime && (
@@ -152,11 +163,7 @@ export function ArticleHeader({
           </Text>
         )}
         {readTime && (
-          <Text
-            size="sm"
-            fontFamily="geist"
-            className="flex-shrink text-grey"
-            numberOfLines={1}>
+          <Text size="sm" fontFamily="geist" className="text-grey flex-shrink" numberOfLines={1}>
             {readTime}
           </Text>
         )}

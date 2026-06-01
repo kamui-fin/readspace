@@ -266,8 +266,8 @@ export function FollowingScreen({
 
   // Handle automatic scroll to top after a manual refresh completes and finds new/more articles
   useEffect(() => {
-    let t1: NodeJS.Timeout;
-    let t2: NodeJS.Timeout;
+    let t1: ReturnType<typeof setTimeout>;
+    let t2: ReturnType<typeof setTimeout>;
 
     if (prevRefreshingRef.current && !refreshing) {
       const currentFirstId = allArticles[0]?.id;
@@ -306,12 +306,20 @@ export function FollowingScreen({
   }, [refreshing, allArticles, scrollY]);
 
   // Track the first article to detect when new articles are added at the top (e.g., after refresh)
-  const previousFirstArticleRef = useRef<{ id: string; published_at?: string | Date | null } | null>(null);
+  const previousFirstArticleRef = useRef<{
+    id: string;
+    published_at?: string | Date | null;
+  } | null>(null);
 
   useEffect(() => {
     // Only check if we are not actively loading a next page from pagination,
     // and we aren't already resetting the scroll via useScrollReset
-    if (!isFetchingNextPage && !isLoadingMore && !isResettingRef.current && allArticles.length > 0) {
+    if (
+      !isFetchingNextPage &&
+      !isLoadingMore &&
+      !isResettingRef.current &&
+      allArticles.length > 0
+    ) {
       const currentFirst = allArticles[0];
       const prevFirst = previousFirstArticleRef.current;
 
@@ -334,7 +342,7 @@ export function FollowingScreen({
 
       previousFirstArticleRef.current = {
         id: currentFirst.id,
-        published_at: currentFirst.published_at
+        published_at: currentFirst.published_at,
       };
     } else if (allArticles.length === 0) {
       previousFirstArticleRef.current = null;
@@ -344,7 +352,7 @@ export function FollowingScreen({
       const currentFirst = allArticles[0];
       previousFirstArticleRef.current = {
         id: currentFirst.id,
-        published_at: currentFirst.published_at
+        published_at: currentFirst.published_at,
       };
     }
   }, [allArticles, isFetchingNextPage, isLoadingMore, scrollY]);

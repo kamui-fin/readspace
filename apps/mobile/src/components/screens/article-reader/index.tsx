@@ -175,10 +175,10 @@ export function ArticleReader({
         // Apply italic font if inside italic context
         const linkStyle = isInsideItalic
           ? {
-            ...tagsStyles.a,
-            fontFamily: 'EBGaramond_500Medium_Italic',
-            fontStyle: 'italic' as const,
-          }
+              ...tagsStyles.a,
+              fontFamily: 'EBGaramond_500Medium_Italic',
+              fontStyle: 'italic' as const,
+            }
           : tagsStyles.a;
 
         // Safely access tbaseStyle with null check
@@ -200,7 +200,7 @@ export function ArticleReader({
 
   return (
     <ScrollView
-      className="flex-1 bg-background"
+      className="bg-background flex-1"
       contentContainerStyle={{
         paddingBottom: 80,
       }}

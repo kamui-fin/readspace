@@ -103,3 +103,29 @@ async def exists(key: str) -> bool:
     except Exception as e:
         logger.error("Redis EXISTS failed", key=key, error=str(e))
         return False
+
+
+async def incr(key: str, ttl_seconds: int | None = None) -> int:
+    """Increment a key and optionally set its TTL."""
+    try:
+        pool = get_pool()
+        async with aioredis.Redis(connection_pool=pool) as client:
+            val = await client.incr(key)
+            if ttl_seconds and val == 1:
+                await client.expire(key, ttl_seconds)
+            return val
+    except Exception as e:
+        logger.error("Redis INCR failed", key=key, error=str(e))
+        return 0
+
+
+async def decr(key: str) -> int:
+    """Decrement a key."""
+    try:
+        pool = get_pool()
+        async with aioredis.Redis(connection_pool=pool) as client:
+            return await client.decr(key)
+    except Exception as e:
+        logger.error("Redis DECR failed", key=key, error=str(e))
+        return 0
+

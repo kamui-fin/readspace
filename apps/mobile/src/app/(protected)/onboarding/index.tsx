@@ -7,30 +7,19 @@ import { useRef, useState } from 'react';
 import { View } from 'react-native';
 
 export default function OnboardingScreen() {
-    const stepperRef = useRef<StepperRef>(null);
-    const [currentStep, setCurrentStep] = useState(0);
-    const isDark = useIsDarkMode();
-    const colors = COLORS[isDark ? 'dark' : 'light'];
+  const stepperRef = useRef<StepperRef>(null);
+  const [currentStep, setCurrentStep] = useState(0);
+  const isDark = useIsDarkMode();
+  const colors = COLORS[isDark ? 'dark' : 'light'];
 
-    const pages = [
-        <CategorySelectionStep
-            key="categories"
-            onNext={() => stepperRef.current?.goToNext()}
-        />,
-        <FeedSelectionStep
-            key="feeds"
-            onNext={() => { }}
-        />,
-    ];
+  const pages = [
+    <CategorySelectionStep key="categories" onNext={() => stepperRef.current?.goToNext()} />,
+    <FeedSelectionStep key="feeds" onNext={() => {}} />,
+  ];
 
-    return (
-        <View className="flex-1 bg-screen" style={{ backgroundColor: colors.background }}>
-            <Stepper
-                ref={stepperRef}
-                pages={pages}
-                onStepChange={setCurrentStep}
-                initialStep={0}
-            />
-        </View>
-    );
+  return (
+    <View className="bg-screen flex-1" style={{ backgroundColor: colors.background }}>
+      <Stepper ref={stepperRef} pages={pages} onStepChange={setCurrentStep} initialStep={0} />
+    </View>
+  );
 }

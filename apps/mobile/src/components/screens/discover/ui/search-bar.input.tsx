@@ -6,7 +6,14 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { forwardRef, useCallback } from 'react';
-import { Platform, TextInput, type TextInputProps, TouchableOpacity, View, Keyboard } from 'react-native';
+import {
+  Platform,
+  TextInput,
+  type TextInputProps,
+  TouchableOpacity,
+  View,
+  Keyboard,
+} from 'react-native';
 
 export type Language = 'english' | 'chinese' | 'japanese';
 

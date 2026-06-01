@@ -39,7 +39,8 @@ class Settings(BaseSettings):
 
     # Gemini Configuration (Primary AI service)
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-3-flash-preview"  # For text generation
+    GEMINI_SMART_MODEL: str = "gemini-3.5-flash"  # For complex reasoning (e.g. enrichment)
+    GEMINI_FAST_MODEL: str = "gemini-3.1-flash-lite"  # For high-volume continuous parsing (summaries, translation)
     GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"  # For embeddings
 
     # RSShub Configuration (validated URL)
@@ -51,20 +52,16 @@ class Settings(BaseSettings):
     MEILISEARCH_INDEX_NAME: str = "feeds"
 
     # Google Cloud / Vertex AI Configuration
-    # Google Cloud / Vertex AI Configuration
-    # Removed as we reverted to standard Gemini API
-    # GOOGLE_CLOUD_PROJECT: str | None = None
-    # GOOGLE_CLOUD_LOCATION: str = "us-central1"
-    # GCS_BUCKET: str | None = None
+    GOOGLE_CLOUD_PROJECT: str | None = None
+    GOOGLE_CLOUD_LOCATION: str = "us-central1"
+    GCS_BUCKET: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @field_validator("GEMINI_API_KEY")
     @classmethod
     def validate_gemini_api_key(cls, v: str, info) -> str:
-        """Validate GEMINI_API_KEY is provided when AI is enabled."""
-        if info.data.get("ENABLE_AI") and not v:
-            raise ValueError("GEMINI_API_KEY is required when ENABLE_AI is True")
+        """Validate GEMINI_API_KEY is provided when AI is enabled and Vertex AI is not used."""
         return v
 
     @field_validator("DATABASE_URL_API")

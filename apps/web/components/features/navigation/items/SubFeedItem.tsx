@@ -1,15 +1,11 @@
-"use client"
-
 import { memo } from "react"
 import Link from "next/link"
 import { FeedIcon } from "@/components/features/feeds/FeedIcon"
 import { motion } from "framer-motion"
-import {
-    SidebarLeftMenuSubButton,
-    SidebarMenuSubItem,
-} from "@/components/ui/sidebar"
+import { SidebarMenuSubItem } from "@/components/ui/sidebar"
 import { FeedDropdownMenu } from "../menus/FeedContextMenu"
 import { Star } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface SubFeedItemData {
     /** Unique identifier for the feed */
@@ -50,37 +46,35 @@ const SubFeedItemComponent = ({
 }: SubFeedItemProps) => {
     const content = (
         <SidebarMenuSubItem>
-            <div className="flex items-center w-full group/item">
-                <SidebarLeftMenuSubButton
-                    asChild
-                    isActive={item.isActive}
-                    className="py-0 flex-1"
+            <div className={cn(
+                "relative flex items-center w-full group/item h-8 rounded-md text-sm transition-colors duration-150 px-1 pl-2",
+                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                item.isActive && "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+            )}>
+                <Link
+                    href={item.url}
+                    className="flex flex-grow items-center overflow-hidden h-full pr-10 outline-none select-none text-sidebar-foreground"
+                    aria-label={`Navigate to ${item.title} feed`}
                 >
-                    <Link
-                        href={item.url}
-                        className="flex w-full items-center"
-                        aria-label={`Navigate to ${item.title} feed`}
-                    >
-                        <div className="flex flex-grow items-center overflow-hidden pl-2">
-                            {/* Feed favicon with fallback */}
-                            <FeedIcon
-                                feed={{
-                                    title: item.title,
-                                    image_url: item.image,
-                                }}
-                                className="mr-2 h-4 w-4 shrink-0 rounded"
-                            />
-                            <span className="truncate">{item.title}</span>
-                            {/* Star indicator for favorited feeds (hidden in pinned section) */}
-                            {item.isFavorite && !item.isPinned && (
-                                <Star className="h-3 w-3 ml-2 shrink-0 fill-yellow-500 text-yellow-500" />
-                            )}
-                        </div>
-                    </Link>
-                </SidebarLeftMenuSubButton>
+                    <div className="flex flex-grow items-center overflow-hidden pl-1">
+                        {/* Feed favicon with fallback */}
+                        <FeedIcon
+                            feed={{
+                                title: item.title,
+                                image_url: item.image,
+                            }}
+                            className="mr-2 h-4 w-4 shrink-0 rounded"
+                        />
+                        <span className="truncate">{item.title}</span>
+                        {/* Star indicator for favorited feeds (hidden in pinned section) */}
+                        {item.isFavorite && !item.isPinned && (
+                            <Star className="h-3 w-3 ml-2 shrink-0 fill-yellow-500 text-yellow-500" />
+                        )}
+                    </div>
+                </Link>
 
-                {/* Context menu and count */}
-                <div className="shrink-0 flex items-center pr-2">
+                {/* Context menu and count positioned absolutely */}
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-auto">
                     <FeedDropdownMenu
                         isFolder={false}
                         itemActive={item.isActive}

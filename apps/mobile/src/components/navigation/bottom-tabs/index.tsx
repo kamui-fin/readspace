@@ -166,12 +166,14 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
                 shadowOpacity: isDark ? 0.45 : 0.08,
                 shadowRadius: 20,
                 elevation: 15,
-                backgroundColor: Platform.OS === 'android' ? (isDark ? '#141414' : '#ffffff') : undefined,
+                backgroundColor:
+                  Platform.OS === 'android' ? (isDark ? '#141414' : '#ffffff') : undefined,
               },
             ]}>
             <Animated.View style={[styles.floatingBarWrapper, animatedFloatingBarStyle]}>
               {Platform.OS === 'android' ? (
-                <View style={[styles.blurView, { backgroundColor: isDark ? '#141414' : '#ffffff' }]}>
+                <View
+                  style={[styles.blurView, { backgroundColor: isDark ? '#141414' : '#ffffff' }]}>
                   {tabsContent}
                 </View>
               ) : (

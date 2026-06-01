@@ -1,7 +1,12 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { PageMetadata, SaveOptions, Priority, ArticlePriority } from '@readspace/shared'
+import {
+  PageMetadata,
+  SaveOptions,
+  Priority,
+  ArticlePriority,
+} from '@readspace/shared'
 import { ArrowLeft, Save, Flag, StickyNote } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -94,9 +99,10 @@ export function AdvancedSaveOptions({
               onClick={() => setPriority(ArticlePriority.LOW)}
               className={`
                 px-3 py-2 rounded text-sm font-medium transition-all cursor-pointer
-                ${priority === ArticlePriority.LOW
-                  ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                ${
+                  priority === ArticlePriority.LOW
+                    ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >
@@ -110,9 +116,10 @@ export function AdvancedSaveOptions({
               onClick={() => setPriority(ArticlePriority.MEDIUM)}
               className={`
                 px-3 py-2 rounded text-sm font-medium transition-all cursor-pointer
-                ${priority === ArticlePriority.MEDIUM
-                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                ${
+                  priority === ArticlePriority.MEDIUM
+                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >
@@ -126,9 +133,10 @@ export function AdvancedSaveOptions({
               onClick={() => setPriority(ArticlePriority.HIGH)}
               className={`
                 px-3 py-2 rounded text-sm font-medium transition-all cursor-pointer
-                ${priority === ArticlePriority.HIGH
-                  ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                ${
+                  priority === ArticlePriority.HIGH
+                    ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >

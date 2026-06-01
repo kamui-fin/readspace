@@ -125,7 +125,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-background">
+      <View className="bg-background flex-1">
         {headerSection}
         <View className="px-6">
           <ArticleCardSkeletonList count={5} />
@@ -136,13 +136,10 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
 
   if (isError) {
     return (
-      <View className="flex-1 bg-background">
+      <View className="bg-background flex-1">
         {headerSection}
         <View className="flex-1 items-center justify-center px-6">
-          <Text
-            size="base"
-            fontFamily="geist"
-            className="mb-4 text-center text-grey">
+          <Text size="base" fontFamily="geist" className="text-grey mb-4 text-center">
             Failed to load articles
           </Text>
           <Button variant="primary" size="medium" fullWidth={false} onPress={handleBack}>
@@ -154,7 +151,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="bg-background flex-1">
       {headerSection}
 
       {articles.length > 0 ? (
@@ -178,13 +175,10 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
           <Text
             size="lg"
             fontFamily="geist-semibold"
-            className="mt-4 text-center tracking-heading text-primary-foreground">
+            className="tracking-heading text-primary-foreground mt-4 text-center">
             No articles yet
           </Text>
-          <Text
-            size="base"
-            fontFamily="geist"
-            className="mt-2 text-center text-grey">
+          <Text size="base" fontFamily="geist" className="text-grey mt-2 text-center">
             This feed doesn't have any articles yet. Check back later!
           </Text>
         </View>

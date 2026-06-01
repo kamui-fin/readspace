@@ -39,7 +39,6 @@ export function useOpmlImport() {
                 onError: (error) => {
                     console.error("Error uploading OPML file:", error)
                     if (error instanceof ApiError && error.status === 429) {
-                        toast.error(error.message, { duration: 8000 })
                         return
                     }
                     if (error instanceof ApiError) {

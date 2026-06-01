@@ -129,7 +129,7 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
                 {headerTitle && (
                   <Text
                     className={clsx(
-                      'font-geist-semibold text-2xl text-primary-foreground',
+                      'font-geist-semibold text-primary-foreground text-2xl',
                       headerTitleAlign === 'center' ? 'text-center' : 'text-left'
                     )}
                     style={[{ lineHeight: 28, letterSpacing: -0.5 }, headerTitleStyle]}>

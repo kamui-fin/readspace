@@ -1,6 +1,7 @@
 import { useState } from "react"
-import { useCreateFolder, useCreateFeed } from "@readspace/shared"
+import { useCreateFolder, useCreateFeed, ApiError } from "@readspace/shared"
 import { toast } from "react-hot-toast"
+
 
 interface UseFeedSubscriptionProps {
     onSuccess?: () => void
@@ -55,6 +56,9 @@ export function useFeedSubscription({
             onClose()
             resetState()
         } catch (error: unknown) {
+            if (error instanceof ApiError && error.status === 429) {
+                return
+            }
             const message =
                 (error as { message?: string; detail?: string })?.message ||
                 (error as { message?: string; detail?: string })?.detail ||

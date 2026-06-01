@@ -33,10 +33,7 @@ export function ArticleListItem({
   if (item.type === 'section') {
     return (
       <View className="px-4 pb-2 pt-4">
-        <Text
-          size="md"
-          fontFamily="geist-semibold"
-          className="text-secondary">
+        <Text size="md" fontFamily="geist-semibold" className="text-secondary">
           {item.sectionTitle}
         </Text>
       </View>

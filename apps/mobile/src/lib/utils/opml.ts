@@ -1,5 +1,5 @@
 import * as DocumentPicker from 'expo-document-picker';
-import { File, Paths } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { XMLParser } from 'fast-xml-parser';
 
@@ -202,16 +202,14 @@ export async function exportFeedsToOPML(
     const date = new Date().toISOString().split('T')[0];
     const finalFilename = filename || `readspace-export-${date}.opml`;
 
-    const file = new File(Paths.cache, finalFilename);
+    const fileUri = `${FileSystem.cacheDirectory}${finalFilename}`;
 
-    if (file.exists) {
-      file.delete();
-    }
-    file.create();
-    file.write(opmlContent);
+    await FileSystem.writeAsStringAsync(fileUri, opmlContent, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
 
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(file.uri, {
+      await Sharing.shareAsync(fileUri, {
         mimeType: 'text/xml',
         dialogTitle: 'Export OPML',
         UTI: 'public.xml',

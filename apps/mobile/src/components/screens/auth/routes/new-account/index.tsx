@@ -157,7 +157,7 @@ export function SignupScreen() {
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
   return (
-    <View className="flex-1 bg-screen" style={{ backgroundColor: colors.background }}>
+    <View className="bg-screen flex-1" style={{ backgroundColor: colors.background }}>
       <Stepper ref={stepperRef} pages={pages} onStepChange={setCurrentStep} initialStep={0} />
 
       {/* Fixed Buttons at Bottom - Hide on verification screen - Adjusts for keyboard with smooth animation */}
@@ -189,22 +189,20 @@ export function SignupScreen() {
             )}
 
             {/* Back Button or Sign In Link - Hide sign in link when keyboard is visible */}
-            {currentStep === 0 && (
-              keyboardHeight === 0 && (
-                <View className="flex-row items-center justify-center gap-1 py-3">
-                  <Text size="base" fontFamily="geist" className="text-grey dark:text-grey">
-                    Already have an account?
+            {currentStep === 0 && keyboardHeight === 0 && (
+              <View className="flex-row items-center justify-center gap-1 py-3">
+                <Text size="base" fontFamily="geist" className="text-grey dark:text-grey">
+                  Already have an account?
+                </Text>
+                <Pressable onPress={() => router.replace('/(auth)/login')} disabled={isLoading}>
+                  <Text
+                    size="base"
+                    fontFamily="geist-semibold"
+                    className="text-primary dark:text-primary">
+                    Sign in
                   </Text>
-                  <Pressable onPress={() => router.replace('/(auth)/login')} disabled={isLoading}>
-                    <Text
-                      size="base"
-                      fontFamily="geist-semibold"
-                      className="text-primary dark:text-primary">
-                      Sign in
-                    </Text>
-                  </Pressable>
-                </View>
-              )
+                </Pressable>
+              </View>
             )}
           </View>
         </Animated.View>

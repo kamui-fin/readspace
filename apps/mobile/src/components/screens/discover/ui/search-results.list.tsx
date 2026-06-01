@@ -98,7 +98,7 @@ export function SearchResults({
             paddingBottom: contentPaddingBottom,
           }}>
           {categoryHeader}
-          <View className="flex-1 pt-24 px-6 items-center">
+          <View className="flex-1 items-center px-6 pt-24">
             <Text size="base" fontFamily="geist" className="text-grey text-center">
               No feeds found matching your search
             </Text>

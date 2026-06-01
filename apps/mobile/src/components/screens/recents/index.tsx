@@ -203,7 +203,7 @@ export function RecentsScreen() {
   );
 
   return (
-    <View className="flex-1 bg-background" style={{ backgroundColor: colors.background }}>
+    <View className="bg-background flex-1" style={{ backgroundColor: colors.background }}>
       <InfiniteScrollList
         key={isDark ? 'dark' : 'light'}
         ref={listRef}

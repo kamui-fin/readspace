@@ -37,27 +37,24 @@ export const titleContainerVariants = cva('', {
   },
 });
 
-export const titleVariants = cva(
-  'leading-8 text-primary-foreground tracking-tight',
-  {
-    variants: {
-      fontWeight: {
-        bold: 'font-geist-bold',
-        semibold: 'font-geist-semibold',
-      },
-      size: {
-        default: 'text-3xl',
-        medium: 'text-2xl',
-        small: 'text-xl',
-        xs: 'text-lg',
-      },
+export const titleVariants = cva('leading-8 text-primary-foreground tracking-tight', {
+  variants: {
+    fontWeight: {
+      bold: 'font-geist-bold',
+      semibold: 'font-geist-semibold',
     },
-    defaultVariants: {
-      fontWeight: 'bold',
-      size: 'default',
+    size: {
+      default: 'text-3xl',
+      medium: 'text-2xl',
+      small: 'text-xl',
+      xs: 'text-lg',
     },
-  }
-);
+  },
+  defaultVariants: {
+    fontWeight: 'bold',
+    size: 'default',
+  },
+});
 
 export const subtitleVariants = cva(
   'font-geist-medium text-lg text-grey2 dark:text-grey2 mt-1 opacity-80'

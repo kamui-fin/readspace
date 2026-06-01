@@ -56,7 +56,7 @@ export function HeaderForeground({
 
   if (useCenteredLayout) {
     return (
-      <View className="flex-row items-center pb-3 w-full absolute" onLayout={onLayout}>
+      <View className="absolute w-full flex-row items-center pb-3" onLayout={onLayout}>
         {showBackButton && (
           <View className="absolute left-4 top-0 z-10">
             <Button onPress={onBackPress} variant="icon" size="small" fullWidth={false}>

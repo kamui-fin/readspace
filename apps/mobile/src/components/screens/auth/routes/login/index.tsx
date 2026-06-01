@@ -124,7 +124,7 @@ export function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-screen"
+      className="bg-screen flex-1"
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       enabled={!isModalOpen}
       style={{ backgroundColor: colors.background }}>
@@ -135,7 +135,15 @@ export function LoginScreen() {
         validateOnMount={false}
         validateOnChange={false}
         validateOnBlur={false}>
-        {({ values, errors, touched, handleChange, setFieldTouched, handleSubmit, isSubmitting }) => (
+        {({
+          values,
+          errors,
+          touched,
+          handleChange,
+          setFieldTouched,
+          handleSubmit,
+          isSubmitting,
+        }) => (
           <>
             <ScrollView
               contentContainerStyle={{
@@ -157,7 +165,7 @@ export function LoginScreen() {
                     <Text
                       size="lg"
                       fontFamily="geist-medium"
-                      className="mb-4 text-grey dark:text-grey">
+                      className="text-grey dark:text-grey mb-4">
                       Sign in to your account to continue
                     </Text>
                   </View>
@@ -276,6 +284,6 @@ export function LoginScreen() {
         onSave={handleSelfHostSave}
         onClose={handleModalClose}
       />
-    </KeyboardAvoidingView >
+    </KeyboardAvoidingView>
   );
 }

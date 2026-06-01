@@ -243,18 +243,32 @@ def prepare_bulk_updates(
     enriched_count = 0
     failed_count = 0
 
+    from app.models.enums import ContentType
+
     for i, feed_snapshot in enumerate(feed_snapshot_list):
         try:
             llm_result = llm_results[i]
 
-            # Skip feeds where enrichment failed (None results)
+            # Sensible fallback state for failed enrichments to prevent infinite starvation loops
             if llm_result is None:
                 logger.warning(
-                    "Skipping feed with failed enrichment",
+                    "Applying fallback enrichment to prevent starvation loop",
                     feed_id=str(feed_snapshot.id),
                     feed_title=feed_snapshot.title,
                 )
                 failed_count += 1
+                fallback_mapping = {
+                    "id": feed_snapshot.id,
+                    "updated_at": datetime.now(timezone.utc),
+                    "tags": ["failed-enrichment", "news", "misc"],
+                    "tags_native": [],
+                    "content_type": ContentType.INDIE_BLOG,  # Generic sensible default
+                    "top_level_category": FeedCategory.MISCELLANEOUS,
+                    "popularity_score": 0.1,
+                    "author": "Unknown",
+                    "description": feed_snapshot.description or "No description available.",
+                }
+                bulk_update_mappings.append(fallback_mapping)
                 continue
 
             language = feed_data_list[i].language

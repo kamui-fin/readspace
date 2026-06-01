@@ -65,18 +65,18 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
       registerCallbacks(articleId, {
         onMarkAsRead: onMarkAsRead
           ? () => {
-            onMarkAsRead(articleRef);
-          }
+              onMarkAsRead(articleRef);
+            }
           : undefined,
         onMarkAsUnread: onMarkAsUnread
           ? () => {
-            onMarkAsUnread(articleRef);
-          }
+              onMarkAsUnread(articleRef);
+            }
           : undefined,
         onSaveArticle: onSaveArticle
           ? () => {
-            onSaveArticle(articleRef);
-          }
+              onSaveArticle(articleRef);
+            }
           : undefined,
       });
 

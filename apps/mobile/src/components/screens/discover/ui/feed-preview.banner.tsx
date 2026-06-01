@@ -22,7 +22,7 @@ export function FeedPreviewBanner({ feedTitle: _feedTitle, onFollow }: FeedPrevi
 
   return (
     <View
-      className="flex-row items-center rounded-full w-80 justify-between py-[10px] pl-4 pr-[18px] shadow-none"
+      className="w-80 flex-row items-center justify-between rounded-full py-[10px] pl-4 pr-[18px] shadow-none"
       style={{
         backgroundColor,
         shadowOffset: { width: 0, height: 2 },

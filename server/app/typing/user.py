@@ -1,12 +1,14 @@
 """User/Profile schemas - pure Pydantic, separate from DB models."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr
 
 from app.models.enums import UserRole
 from app.typing.common import response_config
+
 
 # ================= Requests =================
 
@@ -30,6 +32,16 @@ class ProfileResponse(BaseModel):
     role: UserRole
     created_at: datetime
     updated_at: datetime
+
+
+class UserLimitsResponse(BaseModel):
+    """Resource limits and current usage response."""
+
+    model_config = response_config
+
+    role: UserRole
+    limits: dict[str, Any]
+    usage: dict[str, Any]
 
 
 # ================= Auth =================

@@ -288,12 +288,14 @@ function DiscoverScreenInner() {
   const hasTypedQuery = searchQuery.trim().length > 0;
 
   return (
-    <View className="flex-1 bg-background" style={{ paddingTop: insets.top, backgroundColor: colors.background }}>
+    <View
+      className="bg-background flex-1"
+      style={{ paddingTop: insets.top, backgroundColor: colors.background }}>
       <TouchableWithoutFeedback onPress={handleOutsidePress}>
         <View className="flex-1">
           {/* In non-default states (focused/search/category), search bar is at top */}
           {viewState !== 'default' && (
-            <View className="px-6 pt-3 pb-6">
+            <View className="px-6 pb-6 pt-3">
               <Pressable onPress={(e) => e.stopPropagation()}>
                 <SearchBar
                   ref={searchBarRef}
@@ -335,8 +337,11 @@ function DiscoverScreenInner() {
                   paddingBottom: contentPaddingBottom,
                 }}>
                 {/* Child 0 — Discover header, scrolls away */}
-                <View className="pt-3 pb-4 flex-row items-center justify-between px-6">
-                  <Text size="3xl" fontFamily="geist-bold" className="tracking-heading text-primary-foreground">
+                <View className="flex-row items-center justify-between px-6 pb-4 pt-3">
+                  <Text
+                    size="3xl"
+                    fontFamily="geist-bold"
+                    className="tracking-heading text-primary-foreground">
                     Discover
                   </Text>
                   <Button

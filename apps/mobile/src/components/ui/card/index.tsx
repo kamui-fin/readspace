@@ -15,8 +15,7 @@ const cardVariants = cva('bg-background ', {
   variants: {
     variant: {
       feed: 'flex-row items-center gap-4 py-4 px-4',
-      'image-top':
-        'w-full rounded-2xl bg-background  overflow-hidden',
+      'image-top': 'w-full rounded-2xl bg-background  overflow-hidden',
       article: 'flex-row gap-3 py-4', // Edge-to-edge article card with image on right
       'text-only': 'rounded-2xl p-4',
     },
@@ -27,8 +26,7 @@ const cardVariants = cva('bg-background ', {
 });
 
 export interface CardProps
-  extends Omit<PressableProps, 'children'>,
-    VariantProps<typeof cardVariants> {
+  extends Omit<PressableProps, 'children'>, VariantProps<typeof cardVariants> {
   children?: ReactNode;
   className?: string;
   // Feed variant props
@@ -105,9 +103,13 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
 
     if (variant === 'feed') {
       return (
-        <Pressable ref={ref} className={clsx(cardVariants({ variant }), className)} style={[containerStyle, props.style as any]} {...props}>
+        <Pressable
+          ref={ref}
+          className={clsx(cardVariants({ variant }), className)}
+          style={[containerStyle, props.style as any]}
+          {...props}>
           {/* Icon */}
-          <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-grey5">
+          <View className="bg-grey5 h-12 w-12 items-center justify-center overflow-hidden rounded-lg">
             {iconUrl && !imageError ? (
               <ExpoImage
                 source={{ uri: iconUrl }}
@@ -134,7 +136,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
               <Text
                 size="xl"
                 fontFamily="geist-semibold"
-                className="mb-1 text-primary-foreground"
+                className="text-primary-foreground mb-1"
                 numberOfLines={1}>
                 {stripHtml(title)}
               </Text>
@@ -162,7 +164,11 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
         <View className={clsx(isRead && 'opacity-60')}>
           {/* Top divider - edge-to-edge, no horizontal margin */}
           {showTopDivider && <Divider />}
-          <Pressable ref={ref} className={clsx(cardVariants({ variant }), className)} style={[containerStyle, props.style as any]} {...props}>
+          <Pressable
+            ref={ref}
+            className={clsx(cardVariants({ variant }), className)}
+            style={[containerStyle, props.style as any]}
+            {...props}>
             {/* Content on left */}
             <View className="flex-1">
               {/* Feed name and timestamp header */}
@@ -216,9 +222,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                   fontFamily="geist-semibold"
                   className={clsx(
                     'mb-1 leading-5 tracking-tight',
-                    isRead
-                      ? 'text-grey dark:text-grey'
-                      : 'text-primary-foreground'
+                    isRead ? 'text-grey dark:text-grey' : 'text-primary-foreground'
                   )}
                   numberOfLines={3}>
                   {stripHtml(title)}
@@ -228,10 +232,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                 <Text
                   size={13}
                   fontFamily="geist"
-                  className={clsx(
-                    'leading-5',
-                    isRead ? 'text-grey/70' : 'text-grey'
-                  )}
+                  className={clsx('leading-5', isRead ? 'text-grey/70' : 'text-grey')}
                   numberOfLines={2}>
                   {stripHtml(description)}
                 </Text>
@@ -240,7 +241,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
 
             {/* Thumbnail on right - only show if imageUrl exists */}
             {imageUrl && (
-              <View className="h-24 w-24 overflow-hidden rounded-xl bg-grey5">
+              <View className="bg-grey5 h-24 w-24 overflow-hidden rounded-xl">
                 <ExpoImage
                   source={{ uri: imageUrl }}
                   style={{ width: 96, height: 96 }}
@@ -278,7 +279,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
           ]}
           {...props}>
           {imageUrl && (
-            <View className="w-full bg-grey5" style={{ height: 160 }}>
+            <View className="bg-grey5 w-full" style={{ height: 160 }}>
               <ExpoImage
                 source={{ uri: imageUrl }}
                 style={{ width: '100%', height: '100%' }}
@@ -290,12 +291,14 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
               />
             </View>
           )}
-          <View className="p-4 flex-1" style={{ backgroundColor: isDark ? 'rgba(0, 0, 0, 0.15)' : 'rgba(0, 0, 0, 0.02)' }}>
+          <View
+            className="flex-1 p-4"
+            style={{ backgroundColor: isDark ? 'rgba(0, 0, 0, 0.15)' : 'rgba(0, 0, 0, 0.02)' }}>
             {title && (
               <Text
                 size="base"
                 fontFamily="geist-semibold"
-                className="mb-1.5 leading-5 tracking-tight text-primary-foreground"
+                className="text-primary-foreground mb-1.5 leading-5 tracking-tight"
                 numberOfLines={2}
                 ellipsizeMode="tail">
                 {stripHtml(title)}
@@ -305,7 +308,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
               <Text
                 size={13}
                 fontFamily="geist"
-                className="mb-3 leading-5 text-grey2 dark:text-grey2"
+                className="text-grey2 dark:text-grey2 mb-3 leading-5"
                 numberOfLines={imageUrl ? 2 : 5}
                 ellipsizeMode="tail">
                 {stripHtml(description)}
@@ -335,7 +338,11 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
 
     // Text-only variant - just text content or custom children
     return (
-      <Pressable ref={ref} className={clsx(cardVariants({ variant }), className)} style={[containerStyle, props.style as any]} {...props}>
+      <Pressable
+        ref={ref}
+        className={clsx(cardVariants({ variant }), className)}
+        style={[containerStyle, props.style as any]}
+        {...props}>
         {content || children}
       </Pressable>
     );

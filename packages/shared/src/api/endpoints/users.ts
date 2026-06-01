@@ -1,12 +1,9 @@
 import { ApiClient } from "../core";
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  role: string;
-  created_at: string;
-}
+import type { UserProfile, UserLimits } from "../types/users";
 
 export const users = {
   getProfile: () => ApiClient.get<UserProfile>("/api/users/profile"),
+  getLimits: () => ApiClient.get<UserLimits>("/api/users/limits"),
 };
+
+

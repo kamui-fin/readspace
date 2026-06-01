@@ -1,4 +1,7 @@
-import { ArticleOptionsBottomSheet, type ArticleViewMode } from '@components/bottom-sheets/article-options';
+import {
+  ArticleOptionsBottomSheet,
+  type ArticleViewMode,
+} from '@components/bottom-sheets/article-options';
 import { ArticleSummaryBottomSheet } from '@components/bottom-sheets/article-summary';
 import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
 import { ArticleReader } from '@components/screens/article-reader/index';
@@ -329,32 +332,35 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     [article, articleId, currentContent, addRecentLanguage, translateMutation]
   );
 
-  const handleSelectView = useCallback((view: ArticleViewMode) => {
-    if (view === 'extracted' && !(article?.extracted_content || extractedData?.content)) {
-      toast.info('Extracting full text...');
-      extractFullText()
-        .then(() => {
-          setContentSource('extracted');
-          toast.success('Full text extracted!');
-        })
-        .catch(() => {
-          toast.error('Failed to extract text');
-        });
-    } else {
-      setContentSource(view);
-      if (view === 'original') toast.success('Showing original content');
-      if (view === 'extracted') toast.success('Showing extracted content');
-    }
-  }, [article, extractedData, extractFullText]);
+  const handleSelectView = useCallback(
+    (view: ArticleViewMode) => {
+      if (view === 'extracted' && !(article?.extracted_content || extractedData?.content)) {
+        toast.info('Extracting full text...');
+        extractFullText()
+          .then(() => {
+            setContentSource('extracted');
+            toast.success('Full text extracted!');
+          })
+          .catch(() => {
+            toast.error('Failed to extract text');
+          });
+      } else {
+        setContentSource(view);
+        if (view === 'original') toast.success('Showing original content');
+        if (view === 'extracted') toast.success('Showing extracted content');
+      }
+    },
+    [article, extractedData, extractFullText]
+  );
 
   if (isArticleLoading) {
     return (
-      <View className="flex-1 bg-background">
+      <View className="bg-background flex-1">
         <ArticleActionBar
           onClose={handleClose}
           onShare={handleShare}
           onBookmark={handleBookmark}
-          onMenuPress={() => { }}
+          onMenuPress={() => {}}
           isBookmarked={false}
           isClipped={false}
         />
@@ -365,20 +371,17 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
 
   if (!article) {
     return (
-      <View className="flex-1 bg-background">
+      <View className="bg-background flex-1">
         <ArticleActionBar
           onClose={handleClose}
           onShare={handleShare}
           onBookmark={handleBookmark}
-          onMenuPress={() => { }}
+          onMenuPress={() => {}}
           isBookmarked={false}
           isClipped={false}
         />
         <View className="flex-1 items-center justify-center px-6">
-          <Text
-            size="base"
-            fontFamily="geist"
-            className="text-center text-grey">
+          <Text size="base" fontFamily="geist" className="text-grey text-center">
             Article not found
           </Text>
         </View>
@@ -387,7 +390,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="bg-background flex-1">
       <ArticleActionBar
         scrollY={scrollY}
         scrollDirection={scrollDirection}

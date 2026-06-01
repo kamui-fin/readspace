@@ -95,21 +95,21 @@ const FolderGroupComponent = ({
           fullWidth
           onPressIn={onPressIn}
           onPress={() => onFolderPress(folder.id)}
-          className="px-4 rounded-md overflow-visible"
+          className="overflow-visible rounded-md px-4"
           style={{
             minHeight: 64,
             paddingTop: 12,
             paddingBottom: isExpanded && !isEmpty ? 8 : 12,
           }}>
-          <View className="flex-row gap-2 items-center flex-1">
+          <View className="flex-1 flex-row items-center gap-2">
             <View className="shrink-0 pl-1">
               {isSelectionMode ? (
-                <View className="w-7 h-7 justify-center items-center">
+                <View className="h-7 w-7 items-center justify-center">
                   {isSelected ? (
                     <CheckCircleBoldIcon width={28} height={28} color={colors.secondary} />
                   ) : (
                     <View
-                      className="w-6 h-6 rounded-full border-[1.5px]"
+                      className="h-6 w-6 rounded-full border-[1.5px]"
                       style={{ borderColor: isDark ? colors.grey4 : colors.grey3 }}
                     />
                   )}
@@ -121,15 +121,15 @@ const FolderGroupComponent = ({
               )}
             </View>
 
-            <View className="flex-1 flex-row items-center justify-between min-w-0">
+            <View className="min-w-0 flex-1 flex-row items-center justify-between">
               <Text
-                className="font-geist-semibold text-lg text-grey mr-3"
+                className="font-geist-semibold text-grey mr-3 text-lg"
                 numberOfLines={1}
                 style={{ flexShrink: 1 }}>
                 {folder.name}
               </Text>
 
-              <View className="flex-row items-center gap-2 shrink-0">
+              <View className="shrink-0 flex-row items-center gap-2">
                 {!isSelectionMode && unreadCount > 0 && (
                   <Chip
                     label={unreadCount.toString()}
@@ -146,7 +146,7 @@ const FolderGroupComponent = ({
                         variant="icon"
                         size="small"
                         fullWidth={false}
-                        className="h-10 w-10 flex items-center justify-center bg-transparent dark:bg-transparent">
+                        className="flex h-10 w-10 items-center justify-center bg-transparent dark:bg-transparent">
                         <MenuDotsBoldIcon width={20} height={20} color={colors.grey2} />
                       </Button>
                     </DropdownMenuTrigger>
@@ -179,8 +179,13 @@ const FolderGroupComponent = ({
                         e?.stopPropagation?.();
                         onToggleExpand(folder.id);
                       }}
-                      className="h-10 w-10 flex items-center justify-center bg-transparent dark:bg-transparent">
-                      <ExpandVerticalIcon width={20} height={20} color={colors.grey2} fill={colors.grey2} />
+                      className="flex h-10 w-10 items-center justify-center bg-transparent dark:bg-transparent">
+                      <ExpandVerticalIcon
+                        width={20}
+                        height={20}
+                        color={colors.grey2}
+                        fill={colors.grey2}
+                      />
                     </Button>
                   </MotiView>
                 )}
@@ -197,7 +202,7 @@ const FolderGroupComponent = ({
               exit={{ height: 0, opacity: 0 }}
               transition={{ type: 'timing', duration: 200 }}
               style={{ overflow: 'hidden' }}>
-              <View className="pl-4 pb-3">
+              <View className="pb-3 pl-4">
                 {folderFeeds.map((sub) => (
                   <FeedListItem
                     key={sub.id}

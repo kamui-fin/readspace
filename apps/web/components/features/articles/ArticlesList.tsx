@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { Article, ArticleFilterMode } from "@readspace/shared"
 import { CalendarIcon } from "lucide-react"
 import { ArticleItem } from "./ArticleItem"
@@ -61,6 +62,17 @@ export function ArticlesList({
             isRecentlyReadMode,
             isTodayMode,
         })
+
+    // Scroll selected article into view
+    useEffect(() => {
+        if (!selectedArticleId) return
+        const index = allRows.findIndex(
+            (row) => row && !("type" in row) && row.id === selectedArticleId
+        )
+        if (index !== -1) {
+            rowVirtualizer.scrollToIndex(index, { align: "auto" })
+        }
+    }, [selectedArticleId, allRows, rowVirtualizer])
 
     // Show loading skeleton while initial load
     if (isLoading) {

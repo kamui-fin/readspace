@@ -429,8 +429,8 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
       if (isSelectionMode) {
         if (selectedFeedIds.size === 0 && selectedFolderIds.size === 0) {
           return (
-            <Pressable onPress={toggleSelectionMode} className="py-2 px-1">
-              <Text className="font-geist-medium text-base text-grey dark:text-grey">Cancel</Text>
+            <Pressable onPress={toggleSelectionMode} className="px-1 py-2">
+              <Text className="font-geist-medium text-grey dark:text-grey text-base">Cancel</Text>
             </Pressable>
           );
         }
@@ -453,7 +453,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
               <FolderWithFilesBoldIcon width={20} height={20} color={colors.primary} />
             </Button>
             <Pressable onPress={toggleSelectionMode} className="py-2 pl-2">
-              <Text className="font-geist text-base text-grey dark:text-grey">Cancel</Text>
+              <Text className="font-geist text-grey dark:text-grey text-base">Cancel</Text>
             </Pressable>
           </View>
         );
@@ -519,10 +519,10 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
           {listData.length === 0 && favoriteFeeds.length === 0 ? (
             <View className="items-center justify-center py-12">
               <InboxBrokenIcon width={64} height={64} color={colors.grey} />
-              <Text className="mt-4 font-geist-medium text-base text-grey dark:text-grey">
+              <Text className="font-geist-medium text-grey dark:text-grey mt-4 text-base">
                 No feeds yet
               </Text>
-              <Text className="mt-1 font-geist-medium text-sm text-grey dark:text-grey">
+              <Text className="font-geist-medium text-grey dark:text-grey mt-1 text-sm">
                 Subscribe to feeds to see them here
               </Text>
             </View>

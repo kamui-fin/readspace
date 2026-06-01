@@ -136,14 +136,15 @@ export const Header: React.FC<HeaderProps> = (props) => {
     // This ensures header is never slightly sticky when scroll is at top
     const clampedScrollY = scrollY.value < 1 ? 0 : scrollY.value;
 
-    const translation = foregroundHeight.value > 0
-      ? interpolate(
-          clampedScrollY,
-          [0, foregroundHeight.value],
-          [0, -foregroundHeight.value],
-          Extrapolation.CLAMP
-        )
-      : 0;
+    const translation =
+      foregroundHeight.value > 0
+        ? interpolate(
+            clampedScrollY,
+            [0, foregroundHeight.value],
+            [0, -foregroundHeight.value],
+            Extrapolation.CLAMP
+          )
+        : 0;
 
     const isSticky = clampedScrollY > 50; // Threshold to consider sticky
     const animatedPaddingTop = withTiming(isSticky ? insets.top : insets.top + 10, {
@@ -480,7 +481,10 @@ export const Header: React.FC<HeaderProps> = (props) => {
   return (
     <Animated.View
       className={clsx(headerContainerVariants({ variant }))}
-      style={[{ paddingTop: insets.top + 10, backgroundColor: headerBgColor }, animatedHeaderStyle]}>
+      style={[
+        { paddingTop: insets.top + 10, backgroundColor: headerBgColor },
+        animatedHeaderStyle,
+      ]}>
       <Animated.View style={animatedForegroundStyle}>{renderForeground()}</Animated.View>
       {renderTabs()}
     </Animated.View>

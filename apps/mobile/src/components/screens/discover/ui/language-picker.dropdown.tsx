@@ -56,12 +56,9 @@ export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(
       }
     }, [initialLanguage]);
 
-    const handleLanguageSelect = useCallback(
-      (language: string) => {
-        setSelectedLanguage(language);
-      },
-      []
-    );
+    const handleLanguageSelect = useCallback((language: string) => {
+      setSelectedLanguage(language);
+    }, []);
 
     const handleConfirm = useCallback(() => {
       if (selectedLanguage) {
@@ -87,14 +84,12 @@ export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(
             style={{
               paddingBottom: Math.max(insets.bottom, 24),
               backgroundColor: colors.background,
-            }}
-          >
+            }}>
             <Button
               variant="primary"
               size="large"
               onPress={handleConfirm}
-              disabled={!selectedLanguage}
-            >
+              disabled={!selectedLanguage}>
               Confirm
             </Button>
           </View>
@@ -114,13 +109,10 @@ export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(
         backgroundStyle={{ backgroundColor: colors.background }}
         handleIndicatorStyle={{ backgroundColor: colors.grey4 }}>
         <BottomSheetScrollView
-          className="flex-1 bg-background px-6"
+          className="bg-background flex-1 px-6"
           contentContainerStyle={{ paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}>
-          <Text
-            size="2xl"
-            fontFamily="geist-bold"
-            className="mb-6 tracking-heading text-black">
+          <Text size="2xl" fontFamily="geist-bold" className="tracking-heading mb-6 text-black">
             {title}
           </Text>
 

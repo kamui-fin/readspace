@@ -39,12 +39,9 @@ async def test_batch_enrichment_flow(db_session):
     # 2. Mock Dependencies
 
     # Mock Settings
-    with patch("app.workers.feed.enrichment.get_settings") as mock_settings, patch(
-        "app.workers.feed.enrichment.get_domain_authority_scores_batch"
-    ) as mock_da:
+    with patch("app.workers.feed.enrichment.get_settings") as mock_settings:
 
         mock_settings.return_value.ENABLE_AI = True
-        mock_da.return_value = {"example.com": 0.7}
 
         # Mock LLM Batch Service
         with patch("app.workers.feed.enrichment.enrich_feeds_batch") as mock_batch:
@@ -74,18 +71,9 @@ async def test_batch_enrichment_flow(db_session):
                 assert feed.tags == ["example", "tech"]
                 assert feed.description == "An enhanced description about examples."
 
-                # Verify Popularity Score Calculation
-                # LLM: 85 -> 0.85 * 0.4 = 0.34
-                # DA: 0.7 * 0.3 = 0.21
-                # Quality:
-                #   Title (0.15) + Desc (0.1) + Lang (0.05) = 0.3 (assuming no image/author/articles)
-                #   Wait, we didn't add articles, so stats will be empty.
-                #   Quality = 0.3
-                #   0.3 * 0.3 = 0.09
-                # Total = 0.34 + 0.21 + 0.09 = 0.64
-
+                # Total = 0.34 + 0.0 + 0.09 = 0.43
                 # Allow some floating point variance
-                assert feed.popularity_score == pytest.approx(0.64, abs=0.05)
+                assert feed.popularity_score == pytest.approx(0.43, abs=0.05)
 
                 # Verify Mocks Called
                 mock_batch.assert_called_once()
@@ -115,12 +103,9 @@ async def test_batch_enrichment_empty_tags(db_session):
     await db_session.commit()
 
     # 2. Mock Dependencies
-    with patch("app.workers.feed.enrichment.get_settings") as mock_settings, patch(
-        "app.workers.feed.enrichment.get_domain_authority_scores_batch"
-    ) as mock_da:
+    with patch("app.workers.feed.enrichment.get_settings") as mock_settings:
 
         mock_settings.return_value.ENABLE_AI = True
-        mock_da.return_value = {}
 
         with patch("app.workers.feed.enrichment.enrich_feeds_batch") as mock_batch, \
              patch("app.workers.feed.enrichment.sync_feeds_batch") as mock_sync:

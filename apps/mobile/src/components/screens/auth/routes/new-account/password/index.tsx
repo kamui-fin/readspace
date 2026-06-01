@@ -89,7 +89,7 @@ export function PasswordStep({ initialPassword = '', onPasswordChange }: Passwor
     <Formik
       initialValues={{ password: initialPassword || '' }}
       validationSchema={toFormikValidationSchema(PasswordSchema)}
-      onSubmit={() => { }}
+      onSubmit={() => {}}
       validateOnMount={false}
       validateOnChange={false}
       validateOnBlur={false}>
