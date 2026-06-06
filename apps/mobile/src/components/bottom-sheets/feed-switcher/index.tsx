@@ -18,8 +18,10 @@ import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Checkbox } from '@components/ui/checkbox';
 import { DropdownMenuRoot, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
+import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import {
   type Folder,
@@ -34,12 +36,10 @@ import {
 } from '@readspace/shared';
 import { type FeedSwitcherStore, useFeedSwitcherStore } from '@stores/feed-switcher';
 import { useFeedViewStore } from '@stores/feed-view';
+import { useRouter } from 'expo-router';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
-import { Text } from '@components/ui/text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { useRouter } from 'expo-router';
 
 const PINNED_YELLOW = '#EAB308';
 

@@ -4,11 +4,11 @@ import InboxBoldIcon from '@components/icons/solar/inbox-bold';
 import SortBoldIcon from '@components/icons/solar/sort-bold';
 import { Tab } from '@components/navigation/tab';
 import { Button } from '@components/ui/button';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { DEVICE_CORNER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import clsx from 'clsx';
 import { View } from 'react-native';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import {
   tabsContainerVariants,
   tabsGroupVariants,

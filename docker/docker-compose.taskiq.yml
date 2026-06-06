@@ -2,27 +2,6 @@
 # Taskiq worker and scheduler services
 
 services:
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    container_name: readspace_rabbitmq
-    restart: always
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 10s
-    environment:
-      - RABBITMQ_DEFAULT_USER=guest
-      - RABBITMQ_DEFAULT_PASS=guest
-      - RABBITMQ_DEFAULT_VHOST=/
-    networks:
-      - coolify
 
   worker:
     build:
@@ -31,14 +10,11 @@ services:
     container_name: readspace_worker
     command: taskiq worker app.core.taskiq_app:broker app.workers.registry --max-async-tasks 200
     restart: on-failure
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
     environment:
       - PYTHONPATH=/app
       - PYTHONUNBUFFERED=1
       - ENVIRONMENT=production
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
     networks:
       - coolify
 
@@ -48,19 +24,14 @@ services:
       dockerfile: Dockerfile
     container_name: readspace_scheduler
     command: taskiq scheduler app.core.taskiq_app:scheduler app.workers.registry 
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
     environment:
       - PYTHONPATH=/app
       - PYTHONUNBUFFERED=1
       - ENVIRONMENT=production
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
     networks:
       - coolify
 
-volumes:
-  rabbitmq-data:
 
 networks:
   coolify:

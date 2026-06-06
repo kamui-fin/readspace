@@ -1,3 +1,5 @@
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import { useEffect } from 'react';
@@ -10,10 +12,8 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { COLORS } from '@lib/constants/colors';
 
-const skeletonVariants = cva('bg-grey6 ', {
+const skeletonVariants = cva('', {
   variants: {
     variant: {
       rectangle: 'rounded-lg',
@@ -82,7 +82,11 @@ export function Skeleton({
   return (
     <Animated.View
       className={clsx(skeletonVariants({ variant, size }), className)}
-      style={[customStyle as object, animate ? animatedStyle : undefined, { backgroundColor: colors.grey5 }]}
+      style={[
+        customStyle as object,
+        animate ? animatedStyle : undefined,
+        { backgroundColor: colors.grey5 },
+      ]}
     />
   );
 }
@@ -109,9 +113,9 @@ export function SkeletonGroup({
 }: SkeletonGroupProps) {
   return (
     <View className={clsx('flex-col', className)} style={{ gap: spacing }}>
-      {/* biome-ignore lint/suspicious/noArrayIndexKey: Skeleton items are static and don't reorder */}
       {Array.from({ length: count }).map((_, index) => (
         <Skeleton
+          // biome-ignore lint/suspicious/noArrayIndexKey: Skeleton items are static
           key={`skeleton-${index}`}
           variant={variant}
           size={size}

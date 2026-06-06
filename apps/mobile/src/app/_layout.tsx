@@ -2,6 +2,7 @@ import 'global.css';
 import { SessionProvider, useSession } from '@contexts/auth-context';
 import { ThemeProvider } from '@contexts/theme-provider';
 import { ToastProvider } from '@contexts/toast-provider';
+import { RevenueCatProvider } from '@contexts/revenuecat-context';
 import {
   EBGaramond_400Regular,
   EBGaramond_400Regular_Italic,
@@ -30,27 +31,46 @@ import {
   GeistMono_600SemiBold,
   GeistMono_700Bold,
 } from '@expo-google-fonts/geist-mono';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { COLORS } from '@lib/constants/colors';
+import { BottomSheetModalProvider, BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 import { useThemeStore } from '@stores/theme';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
+import { ApiError } from '@readspace/shared';
 import clsx from 'clsx';
-import { StatusBar } from 'expo-status-bar';
 import * as Font from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState, useRef } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import '@lib/api-client';
 import { configureApiClient } from '@lib/api-client';
+import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
+import { UpgradePaywallModal } from '@components/bottom-sheets/upgrade';
+import { useUpgradeDialog } from '@stores/upgrade-dialog';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
+const handleGlobalError = (error: unknown) => {
+  if (error instanceof ApiError && error.status === 429) {
+    useUpgradeDialog.getState().open({
+      title: 'Upgrade to Readspace Pro',
+      description: error.message || 'You have reached a limit on your current plan.',
+    });
+  }
+};
+
 // Create QueryClient instance
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: handleGlobalError,
+  }),
+  mutationCache: new MutationCache({
+    onError: handleGlobalError,
+  }),
   defaultOptions: {
     queries: {
       retry: 2,
@@ -66,13 +86,17 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <SessionProvider>
-          <RootNavigator />
-        </SessionProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <SessionProvider>
+            <RevenueCatProvider>
+              <RootNavigator />
+            </RevenueCatProvider>
+          </SessionProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }
 
@@ -83,6 +107,7 @@ function RootNavigator() {
   const [fontError, setFontError] = useState<Error | null>(null);
   const isDark = useIsDarkMode();
   const isHydrated = useThemeStore((state) => state.isHydrated);
+
 
   useEffect(() => {
     async function loadFonts() {
@@ -140,13 +165,14 @@ function RootNavigator() {
     const inAuthGroup = segments[0] === '(auth)';
     const inProtectedGroup = segments[0] === '(protected)';
     const isRoot = !segments.length || segments[0] === 'index';
+    const isRedirectRoute = segments[0] === 'oauthredirect' || segments[0] === 'oauth2redirect';
 
     // Wait until router is mounted and navigation completes
     // Only redirect if user is in the wrong section, or they are stuck on the empty index placeholder
-    if (!session && (inProtectedGroup || isRoot)) {
+    if (!session && (inProtectedGroup || isRoot || isRedirectRoute)) {
       // Not logged in but in protected area (or root) - redirect to auth
       router.replace('/(auth)');
-    } else if (session && (inAuthGroup || isRoot)) {
+    } else if (session && (inAuthGroup || isRoot || isRedirectRoute)) {
       // Logged in but in auth area (or root) - redirect to protected area
       if (isNewSignup) {
         router.replace('/(protected)/onboarding');
@@ -191,6 +217,7 @@ function RootNavigator() {
               <Stack.Screen name="(protected)" />
               <Stack.Screen name="(auth)" />
             </Stack>
+             <UpgradePaywallModal />
           </ToastProvider>
         </BottomSheetModalProvider>
       </KeyboardProvider>

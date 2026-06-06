@@ -3,14 +3,33 @@ import { CategorySelectionStep } from '@components/screens/onboarding/categories
 import { FeedSelectionStep } from '@components/screens/onboarding/feeds';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { useRef, useState } from 'react';
-import { View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { BackHandler, Platform, View } from 'react-native';
 
 export default function OnboardingScreen() {
   const stepperRef = useRef<StepperRef>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+
+  // Handle hardware back button on Android
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android') return;
+
+      const onBackPress = () => {
+        if (currentStep > 0) {
+          stepperRef.current?.goToPrevious();
+          return true; // Intercept & go back in stepper
+        }
+        return false; // Let default back handle (exit app)
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [currentStep])
+  );
 
   const pages = [
     <CategorySelectionStep key="categories" onNext={() => stepperRef.current?.goToNext()} />,

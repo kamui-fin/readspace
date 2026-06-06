@@ -8,7 +8,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import { Image as ExpoImage } from 'expo-image';
 import type { ReactNode } from 'react';
-import { forwardRef, useState, useMemo } from 'react';
+import { forwardRef, useMemo, useState } from 'react';
 import { Pressable, type PressableProps, View } from 'react-native';
 
 const cardVariants = cva('bg-background ', {
@@ -26,7 +26,8 @@ const cardVariants = cva('bg-background ', {
 });
 
 export interface CardProps
-  extends Omit<PressableProps, 'children'>, VariantProps<typeof cardVariants> {
+  extends Omit<PressableProps, 'children'>,
+    VariantProps<typeof cardVariants> {
   children?: ReactNode;
   className?: string;
   // Feed variant props

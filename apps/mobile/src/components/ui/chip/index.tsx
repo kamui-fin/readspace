@@ -1,10 +1,10 @@
+import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import React, { type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
-import { Text } from '@components/ui/text';
 
 const chipVariants = cva('flex-row items-center rounded-full', {
   variants: {

@@ -1,17 +1,9 @@
 import { AppState, Platform } from 'react-native';
 import 'expo-sqlite/localStorage/install';
 import 'react-native-url-polyfill/auto';
+import { resolveHostname } from '@lib/utils/network';
 import { getSettings } from '@stores/settings';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-
-// Helper to resolve hostname for Android emulator
-const resolveHostname = (url: string) => {
-  const _url = new URL(url);
-  if (_url.hostname === 'localhost' && Platform.OS === 'android') {
-    _url.hostname = '10.0.2.2';
-  }
-  return _url.toString();
-};
 
 // Singleton Supabase client
 let supabaseClient: SupabaseClient | null = null;

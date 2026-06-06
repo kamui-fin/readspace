@@ -2,10 +2,10 @@ import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.car
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { Skeleton } from '@components/ui/skeleton';
 import { Text } from '@components/ui/text';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import type { FeedSummary } from '@readspace/shared';
 import { ScrollView, View } from 'react-native';
 import { CategoriesList } from './categories.list';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
 interface SearchResultsProps {
   showSearchSkeleton: boolean;

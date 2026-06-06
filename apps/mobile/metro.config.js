@@ -9,7 +9,9 @@ const monorepoRoot = path.resolve(projectRoot, '../..');
 const config = getDefaultConfig(projectRoot);
 
 // Add monorepo support
-config.watchFolders = [monorepoRoot];
+config.watchFolders = Array.from(
+  new Set([...(config.watchFolders || []), projectRoot, monorepoRoot])
+);
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(monorepoRoot, 'node_modules'),

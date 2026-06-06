@@ -25,10 +25,17 @@ import {
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useSession } from '@contexts/auth-context';
+import { useRevenueCat } from '@contexts/revenuecat-context';
+import { useUpgradeDialog } from '@stores/upgrade-dialog';
+import SolarCrownBoldIcon from '@components/icons/solar/crown-bold';
+import SolarShieldCheckBoldIcon from '@components/icons/solar/shield-check-bold';
+import SolarCloudBoldIcon from '@components/icons/solar/cloud-bold';
+import SolarServerBoldIcon from '@components/icons/solar/server-bold';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { CLOUD_CONFIG } from '@lib/constants/config';
 import { exportFeedsToOPML } from '@lib/utils/opml';
 import { useFeeds } from '@readspace/shared';
 import { useSettingsStore } from '@stores/settings';
@@ -36,13 +43,15 @@ import { type Theme, useThemeStore } from '@stores/theme';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { useRouter } from 'expo-router';
-import { useCallback, useState, useRef, useEffect } from 'react';
-import { Linking, ScrollView, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, Linking, Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function ProfileScreen() {
   const router = useRouter(); // Still needed for Reading History button
   const { signOut, user } = useSession();
+  const { isPro, isRcPro, presentCustomerCenter } = useRevenueCat();
+  const { open: openUpgrade } = useUpgradeDialog();
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -138,6 +147,21 @@ export function ProfileScreen() {
           title="Profile"
           titleFontWeight="semibold"
           subtitle="Your account settings"
+          rightElement={
+            <Chip
+              label={settings.instance_type === 'cloud' ? 'Cloud' : 'Self-hosted'}
+              variant="filled"
+              size="medium"
+              selected={false}
+              icon={
+                settings.instance_type === 'cloud' ? (
+                  <SolarCloudBoldIcon width={14} height={14} color={isDark ? colors.grey2 : colors.grey} />
+                ) : (
+                  <SolarServerBoldIcon width={14} height={14} color={isDark ? colors.grey2 : colors.grey} />
+                )
+              }
+            />
+          }
         />
         <View className="mt-4 px-6">
           {/* User Profile */}
@@ -149,14 +173,63 @@ export function ProfileScreen() {
                 avatarUrl={displayUser.user_metadata?.avatar_url}
                 className="flex-1"
               />
-              <Chip
-                label={settings.instance_type === 'cloud' ? 'Cloud' : 'Self-hosted'}
-                variant="filled"
-                size="small"
-                selected={false}
-              />
+              {isPro ? (
+                <View 
+                  className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full"
+                  style={{ backgroundColor: '#F59E0B' }}>
+                  <SolarCrownBoldIcon width={14} height={14} color="#FFFFFF" />
+                  <Text size="sm" fontFamily="geist-bold" className="text-white">
+                    Pro
+                  </Text>
+                </View>
+              ) : (
+                <View 
+                  className="px-3 py-1.5 rounded-full"
+                  style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : colors.grey6 }}>
+                  <Text size="sm" fontFamily="geist-medium" style={{ color: isDark ? colors.grey2 : colors.grey }}>
+                    Basic
+                  </Text>
+                </View>
+              )}
             </View>
           )}
+
+          {/* Subscription Section */}
+          <SettingsGroup className="mb-6">
+            {!isPro ? (
+              <SettingsItem
+                label="Upgrade to Pro"
+                variant="button"
+                leftIcon={<SolarCrownBoldIcon width={22} height={22} color="#D4AF37" />}
+                onPress={() => openUpgrade()}
+                isLast={true}
+              />
+            ) : (
+              <SettingsItem
+                label="Manage Subscription"
+                variant="button"
+                leftIcon={<SolarShieldCheckBoldIcon width={22} height={22} color={colors.secondary} />}
+                onPress={() => {
+                  if (isRcPro) {
+                    presentCustomerCenter();
+                  } else {
+                    Alert.alert(
+                      'Manage Subscription',
+                      'This subscription was purchased on the web. Please manage your billing via the web version of Readspace.',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { 
+                          text: 'Open Web', 
+                          onPress: () => Linking.openURL(CLOUD_CONFIG.READSPACE_APP_URL) 
+                        }
+                      ]
+                    );
+                  }
+                }}
+                isLast={true}
+              />
+            )}
+          </SettingsGroup>
 
           {/* Preferences Section */}
           <SettingsGroup title="Preferences" className="mb-6">

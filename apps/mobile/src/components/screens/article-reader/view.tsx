@@ -7,6 +7,7 @@ import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
 import { ArticleReader } from '@components/screens/article-reader/index';
 import { ArticleActionBar } from '@components/screens/article-reader/ui/article-actions.bar';
 import { ArticleReaderSkeleton } from '@components/screens/article-reader/ui/article-reader.skeleton';
+import type { LanguageOption } from '@components/screens/discover/ui/language-picker.dropdown';
 import { LanguagePicker } from '@components/screens/discover/ui/language-picker.dropdown';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
@@ -14,6 +15,7 @@ import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { SUPPORTED_LANGUAGES } from '@lib/constants/languages';
 import {
   useArticle,
   useExtractFullTextMutation,
@@ -21,16 +23,15 @@ import {
   useTranslateArticleMutation,
   useUpdateArticle,
 } from '@readspace/shared';
-import { SUPPORTED_LANGUAGES } from '@lib/constants/languages';
 import { useTranslationHistory } from '@stores/translation-history';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLimitChecker } from '@hooks/useLimitChecker';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Share, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
-import type { LanguageOption } from '@components/screens/discover/ui/language-picker.dropdown';
 
 interface ArticleScreenProps {
   articleId: string;
@@ -45,6 +46,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   const scrollDirection = useSharedValue<'up' | 'down'>('down');
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+  const { checkAndTriggerUpgrade } = useLimitChecker();
 
   // Bottom sheet refs
   const summaryBottomSheetRef = useRef<BottomSheetModal>(null);
@@ -100,12 +102,15 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   const summaryData = summarizeMutation.data;
   const isSummaryLoading = summarizeMutation.isPending;
   const generateSummary = useCallback(async () => {
+    if (!checkAndTriggerUpgrade('ai')) {
+      throw new Error('AI limit reached');
+    }
     return summarizeMutation.mutateAsync({
       articleId: articleId || '',
       content: currentContent || undefined,
       languageKey: contentSource,
     });
-  }, [articleId, currentContent, contentSource, summarizeMutation]);
+  }, [articleId, currentContent, contentSource, summarizeMutation, checkAndTriggerUpgrade]);
 
   // Sync contentSource with article.extracted_content
   useLayoutEffect(() => {
@@ -122,9 +127,10 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     return [...recent, ...others];
   }, [recentLanguages]);
 
-  // Auto-extract content if not already extracted and article has loaded
+  // Auto-extract content if not already extracted and article has loaded (only if subscribed)
   useEffect(() => {
     if (
+      isSubscribed &&
       article &&
       !article.extracted_content &&
       article.article_type === 'feed' &&
@@ -136,7 +142,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         console.warn('Failed to auto-extract article content:', error);
       });
     }
-  }, [article, extractMutation.status, extractFullText]);
+  }, [article, extractMutation.status, extractFullText, isSubscribed]);
 
   // Mark as read on mount (only if subscribed to the feed)
   useEffect(() => {
@@ -443,6 +449,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         hasTranslatedContent={!!translateData?.translated_content}
         canExtractContent={isSubscribed || false}
         isClipped={isClipped}
+        isSubscribed={isSubscribed}
       />
     </View>
   );

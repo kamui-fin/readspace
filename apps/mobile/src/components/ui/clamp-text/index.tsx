@@ -1,7 +1,7 @@
+import { Text } from '@components/ui/text';
 import { useClampText } from '@hooks/useClampText';
 import { ReactNode, useRef } from 'react';
 import { Platform, Text as RNText } from 'react-native';
-import { Text } from '@components/ui/text';
 
 export type ClampTextProps = {
   text?: string | Iterable<ReactNode> | null;

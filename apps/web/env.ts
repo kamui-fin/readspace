@@ -13,6 +13,7 @@ export const env = createEnv({
         SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
         POLAR_ACCESS_TOKEN: z.string().optional(),
         POLAR_WEBHOOK_SECRET: z.string().optional(),
+        REVENUECAT_WEBHOOK_SECRET: z.string().optional(),
     },
 
     /**

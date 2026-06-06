@@ -4,9 +4,9 @@ import { Text } from '@components/ui/text';
 import {
   BottomSheetBackdrop,
   type BottomSheetBackdropProps,
+  BottomSheetFooter,
   BottomSheetModal,
   BottomSheetScrollView,
-  BottomSheetFooter,
 } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';

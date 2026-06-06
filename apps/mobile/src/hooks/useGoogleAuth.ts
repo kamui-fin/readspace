@@ -43,8 +43,7 @@ export function useGoogleAuth(config: UseGoogleAuthConfig) {
   });
 
   const customPromptAsync = async (options?: Parameters<typeof promptAsync>[0]) => {
-    const isMissingClientId =
-      Platform.OS === 'ios' ? !iosClientId : !androidClientId;
+    const isMissingClientId = Platform.OS === 'ios' ? !iosClientId : !androidClientId;
 
     if (isMissingClientId) {
       const errorMsg = `Google OAuth Client ID is not configured for ${Platform.OS}. Please check your environment variables.`;

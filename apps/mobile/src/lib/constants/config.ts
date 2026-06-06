@@ -30,6 +30,10 @@ export const CLOUD_CONFIG = {
     process.env.EXPO_PUBLIC_API_URL ||
     process.env.EXPO_PUBLIC_CLOUD_API_URL ||
     'https://api.readspace.ai',
+  READSPACE_APP_URL:
+    process.env.EXPO_PUBLIC_APP_URL ||
+    process.env.EXPO_PUBLIC_CLOUD_APP_URL ||
+    'https://app.readspace.ai',
   SUPABASE_URL:
     process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_CLOUD_SUPABASE_URL || '',
   SUPABASE_ANON_KEY:

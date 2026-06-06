@@ -17,7 +17,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { getToastBackgroundColor, getToastTextColor } from './utils';
+import { getToastBackgroundColor, getToastBorderColor, getToastTextColor } from './utils';
 
 export type ToastType = 'success' | 'error' | 'promise' | 'info' | 'custom';
 
@@ -26,6 +26,7 @@ export interface CustomToastConfig {
   iconColor?: string;
   textColor?: string;
   backgroundColor?: string;
+  borderColor?: string;
 }
 
 export interface ToastData {
@@ -230,6 +231,8 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
           className="flex-row items-center rounded-full py-[10px] pl-4 pr-[18px]"
           style={{
             backgroundColor: getToastBackgroundColor(toast.type, colors, toast.custom),
+            borderWidth: 1,
+            borderColor: getToastBorderColor(toast.type, colors, toast.custom),
             shadowColor: isDark ? '#000' : '#8A9A9D',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: isDark ? 0.35 : 0.08,

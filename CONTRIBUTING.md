@@ -86,7 +86,6 @@ This starts:
 
 - Supabase (with Studio and Analytics)
 - Redis
-- RabbitMQ (message broker with management UI)
 - RSSHub
 - Taskiq worker and scheduler
 
@@ -192,7 +191,6 @@ poetry run taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-patter
 
 This gives you immediate feedback and easier debugging compared to running in Docker.
 
-**RabbitMQ Management UI**: Access the management interface at [http://localhost:15672](http://localhost:15672) (username: `guest`, password: `guest`) to monitor task queues and message flow.
 
 ### Database Migrations (Alembic)
 

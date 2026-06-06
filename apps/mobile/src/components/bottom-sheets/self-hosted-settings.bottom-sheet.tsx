@@ -1,5 +1,5 @@
 /** biome-ignore-all assist/source/organizeImports: false positive */
-import { BottomSheetTextInput, type BottomSheetModal } from '@gorhom/bottom-sheet';
+import { type BottomSheetModal } from '@gorhom/bottom-sheet';
 import { forwardRef, useCallback, useEffect, useMemo, useState } from 'react';
 import { Keyboard, Platform, View } from 'react-native';
 import { Text } from '@components/ui/text';
@@ -8,29 +8,14 @@ import { z } from 'zod';
 
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
+import { BottomSheetInput } from '@components/ui/input';
 import { Spinner } from '@components/ui/spinner';
 import { toast } from '@components/ui/toast';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { validateSupabaseConnection } from '@lib/supabase/client';
-
-// Helper to resolve hostname for Android emulator
-const resolveHostname = (url: string) => {
-  try {
-    const _url = new URL(url);
-    if (_url.hostname === 'localhost' && Platform.OS === 'android') {
-      _url.hostname = '10.0.2.2';
-    }
-    // Remove trailing slash to prevent double slashes in API paths
-    return _url.toString().replace(/\/$/, '');
-  } catch {
-    if (url.includes('localhost') && Platform.OS === 'android') {
-      return url.replace('localhost', '10.0.2.2').replace(/\/$/, '');
-    }
-    return url.replace(/\/$/, '');
-  }
-};
+import { useSettingsStore } from '@stores/settings';
+import { resolveHostname } from '@lib/utils/network';
 
 // Helper to wrap a promise in a timeout
 const withTimeout = <T,>(promise: Promise<T>, ms: number, message: string): Promise<T> => {
@@ -77,10 +62,26 @@ export interface SelfHostSettingsProps {
 
 export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHostSettingsProps>(
   ({ onSave, onClose, initialData }, ref) => {
-    const isDark = useIsDarkMode();
-    const [apiUrl, setApiUrl] = useState(initialData?.apiUrl || '');
+    const { settings } = useSettingsStore();
+    const [resetCounter, setResetCounter] = useState(0);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isValidating, setIsValidating] = useState(false);
+
+    // Compute the stable saved URL from settings or initialData
+    const savedUrl = useMemo(() => {
+      return (
+        initialData?.apiUrl ||
+        (settings.instance_type === 'self-hosted' ? settings.readspace_url : '')
+      );
+    }, [initialData, settings.readspace_url, settings.instance_type]);
+
+    // Local state for checking if the input is non-empty (to enable the submit button)
+    const [apiUrl, setApiUrl] = useState(savedUrl);
+
+    // Sync input state when savedUrl changes
+    useEffect(() => {
+      setApiUrl(savedUrl);
+    }, [savedUrl]);
 
     // Debug: Log when bottom sheet mounts/unmounts
     useEffect(() => {
@@ -88,16 +89,9 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
       return () => console.log('[SelfHostSettingsBottomSheet] Component unmounted');
     }, []);
 
-    // Validate form schema
+    // Validate form schema (non-empty URL required to enable submit validation)
     const isValid = useMemo(() => {
-      try {
-        selfHostSchema.parse({
-          apiUrl,
-        });
-        return true;
-      } catch {
-        return false;
-      }
+      return apiUrl.trim().length > 0;
     }, [apiUrl]);
 
     const handleSave = useCallback(async () => {
@@ -108,7 +102,7 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
       try {
         // Validate form schema first
         const data = selfHostSchema.parse({
-          apiUrl,
+          apiUrl: apiUrl.trim(),
         });
 
         // Test API endpoint and retrieve configuration
@@ -272,19 +266,29 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
       }
     }, [apiUrl, onSave, ref]);
 
-    // Clear errors when value changes
-    useEffect(() => {
-      if (errors.apiUrl && apiUrl) setErrors((prev) => ({ ...prev, apiUrl: '' }));
-    }, [apiUrl, errors.apiUrl]);
+    // Handle text change and clear errors immediately to avoid double re-renders
+    const handleTextChange = useCallback(
+      (text: string) => {
+        setApiUrl(text);
+        if (errors.apiUrl) {
+          setErrors((prev) => ({ ...prev, apiUrl: '' }));
+        }
+      },
+      [errors.apiUrl]
+    );
 
     const handleSheetChange = useCallback(
       (index: number) => {
         if (index === -1) {
           // Sheet was dismissed
           onClose?.();
+          // Reset to current saved setting and trigger a re-render of the input field
+          setApiUrl(savedUrl);
+          setErrors({});
+          setResetCounter((prev) => prev + 1);
         }
       },
-      [onClose]
+      [onClose, savedUrl]
     );
 
     const snapPoints = useMemo(() => ['35%', '72%'], []);
@@ -305,52 +309,21 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
             Connect to your own Readspace instance URL
           </Text>
 
-          <View className="gap-4">
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                borderRadius: 12,
-                backgroundColor: isDark ? COLORS.dark.grey6 : COLORS.light.grey6,
-                borderColor: errors.apiUrl
-                  ? isDark
-                    ? COLORS.dark.destructive
-                    : COLORS.light.destructive
-                  : undefined,
-                borderWidth: errors.apiUrl ? 1 : undefined,
-              }}>
-              <BottomSheetTextInput
-                value={apiUrl}
-                onChangeText={setApiUrl}
-                placeholder="e.g., http://192.168.1.42:18008"
-                keyboardType="url"
-                autoCapitalize="none"
-                autoComplete="off"
-                autoCorrect={false}
-                placeholderTextColor={isDark ? COLORS.dark.grey2 : COLORS.light.grey2}
-                style={{
-                  flex: 1,
-                  paddingTop: 16,
-                  paddingBottom: 16,
-                  paddingLeft: 16,
-                  paddingRight: 16,
-                  color: isDark ? '#fff' : '#000',
-                  fontFamily: 'GeistMono_500Medium',
-                  fontSize: 15,
-                }}
-              />
-            </View>
-            {errors.apiUrl ? (
-              <Text
-                className="font-geist-medium text-sm"
-                style={{
-                  marginTop: -4,
-                  color: isDark ? COLORS.dark.destructive : COLORS.light.destructive,
-                }}>
-                {errors.apiUrl}
-              </Text>
-            ) : null}
-          </View>
+          <BottomSheetInput
+            key={`${savedUrl}-${resetCounter}`}
+            defaultValue={savedUrl}
+            onChangeText={handleTextChange}
+            placeholder="e.g., http://192.168.1.42:18008"
+            keyboardType="url"
+            autoCapitalize="none"
+            autoComplete="off"
+            autoCorrect={false}
+            spellCheck={false}
+            isInvalid={!!errors.apiUrl}
+            errorText={errors.apiUrl}
+            className="font-geist-mono"
+            borderRadius={12}
+          />
 
           {/* Inline Action Button */}
           <View className="mb-1 mt-4">

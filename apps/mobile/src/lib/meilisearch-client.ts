@@ -1,8 +1,9 @@
+import { resolveHostname } from '@lib/utils/network';
 import { instantMeiliSearch } from '@meilisearch/instant-meilisearch';
 import type { HybridSearchConfig } from '@readspace/shared';
+import { getSettings } from '@stores/settings';
 import { MeiliSearch } from 'meilisearch';
 import { Platform } from 'react-native';
-import { getSettings } from '@stores/settings';
 
 export const MEILISEARCH_URL = process.env.EXPO_PUBLIC_MEILISEARCH_URL || 'http://localhost:7700';
 export const MEILISEARCH_SEARCH_KEY = process.env.EXPO_PUBLIC_MEILISEARCH_SEARCH_KEY || '';
@@ -12,22 +13,6 @@ if (!MEILISEARCH_SEARCH_KEY) {
     'EXPO_PUBLIC_MEILISEARCH_SEARCH_KEY is not set. Search functionality may not work correctly.'
   );
 }
-
-// Helper to resolve hostname for Android emulator
-const resolveHostname = (url: string): string => {
-  try {
-    const _url = new URL(url);
-    if (_url.hostname === 'localhost' && Platform.OS === 'android') {
-      _url.hostname = '10.0.2.2';
-    }
-    return _url.toString().replace(/\/$/, '');
-  } catch (e) {
-    if (url.includes('localhost') && Platform.OS === 'android') {
-      return url.replace('localhost', '10.0.2.2').replace(/\/$/, '');
-    }
-    return url.replace(/\/$/, '');
-  }
-};
 
 const getMeiliSearchConfig = () => {
   const settings = getSettings();

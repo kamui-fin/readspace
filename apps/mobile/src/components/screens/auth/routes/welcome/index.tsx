@@ -2,6 +2,7 @@ import GoogleIcon from '@components/icons/local/google';
 import ReadspaceLogo from '@components/icons/local/readspace-logo';
 import LetterBoldIcon from '@components/icons/solar/letter-bold';
 import { Button } from '@components/ui/button';
+import { Text } from '@components/ui/text';
 import { ThreeDotsAnimation } from '@components/ui/three-dots';
 import { toast } from '@components/ui/toast';
 import { useSession } from '@contexts/auth-context';
@@ -9,12 +10,11 @@ import { useGoogleAuth } from '@hooks/useGoogleAuth';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { SPACING } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { View, useWindowDimensions, Text as RNText } from 'react-native';
-import { Text } from '@components/ui/text';
+import { Text as RNText, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
 
 export function WelcomeScreen() {
   const insets = useSafeAreaInsets();
@@ -22,6 +22,7 @@ export function WelcomeScreen() {
   const isDark = useIsDarkMode();
   const { signInWithGoogle } = useSession();
   const [isLoading, setIsLoading] = useState(false);
+  const [hasSignedIn, setHasSignedIn] = useState(false);
 
   // TODO: Replace with your actual Google OAuth client ID
   // You'll need to provide this from your environment variables
@@ -43,7 +44,7 @@ export function WelcomeScreen() {
   });
 
   useEffect(() => {
-    if (response?.type === 'success') {
+    if (response?.type === 'success' && !hasSignedIn) {
       // expo-auth-session/providers/google returns tokens in response.authentication or response.params
       const { id_token } = response.params;
       const { accessToken } = response.authentication || {};
@@ -52,6 +53,7 @@ export function WelcomeScreen() {
       const token = id_token || response.authentication?.idToken;
 
       if (token) {
+        setHasSignedIn(true);
         setIsLoading(true);
 
         signInWithGoogle(token, accessToken || '')
@@ -60,6 +62,7 @@ export function WelcomeScreen() {
           })
           .catch((error) => {
             console.error('Google sign in error:', error);
+            setHasSignedIn(false);
             // Show a friendly error message to the user
             toast.error('Unable to sign in with Google. Please try again.');
           })
@@ -71,7 +74,7 @@ export function WelcomeScreen() {
       console.error('OAuth error:', response.error);
       toast.error('Google sign in was cancelled or failed. Please try again.');
     }
-  }, [response, signInWithGoogle]);
+  }, [response, signInWithGoogle, hasSignedIn]);
 
   const widthRatio = width / 393;
   const logoSize = Math.max(Math.min(60 * widthRatio, 80), 50);
@@ -147,7 +150,7 @@ export function WelcomeScreen() {
           disabled={isLoading}
           leftIcon={
             !isLoading ? (
-              <GoogleIcon width={20} height={20} fill={isDark ? '#ffffff' : COLORS.light.black} />
+              <GoogleIcon width={20} height={20} color={isDark ? '#ffffff' : COLORS.light.black} />
             ) : undefined
           }>
           {isLoading ? (

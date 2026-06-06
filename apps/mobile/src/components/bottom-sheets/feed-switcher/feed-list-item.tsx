@@ -9,13 +9,13 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
+import { Text } from '@components/ui/text';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import type { Subscription } from '@readspace/shared';
 import { Image as ExpoImage } from 'expo-image';
 import { memo } from 'react';
 import { View } from 'react-native';
-import { Text } from '@components/ui/text';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
 function getFaviconUrl(feed: { link?: string | null; image_url?: string | null }): string | null {
   if (feed.image_url) return feed.image_url;

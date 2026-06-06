@@ -11,7 +11,7 @@ export const DEVICE_CORNER_RADIUS = Platform.select({
 
 // Button border radius based on device corner radius
 // For buttons, we use the device corner radius directly for a system-consistent look
-export const BUTTON_BORDER_RADIUS = 15;
+export const BUTTON_BORDER_RADIUS = 9999;
 
 export const BOTTOM_SHEET_WIDTH = Dimensions.get('window').width - 32;
 

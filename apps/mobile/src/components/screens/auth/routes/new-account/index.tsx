@@ -7,13 +7,13 @@ import { useSession } from '@contexts/auth-context';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useAuthErrorHandler } from '@hooks/useAuthErrorHandler';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { COLORS } from '@lib/constants/colors';
 import { BUTTON_BORDER_RADIUS, SPACING } from '@lib/constants/app';
+import { COLORS } from '@lib/constants/colors';
 import { EmailSchema, PasswordSchema } from '@lib/validation/auth-schemas';
 import { useSettingsStore } from '@stores/settings';
-import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Keyboard, Platform, Pressable, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, BackHandler, Keyboard, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmailStep } from '@/components/screens/auth/routes/new-account/email';
 import { PasswordStep } from '@/components/screens/auth/routes/new-account/password';
@@ -58,6 +58,24 @@ export function SignupScreen() {
       hideSubscription.remove();
     };
   }, [buttonBottomAnim]);
+
+  // Handle Android back button
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android') {
+        return;
+      }
+
+      const onBackPress = () => {
+        handleBack();
+        return true; // prevent default (app exit)
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => subscription.remove();
+    }, [currentStep])
+  );
 
   const handleSelfHostSave = (data: {
     apiUrl: string;
@@ -158,7 +176,13 @@ export function SignupScreen() {
 
   return (
     <View className="bg-screen flex-1" style={{ backgroundColor: colors.background }}>
-      <Stepper ref={stepperRef} pages={pages} onStepChange={setCurrentStep} initialStep={0} />
+      <Stepper
+        ref={stepperRef}
+        pages={pages}
+        onStepChange={setCurrentStep}
+        initialStep={0}
+        onFirstStepBack={handleBack}
+      />
 
       {/* Fixed Buttons at Bottom - Hide on verification screen - Adjusts for keyboard with smooth animation */}
       {currentStep < pages.length && (

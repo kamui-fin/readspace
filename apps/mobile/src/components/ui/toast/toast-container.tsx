@@ -13,7 +13,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { getToastBackgroundColor, getToastTextColor } from './utils';
+import { getToastBackgroundColor, getToastBorderColor, getToastTextColor } from './utils';
 
 export type ToastType = 'success' | 'error';
 
@@ -107,6 +107,8 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
             paddingHorizontal: 16,
             borderRadius: 12,
             backgroundColor: getToastBackgroundColor(toast.type, colors),
+            borderWidth: 1,
+            borderColor: getToastBorderColor(toast.type, colors),
             shadowColor: isDark ? '#000' : '#8A9A9D',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: isDark ? 0.35 : 0.08,

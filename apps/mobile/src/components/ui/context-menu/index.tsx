@@ -160,10 +160,7 @@ const ContextMenuSeparator = ContextMenu.create(
     className,
     ...props
   }: { className?: string } & ComponentProps<typeof ContextMenu.Separator>) => (
-    <ContextMenu.Separator
-      {...props}
-      className={clsx('my-1 h-px bg-grey4 ', className)}
-    />
+    <ContextMenu.Separator {...props} className={clsx('my-1 h-px bg-grey4 ', className)} />
   ),
   'Separator'
 );
@@ -211,10 +208,7 @@ const ContextMenuLabel = ContextMenu.create(
   ({ className, ...props }: { className?: string } & ComponentProps<typeof ContextMenu.Label>) => (
     <ContextMenu.Label
       {...props}
-      className={clsx(
-        'px-2 py-1.5 font-geist-semibold text-sm text-grey ',
-        className
-      )}
+      className={clsx('px-2 py-1.5 font-geist-semibold text-sm text-grey ', className)}
     />
   ),
   'Label'

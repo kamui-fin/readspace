@@ -2,6 +2,7 @@ import AddCircleBoldDuotoneIcon from '@components/icons/solar/add-circle-bold-du
 import CheckCircleBoldDuotoneIcon from '@components/icons/solar/check-circle-bold-duotone';
 import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
+import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { stripHtml } from '@lib/utils/html';
@@ -9,7 +10,6 @@ import { useCreateFeed, useDeleteFeed } from '@readspace/shared';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
-import { toast } from '@components/ui/toast';
 
 export interface OnboardingFeedItemProps {
   feedId: string;

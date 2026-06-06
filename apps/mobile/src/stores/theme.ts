@@ -1,10 +1,10 @@
 import { Appearance, type ColorSchemeName } from 'react-native';
 import 'expo-sqlite/localStorage/install';
+import { Uniwind } from 'uniwind';
+// @ts-expect-error
+import { UniwindStore } from 'uniwind/src/core/native/store';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { Uniwind } from 'uniwind';
-// @ts-ignore
-import { UniwindStore } from 'uniwind/src/core/native/store';
 
 export type Theme = 'system' | 'light' | 'dark';
 
@@ -80,5 +80,3 @@ export const useThemeStore = create<ThemeStore>()(
     }
   )
 );
-
-

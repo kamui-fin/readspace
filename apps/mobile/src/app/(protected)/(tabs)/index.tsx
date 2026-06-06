@@ -1,15 +1,15 @@
 import { FeedSwitcherBottomSheet } from '@components/bottom-sheets/feed-switcher';
 import RssIcon from '@components/icons/local/rss';
 import FolderBoldDuotoneIcon from '@components/icons/solar/folder-bold-duotone';
-import HashtagBoldDuotoneIcon from '@components/icons/solar/hashtag-bold-duotone';
 import { Header } from '@components/navigation/header';
 import { FollowingScreen } from '@components/screens/following';
 import { FilterActionButton } from '@components/screens/following/ui/filter-action.button';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useFeedViewStore } from '@stores/feed-view';
 import { useFollowingStore } from '@stores/following';
+import Constants from 'expo-constants';
 import { useFocusEffect } from 'expo-router';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Platform, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
@@ -26,8 +26,13 @@ export default function FollowingRoute() {
   const setActiveTab = useFollowingStore((state) => state.setActiveTab);
   const filter = useFollowingStore((state) => state.filter);
   const setFilter = useFollowingStore((state) => state.setFilter);
-  const [headerHeight, setHeaderHeight] = useState(0);
   const insets = useSafeAreaInsets();
+  const safeAreaTop = insets.top > 0 ? insets.top : Constants.statusBarHeight;
+  const initialHeaderHeight = useMemo(() => {
+    // foreground title (approx 44px) + tabs row (approx 52px) + top padding (10px)
+    return safeAreaTop + 106;
+  }, [safeAreaTop]);
+  const [headerHeight, setHeaderHeight] = useState(initialHeaderHeight);
   const feedSwitcherRef = useRef<BottomSheetModal>(null);
 
   // Get selected feed/folder name from feed view store
@@ -78,10 +83,10 @@ export default function FollowingRoute() {
   // Calculate safe minimum header height (safe area + title + tabs + padding)
   // This ensures content never appears under header, even if headerHeight is 0
   const safeMinimumHeight = useMemo(() => {
-    const baseHeight = insets.top + 10 + 80; // safe area + padding + title
+    const baseHeight = safeAreaTop + 10 + 80; // safe area + padding + title
     const tabsHeight = 50; // Tabbed header always renders tabs
     return baseHeight + tabsHeight;
-  }, [insets.top]);
+  }, [safeAreaTop]);
 
   // Persist header height - only update when we get a valid (> 0) height
   // This prevents headerHeight from dropping to 0 during remeasurements

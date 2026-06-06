@@ -1,11 +1,11 @@
 import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
 import AltArrowRightLinearIcon from '@components/icons/solar/alt-arrow-right-linear';
 import { Text } from '@components/ui/text';
-import clsx from 'clsx';
-import { forwardRef } from 'react';
-import { Pressable, type PressableProps, View, StyleSheet } from 'react-native';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import clsx from 'clsx';
+import { forwardRef } from 'react';
+import { Pressable, type PressableProps, StyleSheet, View } from 'react-native';
 
 type SettingsItemVariant = 'select' | 'button' | 'link';
 

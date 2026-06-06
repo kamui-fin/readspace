@@ -1,10 +1,10 @@
 import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
 import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
 import { Button } from '@components/ui/button';
+import { Text } from '@components/ui/text';
 import { COLORS } from '@lib/constants/colors';
 import clsx from 'clsx';
 import { Platform, TouchableOpacity, View } from 'react-native';
-import { Text } from '@components/ui/text';
 import {
   actionsContainerVariants,
   foregroundVariants,
@@ -35,6 +35,7 @@ interface HeaderForegroundProps {
   onTitlePress?: () => void;
   colors: typeof COLORS.light | typeof COLORS.dark;
   onLayout: (e: { nativeEvent: { layout: { height: number } } }) => void;
+  rightElement?: React.ReactNode;
 }
 
 export function HeaderForeground({
@@ -49,6 +50,7 @@ export function HeaderForeground({
   onTitlePress,
   colors,
   onLayout,
+  rightElement,
 }: HeaderForegroundProps) {
   // Determine if we should use centered layout (for similar feeds with back button and no actions)
   const useCenteredLayout = showBackButton && actions.length === 0 && !subtitle;
@@ -134,8 +136,9 @@ export function HeaderForeground({
         )}
       </View>
 
-      {actions.length > 0 && (
+      {(actions.length > 0 || rightElement) && (
         <View className={clsx(actionsContainerVariants())}>
+          {rightElement}
           {actions.map((action) => (
             <Button
               key={action.label}

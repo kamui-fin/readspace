@@ -12,17 +12,11 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
-import {
-  ApiClient,
-  type FeedDiscoveryResult,
-  useCreateFeed,
-  useDeleteFeed,
-  useFeed,
-} from '@readspace/shared';
+import { ApiClient, queryKeys, useCreateFeed, useDeleteFeed, useFeed } from '@readspace/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams, useRootNavigationState, useRouter, useSegments } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { Platform, ScrollView, View } from 'react-native';
+import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface FeedPreviewScreenProps {
@@ -34,7 +28,7 @@ interface FeedPreviewScreenProps {
   };
 }
 
-export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProps) {
+export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPreviewScreenProps) {
   const router = useRouter();
   const segments = useSegments();
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
@@ -101,16 +95,26 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
     is_subscribed: false,
     is_preview: true,
   }));
-  const isFollowing = feed?.is_subscribed || false;
+  // Track optimistic and loading states
+  const [optimisticFollowing, setOptimisticFollowing] = useState<boolean | null>(null);
+  const [localLoading, setLocalLoading] = useState(false);
+
+  const actuallyFollowing = feed?.is_subscribed || false;
+
+  // Clear optimistic state when actual state catches up and matches it
+  useEffect(() => {
+    if (optimisticFollowing !== null && optimisticFollowing === actuallyFollowing) {
+      setOptimisticFollowing(null);
+    }
+  }, [optimisticFollowing, actuallyFollowing]);
+
+  const isFollowing = optimisticFollowing !== null ? optimisticFollowing : actuallyFollowing;
 
   const handleFollowPress = useCallback(() => {
     if (isFollowing && feed?.id) {
-      // Optimistically update
-      queryClient.setQueryData(['feed', feed.id], (old: any) =>
-        old ? { ...old, is_subscribed: false } : old
-      );
-
       // Unfollow
+      setLocalLoading(true);
+      setOptimisticFollowing(false);
       deleteFeed.mutate(
         { feedId: feed.id, silent: false },
         {
@@ -119,10 +123,10 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
           },
           onError: () => {
             toast.error('Failed to unfollow feed');
-            // Revert on error
-            queryClient.setQueryData(['feed', feed.id], (old: any) =>
-              old ? { ...old, is_subscribed: true } : old
-            );
+            setOptimisticFollowing(null);
+          },
+          onSettled: () => {
+            setLocalLoading(false);
           },
         }
       );
@@ -130,7 +134,7 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
       // Show folder picker to follow
       folderPickerRef.current?.present();
     }
-  }, [isFollowing, feed, deleteFeed, queryClient]);
+  }, [isFollowing, feed, deleteFeed]);
 
   const handleBack = useCallback(() => {
     // If we have a returnTo param, navigate there instead of going back
@@ -156,45 +160,39 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
         return;
       }
 
-      // Optimistic update if following current feed
-      if (!pendingSimilarFeedUrl && feed?.id) {
-        queryClient.setQueryData(['feed', feed.id], (old: any) =>
-          old ? { ...old, is_subscribed: true } : old
-        );
+      const isMainFeed = !pendingSimilarFeedUrl;
+      if (isMainFeed) {
+        setLocalLoading(true);
       }
 
       try {
-        await toast.promise(
-          createFeed.mutateAsync({
-            url: feedUrlToFollow,
-            folder_id: folderId || '',
-          }),
-          {
-            loading: 'Following feed...',
-            success: pendingSimilarFeedUrl
-              ? 'Following feed!'
-              : `Following ${feed?.title || 'feed'}!`,
-            error: 'Failed to follow feed',
-          }
+        await createFeed.mutateAsync({
+          url: feedUrlToFollow,
+          folder_id: folderId || '',
+        });
+
+        toast.success(
+          pendingSimilarFeedUrl ? 'Following feed!' : `Following ${feed?.title || 'feed'}!`
         );
 
+        if (isMainFeed) {
+          setOptimisticFollowing(true);
+        }
         setPendingSimilarFeedUrl(null);
 
         // If we just followed the current feed (not a similar feed)
-        if (!pendingSimilarFeedUrl && feed?.id) {
+        if (isMainFeed && feed?.id) {
           // Invalidate the feed cache to ensure the Following screen gets updated data
           queryClient.invalidateQueries({
-            queryKey: ['feeds', feed.id],
+            queryKey: queryKeys.feed(feed.id),
           });
         }
-      } catch (error: any) {
+      } catch (_error: any) {
         setPendingSimilarFeedUrl(null);
-
-        // Revert optimistic update on error
-        if (!pendingSimilarFeedUrl && feed?.id) {
-          queryClient.setQueryData(['feed', feed.id], (old: any) =>
-            old ? { ...old, is_subscribed: false } : old
-          );
+        toast.error('Failed to follow feed');
+      } finally {
+        if (isMainFeed) {
+          setLocalLoading(false);
         }
       }
     },
@@ -261,7 +259,7 @@ export function FeedPreviewScreen({ feedId, initialData }: FeedPreviewScreenProp
             feed={feed}
             isFollowing={isFollowing}
             isFeedDead={isFeedDead}
-            isFollowLoading={createFeed.isPending || deleteFeed.isPending}
+            isFollowLoading={localLoading}
             onBack={handleBack}
             onFollow={handleFollowPress}
             colors={colors}

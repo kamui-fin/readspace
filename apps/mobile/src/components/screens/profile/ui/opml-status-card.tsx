@@ -1,5 +1,14 @@
+import CheckCircleLinearIcon from '@components/icons/solar/check-circle-linear';
+import ClockCircleLinearIcon from '@components/icons/solar/clock-circle-linear';
+import CloseCircleLinearIcon from '@components/icons/solar/close-circle-linear';
+import DocumentTextBoldIcon from '@components/icons/solar/document-text-bold';
+import { Button } from '@components/ui/button';
+import { Text } from '@components/ui/text';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
+import { useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
-import { View, TextInput } from 'react-native';
+import { TextInput, View } from 'react-native';
 import Animated, {
   interpolateColor,
   useAnimatedProps,
@@ -9,15 +18,6 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { Text } from '@components/ui/text';
-import { Button } from '@components/ui/button';
-import { COLORS } from '@lib/constants/colors';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { useRouter } from 'expo-router';
-import CheckCircleLinearIcon from '@components/icons/solar/check-circle-linear';
-import CloseCircleLinearIcon from '@components/icons/solar/close-circle-linear';
-import ClockCircleLinearIcon from '@components/icons/solar/clock-circle-linear';
-import DocumentTextBoldIcon from '@components/icons/solar/document-text-bold';
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 

@@ -3,6 +3,7 @@ import { HeaderTabs } from '@components/navigation/header/ui/header-tabs';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import clsx from 'clsx';
+import Constants from 'expo-constants';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
@@ -10,7 +11,6 @@ import Animated, {
   Easing,
   Extrapolation,
   interpolate,
-  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -32,12 +32,15 @@ export const Header: React.FC<HeaderProps> = (props) => {
     titleFontWeight = 'bold',
     titleSize,
     transparentBackground = false,
+    className,
+    rightElement,
   } = props;
 
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const headerBgColor = transparentBackground ? 'transparent' : colors.card;
   const insets = useSafeAreaInsets();
+  const safeAreaTop = insets.top > 0 ? insets.top : Constants.statusBarHeight;
 
   const [foregroundHeightState, setForegroundHeight] = useState(0);
   const [tabsHeight, setTabsHeight] = useState(0);
@@ -69,12 +72,15 @@ export const Header: React.FC<HeaderProps> = (props) => {
 
   useEffect(() => {
     if (variant === 'tabbed') {
-      const totalHeight = insets.top + 10 + foregroundHeightState + tabsHeight;
-      if (totalHeight > 0 && onHeaderHeightChange) {
-        onHeaderHeightChange(totalHeight);
+      // Only report height when both foreground and tabs have been measured
+      if (foregroundHeightState > 0 && tabsHeight > 0) {
+        const totalHeight = safeAreaTop + 10 + foregroundHeightState + tabsHeight;
+        if (onHeaderHeightChange) {
+          onHeaderHeightChange(totalHeight);
+        }
       }
     }
-  }, [foregroundHeightState, tabsHeight, onHeaderHeightChange, variant, insets.top]);
+  }, [foregroundHeightState, tabsHeight, onHeaderHeightChange, variant, safeAreaTop]);
 
   const handleForegroundLayout = useCallback(
     (e: { nativeEvent: { layout: { height: number } } }) => {
@@ -147,26 +153,45 @@ export const Header: React.FC<HeaderProps> = (props) => {
         : 0;
 
     const isSticky = clampedScrollY > 50; // Threshold to consider sticky
-    const animatedPaddingTop = withTiming(isSticky ? insets.top : insets.top + 10, {
-      duration: 200,
-      easing: Easing.out(Easing.quad),
-    });
 
-    const shadowOpacity = withTiming(isSticky ? (isDark ? 0.22 : 0.06) : 0, {
-      duration: 200,
-    });
+    // Prevent animating values on initial mount (when foregroundHeight is still 0)
+    // to avoid the header starting offset/high and sliding down.
+    const targetPaddingTop = isSticky ? safeAreaTop : safeAreaTop + 10;
+    const animatedPaddingTop =
+      foregroundHeight.value === 0
+        ? targetPaddingTop
+        : withTiming(targetPaddingTop, {
+            duration: 200,
+            easing: Easing.out(Easing.quad),
+          });
 
-    const shadowRadius = withTiming(isSticky ? 8 : 0, {
-      duration: 200,
-    });
+    const shadowOpacity =
+      foregroundHeight.value === 0
+        ? 0
+        : withTiming(isSticky ? (isDark ? 0.22 : 0.06) : 0, {
+            duration: 200,
+          });
 
-    const shadowOffsetHeight = withTiming(isSticky ? 3 : 0, {
-      duration: 200,
-    });
+    const shadowRadius =
+      foregroundHeight.value === 0
+        ? 0
+        : withTiming(isSticky ? 8 : 0, {
+            duration: 200,
+          });
 
-    const elevation = withTiming(isSticky ? 4 : 0, {
-      duration: 200,
-    });
+    const shadowOffsetHeight =
+      foregroundHeight.value === 0
+        ? 0
+        : withTiming(isSticky ? 3 : 0, {
+            duration: 200,
+          });
+
+    const elevation =
+      foregroundHeight.value === 0
+        ? 0
+        : withTiming(isSticky ? 4 : 0, {
+            duration: 200,
+          });
 
     return {
       position: 'absolute' as const,
@@ -277,7 +302,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
   const animatedContainerStyle = useAnimatedStyle(() => {
     if (variant === 'sticky' && scrollY && scrollDirection) {
       const totalHeight = foregroundHeight.value + bottomContentHeight.value;
-      const paddingTop = insets.top + 10;
+      const paddingTop = safeAreaTop + 10;
 
       if (totalHeight === 0) {
         return {
@@ -404,6 +429,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
       titleSize={titleSize}
       colors={colors}
       onLayout={handleForegroundLayout}
+      rightElement={rightElement}
     />
   );
 
@@ -428,7 +454,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
     if (!scrollY || !scrollDirection) {
       return (
         <View
-          className={clsx(headerContainerVariants({ variant }))}
+          className={clsx(headerContainerVariants({ variant }), className)}
           onLayout={handleStickyContainerLayout}
           style={{
             position: 'absolute',
@@ -436,7 +462,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
             left: 0,
             right: 0,
             zIndex: 10,
-            paddingTop: insets.top + 10,
+            paddingTop: safeAreaTop + 10,
             backgroundColor: headerBgColor,
           }}>
           {renderForeground()}
@@ -448,7 +474,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
     // Sticky header with scroll animations
     return (
       <Animated.View
-        className={clsx(headerContainerVariants({ variant }))}
+        className={clsx(headerContainerVariants({ variant }), className)}
         style={[animatedContainerStyle, { backgroundColor: headerBgColor }]}>
         <Animated.View style={animatedForegroundStyle}>
           {renderForeground()}
@@ -467,10 +493,10 @@ export const Header: React.FC<HeaderProps> = (props) => {
   if (variant === 'static') {
     return (
       <View
-        className={clsx(headerContainerVariants({ variant }), 'pb-5')}
+        className={clsx(headerContainerVariants({ variant }), 'pb-2', className)}
         style={{
           backgroundColor: headerBgColor,
-          paddingTop: insets.top + 10,
+          paddingTop: safeAreaTop + 10,
         }}>
         {renderForeground()}
       </View>
@@ -480,9 +506,9 @@ export const Header: React.FC<HeaderProps> = (props) => {
   // Sticky and Tabbed variants - with animations
   return (
     <Animated.View
-      className={clsx(headerContainerVariants({ variant }))}
+      className={clsx(headerContainerVariants({ variant }), className)}
       style={[
-        { paddingTop: insets.top + 10, backgroundColor: headerBgColor },
+        { paddingTop: safeAreaTop + 10, backgroundColor: headerBgColor },
         animatedHeaderStyle,
       ]}>
       <Animated.View style={animatedForegroundStyle}>{renderForeground()}</Animated.View>

@@ -143,13 +143,22 @@ async def configure_meilisearch_index(
                             {
                                 "model": "models/gemini-embedding-001",
                                 "content": {"parts": [{"text": "{{text}}"}]},
-                                "outputDimensionality": 768,
+                                "outputDimensionality": 768
                             },
-                            "{{..}}",
-                        ],
+                            "{{..}}"
+                        ]
                     },
-                    "response": {"embeddings": [{"values": "{{embedding}}"}, "{{..}}"]},
-                    "headers": {"x-goog-api-key": settings.GEMINI_API_KEY},
+                    "response": {
+                        "embeddings": [
+                            {
+                                "values": "{{embedding}}"
+                            },
+                            "{{..}}"
+                        ]
+                    },
+                    "headers": {
+                        "x-goog-api-key": settings.GEMINI_API_KEY
+                    }
                 }
             }
         }
@@ -215,31 +224,39 @@ async def configure_meilisearch_index(
         }
 
         # Configure embedders only if AI is enabled
-    # DISABLED: Vector search is temporarily disabled as per migration plan
-    # if settings.ENABLE_AI:
-    #     settings_dict["embedders"] = {
-    #         "default": {
-    #             "source": "rest",
-    #             "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents",
-    #             "dimensions": 768,
-    #             "documentTemplate": "{{doc.title}} {{doc.description}}",
-    #             "request": {
-    #                 "requests": [
-    #                     {
-    #                         "model": "models/gemini-embedding-001",
-    #                         "content": {"parts": [{"text": "{{text}}"}]},
-    #                         "outputDimensionality": 768,
-    #                     },
-    #                     "{{..}}",
-    #                 ],
-    #             },
-    #             "response": {"embeddings": [{"values": "{{embedding}}"}, "{{..}}"]},
-    #             "headers": {"x-goog-api-key": settings.GEMINI_API_KEY},
-    #         }
-    #     }
-    #     logger.info("ai_enabled_configuring_embedders", index=index_name)
-    # else:
-    logger.info("vector_search_disabled_skipping_embedders", index=index_name)
+        if settings.ENABLE_AI:
+            settings_dict["embedders"] = {
+                "default": {
+                    "source": "rest",
+                    "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents",
+                    "dimensions": 768,
+                    "documentTemplate": "{{doc.title}} {{doc.description}}",
+                    "request": {
+                        "requests": [
+                            {
+                                "model": "models/gemini-embedding-001",
+                                "content": {"parts": [{"text": "{{text}}"}]},
+                                "outputDimensionality": 768
+                            },
+                            "{{..}}"
+                        ]
+                    },
+                    "response": {
+                        "embeddings": [
+                            {
+                                "values": "{{embedding}}"
+                            },
+                            "{{..}}"
+                        ]
+                    },
+                    "headers": {
+                        "x-goog-api-key": settings.GEMINI_API_KEY
+                    }
+                }
+            }
+            logger.info("ai_enabled_configuring_embedders", index=index_name)
+        else:
+            logger.info("vector_search_disabled_skipping_embedders", index=index_name)
 
     # Create Pydantic model from dict
     # The SDK will automatically convert snake_case to camelCase for the API

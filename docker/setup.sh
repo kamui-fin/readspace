@@ -411,6 +411,7 @@ cat <<EOF > "$PROJECT_ROOT/server/.env"
 SUPABASE_URL=http://localhost:18000
 SUPABASE_JWT_SECRET=${JWT_SECRET}
 SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
+SUPABASE_ANON_KEY=${ANON_KEY}
 
 # Database Configuration
 # API uses Session Mode (port 5432) with QueuePool for persistent connections
@@ -418,8 +419,6 @@ SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
 DATABASE_URL_API=postgresql://postgres.postgres:${POSTGRES_PASSWORD}@localhost:5432/postgres
 DATABASE_URL_WORKER=postgresql://postgres.postgres:${POSTGRES_PASSWORD}@localhost:6543/postgres
 
-# RabbitMQ Configuration for Taskiq
-RABBITMQ_URL=amqp://guest:guest@localhost:5672/
 
 # Meilisearch Configuration (master key for admin operations)
 MEILISEARCH_URL=http://localhost:7700
@@ -442,6 +441,7 @@ cat <<EOF > "$PROJECT_ROOT/server/.env"
 SUPABASE_URL=http://kong:8000
 SUPABASE_JWT_SECRET=${JWT_SECRET}
 SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
+SUPABASE_ANON_KEY=${ANON_KEY}
 
 # Database Configuration
 # API uses Session Mode (port 5432) with QueuePool for persistent connections
@@ -449,8 +449,6 @@ SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
 DATABASE_URL_API=postgresql://postgres.postgres:${POSTGRES_PASSWORD}@db:5432/postgres
 DATABASE_URL_WORKER=postgresql://postgres.postgres:${POSTGRES_PASSWORD}@supavisor:6543/postgres
 
-# RabbitMQ Configuration for Taskiq
-RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
 
 # Meilisearch Configuration (master key for admin operations)
 MEILISEARCH_URL=http://meilisearch:7700
@@ -461,7 +459,7 @@ MEILISEARCH_INDEX_NAME=feeds
 ENABLE_AI=${ENABLE_AI}
 GEMINI_API_KEY=${GEMINI_API_KEY}
 GEMINI_MODEL=gemini-2.5-flash-lite
-GEMINI_EMBEDDING_MODEL=text-embedding-004
+GEMINI_EMBEDDING_MODEL=gemini-embedding-001
 
 # RSShub Configuration
 RSSHUB_URL=${RSSHUB_URL}

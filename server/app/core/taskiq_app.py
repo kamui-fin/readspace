@@ -6,8 +6,7 @@ import os
 from taskiq import AsyncBroker, InMemoryBroker, PrometheusMiddleware, TaskiqScheduler
 from taskiq.middlewares import SmartRetryMiddleware
 from taskiq.schedule_sources import LabelScheduleSource
-from taskiq_aio_pika import AioPikaBroker
-from taskiq_redis import ListRedisScheduleSource, RedisAsyncResultBackend
+from taskiq_redis import ListRedisScheduleSource, RedisAsyncResultBackend, RedisStreamBroker
 
 from app.core.config import get_settings
 from app.core.logging_config import setup_logging
@@ -34,17 +33,11 @@ else:
         keep_results=False,  # Remove results after reading
     )
 
-    # Create AioPika broker for RabbitMQ
-    # Note: RabbitMQ URL format: amqp://username:password@host:port/vhost
-    rabbitmq_url = getattr(settings, "RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
-
-    broker = AioPikaBroker(
-        url=rabbitmq_url,
+    # Create RedisStreamBroker
+    # This uses Redis Streams for reliable at-least-once delivery with acknowledgements
+    broker = RedisStreamBroker(
+        url=settings.REDIS_URL,
         queue_name="taskiq_tasks",
-        max_priority=10,  # Enable task priorities
-        qos=50,  # Prefetch 50 messages per worker process (balances throughput with memory usage)
-        declare_exchange=True,
-        exchange_name="taskiq_exchange",
     ).with_result_backend(result_backend)
 
     # Add middlewares for retry and metrics

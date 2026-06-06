@@ -8,7 +8,7 @@ export function ArticleCardSkeleton() {
       {/* Content on left */}
       <View className="flex-1">
         {/* Feed name and timestamp header */}
-        <View className="mb-2 flex-row items-center gap-2">
+        <View className="mb-3 flex-row items-center gap-1.5">
           {/* Favicon skeleton */}
           <Skeleton variant="rectangle" width={16} height={16} className="rounded-sm" />
           {/* Feed name skeleton */}
@@ -18,7 +18,7 @@ export function ArticleCardSkeleton() {
         </View>
 
         {/* Title - 3 lines */}
-        <View className="mb-2 gap-1">
+        <View className="mb-1 gap-1">
           <Skeleton variant="text" height={20} width="100%" />
           <Skeleton variant="text" height={20} width="90%" />
           <Skeleton variant="text" height={20} width="75%" />

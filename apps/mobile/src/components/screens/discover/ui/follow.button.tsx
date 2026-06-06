@@ -2,35 +2,36 @@ import {
   FolderPickerBottomSheet,
   type FolderPickerBottomSheetRef,
 } from '@components/bottom-sheets/folder-picker';
+import TrashBinTrashBoldIcon from '@components/icons/solar/trash-bin-trash-bold';
 import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { useCreateFeed, useDeleteFeed, useFeeds } from '@readspace/shared';
+import { useLimitChecker } from '@hooks/useLimitChecker';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
-import TrashBinTrashBoldIcon from '@components/icons/solar/trash-bin-trash-bold';
 
-const followButtonVariants = cva('flex-row items-center gap-2 border', {
+const followButtonVariants = cva('flex-row items-center gap-2', {
   variants: {
     variant: {
       default: 'rounded-full px-4 py-2',
-      large: 'rounded-2xl px-6 py-3 justify-center',
+      large: 'rounded-full px-6 py-3 justify-center',
     },
     following: {
       true: '',
-      false: '',
+      false: 'border',
     },
   },
   compoundVariants: [
     {
       variant: 'default',
       following: true,
-      class: 'border-grey4 ',
+      class: '',
     },
     {
       variant: 'default',
@@ -40,7 +41,7 @@ const followButtonVariants = cva('flex-row items-center gap-2 border', {
     {
       variant: 'large',
       following: true,
-      class: 'border border-grey4 bg-background  ',
+      class: 'bg-background',
     },
     {
       variant: 'large',
@@ -96,6 +97,7 @@ export function FollowButton({
   const createFeed = useCreateFeed();
   const deleteFeed = useDeleteFeed();
   const { data: userFeeds } = useFeeds();
+  const { checkAndTriggerUpgrade } = useLimitChecker();
 
   // Track optimistic state
   const [optimisticFollowing, setOptimisticFollowing] = useState<boolean | null>(null);
@@ -118,6 +120,9 @@ export function FollowButton({
   const handleFolderSelect = (folderId: string | null) => {
     if (!feedUrl) {
       toast.error('Cannot subscribe: Missing Feed URL');
+      return;
+    }
+    if (!checkAndTriggerUpgrade('feed')) {
       return;
     }
     setOptimisticFollowing(true);
@@ -158,6 +163,9 @@ export function FollowButton({
       );
     } else {
       // Follow
+      if (!checkAndTriggerUpgrade('feed')) {
+        return;
+      }
       if (!showFolderPicker && onFollowRequest && feedUrl) {
         // Onboarding flow: use custom follow handler
         setOptimisticFollowing(true);

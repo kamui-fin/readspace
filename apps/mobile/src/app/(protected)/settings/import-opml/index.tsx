@@ -1,4 +1,7 @@
+import { OPMLImportBottomSheet } from '@components/bottom-sheets/opml-import';
+import DocumentTextBoldIcon from '@components/icons/solar/document-text-bold';
 import { Header } from '@components/navigation/header';
+import { OPMLStatusCard } from '@components/screens/profile/ui/opml-status-card';
 import { SettingsGroup } from '@components/screens/profile/ui/settings-group';
 import { SettingsItem } from '@components/screens/profile/ui/settings-item';
 import { Spinner } from '@components/ui/spinner';
@@ -14,16 +17,13 @@ import {
   useActiveImportTask,
   useImportTaskStatus,
 } from '@readspace/shared';
+import { useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQueryClient } from '@tanstack/react-query';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import DocumentTextBoldIcon from '@components/icons/solar/document-text-bold';
-import { OPMLImportBottomSheet } from '@components/bottom-sheets/opml-import';
-import { OPMLStatusCard } from '@components/screens/profile/ui/opml-status-card';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ImportOPMLScreen() {
   const router = useRouter();

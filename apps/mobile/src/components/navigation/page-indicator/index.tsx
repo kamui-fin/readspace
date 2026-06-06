@@ -42,6 +42,8 @@ export function PageIndicator({
             style={{
               height: size,
               marginHorizontal: gap / 2,
+              borderRadius: size / 2,
+              overflow: 'hidden',
             }}>
             {/* Inactive background */}
             <View

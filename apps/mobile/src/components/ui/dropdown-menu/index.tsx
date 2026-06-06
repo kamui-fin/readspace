@@ -164,10 +164,7 @@ const DropdownMenuSeparator = DropdownMenu.create(
     className,
     ...props
   }: { className?: string } & ComponentProps<typeof DropdownMenu.Separator>) => (
-    <DropdownMenu.Separator
-      {...props}
-      className={clsx('my-1 h-px bg-grey4 ', className)}
-    />
+    <DropdownMenu.Separator {...props} className={clsx('my-1 h-px bg-grey4 ', className)} />
   ),
   'Separator'
 );
@@ -215,10 +212,7 @@ const DropdownMenuLabel = DropdownMenu.create(
   ({ className, ...props }: { className?: string } & ComponentProps<typeof DropdownMenu.Label>) => (
     <DropdownMenu.Label
       {...props}
-      className={clsx(
-        'px-2 py-1.5 font-geist-semibold text-sm text-grey ',
-        className
-      )}
+      className={clsx('px-2 py-1.5 font-geist-semibold text-sm text-grey ', className)}
     />
   ),
   'Label'

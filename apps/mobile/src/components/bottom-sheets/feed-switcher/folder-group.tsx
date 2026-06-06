@@ -15,13 +15,13 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
+import { Text } from '@components/ui/text';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import type { Folder, Subscription } from '@readspace/shared';
 import { AnimatePresence, MotiView } from 'moti';
 import { memo } from 'react';
 import { View } from 'react-native';
-import { Text } from '@components/ui/text';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { FeedListItem } from './feed-list-item';
 
 export interface FolderGroupProps {

@@ -1,9 +1,17 @@
+import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { PAGE_INDICATOR, SPACING } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import type React from 'react';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Platform, useWindowDimensions, View } from 'react-native';
+import {
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PageIndicator } from '../page-indicator';
 
@@ -11,6 +19,7 @@ interface StepperProps {
   pages: React.ReactNode[];
   onStepChange?: (currentStep: number) => void;
   initialStep?: number;
+  onFirstStepBack?: () => void;
 }
 
 export interface StepperRef {
@@ -21,7 +30,7 @@ export interface StepperRef {
 }
 
 export const Stepper = forwardRef<StepperRef, StepperProps>(
-  ({ pages, onStepChange, initialStep = 0 }, ref) => {
+  ({ pages, onStepChange, initialStep = 0, onFirstStepBack }, ref) => {
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
     const { width, height } = useWindowDimensions();
@@ -38,28 +47,34 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
 
     const topPadding = SPACING.getOnboardingTopPadding(height) * 0.7;
 
+    const goToNext = () => {
+      if (current < pages.length - 1) {
+        setDirection('forward');
+        setCurrent(current + 1);
+      }
+    };
+
+    const goToPrevious = () => {
+      if (current > 0) {
+        setDirection('backward');
+        setCurrent(current - 1);
+      }
+    };
+
+    const goToStep = (step: number) => {
+      if (step >= 0 && step < pages.length) {
+        setDirection(step > current ? 'forward' : 'backward');
+        setCurrent(step);
+      }
+    };
+
     // Expose methods to parent via ref
     useImperativeHandle(
       ref,
       () => ({
-        goToNext: () => {
-          if (current < pages.length - 1) {
-            setDirection('forward');
-            setCurrent(current + 1);
-          }
-        },
-        goToPrevious: () => {
-          if (current > 0) {
-            setDirection('backward');
-            setCurrent(current - 1);
-          }
-        },
-        goToStep: (step: number) => {
-          if (step >= 0 && step < pages.length) {
-            setDirection(step > current ? 'forward' : 'backward');
-            setCurrent(step);
-          }
-        },
+        goToNext,
+        goToPrevious,
+        goToStep,
         getCurrentStep: () => current,
       }),
       [current, pages.length]
@@ -106,15 +121,42 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View className="bg-screen flex-1">
-          {/* Page Indicator */}
+        <View className="bg-screen flex-1" style={{ backgroundColor: colors.background }}>
+          {/* Page Indicator and Back Button */}
           <View
             style={{
               paddingHorizontal: stepperHorizontalPadding,
               paddingTop: 1.2 * insets.top,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}>
+            {(current > 0 || onFirstStepBack) && (
+              <TouchableOpacity
+                onPress={() => {
+                  if (current > 0) {
+                    goToPrevious();
+                  } else if (onFirstStepBack) {
+                    onFirstStepBack();
+                  }
+                }}
+                style={{
+                  position: 'absolute',
+                  left: stepperHorizontalPadding,
+                  padding: 8,
+                  zIndex: 10,
+                }}
+                activeOpacity={0.7}>
+                <ArrowLeftLinearIcon
+                  width={24}
+                  height={24}
+                  strokeWidth={2.4}
+                  color={colors.primary_foreground}
+                />
+              </TouchableOpacity>
+            )}
             <PageIndicator
-              gap={0}
+              gap={8}
               color={colors.grey4}
               activeColor={colors.primary}
               size={indicatorSize}

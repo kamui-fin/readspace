@@ -1,19 +1,19 @@
+import LayersMinimalisticLinearIcon from '@components/icons/solar/layers-minimalistic-linear';
+import LinkMinimalistic2BoldIcon from '@components/icons/solar/link-minimalistic-2-bold';
+import UserCircleLinearIcon from '@components/icons/solar/user-circle-linear';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { BottomSheetInput } from '@components/ui/input';
-import { toast } from '@components/ui/toast';
 import { Text } from '@components/ui/text';
+import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { ApiClient, type FeedDiscoveryResult } from '@readspace/shared';
 import { useMutation } from '@tanstack/react-query';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { ActivityIndicator, Image, View, Keyboard, Linking, Pressable } from 'react-native';
-import UserCircleLinearIcon from '@components/icons/solar/user-circle-linear';
-import LayersMinimalisticLinearIcon from '@components/icons/solar/layers-minimalistic-linear';
-import LinkMinimalistic2BoldIcon from '@components/icons/solar/link-minimalistic-2-bold';
+import { ActivityIndicator, Image, Keyboard, Linking, Pressable, View } from 'react-native';
 
 export interface AddFeedBottomSheetRef {
   present: () => void;

@@ -19,14 +19,14 @@ import {
   useCreateFeed,
   useFeed,
   useFeeds,
+  useRefreshFeed,
   useUnreadCounts,
   useUpdateArticle,
-  useRefreshFeed,
 } from '@readspace/shared';
 import { useFeedViewStore } from '@stores/feed-view';
 import { getTabKey, getTabName, useFollowingStore } from '@stores/following';
-import { useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type NativeScrollEvent,

@@ -80,7 +80,6 @@ google-genai = "^1.35.0"
 trafilatura = "^1.12.2"
 defusedxml = "^0.7.1"
 brotli = "^1.1.0"
-taskiq-aio-pika = "^0.4.4"
 python-json-logger = "^4.0.0"
 prometheus-fastapi-instrumentator = "^7.1.0"
 taskiq = {extras = ["metrics", "reload"], version = "^0.11.20"}

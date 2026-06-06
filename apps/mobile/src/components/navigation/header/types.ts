@@ -20,10 +20,12 @@ export interface BaseHeaderProps {
   showBackButton?: boolean;
   onBackPress?: () => void;
   actions?: HeaderAction[];
+  rightElement?: ReactNode;
   bottomContent?: ReactNode; // Content to render below title (e.g., search bar)
   titleFontWeight?: 'bold' | 'semibold'; // Font weight for title
   titleSize?: 'default' | 'medium' | 'small' | 'xs'; // Size for title
   transparentBackground?: boolean; // If true, sets header background to transparent
+  className?: string; // Custom class for styling
 }
 
 export interface StaticHeaderProps extends BaseHeaderProps {

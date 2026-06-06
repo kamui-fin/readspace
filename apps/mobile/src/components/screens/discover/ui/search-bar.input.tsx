@@ -7,12 +7,12 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { forwardRef, useCallback } from 'react';
 import {
+  Keyboard,
   Platform,
   TextInput,
   type TextInputProps,
   TouchableOpacity,
   View,
-  Keyboard,
 } from 'react-native';
 
 export type Language = 'english' | 'chinese' | 'japanese';

@@ -31,8 +31,6 @@ class Settings(BaseSettings):
     # Redis Configuration (validated URL)
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    # RabbitMQ Configuration for Taskiq
-    RABBITMQ_URL: str = "amqp://guest:guest@localhost:5672/"
 
     # AI Configuration
     ENABLE_AI: bool = True  # Master switch for all AI functionality
@@ -41,7 +39,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_SMART_MODEL: str = "gemini-3.5-flash"  # For complex reasoning (e.g. enrichment)
     GEMINI_FAST_MODEL: str = "gemini-3.1-flash-lite"  # For high-volume continuous parsing (summaries, translation)
-    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"  # For embeddings
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"  # For embeddings
 
     # RSShub Configuration (validated URL)
     RSSHUB_URL: str = "http://localhost:1200"  # Default RSShub instance URL
@@ -96,13 +94,6 @@ class Settings(BaseSettings):
             raise ValueError(f"Redis URL must start with 'redis://': {v}")
         return v
 
-    @field_validator("RABBITMQ_URL")
-    @classmethod
-    def validate_rabbitmq_url(cls, v: str) -> str:
-        """Validate RabbitMQ URL format."""
-        if not v.startswith("amqp://"):
-            raise ValueError(f"RabbitMQ URL must start with 'amqp://': {v}")
-        return v
 
     @field_validator("RSSHUB_URL")
     @classmethod

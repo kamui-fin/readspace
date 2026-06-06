@@ -26,15 +26,15 @@ export const buttonVariants = cva('flex-row items-center justify-center relative
     },
     {
       variant: 'primary',
-      class: 'rounded-xl',
+      class: 'rounded-full',
     },
     {
       variant: 'secondary',
-      class: 'rounded-xl',
+      class: 'rounded-full',
     },
     {
       variant: 'ghost',
-      class: 'rounded-xl',
+      class: 'rounded-full',
     },
     {
       variant: 'icon',

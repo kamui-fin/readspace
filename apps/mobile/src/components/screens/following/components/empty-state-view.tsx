@@ -1,8 +1,8 @@
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
-import { RefreshControl, ScrollView, View } from 'react-native';
-import { EmptyState } from '@/components/ui/empty-state';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { RefreshControl, ScrollView, View } from 'react-native';
+import { EmptyState } from '@/components/ui/empty-state';
 
 import {
   DEFAULT_EMPTY_STATE_CONFIG,

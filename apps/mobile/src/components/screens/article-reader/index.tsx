@@ -4,7 +4,7 @@ import { ArticleHeader } from '@components/screens/article-reader/ui/article-hea
 import { useFavicon } from '@hooks/useFavicon';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-
+import { RenderHTML } from '@native-html/render';
 import type { Article } from '@readspace/shared';
 import { useMemo } from 'react';
 import {
@@ -16,7 +16,6 @@ import {
   View,
 } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
-import { RenderHTML } from '@native-html/render';
 
 export interface ArticleReaderProps {
   article: Article;

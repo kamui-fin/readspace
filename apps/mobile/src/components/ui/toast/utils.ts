@@ -17,18 +17,18 @@ export const getToastBackgroundColor = (
     return colors.grey6;
   }
 
-  // Premium colorful backgrounds in light mode
+  // Soft premium tinted backgrounds matching Readspace palette in light mode
   if (type === 'success') {
-    return 'rgb(240, 246, 238)'; // Beautiful soft forest green tint (secondary-foreground translucent blend)
+    return 'rgb(243, 249, 243)'; // Very soft forest green
   }
   if (type === 'error') {
-    return 'rgb(254, 238, 237)'; // Soft rose/red tint
+    return 'rgb(255, 245, 245)'; // Very soft rose red
   }
   if (type === 'promise' || type === 'info') {
-    return 'rgb(240, 244, 255)'; // Soft premium blue tint
+    return 'rgb(244, 247, 244)'; // Cohesive light green-grey (adhering to readspace theme)
   }
 
-  return colors.grey6;
+  return 'rgb(244, 247, 244)';
 };
 
 export const getToastTextColor = (
@@ -46,16 +46,41 @@ export const getToastTextColor = (
     return colors.primary_foreground;
   }
 
-  // Premium colorful high-contrast text in light mode
+  // High-contrast themed text in light mode
   if (type === 'success') {
-    return 'rgb(47, 68, 34)'; // Deep forest green
+    return '#2c4f32'; // Deep forest green (AAA contrast)
   }
   if (type === 'error') {
-    return 'rgb(180, 20, 10)'; // Deep contrast red
+    return '#a81c1c'; // Deep rose red (AAA contrast)
   }
   if (type === 'promise' || type === 'info') {
-    return 'rgb(20, 60, 160)'; // Deep contrast blue
+    return '#2c4f32'; // Deep themed forest green for info/promise
   }
 
-  return colors.primary_foreground;
+  return '#2c4f32';
+};
+
+export const getToastBorderColor = (
+  type: string,
+  colors: ThemeColors,
+  custom?: { borderColor?: string }
+) => {
+  if (custom?.borderColor) {
+    return custom.borderColor;
+  }
+
+  const isDark = colors === COLORS.dark;
+  if (isDark) {
+    return 'rgba(255, 255, 255, 0.05)'; // Very subtle border in dark mode
+  }
+
+  // Premium colorful borders in light mode matching Readspace palette
+  if (type === 'success') {
+    return 'rgba(56, 102, 65, 0.18)'; // Soft primary green border
+  }
+  if (type === 'error') {
+    return 'rgba(234, 67, 53, 0.18)'; // Soft red border
+  }
+  // Info, Promise, Custom, etc.
+  return 'rgba(56, 102, 65, 0.12)';
 };

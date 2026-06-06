@@ -116,6 +116,20 @@ export function useCreateFeed(
           };
         }
       );
+
+      // Update the individual feed detail cache instantly if it exists
+      if (newSubscription?.feed?.id) {
+        queryClient.setQueriesData<FeedDetail>(
+          { queryKey: queryKeys.feed(newSubscription.feed.id) },
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              is_subscribed: true,
+            };
+          }
+        );
+      }
     },
     onSettled: (data) => {
       queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, "list"], refetchType: 'all' });
@@ -289,6 +303,18 @@ export function useDeleteFeed(
             subscriptions: (old.subscriptions || []).filter(
               (s) => s.feed.id !== feedId,
             ),
+          };
+        },
+      );
+
+      // Update the individual feed detail cache instantly if it exists
+      queryClient.setQueriesData<FeedDetail>(
+        { queryKey: queryKeys.feed(feedId) },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            is_subscribed: false,
           };
         },
       );

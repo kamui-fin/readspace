@@ -1,13 +1,13 @@
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { BottomSheetInput } from '@components/ui/input';
+import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { useUpdateFeed } from '@readspace/shared';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { View } from 'react-native';
-import { Text } from '@components/ui/text';
 
 export interface RenameFeedModalRef {
   present: (feedId: string, currentName: string) => void;

@@ -20,8 +20,7 @@ services:
     image: getmeili/meilisearch:v1.16
     container_name: readspace_meilisearch
     restart: always
-    ports:
-      - "7700:7700"
+    network_mode: host
     volumes:
       - meilisearch-data:/meili_data
     environment:
@@ -35,9 +34,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 10s
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
 
   web:
     build:
@@ -73,8 +69,6 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
       meilisearch:
         condition: service_healthy
     volumes:
@@ -90,7 +84,6 @@ services:
       - SUPABASE_JWT_SECRET=${JWT_SECRET}
       - SUPABASE_URL=http://kong:8000
       - SUPABASE_DB_CONNECTION=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - MEILISEARCH_URL=http://meilisearch:7700
       - MEILISEARCH_MASTER_KEY=${MEILISEARCH_MASTER_KEY}
       - MEILISEARCH_INDEX_NAME=feeds
@@ -102,25 +95,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    container_name: readspace_rabbitmq
-    restart: always
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 10s
-    environment:
-      - RABBITMQ_DEFAULT_USER=guest
-      - RABBITMQ_DEFAULT_PASS=guest
-      - RABBITMQ_DEFAULT_VHOST=/
 
   worker:
     build:
@@ -133,8 +107,6 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
       meilisearch:
         condition: service_healthy
     extra_hosts:
@@ -142,7 +114,6 @@ services:
     environment:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - CORS_ORIGIN=http://web:8042
       - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - SUPABASE_JWT_SECRET=${JWT_SECRET}
@@ -165,14 +136,11 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - CORS_ORIGIN=http://web:8042
       - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - SUPABASE_JWT_SECRET=${JWT_SECRET}
@@ -238,7 +206,6 @@ services:
 
 volumes:
   redis-data:
-  rabbitmq-data:
   meilisearch-data:
   prometheus-data:
   grafana-data:

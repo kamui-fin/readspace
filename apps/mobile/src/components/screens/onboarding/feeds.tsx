@@ -1,13 +1,13 @@
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
-import { useOnboardingFeeds } from '@/hooks/useOnboardingFeeds';
 import { useCreateFeed } from '@readspace/shared';
 import { useOnboardingStore } from '@stores/onboarding';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useOnboardingFeeds } from '@/hooks/useOnboardingFeeds';
 
 export function FeedSelectionStep({ onNext }: { onNext: () => void }) {
   const insets = useSafeAreaInsets();

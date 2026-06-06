@@ -1,16 +1,16 @@
 import { buttonVariants } from '@components/ui/button/constants/button-variants';
 import { textVariants } from '@components/ui/button/constants/text-variants';
-import { ThreeDotsAnimation } from '@components/ui/three-dots';
+import { Text } from '@components/ui/text';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import type { VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import { type ReactNode, useMemo } from 'react';
-import { Pressable, type PressableProps, StyleSheet, View } from 'react-native';
-import { Text } from '@components/ui/text';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { ActivityIndicator, Pressable, type PressableProps, StyleSheet, View } from 'react-native';
 
 export interface ButtonProps
-  extends Omit<PressableProps, 'children'>, VariantProps<typeof buttonVariants> {
+  extends Omit<PressableProps, 'children'>,
+    VariantProps<typeof buttonVariants> {
   children: ReactNode;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
@@ -42,7 +42,7 @@ export function Button({
   // Check if children is text content (string, number, or Text component with text children)
   let isTextContent = typeof children === 'string' || typeof children === 'number';
   let textContent = children;
-  let textStyle;
+  let textStyle: any;
 
   // Handle Text component as children - extract its props
   if (!isTextContent && typeof children === 'object' && children !== null && 'props' in children) {
@@ -101,9 +101,7 @@ export function Button({
       disabled={isDisabled}
       {...props}>
       {loading ? (
-        <View style={{ transform: [{ scale: 3 }] }}>
-          <ThreeDotsAnimation color={dotColor} />
-        </View>
+        <ActivityIndicator color={dotColor} size="small" />
       ) : useCenteredLayout ? (
         // Medium/Small: Center everything together
         <View style={[styles.contentContainer, { gap }]}>

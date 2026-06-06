@@ -1,23 +1,8 @@
 import { supabase } from '@lib/supabase/client';
+import { resolveHostname } from '@lib/utils/network';
 import { ApiClient } from '@readspace/shared';
 import { getSettings } from '@stores/settings';
 import { Platform } from 'react-native';
-
-// Helper to resolve hostname for Android emulator
-const resolveHostname = (url: string): string => {
-  try {
-    const _url = new URL(url);
-    if (_url.hostname === 'localhost' && Platform.OS === 'android') {
-      _url.hostname = '10.0.2.2';
-    }
-    return _url.toString().replace(/\/$/, '');
-  } catch (e) {
-    if (url.includes('localhost') && Platform.OS === 'android') {
-      return url.replace('localhost', '10.0.2.2').replace(/\/$/, '');
-    }
-    return url.replace(/\/$/, '');
-  }
-};
 
 /**
  * Configure the API client with the current settings from the store.

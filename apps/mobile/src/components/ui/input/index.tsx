@@ -1,3 +1,4 @@
+import { Text } from '@components/ui/text';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useOnFocus } from '@hooks/useOnFocus';
@@ -14,7 +15,6 @@ import {
   type TextStyle,
   View,
 } from 'react-native';
-import { Text } from '@components/ui/text';
 
 type InputProps = Omit<RNTextInputProps, 'style' | 'className'> & {
   leftElement?: JSX.Element;
@@ -172,7 +172,9 @@ const InputBase = forwardRef((props: InputProps & { TextInputComponent: any }, r
           multiline={multiline}
           {...rest}
         />
-        {rightElement && <View style={{ marginLeft: 'auto', paddingRight: 8 }}>{rightElement}</View>}
+        {rightElement && (
+          <View style={{ marginLeft: 'auto', paddingRight: 8 }}>{rightElement}</View>
+        )}
       </View>
       {helperText ? (
         <Text

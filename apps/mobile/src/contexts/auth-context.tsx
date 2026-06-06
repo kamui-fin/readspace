@@ -1,14 +1,14 @@
 import { configureApiClient } from '@lib/api-client';
 import { supabase } from '@lib/supabase/client';
+import { useFeedSwitcherStore } from '@stores/feed-switcher';
+import { useFeedViewStore } from '@stores/feed-view';
+import { useFollowingStore } from '@stores/following';
+import { useOnboardingStore } from '@stores/onboarding';
+import { useSearchHistory } from '@stores/search-history';
 import type { Session, User } from '@supabase/supabase-js';
 import { useRouter, useSegments } from 'expo-router';
 import type React from 'react';
 import { createContext, use, useEffect, useState } from 'react';
-import { useFeedViewStore } from '@stores/feed-view';
-import { useFollowingStore } from '@stores/following';
-import { useFeedSwitcherStore } from '@stores/feed-switcher';
-import { useOnboardingStore } from '@stores/onboarding';
-import { useSearchHistory } from '@stores/search-history';
 
 interface SignUpCredentials {
   email: string;
@@ -38,10 +38,10 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isLoading: true,
   isNewSignup: false,
-  signOut: async () => { },
-  signIn: async () => { },
-  signUp: async () => { },
-  signInWithGoogle: async () => { },
+  signOut: async () => {},
+  signIn: async () => {},
+  signUp: async () => {},
+  signInWithGoogle: async () => {},
 });
 
 export function useSession() {
