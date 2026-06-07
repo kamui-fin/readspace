@@ -89,7 +89,12 @@ export function useFavicon({
           height: size,
           backgroundColor,
         }}>
-        <LocalRssIcon width={size * 0.6} height={size * 0.6} fill={COLORS.light.grey} />
+        <LocalRssIcon
+          width={size * 0.6}
+          height={size * 0.6}
+          color={COLORS.light.grey}
+          fill={COLORS.light.grey}
+        />
       </View>
     );
   }, [backgroundColor]);

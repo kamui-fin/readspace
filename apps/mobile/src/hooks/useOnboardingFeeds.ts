@@ -1,6 +1,7 @@
 import { FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { InteractionManager } from 'react-native';
 
 export type OnboardingFeed = {
   id: string;
@@ -15,6 +16,14 @@ export type OnboardingFeed = {
 
 export function useOnboardingFeeds(selectedCategories: string[] = []) {
   const [displayedFeeds, setDisplayedFeeds] = useState<OnboardingFeed[]>([]);
+  const [isTransitionComplete, setIsTransitionComplete] = useState(false);
+
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      setIsTransitionComplete(true);
+    });
+    return () => task.cancel();
+  }, []);
 
   const {
     data: feedsData,
@@ -77,7 +86,7 @@ export function useOnboardingFeeds(selectedCategories: string[] = []) {
 
       return interleavedFeeds;
     },
-    enabled: selectedCategories.length > 0,
+    enabled: selectedCategories.length > 0 && isTransitionComplete,
   });
 
   useEffect(() => {
@@ -126,7 +135,7 @@ export function useOnboardingFeeds(selectedCategories: string[] = []) {
   };
 
   return {
-    displayedFeeds,
+    displayedFeeds: displayedFeeds.length > 0 ? displayedFeeds : feedsData || [],
     isLoading,
     error,
     fetchSimilarFeeds,

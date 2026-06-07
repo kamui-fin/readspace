@@ -16,19 +16,19 @@ export function FeedListSkeleton({ count = 5 }: FeedListSkeletonProps) {
   return (
     <View className="gap-4">
       {skeletonKeys.map((key) => (
-        <View key={key} className="flex-row items-center gap-4">
+        <View key={key} className="flex-row items-center gap-4 py-1">
           {/* Icon skeleton */}
-          <Skeleton className="h-12 w-12 rounded-lg" />
+          <Skeleton variant="rectangle" width={48} height={48} className="rounded-lg" />
 
           {/* Content skeleton */}
-          <View className="flex-1 gap-2">
-            <Skeleton className="h-4 w-3/4 rounded" />
-            <Skeleton className="h-3 w-full rounded" />
-            <Skeleton className="h-3 w-2/3 rounded" />
+          <View className="flex-1 gap-1.5">
+            <Skeleton variant="text" width="75%" height={16} className="rounded" />
+            <Skeleton variant="text" width="100%" height={12} className="rounded" />
+            <Skeleton variant="text" width="66%" height={12} className="rounded" />
           </View>
 
           {/* Button skeleton */}
-          <Skeleton className="h-8 w-20 rounded-full" />
+          <Skeleton variant="rectangle" width={80} height={32} className="rounded-full" />
         </View>
       ))}
     </View>

@@ -26,7 +26,6 @@ interface ArticleOptionsBottomSheetProps {
   hasTranslatedContent: boolean;
   canExtractContent: boolean;
   isClipped: boolean;
-  isSubscribed?: boolean;
 }
 
 export const ArticleOptionsBottomSheet = forwardRef<
@@ -46,7 +45,6 @@ export const ArticleOptionsBottomSheet = forwardRef<
       hasTranslatedContent,
       canExtractContent,
       isClipped,
-      isSubscribed = true,
     },
     ref
   ) => {
@@ -120,7 +118,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
             Actions
           </Text>
           <View className="mb-4">
-            {!isClipped && isSubscribed &&
+            {!isClipped &&
               renderOption(
                 <SparkleIcon width={22} height={22} color={greyColor} fill={greyColor} />,
                 'Generate AI Summary',
@@ -128,7 +126,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
                 onGenerateSummary
               )}
 
-            {!isClipped && isSubscribed &&
+            {!isClipped &&
               renderOption(
                 <EarthBoldIcon width={22} height={22} color={greyColor} />,
                 hasTranslatedContent ? 'Translate to a different language' : 'Translate Article',
@@ -181,11 +179,10 @@ export const ArticleOptionsBottomSheet = forwardRef<
                 canExtractContent && !hasExtractedContent ? 'Extract Full Text' : 'Full Text',
                 'Extracted from original site',
                 () => onSelectView('extracted'),
-                currentView === 'extracted',
-                !canExtractContent && !hasExtractedContent
+                currentView === 'extracted'
               )}
 
-            {isSubscribed && renderOption(
+            {renderOption(
               <EarthBoldIcon
                 width={22}
                 height={22}

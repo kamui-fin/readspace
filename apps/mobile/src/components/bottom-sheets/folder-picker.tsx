@@ -10,7 +10,7 @@ import { Radio } from '@components/ui/radio';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { useFeeds } from '@readspace/shared';
-import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { View } from 'react-native';
 
 export interface FolderPickerBottomSheetRef {
@@ -22,6 +22,9 @@ export interface FolderPickerBottomSheetProps {
   onFolderSelect: (folderId: string | null) => void;
   initialFolderId?: string | null;
 }
+
+// Memory cache to preserve user folder preference during application lifetime
+let lastSelectedFolderId: string | null = null;
 
 export const FolderPickerBottomSheet = forwardRef<
   FolderPickerBottomSheetRef,
@@ -35,16 +38,40 @@ export const FolderPickerBottomSheet = forwardRef<
     dismiss: () => bottomSheetRef.current?.dismiss(),
   }));
 
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(initialFolderId ?? null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
+    initialFolderId ?? lastSelectedFolderId
+  );
   const { data: feedsData } = useFeeds();
   const folders = feedsData?.folders || [];
   const typedFolders = (folders as { id: string; name: string }[]) || [];
+
+  // Guarantee that one option is selected at all times when folders exist
+  useEffect(() => {
+    if (typedFolders.length > 0) {
+      const isValid = typedFolders.some((f) => f.id === selectedFolderId);
+      if (!isValid) {
+        const isLastValid = lastSelectedFolderId
+          ? typedFolders.some((f) => f.id === lastSelectedFolderId)
+          : false;
+        if (isLastValid && lastSelectedFolderId) {
+          setSelectedFolderId(lastSelectedFolderId);
+        } else {
+          setSelectedFolderId(typedFolders[0].id);
+        }
+      }
+    } else {
+      setSelectedFolderId(null);
+    }
+  }, [typedFolders, selectedFolderId]);
 
   const handleSelect = useCallback((folderId: string | null) => {
     setSelectedFolderId(folderId);
   }, []);
 
   const handleConfirm = useCallback(() => {
+    if (selectedFolderId) {
+      lastSelectedFolderId = selectedFolderId;
+    }
     onFolderSelect(selectedFolderId);
     bottomSheetRef.current?.dismiss();
   }, [selectedFolderId, onFolderSelect]);
@@ -104,6 +131,7 @@ export const FolderPickerBottomSheet = forwardRef<
       <CreateFolderModal
         ref={createFolderModalRef}
         onSuccess={(folder) => {
+          lastSelectedFolderId = folder.id;
           onFolderSelect(folder.id);
           bottomSheetRef.current?.dismiss();
         }}

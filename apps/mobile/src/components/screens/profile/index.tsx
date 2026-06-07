@@ -155,9 +155,17 @@ export function ProfileScreen() {
               selected={false}
               icon={
                 settings.instance_type === 'cloud' ? (
-                  <SolarCloudBoldIcon width={14} height={14} color={isDark ? colors.grey2 : colors.grey} />
+                  <SolarCloudBoldIcon
+                    width={14}
+                    height={14}
+                    color={isDark ? colors.grey2 : colors.grey}
+                  />
                 ) : (
-                  <SolarServerBoldIcon width={14} height={14} color={isDark ? colors.grey2 : colors.grey} />
+                  <SolarServerBoldIcon
+                    width={14}
+                    height={14}
+                    color={isDark ? colors.grey2 : colors.grey}
+                  />
                 )
               }
             />
@@ -174,7 +182,7 @@ export function ProfileScreen() {
                 className="flex-1"
               />
               {isPro ? (
-                <View 
+                <View
                   className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full"
                   style={{ backgroundColor: '#F59E0B' }}>
                   <SolarCrownBoldIcon width={14} height={14} color="#FFFFFF" />
@@ -183,10 +191,13 @@ export function ProfileScreen() {
                   </Text>
                 </View>
               ) : (
-                <View 
+                <View
                   className="px-3 py-1.5 rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : colors.grey6 }}>
-                  <Text size="sm" fontFamily="geist-medium" style={{ color: isDark ? colors.grey2 : colors.grey }}>
+                  <Text
+                    size="sm"
+                    fontFamily="geist-medium"
+                    style={{ color: isDark ? colors.grey2 : colors.grey }}>
                     Basic
                   </Text>
                 </View>
@@ -208,7 +219,9 @@ export function ProfileScreen() {
               <SettingsItem
                 label="Manage Subscription"
                 variant="button"
-                leftIcon={<SolarShieldCheckBoldIcon width={22} height={22} color={colors.secondary} />}
+                leftIcon={
+                  <SolarShieldCheckBoldIcon width={22} height={22} color={colors.secondary} />
+                }
                 onPress={() => {
                   if (isRcPro) {
                     presentCustomerCenter();
@@ -218,10 +231,10 @@ export function ProfileScreen() {
                       'This subscription was purchased on the web. Please manage your billing via the web version of Readspace.',
                       [
                         { text: 'Cancel', style: 'cancel' },
-                        { 
-                          text: 'Open Web', 
-                          onPress: () => Linking.openURL(CLOUD_CONFIG.READSPACE_APP_URL) 
-                        }
+                        {
+                          text: 'Open Web',
+                          onPress: () => Linking.openURL(CLOUD_CONFIG.READSPACE_APP_URL),
+                        },
                       ]
                     );
                   }
@@ -333,7 +346,9 @@ export function ProfileScreen() {
             <SettingsItem
               label="Join the Discord"
               variant="link"
-              leftIcon={<DiscordIcon width={22} height={22} fill={discordColor} />}
+              leftIcon={
+                <DiscordIcon width={22} height={22} color={discordColor} fill={discordColor} />
+              }
               onPress={handleDiscordPress}
               isLast={true}
             />

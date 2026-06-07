@@ -28,6 +28,7 @@ import { getTabKey, getTabName, useFollowingStore } from '@stores/following';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -132,10 +133,12 @@ export function FollowingScreen({
   const updateArticle = useUpdateArticle();
   const createFeed = useCreateFeed();
   const refreshFeed = useRefreshFeed();
+  const queryClient = useQueryClient();
 
-  // Get unread counts and feeds data - kept for potential future use
-  const { refetch: refetchUnread } = useUnreadCounts();
-  const { refetch: refetchFeeds } = useFeeds();
+  // Get unread counts and feeds data — subscription still needed so the
+  // queries are registered as observers (enabling refetchType: 'active' to work).
+  useUnreadCounts();
+  useFeeds();
 
   // Process articles: flatten, deduplicate, and apply filters
   const allArticles = useMemo(() => {
@@ -229,11 +232,17 @@ export function FollowingScreen({
           console.error('Deep refresh failed:', error);
         }
       }
-      await activeQuery.refetch();
+      // Invalidate before refetching so staleTime doesn't prevent a network request.
+      // The 5-min global staleTime means bare refetch() calls may read from cache.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['rss-articles'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['rss-unread-counts'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['rss-feeds', 'list'], refetchType: 'active' }),
+      ]);
     } finally {
       setRefreshing(false);
     }
-  }, [activeQuery, viewType, selectedId, refreshFeed, allArticles]);
+  }, [queryClient, viewType, selectedId, refreshFeed, allArticles]);
 
   // Sync loading state and article count to store
   useEffect(() => {
@@ -255,13 +264,15 @@ export function FollowingScreen({
     prevArticleCountRef.current = allArticles.length;
   }, [isLoading, allArticles.length, isFetchingNextPage, isLoadingMore, setIsLoadingMore]);
 
-  // Refetch active query and associated data when screen receives focus
+  // Refetch active query and associated data when screen receives focus.
+  // Use invalidateQueries instead of bare refetch() so we bypass the 5-min
+  // global staleTime and always get fresh data from the server on focus.
   useFocusEffect(
     useCallback(() => {
-      activeQuery.refetch();
-      refetchUnread();
-      refetchFeeds();
-    }, [activeQuery, refetchUnread, refetchFeeds])
+      queryClient.invalidateQueries({ queryKey: ['rss-articles'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['rss-unread-counts'], refetchType: 'active' });
+      queryClient.invalidateQueries({ queryKey: ['rss-feeds', 'list'], refetchType: 'active' });
+    }, [queryClient])
   );
 
   // Handle automatic scroll to top after a manual refresh completes and finds new/more articles
@@ -436,24 +447,10 @@ export function FollowingScreen({
         refreshing={refreshing}
         onRefresh={handleRefresh}
         refreshColor={colors.secondary}
+        contentPaddingBottom={contentPaddingBottom}
       />
     );
-  }, [isLoading, activeTab, refreshing, handleRefresh, colors.secondary]);
-
-  // If empty and not loading, render empty state outside scrollable list
-  // This prevents scrolling on empty state and ensures header stays in place
-  const isEmptyState = !isLoading && listItems.length === 0;
-
-  if (isEmptyState) {
-    return (
-      <>
-        {renderEmpty()}
-
-        {/* Folder picker bottom sheet */}
-        <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
-      </>
-    );
-  }
+  }, [isLoading, activeTab, refreshing, handleRefresh, colors.secondary, contentPaddingBottom]);
 
   return (
     <>

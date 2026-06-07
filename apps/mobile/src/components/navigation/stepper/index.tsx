@@ -6,6 +6,7 @@ import type React from 'react';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
   Animated,
+  Easing,
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
@@ -40,30 +41,24 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
     const indicatorWidth = width - stepperHorizontalPadding * 2;
     const dashSize = PAGE_INDICATOR.getDashSize(indicatorWidth, pages.length, indicatorSize);
     const [current, setCurrent] = useState(initialStep);
-    const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
     const animatedCurrent = useRef(new Animated.Value(initialStep)).current;
-    const slideAnim = useRef(new Animated.Value(0)).current;
-    const fadeAnim = useRef(new Animated.Value(1)).current;
 
     const topPadding = SPACING.getOnboardingTopPadding(height) * 0.7;
 
     const goToNext = () => {
       if (current < pages.length - 1) {
-        setDirection('forward');
         setCurrent(current + 1);
       }
     };
 
     const goToPrevious = () => {
       if (current > 0) {
-        setDirection('backward');
         setCurrent(current - 1);
       }
     };
 
     const goToStep = (step: number) => {
       if (step >= 0 && step < pages.length) {
-        setDirection(step > current ? 'forward' : 'backward');
         setCurrent(step);
       }
     };
@@ -82,33 +77,13 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
 
     // Update animated value when current changes with transitions
     useEffect(() => {
-      // Reset animations for the new page
-      const startOffset = direction === 'forward' ? width : -width;
-      slideAnim.setValue(startOffset);
-      fadeAnim.setValue(0);
-
-      // Animate page indicator
       Animated.timing(animatedCurrent, {
         toValue: current,
-        duration: 300,
+        duration: 250,
+        easing: Easing.bezier(0.2, 0.8, 0.2, 1),
         useNativeDriver: true,
       }).start();
-
-      // Animate page transition
-      Animated.parallel([
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          tension: 65,
-          friction: 10,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }, [current, animatedCurrent, slideAnim, fadeAnim, direction, width]);
+    }, [current, animatedCurrent]);
 
     // Notify parent of step changes
     useEffect(() => {
@@ -166,16 +141,27 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
             />
           </View>
 
-          {/* Current Page with Transition */}
-          <View className="pt-22 flex-1">
+          {/* Pages Container with Horizontal Slide */}
+          <View className="pt-22 flex-1 overflow-hidden">
             <Animated.View
-              className="relative flex-1"
               style={{
-                width,
-                transform: [{ translateX: slideAnim }],
-                opacity: fadeAnim,
+                flexDirection: 'row',
+                width: width * pages.length,
+                flex: 1,
+                transform: [
+                  {
+                    translateX: animatedCurrent.interpolate({
+                      inputRange: pages.map((_, i) => i),
+                      outputRange: pages.map((_, i) => -i * width),
+                    }),
+                  },
+                ],
               }}>
-              {pages[current]}
+              {pages.map((page, index) => (
+                <View key={`page-${index}`} style={{ width, flex: 1 }}>
+                  {page}
+                </View>
+              ))}
             </Animated.View>
           </View>
         </View>

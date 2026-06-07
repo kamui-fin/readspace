@@ -13,6 +13,7 @@ import { forwardRef, useCallback } from 'react';
 import { type StyleProp, type TextStyle, View } from 'react-native';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '@lib/constants/colors';
 
@@ -53,6 +54,7 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
   ) => {
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
+    const insets = useSafeAreaInsets();
 
     const renderBackdrop = useCallback(
       (backdropProps: BottomSheetBackdropProps) => (
@@ -79,6 +81,7 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
         enableContentPanningGesture={true}
         // allow natural over-drag behaviour if user scrolls past content
         enableOverDrag={true}
+        topInset={insets.top}
         backdropComponent={backdropComponent || renderBackdrop}
         backgroundStyle={{
           backgroundColor: isDark ? COLORS.dark.background : COLORS.light.background,
@@ -179,7 +182,7 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
           contentContainerStyle={{
             paddingHorizontal: 24,
             paddingTop: headerTitle || headerLeft || headerRight || secondaryAction ? 64 : 16,
-            paddingBottom: 18,
+            paddingBottom: 18 + insets.bottom,
           }}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}

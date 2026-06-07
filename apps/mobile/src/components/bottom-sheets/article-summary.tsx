@@ -33,7 +33,12 @@ export const ArticleSummaryBottomSheet = forwardRef<
   const headerLeft = useMemo(
     () => (
       <View className="flex-row items-center gap-1">
-        <SparkleIcon width={20} height={20} fill={isDark ? colors.secondary : colors.primary} />
+        <SparkleIcon
+          width={20}
+          height={20}
+          color={isDark ? colors.secondary : colors.primary}
+          fill={isDark ? colors.secondary : colors.primary}
+        />
         <Text size="xl" fontFamily="geist-semibold" className="text-primary_foreground">
           AI Summary
         </Text>

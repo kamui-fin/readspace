@@ -85,7 +85,7 @@ export function Skeleton({
       style={[
         customStyle as object,
         animate ? animatedStyle : undefined,
-        { backgroundColor: colors.grey5 },
+        { backgroundColor: isDark ? colors.grey4 : colors.grey5 },
       ]}
     />
   );

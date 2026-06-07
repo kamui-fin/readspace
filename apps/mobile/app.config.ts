@@ -21,12 +21,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       CFBundleURLTypes: [
         {
           CFBundleURLSchemes: [
+            'com.readspace.rss',
             // This should match your EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
             // Falls back to the default if not set
             `com.googleusercontent.apps.${process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.replace('.apps.googleusercontent.com', '') || '372373410684-63fg96rrnuuu22nd8qfdpm8tf5sdpfst'}`,
           ],
         },
       ],
+      NSAppTransportSecurity: {
+        NSAllowsArbitraryLoads: true,
+      },
+      NSLocalNetworkUsageDescription:
+        'Readspace needs access to your local network to connect to self-hosted API servers.',
     },
   },
   android: {
@@ -70,4 +76,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
   ],
+  extra: {
+     eas: {
+       projectId: "e28b2485-c247-405c-829e-2b9c9c2e7733"
+     }
+   }
 });

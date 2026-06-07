@@ -127,10 +127,9 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     return [...recent, ...others];
   }, [recentLanguages]);
 
-  // Auto-extract content if not already extracted and article has loaded (only if subscribed)
+  // Auto-extract content if not already extracted and article has loaded
   useEffect(() => {
     if (
-      isSubscribed &&
       article &&
       !article.extracted_content &&
       article.article_type === 'feed' &&
@@ -142,7 +141,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         console.warn('Failed to auto-extract article content:', error);
       });
     }
-  }, [article, extractMutation.status, extractFullText, isSubscribed]);
+  }, [article, extractMutation.status, extractFullText]);
 
   // Mark as read on mount (only if subscribed to the feed)
   useEffect(() => {
@@ -278,9 +277,6 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   const handleGenerateSummary = useCallback(() => {
     if (!article) return;
 
-    // Show loading toast
-    toast.info('Generating AI summary...');
-
     // Open bottom sheet immediately
     summaryBottomSheetRef.current?.present();
 
@@ -298,8 +294,6 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
 
   const handleRegenerateSummary = useCallback(() => {
     if (!article) return;
-
-    toast.info('Regenerating summary...');
 
     generateSummary()
       .then(() => {
@@ -447,9 +441,8 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         onOpenInBrowser={handleOpenInBrowser}
         hasExtractedContent={!!article?.extracted_content || !!extractedData?.content}
         hasTranslatedContent={!!translateData?.translated_content}
-        canExtractContent={isSubscribed || false}
+        canExtractContent={true}
         isClipped={isClipped}
-        isSubscribed={isSubscribed}
       />
     </View>
   );

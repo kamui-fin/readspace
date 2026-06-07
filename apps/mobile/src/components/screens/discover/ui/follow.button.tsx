@@ -2,7 +2,6 @@ import {
   FolderPickerBottomSheet,
   type FolderPickerBottomSheetRef,
 } from '@components/bottom-sheets/folder-picker';
-import TrashBinTrashBoldIcon from '@components/icons/solar/trash-bin-trash-bold';
 import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
@@ -14,7 +13,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 const followButtonVariants = cva('flex-row items-center gap-2', {
   variants: {
@@ -79,6 +78,8 @@ interface FollowButtonProps extends VariantProps<typeof followButtonVariants> {
   className?: string;
   showFolderPicker?: boolean; // If false, use onFollowRequest instead
   onFollowRequest?: (feedUrl: string) => void | Promise<void>; // For onboarding flow
+  onUnfollowRequest?: (feedId: string) => void | Promise<void>; // For onboarding flow
+  disabled?: boolean;
 }
 
 export function FollowButton({
@@ -89,6 +90,8 @@ export function FollowButton({
   className,
   showFolderPicker = true,
   onFollowRequest,
+  onUnfollowRequest,
+  disabled = false,
 }: FollowButtonProps) {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
@@ -146,21 +149,30 @@ export function FollowButton({
 
     if (displayFollowing) {
       // Unfollow
-      setOptimisticFollowing(false);
-      deleteFeed.mutate(
-        { feedId, silent: false },
-        {
-          onSuccess: () => {
-            toast.success('Unfollowed feed');
-            // Keep optimistic state - will clear when actuallyFollowing updates
-          },
-          onError: () => {
-            toast.error('Failed to unfollow feed');
-            // On error, clear optimistic state immediately
-            setOptimisticFollowing(null);
-          },
+      if (!showFolderPicker && onUnfollowRequest) {
+        setOptimisticFollowing(false);
+        try {
+          await onUnfollowRequest(feedId);
+        } catch {
+          setOptimisticFollowing(null);
         }
-      );
+      } else {
+        setOptimisticFollowing(false);
+        deleteFeed.mutate(
+          { feedId, silent: false },
+          {
+            onSuccess: () => {
+              toast.success('Unfollowed feed');
+              // Keep optimistic state - will clear when actuallyFollowing updates
+            },
+            onError: () => {
+              toast.error('Failed to unfollow feed');
+              // On error, clear optimistic state immediately
+              setOptimisticFollowing(null);
+            },
+          }
+        );
+      }
     } else {
       // Follow
       if (!checkAndTriggerUpgrade('feed')) {
@@ -172,7 +184,7 @@ export function FollowButton({
         try {
           await onFollowRequest(feedUrl);
           // Keep optimistic state - will clear when actuallyFollowing updates
-        } catch (error) {
+        } catch {
           // On error, clear optimistic state
           setOptimisticFollowing(null);
         }
@@ -197,8 +209,9 @@ export function FollowButton({
     return {
       backgroundColor: colors.primary, // Notion brand green
       borderColor: colors.primary,
+      opacity: disabled ? 0.4 : 1,
     };
-  }, [isStylingFollowing, colors]);
+  }, [isStylingFollowing, colors, disabled]);
 
   const textStyle = useMemo(() => {
     if (isStylingFollowing) {
@@ -215,7 +228,7 @@ export function FollowButton({
     <>
       <Pressable
         onPress={handlePress}
-        disabled={isLoading}
+        disabled={isLoading || disabled}
         className={clsx(
           followButtonVariants({
             variant: variant || 'default',

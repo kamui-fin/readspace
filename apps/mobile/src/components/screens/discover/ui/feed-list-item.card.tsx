@@ -19,7 +19,9 @@ export interface FeedListItemProps extends PressableProps {
   isPreview?: boolean;
   showFolderPicker?: boolean; // If false, use onFollowRequest instead
   onFollowRequest?: (feedUrl: string) => void | Promise<void>; // For onboarding flow
+  onUnfollowRequest?: (feedId: string) => void | Promise<void>; // For onboarding flow
   disableNavigation?: boolean; // Disable navigation to feed details
+  disabled?: boolean;
 }
 
 export const FeedListItem = ({
@@ -33,7 +35,9 @@ export const FeedListItem = ({
   isPreview = false,
   showFolderPicker = true,
   onFollowRequest,
+  onUnfollowRequest,
   disableNavigation = false,
+  disabled = false,
   ...props
 }: FeedListItemProps) => {
   const [imageError, setImageError] = useState(false);
@@ -84,6 +88,8 @@ export const FeedListItem = ({
         isFollowing={isFollowing}
         showFolderPicker={showFolderPicker}
         onFollowRequest={onFollowRequest}
+        onUnfollowRequest={onUnfollowRequest}
+        disabled={disabled}
       />
     </Pressable>
   );

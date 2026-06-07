@@ -40,7 +40,7 @@ async def get_article_or_404(
         db_factory=db_factory,
         article_id=article_id,
         user_id=user_id,
-        allow_preview=False,
+        allow_preview=True,
         is_clipped=is_clipped,
     )
 
@@ -51,7 +51,7 @@ async def get_article_or_404(
             db_factory=db_factory,
             article_id=article_id,
             user_id=user_id,
-            allow_preview=False,
+            allow_preview=True,
             is_clipped=True,
         )
 

@@ -28,7 +28,7 @@ export function UpgradePaywallModal() {
   const insets = useSafeAreaInsets();
   const { isOpen, title, description, close } = useUpgradeDialog();
   const { currentOffering, purchasePackage, isLoading: isRcLoading } = useRevenueCat();
-  
+
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
   const [isPurchasing, setIsPurchasing] = useState(false);
 
@@ -43,7 +43,7 @@ export function UpgradePaywallModal() {
   // Pricing display strings (with RevenueCat live price strings as source of truth, fallbacks for local dev)
   const monthlyPriceStr = monthlyPackage?.product.priceString ?? '$7.99';
   const yearlyPriceStr = yearlyPackage?.product.priceString ?? '$59.99';
-  
+
   // Calculate yearly monthly-equivalent price ($59.99 / 12 = $4.99)
   const yearlyMonthlyEquivalentStr = useMemo(() => {
     if (yearlyPackage?.product.price) {
@@ -55,7 +55,8 @@ export function UpgradePaywallModal() {
 
   // Make description text concise
   const displayDescription = useMemo(() => {
-    const defaultDesc = 'Unlock unlimited access to all features, including AI summaries and unlimited feed subscriptions.';
+    const defaultDesc =
+      'Unlock unlimited access to all features, including AI summaries and unlimited feed subscriptions.';
     if (description === defaultDesc) {
       return 'Get unlimited feeds & daily AI summaries.';
     }
@@ -64,9 +65,11 @@ export function UpgradePaywallModal() {
 
   const handlePurchase = async () => {
     const pkgToBuy = selectedPlan === 'monthly' ? monthlyPackage : yearlyPackage;
-    
+
     if (!pkgToBuy) {
-      console.log('[UpgradePaywallModal] No active RevenueCat package loaded. Simulating purchase...');
+      console.log(
+        '[UpgradePaywallModal] No active RevenueCat package loaded. Simulating purchase...'
+      );
       setIsPurchasing(true);
       setTimeout(() => {
         setIsPurchasing(false);
@@ -94,7 +97,6 @@ export function UpgradePaywallModal() {
       transparent={false}
       onRequestClose={close}>
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
-        
         {/* Floating Close Button */}
         <View className="absolute right-6 z-30" style={{ top: insets.top + 10 }}>
           <Pressable
@@ -114,19 +116,26 @@ export function UpgradePaywallModal() {
             paddingBottom: insets.bottom + 40,
           }}
           showsVerticalScrollIndicator={false}>
-          
           {/* Header section with Readspace logo */}
           <View className="mb-6 mt-4 items-center">
-            <View 
-              className="h-14 w-14 rounded-full items-center justify-center mb-4" 
+            <View
+              className="h-14 w-14 rounded-full items-center justify-center mb-4"
               style={{ backgroundColor: colors.primary + '18' }}>
               <ReadspaceLogoIcon width={34} height={34} />
             </View>
-            <Text size="2xl" fontFamily="geist-bold" className="text-center" style={{ color: colors.black }}>
+            <Text
+              size="2xl"
+              fontFamily="geist-bold"
+              className="text-center"
+              style={{ color: colors.black }}>
               {title}
             </Text>
             {displayDescription ? (
-              <Text size="base" fontFamily="geist" className="text-center mt-2 px-4" style={{ color: colors.grey }}>
+              <Text
+                size="base"
+                fontFamily="geist"
+                className="text-center mt-2 px-4"
+                style={{ color: colors.grey }}>
                 {displayDescription}
               </Text>
             ) : null}
@@ -134,15 +143,19 @@ export function UpgradePaywallModal() {
 
           {/* Features / Benefits list matching Web dialog - Standard spacious layout */}
           <View className="mb-8 p-6 rounded-3xl" style={{ backgroundColor: colors.grey6 }}>
-            <Text size="xs" fontFamily="geist-semibold" className="uppercase tracking-wider mb-5" style={{ color: colors.grey }}>
+            <Text
+              size="xs"
+              fontFamily="geist-semibold"
+              className="uppercase tracking-wider mb-5"
+              style={{ color: colors.grey }}>
               Readspace Pro benefits
             </Text>
-            
+
             <View className="gap-6">
               {/* Benefit 1: Feed capacity */}
               <View className="flex-row items-start">
-                <View 
-                  className="mr-3.5 h-9 w-9 rounded-full items-center justify-center" 
+                <View
+                  className="mr-3.5 h-9 w-9 rounded-full items-center justify-center"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
                   <RssIcon width={18} height={18} color={colors.primary} />
                 </View>
@@ -150,7 +163,11 @@ export function UpgradePaywallModal() {
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
                     Up to 1000 feeds
                   </Text>
-                  <Text size="xs" fontFamily="geist" className="mt-0.5" style={{ color: colors.grey }}>
+                  <Text
+                    size="xs"
+                    fontFamily="geist"
+                    className="mt-0.5"
+                    style={{ color: colors.grey }}>
                     Follow all your favorite creators, newsletters, & blogs.
                   </Text>
                 </View>
@@ -158,8 +175,8 @@ export function UpgradePaywallModal() {
 
               {/* Benefit 2: AI Summaries */}
               <View className="flex-row items-start">
-                <View 
-                  className="mr-3.5 h-9 w-9 rounded-full items-center justify-center" 
+                <View
+                  className="mr-3.5 h-9 w-9 rounded-full items-center justify-center"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
                   <SparkleIcon width={18} height={18} color={colors.primary} />
                 </View>
@@ -167,7 +184,11 @@ export function UpgradePaywallModal() {
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
                     100 AI reader tools / day
                   </Text>
-                  <Text size="xs" fontFamily="geist" className="mt-0.5" style={{ color: colors.grey }}>
+                  <Text
+                    size="xs"
+                    fontFamily="geist"
+                    className="mt-0.5"
+                    style={{ color: colors.grey }}>
                     Summarize or translate long-form writing instantly.
                   </Text>
                 </View>
@@ -175,8 +196,8 @@ export function UpgradePaywallModal() {
 
               {/* Benefit 3: Intelligent discovery */}
               <View className="flex-row items-start">
-                <View 
-                  className="mr-3.5 h-9 w-9 rounded-full items-center justify-center" 
+                <View
+                  className="mr-3.5 h-9 w-9 rounded-full items-center justify-center"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
                   <SvgXml xml={SEARCH_XML} width={18} height={18} color={colors.primary} />
                 </View>
@@ -184,7 +205,11 @@ export function UpgradePaywallModal() {
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
                     Intelligent discovery
                   </Text>
-                  <Text size="xs" fontFamily="geist" className="mt-0.5" style={{ color: colors.grey }}>
+                  <Text
+                    size="xs"
+                    fontFamily="geist"
+                    className="mt-0.5"
+                    style={{ color: colors.grey }}>
                     Search and filter articles using natural conversational AI.
                   </Text>
                 </View>
@@ -192,8 +217,8 @@ export function UpgradePaywallModal() {
 
               {/* Benefit 4: Reading Library */}
               <View className="flex-row items-start">
-                <View 
-                  className="mr-3.5 h-9 w-9 rounded-full items-center justify-center" 
+                <View
+                  className="mr-3.5 h-9 w-9 rounded-full items-center justify-center"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
                   <SvgXml xml={BOOK_XML} width={18} height={18} color={colors.primary} />
                 </View>
@@ -201,7 +226,11 @@ export function UpgradePaywallModal() {
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
                     Personal reading library
                   </Text>
-                  <Text size="xs" fontFamily="geist" className="mt-0.5" style={{ color: colors.grey }}>
+                  <Text
+                    size="xs"
+                    fontFamily="geist"
+                    className="mt-0.5"
+                    style={{ color: colors.grey }}>
                     Keep bookmarks, highlights, and custom notes synced forever.
                   </Text>
                 </View>
@@ -211,7 +240,11 @@ export function UpgradePaywallModal() {
 
           {/* Plans Selection */}
           <View className="mb-8">
-            <Text size="base" fontFamily="geist-semibold" className="mb-4" style={{ color: colors.black }}>
+            <Text
+              size="base"
+              fontFamily="geist-semibold"
+              className="mb-4"
+              style={{ color: colors.black }}>
               Choose your plan
             </Text>
 
@@ -222,12 +255,21 @@ export function UpgradePaywallModal() {
                 className="flex-1 p-4 rounded-3xl border-2"
                 style={{
                   borderColor: selectedPlan === 'monthly' ? colors.primary : colors.grey5,
-                  backgroundColor: selectedPlan === 'monthly' ? (isDark ? 'rgba(46, 196, 182, 0.08)' : 'rgba(46, 196, 182, 0.04)') : 'transparent',
+                  backgroundColor:
+                    selectedPlan === 'monthly'
+                      ? isDark
+                        ? 'rgba(46, 196, 182, 0.08)'
+                        : 'rgba(46, 196, 182, 0.04)'
+                      : 'transparent',
                 }}>
                 <Text size="base" fontFamily="geist-bold" style={{ color: colors.black }}>
                   Pro Monthly
                 </Text>
-                <Text size="xs" fontFamily="geist" className="mt-0.5" style={{ color: colors.grey }}>
+                <Text
+                  size="xs"
+                  fontFamily="geist"
+                  className="mt-0.5"
+                  style={{ color: colors.grey }}>
                   Billed monthly
                 </Text>
                 <View className="flex-row items-baseline mt-5">
@@ -246,21 +288,37 @@ export function UpgradePaywallModal() {
                 className="flex-1 p-4 rounded-3xl border-2 relative"
                 style={{
                   borderColor: selectedPlan === 'yearly' ? colors.primary : colors.grey5,
-                  backgroundColor: selectedPlan === 'yearly' ? (isDark ? 'rgba(46, 196, 182, 0.08)' : 'rgba(46, 196, 182, 0.04)') : 'transparent',
+                  backgroundColor:
+                    selectedPlan === 'yearly'
+                      ? isDark
+                        ? 'rgba(46, 196, 182, 0.08)'
+                        : 'rgba(46, 196, 182, 0.04)'
+                      : 'transparent',
                 }}>
                 {/* Promo Badge */}
                 <View
                   className="absolute -top-3 left-4 right-4 rounded-full py-0.5 items-center justify-center shadow-xs"
                   style={{ backgroundColor: colors.primary }}>
-                  <Text size="xs" fontFamily="geist-bold" className="text-white text-[9px] uppercase tracking-wider">
+                  <Text
+                    size="xs"
+                    fontFamily="geist-bold"
+                    className="text-white text-[9px] uppercase tracking-wider">
                     Save 25%
                   </Text>
                 </View>
-                
-                <Text size="base" fontFamily="geist-bold" className="mt-1" style={{ color: colors.black }}>
+
+                <Text
+                  size="base"
+                  fontFamily="geist-bold"
+                  className="mt-1"
+                  style={{ color: colors.black }}>
                   Pro Yearly
                 </Text>
-                <Text size="xs" fontFamily="geist" className="mt-0.5" style={{ color: colors.grey }}>
+                <Text
+                  size="xs"
+                  fontFamily="geist"
+                  className="mt-0.5"
+                  style={{ color: colors.grey }}>
                   Billed annually
                 </Text>
                 <View className="flex-row items-baseline mt-5">
@@ -277,11 +335,7 @@ export function UpgradePaywallModal() {
 
           {/* CTA Action Button */}
           <View className="mt-2">
-            <Button
-              variant="primary"
-              size="large"
-              disabled={isPurchasing}
-              onPress={handlePurchase}>
+            <Button variant="primary" size="large" disabled={isPurchasing} onPress={handlePurchase}>
               {isPurchasing ? (
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
@@ -292,7 +346,6 @@ export function UpgradePaywallModal() {
               )}
             </Button>
           </View>
-
         </ScrollView>
       </View>
     </Modal>

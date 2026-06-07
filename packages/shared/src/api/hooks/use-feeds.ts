@@ -105,13 +105,29 @@ export function useCreateFeed(
     mutationFn: (feed: { url: string; folder_id?: string }) =>
       ApiClient.createFeed(feed),
     onSuccess: (newSubscription) => {
-      // Update feeds list with new subscription across all variations
+      // Update feeds list with new subscription (and its folder if new) across all variations
       queryClient.setQueriesData<FeedsResponse>(
         { queryKey: [RSS_QUERY_KEYS.FEEDS, "list"] },
         (old) => {
           if (!old) return old;
+
+          // If the subscription belongs to a folder not yet in the cache, add it optimistically.
+          // This happens when the user creates a new folder and immediately subscribes to a feed
+          // under it — the folder mutation fires first but the cache may not have been updated yet
+          // by the time the feed subscription's onSuccess runs.
+          let updatedFolders = old.folders || [];
+          if (newSubscription?.folder?.id) {
+            const folderAlreadyCached = updatedFolders.some(
+              (f) => f.id === newSubscription.folder.id
+            );
+            if (!folderAlreadyCached) {
+              updatedFolders = [...updatedFolders, newSubscription.folder];
+            }
+          }
+
           return {
             ...old,
+            folders: updatedFolders,
             subscriptions: [...(old.subscriptions || []), newSubscription],
           };
         }

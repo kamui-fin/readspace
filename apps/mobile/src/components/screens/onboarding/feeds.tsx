@@ -1,26 +1,45 @@
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
+import { FeedListSkeleton } from '@components/screens/discover/ui/feed-list.skeleton';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
-import { useCreateFeed } from '@readspace/shared';
+import { useCreateFeed, useDeleteFeed } from '@readspace/shared';
 import { useOnboardingStore } from '@stores/onboarding';
+import { useQueryClient, useIsMutating } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useOnboardingFeeds } from '@/hooks/useOnboardingFeeds';
 
-export function FeedSelectionStep({ onNext }: { onNext: () => void }) {
+// Onboarding feed limits configuration:
+// - ONBOARDING_MIN_FEEDS: Minimum number of feeds the user must follow to proceed.
+// - ONBOARDING_MAX_FEEDS: Maximum number of feeds allowed during onboarding (keep this synced with backend free limit).
+export const ONBOARDING_MIN_FEEDS = 3;
+export const ONBOARDING_MAX_FEEDS = 5;
+
+// Mutation key must match what useCreateFeed registers
+const CREATE_FEED_MUTATION_KEY = ['create-feed'];
+
+export function FeedSelectionStep({ onNext: _onNext }: { onNext: () => void }) {
   const insets = useSafeAreaInsets();
   const { onboardingData, updateOnboardingData } = useOnboardingStore();
   const [followedFeeds, setFollowedFeeds] = useState<string[]>(onboardingData.followedFeeds || []);
+  const [isNavigating, setIsNavigating] = useState(false);
 
-  const { displayedFeeds, isLoading, error, fetchSimilarFeeds } = useOnboardingFeeds(
+  const { displayedFeeds, isLoading, fetchSimilarFeeds } = useOnboardingFeeds(
     onboardingData.selectedCategories
   );
 
   const createFeed = useCreateFeed();
+  const deleteFeed = useDeleteFeed();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  // Track how many createFeed mutations are still in-flight
+  const pendingFeedCreations = useIsMutating({ mutationKey: CREATE_FEED_MUTATION_KEY });
 
   const handleFeedSubscribed = (feedId: string, feedUrl: string) => {
+    if (followedFeeds.length >= ONBOARDING_MAX_FEEDS) return;
     const newFollowedFeeds = [...followedFeeds, feedId];
     setFollowedFeeds(newFollowedFeeds);
     updateOnboardingData({ followedFeeds: newFollowedFeeds });
@@ -29,22 +48,61 @@ export function FeedSelectionStep({ onNext }: { onNext: () => void }) {
     fetchSimilarFeeds(feedId);
   };
 
-  const router = useRouter();
+  const handleFeedUnsubscribed = (feedId: string) => {
+    const newFollowedFeeds = followedFeeds.filter((id) => id !== feedId);
+    setFollowedFeeds(newFollowedFeeds);
+    updateOnboardingData({ followedFeeds: newFollowedFeeds });
 
-  const handleComplete = () => {
+    deleteFeed.mutate({ feedId, silent: true });
+  };
+
+  const handleComplete = async () => {
+    setIsNavigating(true);
     updateOnboardingData({ followedFeeds });
+
+    // Yield control to UI thread so the button has a chance to render the loading spinner
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+
+    // Wait for any still-in-flight createFeed mutations to settle before navigating.
+    // Without this, the following screen could load before the server has processed
+    // the subscriptions, resulting in an empty feed that can't be fixed without
+    // a full app reload (due to React Query's 5-min staleTime).
+    if (pendingFeedCreations > 0) {
+      await queryClient.getMutationCache().subscribe(() => {});
+      // Poll until all createFeed mutations finish
+      await new Promise<void>((resolve) => {
+        const check = () => {
+          const stillPending = queryClient
+            .getMutationCache()
+            .findAll({ mutationKey: CREATE_FEED_MUTATION_KEY, status: 'pending' });
+          if (stillPending.length === 0) {
+            resolve();
+          } else {
+            setTimeout(check, 100);
+          }
+        };
+        check();
+      });
+    }
+
+    // Invalidate caches so the following screen starts with a fresh fetch
+    // rather than serving stale empty data from before the subscriptions existed.
+    queryClient.invalidateQueries({ queryKey: ['rss-articles'], refetchType: 'all' });
+    queryClient.invalidateQueries({ queryKey: ['rss-feeds', 'list'], refetchType: 'all' });
+    queryClient.invalidateQueries({ queryKey: ['rss-unread-counts'], refetchType: 'all' });
+
     router.replace('/(protected)/(tabs)');
   };
 
-  const canComplete = followedFeeds.length >= 3;
+  const canComplete = followedFeeds.length >= ONBOARDING_MIN_FEEDS;
+  const isLimitReached = followedFeeds.length >= ONBOARDING_MAX_FEEDS;
+  // Button is loading while feeds are being created OR while we're navigating
+  const isButtonLoading = isNavigating || pendingFeedCreations > 0;
 
-  if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center p-6">
-        <ActivityIndicator size="large" color="#6A994E" />
-      </View>
-    );
-  }
+  const subtext =
+    (ONBOARDING_MIN_FEEDS as number) === (ONBOARDING_MAX_FEEDS as number)
+      ? `Pick ${ONBOARDING_MAX_FEEDS} publications`
+      : `Pick between ${ONBOARDING_MIN_FEEDS} and ${ONBOARDING_MAX_FEEDS} publications`;
 
   return (
     <View className="flex-1 px-6">
@@ -56,26 +114,35 @@ export function FeedSelectionStep({ onNext }: { onNext: () => void }) {
           Build your news feed
         </Text>
         <Text size="lg" fontFamily="geist-regular" className="text-grey dark:text-grey">
-          Pick at least 3 publications
+          {subtext}
         </Text>
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="gap-2 pb-8">
-          {displayedFeeds.map((feed) => (
-            <FeedListItem
-              key={feed.id}
-              feedId={feed.id}
-              feedUrl={feed.url}
-              title={feed.title || 'Untitled'}
-              description={feed.description || ''}
-              iconUrl={feed.image_url || undefined}
-              isFollowing={followedFeeds.includes(feed.id)}
-              showFolderPicker={false}
-              disableNavigation={true}
-              onFollowRequest={() => handleFeedSubscribed(feed.id, feed.url)}
-            />
-          ))}
+          {isLoading || displayedFeeds.length === 0 ? (
+            <FeedListSkeleton count={5} />
+          ) : (
+            displayedFeeds.map((feed) => {
+              const isFollowing = followedFeeds.includes(feed.id);
+              return (
+                <FeedListItem
+                  key={feed.id}
+                  feedId={feed.id}
+                  feedUrl={feed.url}
+                  title={feed.title || 'Untitled'}
+                  description={feed.description || ''}
+                  iconUrl={feed.image_url || undefined}
+                  isFollowing={isFollowing}
+                  showFolderPicker={false}
+                  disableNavigation={true}
+                  onFollowRequest={() => handleFeedSubscribed(feed.id, feed.url)}
+                  onUnfollowRequest={() => handleFeedUnsubscribed(feed.id)}
+                  disabled={isLimitReached && !isFollowing}
+                />
+              );
+            })
+          )}
         </View>
       </ScrollView>
 
@@ -85,8 +152,11 @@ export function FeedSelectionStep({ onNext }: { onNext: () => void }) {
           size="large"
           onPress={handleComplete}
           disabled={!canComplete}
+          loading={isButtonLoading}
           style={{ borderRadius: 12 }}>
-          {canComplete ? 'Start Reading!' : `Add ${3 - followedFeeds.length} More`}
+          {canComplete
+            ? 'Start Reading!'
+            : `Add ${ONBOARDING_MIN_FEEDS - followedFeeds.length} More`}
         </Button>
       </View>
     </View>

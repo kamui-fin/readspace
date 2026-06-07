@@ -3,11 +3,7 @@ import { toast } from '@components/ui/toast';
 import { supabase } from '@lib/supabase/client';
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { Platform, NativeModules } from 'react-native';
-import type {
-  CustomerInfo,
-  PurchasesOffering,
-  PurchasesPackage,
-} from 'react-native-purchases';
+import type { CustomerInfo, PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 
 // Dynamically import Purchases core to prevent crashes in Expo Go or when native modules are not linked
 let Purchases: any = null;
@@ -22,10 +18,10 @@ let LOG_LEVEL = {
 function getPurchases() {
   if (PurchasesResolved) return Purchases;
   PurchasesResolved = true;
-  
+
   // Safe check for RNPurchases native module without using Object.keys()
   const hasNativeCoreModule = Boolean(NativeModules && NativeModules.RNPurchases);
-  
+
   if (hasNativeCoreModule) {
     try {
       Purchases = require('react-native-purchases').default || require('react-native-purchases');
@@ -39,7 +35,9 @@ function getPurchases() {
       Purchases = null;
     }
   } else {
-    console.log('[RevenueCat] Purchases core native module not detected. SDK running in mock mode.');
+    console.log(
+      '[RevenueCat] Purchases core native module not detected. SDK running in mock mode.'
+    );
   }
   return Purchases;
 }
@@ -63,7 +61,8 @@ function getRevenueCatUI() {
 
   if (hasNativeUiModule) {
     try {
-      RevenueCatUI = require('react-native-purchases-ui').default || require('react-native-purchases-ui');
+      RevenueCatUI =
+        require('react-native-purchases-ui').default || require('react-native-purchases-ui');
       const UIExports = require('react-native-purchases-ui');
       if (UIExports.PAYWALL_RESULT) {
         PAYWALL_RESULT = UIExports.PAYWALL_RESULT;
@@ -74,7 +73,9 @@ function getRevenueCatUI() {
       RevenueCatUI = null;
     }
   } else {
-    console.log('[RevenueCat] Purchases UI native module not detected. UI shortcuts will use fallback.');
+    console.log(
+      '[RevenueCat] Purchases UI native module not detected. UI shortcuts will use fallback.'
+    );
   }
   return RevenueCatUI;
 }
@@ -165,13 +166,15 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
       try {
         const purchasesInstance = getPurchases();
         if (!purchasesInstance) {
-          console.log('[RevenueCat] Purchases core native module not available. SDK running in mock mode.');
+          console.log(
+            '[RevenueCat] Purchases core native module not available. SDK running in mock mode.'
+          );
           setIsLoading(false);
           return;
         }
         console.log('[RevenueCat] 🚀 Initializing RevenueCat SDK...');
         purchasesInstance.setLogLevel(LOG_LEVEL.DEBUG);
-        
+
         // Configure SDK
         purchasesInstance.configure({
           apiKey: REVENUECAT_API_KEY,
@@ -347,16 +350,18 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     try {
       const uiInstance = getRevenueCatUI();
       if (!uiInstance) {
-        console.log('[RevenueCat] Paywall UI not available in this environment. Showing custom bottom sheet...');
+        console.log(
+          '[RevenueCat] Paywall UI not available in this environment. Showing custom bottom sheet...'
+        );
         const { useUpgradeDialog } = require('@stores/upgrade-dialog');
         useUpgradeDialog.getState().open();
         return false;
       }
       console.log('[RevenueCat] 📺 Presenting paywall...');
       const result = await uiInstance.presentPaywall(offering ? { offering } : undefined);
-      
+
       console.log('[RevenueCat] Paywall closed with result:', result);
-      
+
       if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
         await refetchCustomerInfo();
         return true;
@@ -372,7 +377,9 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
     try {
       const uiInstance = getRevenueCatUI();
       if (!uiInstance) {
-        console.log('[RevenueCat] Paywall UI not available in this environment. Showing custom bottom sheet...');
+        console.log(
+          '[RevenueCat] Paywall UI not available in this environment. Showing custom bottom sheet...'
+        );
         const { useUpgradeDialog } = require('@stores/upgrade-dialog');
         useUpgradeDialog.getState().open();
         return false;
@@ -381,9 +388,9 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
       const result = await uiInstance.presentPaywallIfNeeded({
         requiredEntitlementIdentifier: ENTITLEMENT_ID,
       });
-      
+
       console.log('[RevenueCat] presentPaywallIfNeeded result:', result);
-      
+
       if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
         await refetchCustomerInfo();
         return true;

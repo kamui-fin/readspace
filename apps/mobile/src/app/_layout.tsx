@@ -108,7 +108,6 @@ function RootNavigator() {
   const isDark = useIsDarkMode();
   const isHydrated = useThemeStore((state) => state.isHydrated);
 
-
   useEffect(() => {
     async function loadFonts() {
       try {
@@ -217,7 +216,7 @@ function RootNavigator() {
               <Stack.Screen name="(protected)" />
               <Stack.Screen name="(auth)" />
             </Stack>
-             <UpgradePaywallModal />
+            <UpgradePaywallModal />
           </ToastProvider>
         </BottomSheetModalProvider>
       </KeyboardProvider>

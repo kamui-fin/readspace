@@ -1,7 +1,7 @@
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { EmptyState } from '@/components/ui/empty-state';
 
 import {
@@ -13,20 +13,23 @@ import {
 interface EmptyStateViewProps {
   isLoading: boolean;
   activeTab: number;
-  refreshing: boolean;
-  onRefresh: () => void;
-  refreshColor: string;
+  // refreshing/onRefresh/refreshColor are kept for API compatibility but
+  // refresh is now handled by the parent InfiniteScrollList's RefreshControl
+  refreshing?: boolean;
+  onRefresh?: () => void;
+  refreshColor?: string;
+  contentPaddingTop?: number;
+  contentPaddingBottom?: number;
 }
 
 export function EmptyStateView({
   isLoading,
   activeTab,
-  refreshing,
-  onRefresh,
-  refreshColor,
+  contentPaddingBottom = 0,
 }: EmptyStateViewProps) {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+
   if (isLoading) {
     return (
       <View
@@ -45,24 +48,13 @@ export function EmptyStateView({
     DEFAULT_EMPTY_STATE_CONFIG;
 
   return (
-    <ScrollView
-      className="bg-background flex-1"
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={{
-        flexGrow: 1,
+    <View
+      style={{
+        flex: 1,
+        paddingBottom: contentPaddingBottom,
         backgroundColor: colors.background,
-      }}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={refreshColor}
-          colors={[refreshColor]}
-          progressBackgroundColor={isDark ? colors.grey6 : '#ffffff'}
-        />
-      }
-      showsVerticalScrollIndicator={false}>
+      }}>
       <EmptyState variant="centered" icon={config.icon} message={config.message} />
-    </ScrollView>
+    </View>
   );
 }

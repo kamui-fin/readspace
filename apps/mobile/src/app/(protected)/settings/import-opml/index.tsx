@@ -166,7 +166,11 @@ export default function ImportOPMLScreen() {
         onBackPress={() => router.back()}
       />
 
-      <ScrollView className="flex-1">
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + 20,
+        }}>
         {isCheckingTask ? (
           <View className="flex-1 items-center justify-center">
             <Spinner size="large" color={colors.secondary} />
