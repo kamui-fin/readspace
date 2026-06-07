@@ -73,6 +73,7 @@ async def _sync_feeds_to_meilisearch(
         return
 
     import asyncio
+
     max_attempts = 3
     for attempt in range(max_attempts):
         try:

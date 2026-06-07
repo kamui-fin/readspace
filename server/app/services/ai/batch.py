@@ -101,7 +101,7 @@ async def enrich_feeds_batch(
         job = client.batches.create(
             model=settings.GEMINI_SMART_MODEL,
             src=gcs_input_uri,
-            config=types.CreateBatchJobConfig(dest=gcs_output_prefix)
+            config=types.CreateBatchJobConfig(dest=gcs_output_prefix),
         )
         logger.info("Vertex AI Batch job submitted", job=job.name, size=len(feeds))
 
@@ -119,7 +119,7 @@ async def enrich_feeds_batch(
             bucket_name=bucket_name,
             output_prefix=f"{gcs_job_prefix}output/",
             count=len(feeds),
-            feeds=feeds
+            feeds=feeds,
         )
 
     except Exception as e:
@@ -132,6 +132,7 @@ async def enrich_feeds_batch(
 
 
 # --- Google AI Studio Fallback Implementation (Original Flow) ---
+
 
 async def _enrich_feeds_batch_ai_studio(
     feeds: list[FeedEnrichmentInput],
@@ -174,6 +175,7 @@ async def _enrich_feeds_batch_ai_studio(
 
 
 # --- Helper Operations ---
+
 
 def _create_batch_file(feeds: list[FeedEnrichmentInput]) -> str:
     """Write requests to temp JSONL file."""
@@ -256,6 +258,7 @@ def _find_gemini_json_response(data: Any) -> str | None:
         cleaned = data.strip()
         # Clean markdown code block wraps if present
         import re
+
         cleaned = re.sub(r"^```(?:json)?\n|\n```$", "", cleaned, flags=re.MULTILINE).strip()
         if cleaned.startswith("{") and cleaned.endswith("}"):
             if "clean_title" in cleaned or "enhanced_description" in cleaned:
@@ -268,6 +271,7 @@ def _find_gemini_json_response(data: Any) -> str | None:
 
         # Check standard candidate blocks
         import contextlib
+
         with contextlib.suppress(Exception):
             candidates = data.get("candidates")
             if candidates and candidates[0].get("content"):
@@ -332,11 +336,7 @@ def _find_prompt_match(data: Any, prompt_to_idx: dict[str, int]) -> int | None:
 
 
 def _download_results_from_gcs(
-    storage_client: storage.Client,
-    bucket_name: str,
-    output_prefix: str,
-    count: int,
-    feeds: list[FeedEnrichmentInput]
+    storage_client: storage.Client, bucket_name: str, output_prefix: str, count: int, feeds: list[FeedEnrichmentInput]
 ) -> list[FeedEnrichmentResponse | None]:
     """Download and robustly parse output prediction files from GCS using deep search fallbacks."""
     results: list[FeedEnrichmentResponse | None] = [None] * count
@@ -410,9 +410,7 @@ def _download_results_from_gcs(
 
 
 def _download_results_ai_studio(
-    client: genai.Client,
-    result_file: str,
-    count: int
+    client: genai.Client, result_file: str, count: int
 ) -> list[FeedEnrichmentResponse | None]:
     """Download results file from Google AI Studio Files API."""
     results: list[FeedEnrichmentResponse | None] = [None] * count
@@ -433,15 +431,11 @@ def _download_results_ai_studio(
     return results
 
 
-def _cleanup_gcs(
-    storage_client: storage.Client,
-    bucket_name: str,
-    local_path: str | None,
-    gcs_job_prefix: str
-):
+def _cleanup_gcs(storage_client: storage.Client, bucket_name: str, local_path: str | None, gcs_job_prefix: str):
     """Clean up GCS job files and local temporary files to preserve storage quotas and avoid costs."""
     if local_path and os.path.exists(local_path):
         import contextlib
+
         with contextlib.suppress(OSError):
             os.unlink(local_path)
 
@@ -460,6 +454,7 @@ def _cleanup_ai_studio(client: genai.Client, temp_path: str | None, uploaded_fil
     """Clean up local temp files and Files API uploads in AI Studio."""
     if temp_path and os.path.exists(temp_path):
         import contextlib
+
         with contextlib.suppress(OSError):
             os.unlink(temp_path)
 

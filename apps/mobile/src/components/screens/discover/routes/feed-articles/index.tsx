@@ -185,8 +185,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
               bottom: 0,
               backgroundColor: colors.background,
               zIndex: 9,
-            }}
-          >
+            }}>
             <ArticleCardSkeletonList count={6} />
           </Animated.View>
         )}

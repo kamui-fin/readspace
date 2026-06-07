@@ -128,4 +128,3 @@ async def decr(key: str) -> int:
     except Exception as e:
         logger.error("Redis DECR failed", key=key, error=str(e))
         return 0
-

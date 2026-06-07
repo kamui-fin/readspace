@@ -302,4 +302,3 @@ async def expire_basic_read_later_entries(db: AsyncSession, *, retention_days: i
     await db.flush()
 
     return result.rowcount or 0
-

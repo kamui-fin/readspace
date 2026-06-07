@@ -44,7 +44,6 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   const lastScrollY = useSharedValue(0);
   const scrollDirection = useSharedValue<'up' | 'down'>('down');
 
-
   const { checkAndTriggerUpgrade } = useLimitChecker();
 
   // Bottom sheet refs

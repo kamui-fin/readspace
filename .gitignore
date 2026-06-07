@@ -1,5 +1,8 @@
 .lk
 .expo
+.agent/workflows
+.antigravitycli
+.claude
 .cursor/
 .vscode/
 .DS_Store

@@ -16,15 +16,19 @@ export const createSignUpSchema = (isCloudProd: boolean) => {
         acceptTerms: z.boolean().optional(),
     })
 
-    const cloudSchema = baseSchema.extend({
-        acceptTerms: z.boolean().refine((val) => val === true, {
-            message: "You must accept the terms and conditions",
-        }),
-    })
+    if (isCloudProd) {
+        const cloudSchema = baseSchema.extend({
+            acceptTerms: z.boolean().refine((val) => val === true, {
+                message: "You must accept the terms and conditions",
+            }),
+        })
+        return cloudSchema.refine((data) => data.password === data.confirmPassword, {
+            message: "Passwords don't match",
+            path: ["confirmPassword"],
+        })
+    }
 
-    const schema = isCloudProd ? cloudSchema : baseSchema
-
-    return schema.refine((data) => data.password === data.confirmPassword, {
+    return baseSchema.refine((data) => data.password === data.confirmPassword, {
         message: "Passwords don't match",
         path: ["confirmPassword"],
     })

@@ -185,7 +185,7 @@ class TestTranslateArticle:
 
     @pytest.mark.asyncio
     async def test_translate_multiple_languages(
-        self, async_client: AsyncClient, test_article_with_content: FeedArticle
+        self, async_client: AsyncClient, test_article_with_content: FeedArticle, redis_client
     ):
         """Test translating to different languages."""
         languages = ["es", "fr", "de", "zh"]
@@ -199,6 +199,7 @@ class TestTranslateArticle:
             assert response.status_code == 200
             data = response.json()
             assert data["target_language"] == lang
+            await redis_client.flushdb()
 
     @pytest.mark.asyncio
     async def test_translate_article_missing_language(

@@ -168,7 +168,9 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
                 elevation: Platform.OS === 'android' ? 15 : 0,
                 backgroundColor:
                   Platform.OS === 'android'
-                    ? (isDark ? '#141414' : tabBarColors.tab_bar_background_default)
+                    ? isDark
+                      ? '#141414'
+                      : tabBarColors.tab_bar_background_default
                     : 'transparent',
               },
             ]}>
@@ -177,7 +179,9 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
                 <View
                   style={[
                     styles.blurView,
-                    { backgroundColor: isDark ? '#141414' : tabBarColors.tab_bar_background_default },
+                    {
+                      backgroundColor: isDark ? '#141414' : tabBarColors.tab_bar_background_default,
+                    },
                   ]}>
                   {tabsContent}
                 </View>

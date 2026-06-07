@@ -24,27 +24,24 @@ MAX_FEED_SIZE_BYTES = 50 * 1024 * 1024
 _session: aiohttp.ClientSession | None = None
 _session_loop: asyncio.AbstractEventLoop | None = None
 
+
 async def _get_client_session() -> aiohttp.ClientSession:
     """Get or create a shared aiohttp.ClientSession bound to the current event loop."""
     global _session, _session_loop
     current_loop = asyncio.get_running_loop()
-    
+
     if _session is None or _session.closed or _session_loop is not current_loop:
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
-        
+
         # Limit connections to prevent resource exhaustion, enable DNS cache
-        connector = aiohttp.TCPConnector(
-            ssl=ssl_context,
-            limit=HTTP_CLIENT_POOL_LIMITS,
-            ttl_dns_cache=300
-        )
-        
+        connector = aiohttp.TCPConnector(ssl=ssl_context, limit=HTTP_CLIENT_POOL_LIMITS, ttl_dns_cache=300)
+
         _session = aiohttp.ClientSession(connector=connector)
         _session_loop = current_loop
         logger.info("Created shared aiohttp.ClientSession for event loop", loop_id=id(current_loop))
-        
+
     return _session
 
 

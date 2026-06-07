@@ -1,26 +1,26 @@
-@import 'tailwindcss';
-@import 'uniwind';
+@import "tailwindcss";
+@import "uniwind";
 @custom-variant dark (&:is(.dark *));
 
 @theme {
   /* Font Families - Single font per variant (no fallbacks for React Native) */
-  --font-geist: 'Geist_400Regular';
-  --font-geist-regular: 'Geist_400Regular';
-  --font-geist-medium: 'Geist_500Medium';
-  --font-geist-semibold: 'Geist_600SemiBold';
-  --font-geist-bold: 'Geist_700Bold';
-  --font-geist-mono: 'GeistMono_400Regular';
-  --font-geist-mono-medium: 'GeistMono_500Medium';
-  --font-geist-mono-semibold: 'GeistMono_600SemiBold';
-  --font-geist-mono-bold: 'GeistMono_700Bold';
-  --font-figtree-regular: 'Figtree_400Regular';
-  --font-figtree-medium: 'Figtree_500Medium';
-  --font-figtree-semibold: 'Figtree_600SemiBold';
-  --font-figtree-bold: 'Figtree_700Bold';
-  --font-garamond-regular: 'EBGaramond_400Regular';
-  --font-garamond-medium: 'EBGaramond_500Medium';
-  --font-garamond-semibold: 'EBGaramond_600SemiBold';
-  --font-garamond-bold: 'EBGaramond_700Bold';
+  --font-geist: "Geist_400Regular";
+  --font-geist-regular: "Geist_400Regular";
+  --font-geist-medium: "Geist_500Medium";
+  --font-geist-semibold: "Geist_600SemiBold";
+  --font-geist-bold: "Geist_700Bold";
+  --font-geist-mono: "GeistMono_400Regular";
+  --font-geist-mono-medium: "GeistMono_500Medium";
+  --font-geist-mono-semibold: "GeistMono_600SemiBold";
+  --font-geist-mono-bold: "GeistMono_700Bold";
+  --font-figtree-regular: "Figtree_400Regular";
+  --font-figtree-medium: "Figtree_500Medium";
+  --font-figtree-semibold: "Figtree_600SemiBold";
+  --font-figtree-bold: "Figtree_700Bold";
+  --font-garamond-regular: "EBGaramond_400Regular";
+  --font-garamond-medium: "EBGaramond_500Medium";
+  --font-garamond-semibold: "EBGaramond_600SemiBold";
+  --font-garamond-bold: "EBGaramond_700Bold";
 
   /* Letter Spacing */
   --letter-spacing-heading: -0.02em;

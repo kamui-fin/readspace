@@ -50,4 +50,3 @@ async def compact_old_articles() -> dict[str, int]:
 
     logger.info("Article compaction completed", deleted=deleted_count, expired_read_later=expired_saved)
     return {"deleted_articles": deleted_count, "expired_read_later": expired_saved}
-
