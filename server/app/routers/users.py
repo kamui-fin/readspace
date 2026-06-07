@@ -49,4 +49,3 @@ async def get_limits(
 
     limits_and_usage = await get_user_limits_and_usage(db, user_id=UUID(current_user.sub))
     return limits_and_usage
-

@@ -147,9 +147,13 @@ export function HeaderForeground({
             <View
               className="px-2.5 py-0.5 rounded-full items-center justify-center"
               style={{
-                backgroundColor: colors === COLORS.dark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.75)',
+                backgroundColor:
+                  colors === COLORS.dark
+                    ? 'rgba(255, 255, 255, 0.15)'
+                    : 'rgba(255, 255, 255, 0.75)',
                 borderWidth: 1,
-                borderColor: colors === COLORS.dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+                borderColor:
+                  colors === COLORS.dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
               }}>
               <Text
                 className="font-geist-bold text-sm"

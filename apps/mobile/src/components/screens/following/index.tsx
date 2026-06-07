@@ -510,8 +510,7 @@ export function FollowingScreen({
             zIndex: 9,
             paddingTop: contentPaddingTop,
             paddingBottom: isPreviewMode ? contentPaddingBottom + 80 : contentPaddingBottom,
-          }}
-        >
+          }}>
           <ArticleCardSkeletonList count={8} />
         </Animated.View>
       )}

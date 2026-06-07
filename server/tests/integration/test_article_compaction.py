@@ -550,6 +550,7 @@ async def test_compaction_task_wrapper_e2e(
     ), f"Expected 50 articles for test feed, got {len(articles_after)}"
 
 
+@pytest.mark.asyncio
 async def test_compaction_expires_basic_read_later_e2e(
     db_session: AsyncSession,
 ) -> None:

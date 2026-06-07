@@ -79,9 +79,9 @@ async def test_fetch_feed_content_size_limit():
     with patch("app.core.redis_cache.get", new_callable=AsyncMock) as mock_get:
         mock_get.return_value = None
 
-        with patch("aiohttp.ClientSession") as mock_session_cls:
+        with patch("app.services.feeds.fetching._get_client_session", new_callable=AsyncMock) as mock_get_session:
             mock_session = MagicMock()
-            mock_session_cls.return_value.__aenter__.return_value = mock_session
+            mock_get_session.return_value = mock_session
 
             # Mock response with Content-Length too large
             mock_response = AsyncMock()

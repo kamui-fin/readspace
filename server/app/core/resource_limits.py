@@ -21,4 +21,3 @@ RESOURCE_LIMITS = {
         "read_later_retention_days": -1,
     },
 }
-

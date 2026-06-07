@@ -206,7 +206,14 @@ def pytest_sessionfinish(session, exitstatus):
 @pytest_asyncio.fixture(scope="session")
 async def db_engine() -> AsyncGenerator[AsyncEngine, None]:
     if not TEST_DB_CONFIG:
-        raise RuntimeError("Test database is not initialized")
+        base_settings = get_settings()
+        config = await _prepare_test_database(base_settings)
+        _configure_test_env(base_settings, config)
+        get_settings.cache_clear()
+        get_settings()  # Re-initialize with overridden env
+        TEST_DB_CONFIG.update(config)
+        print(f"✅ Using isolated database '{config['name']}' for integration tests")
+
     engine = create_async_engine(
         TEST_DB_CONFIG["async_url"],
         poolclass=NullPool,

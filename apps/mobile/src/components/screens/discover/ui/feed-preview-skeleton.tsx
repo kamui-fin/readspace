@@ -28,8 +28,7 @@ export function FeedPreviewSkeleton() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 24 }}
-          >
+            contentContainerStyle={{ paddingHorizontal: 24 }}>
             <View className="flex-row gap-4">
               {Array.from({ length: 3 }, (_, i) => `article-skeleton-${i}`).map((key) => (
                 <Skeleton

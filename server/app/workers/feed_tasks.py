@@ -60,5 +60,5 @@ async def compact_old_articles_task() -> dict[str, int]:
 async def fetch_favicon_task(feed_id: UUID | str) -> None:
     """Fetch and save favicon for a feed in the background."""
     from app.workers.feed.favicon import fetch_feed_favicon
-    await fetch_feed_favicon(feed_id=ensure_uuid(feed_id))
 
+    await fetch_feed_favicon(feed_id=ensure_uuid(feed_id))

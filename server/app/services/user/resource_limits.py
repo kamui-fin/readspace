@@ -3,8 +3,8 @@ Resource limit enforcement logic.
 """
 
 from datetime import date
-from uuid import UUID
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -98,7 +98,7 @@ async def get_user_limits_and_usage(db: AsyncSession, user_id: UUID) -> dict[str
 
     user_role = str(profile.role)
     role_lower = user_role.lower().split(".")[-1]
-    
+
     limits = RESOURCE_LIMITS.get(role_lower, RESOURCE_LIMITS["basic"])
 
     # Get current usages
@@ -115,5 +115,5 @@ async def get_user_limits_and_usage(db: AsyncSession, user_id: UUID) -> dict[str
         "usage": {
             "subscriptions": sub_usage,
             "daily_ai_calls": ai_usage,
-        }
+        },
     }
