@@ -165,7 +165,4 @@ export const meilisearchClient = new Proxy({} as MeiliSearch, {
   },
 });
 
-export {
-  createHybridSearchParams,
-  type HybridSearchConfig,
-} from '@readspace/shared';
+export { createHybridSearchParams, type HybridSearchConfig } from '@readspace/shared';

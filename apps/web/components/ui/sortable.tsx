@@ -107,7 +107,8 @@ export const Sortable = ({
 }
 
 export interface SortableListProps
-    extends Omit<SortableContextProps, "children">,
+    extends
+        Omit<SortableContextProps, "children">,
         React.ComponentPropsWithoutRef<typeof Primitive.ul> {
     orientation?: "vertical" | "horizontal"
 }
@@ -262,11 +263,10 @@ export const SortableItemTrigger = React.forwardRef<
 })
 SortableItemTrigger.displayName = "SortableItemTrigger"
 
-export interface SortableOverlayProps
-    extends Omit<
-        React.ComponentPropsWithoutRef<typeof DragOverlay>,
-        "children"
-    > {
+export interface SortableOverlayProps extends Omit<
+    React.ComponentPropsWithoutRef<typeof DragOverlay>,
+    "children"
+> {
     children?: React.ReactNode | ((id: UniqueIdentifier) => React.ReactNode)
 }
 

@@ -6,7 +6,7 @@ services:
     container_name: readspace_redis
     restart: always
     ports:
-      - 6379:6379
+      - 127.0.0.1:6379:6379
     volumes:
       - redis-data:/data
     healthcheck:
@@ -20,14 +20,14 @@ services:
     image: getmeili/meilisearch:v1.16
     container_name: readspace_meilisearch
     restart: always
-    network_mode: host
+    ports:
+      - "7700:7700"
     volumes:
       - meilisearch-data:/meili_data
     environment:
       - MEILI_ENV=development
-      - MEILI_MASTER_KEY=${MEILISEARCH_MASTER_KEY}
+      - MEILI_MASTER_KEY=${MEILISEARCH_MASTER_KEY:-readspace_master_key_change_in_production}
       - MEILI_HTTP_ADDR=0.0.0.0:7700
-      - MEILI_MASTER_KEY=readspace_master_key_change_in_production
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
       interval: 30s
@@ -36,6 +36,7 @@ services:
       start_period: 10s
 
   web:
+    profiles: ["app"]
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
@@ -47,15 +48,16 @@ services:
       - "18042:8042"
     environment:
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}
-      - NEXT_PUBLIC_SUPABASE_URL=http://localhost:18000
-      - NEXT_PUBLIC_API_BASE_URL=http://localhost:18008
-      - NEXT_PUBLIC_MEILISEARCH_URL=http://localhost:7700
+      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_PUBLIC_URL:-http://localhost:18000}
+      - NEXT_PUBLIC_API_BASE_URL=${API_URL:-http://localhost:18008}
+      - NEXT_PUBLIC_MEILISEARCH_URL=${MEILISEARCH_PUBLIC_URL:-http://localhost:7700}
       - NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY=${MEILISEARCH_SEARCH_KEY}
     depends_on:
       - api
       - meilisearch
 
   api:
+    profiles: ["app"]
     build:
       context: ../server
       dockerfile: Dockerfile
@@ -97,6 +99,7 @@ services:
 
 
   worker:
+    profiles: ["app"]
     build:
       context: ../server
       dockerfile: Dockerfile.taskiq
@@ -126,6 +129,7 @@ services:
       - PYTHONUNBUFFERED=1
 
   scheduler:
+    profiles: ["app"]
     build:
       context: ../server
       dockerfile: Dockerfile.taskiq

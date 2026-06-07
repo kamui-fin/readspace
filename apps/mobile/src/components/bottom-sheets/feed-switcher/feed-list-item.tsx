@@ -12,13 +12,14 @@ import {
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import type { Subscription } from '@readspace/shared';
 import { Image as ExpoImage } from 'expo-image';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { View } from 'react-native';
 
 function getFaviconUrl(feed: { link?: string | null; image_url?: string | null }): string | null {
-  if (feed.image_url) return feed.image_url;
+  if (feed.image_url) return resolveSupabaseImageUrl(feed.image_url) ?? null;
   if (feed.link) {
     try {
       return `https://www.google.com/s2/favicons?domain=${new URL(feed.link).hostname}&sz=32`;
@@ -60,6 +61,7 @@ const FeedListItemComponent = ({
   isSelectionMode = false,
   isSelected = false,
 }: FeedListItemProps) => {
+  const [imageError, setImageError] = useState(false);
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
@@ -85,13 +87,20 @@ const FeedListItemComponent = ({
           <View className="h-10 w-10 items-center justify-center">
             <CheckCircleBoldIcon width={32} height={32} color={colors.secondary} />
           </View>
-        ) : faviconUrl ? (
+        ) : faviconUrl && !imageError ? (
           <View className="h-10 w-10 items-center justify-center overflow-hidden rounded-md">
             <ExpoImage
               source={{ uri: faviconUrl }}
               style={{ width: 40, height: 40 }}
               contentFit="cover"
               cachePolicy="memory-disk"
+              onError={(err) => {
+                console.error(
+                  `FeedListItem favicon load error for "${title}" (${faviconUrl}):`,
+                  err.error || err
+                );
+                setImageError(true);
+              }}
             />
           </View>
         ) : (

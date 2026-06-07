@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { cn } from "@/lib/utils"
+import { cn, resolveSupabaseImageUrl } from "@/lib/utils"
 import { Rss } from "lucide-react"
 
 interface FeedIconProps {
@@ -40,7 +40,7 @@ export function FeedIcon({ feed, className }: FeedIconProps) {
     return (
         <Avatar className={cn("rounded", className)}>
             <AvatarImage
-                src={feed.image_url || undefined}
+                src={resolveSupabaseImageUrl(feed.image_url)}
                 alt={feed.title || "Feed icon"}
                 className="object-cover"
             />

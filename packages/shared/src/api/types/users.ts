@@ -39,4 +39,3 @@ export interface UserLimits {
     daily_ai_calls: number;
   };
 }
-

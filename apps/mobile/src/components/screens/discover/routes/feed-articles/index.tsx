@@ -12,10 +12,9 @@ import { ApiClient, type Article, formatRelativeDate } from '@readspace/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSegments } from 'expo-router';
 import { useCallback, useRef } from 'react';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const isIOS = Platform.OS === 'ios';
 
 interface FeedArticlesScreenProps {
   feedId: string;
@@ -123,17 +122,6 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
     </View>
   );
 
-  if (isLoading) {
-    return (
-      <View className="bg-background flex-1">
-        {headerSection}
-        <View className="px-6">
-          <ArticleCardSkeletonList count={5} />
-        </View>
-      </View>
-    );
-  }
-
   if (isError) {
     return (
       <View className="bg-background flex-1">
@@ -154,35 +142,55 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
     <View className="bg-background flex-1">
       {headerSection}
 
-      {articles.length > 0 ? (
-        <InfiniteScrollList
-          key={isDark ? 'dark' : 'light'}
-          ref={listRef}
-          data={articles}
-          renderItem={renderArticle}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{
-            paddingTop: 8,
-            paddingBottom: BOTTOM_TABBAR_BASE_HEIGHT + 16,
-          }}
-          showsVerticalScrollIndicator={false}
-          onEndReachedThreshold={0.5}
-          estimatedItemSize={200}
-        />
-      ) : (
-        <View className="flex-1 items-center justify-center px-6">
-          <InboxLineLinearIcon width={64} height={64} color={colors.grey5} />
-          <Text
-            size="lg"
-            fontFamily="geist-semibold"
-            className="tracking-heading text-primary-foreground mt-4 text-center">
-            No articles yet
-          </Text>
-          <Text size="base" fontFamily="geist" className="text-grey mt-2 text-center">
-            This feed doesn't have any articles yet. Check back later!
-          </Text>
-        </View>
-      )}
+      <View className="flex-1">
+        {articles.length > 0 ? (
+          <InfiniteScrollList
+            key={isDark ? 'dark' : 'light'}
+            ref={listRef}
+            data={articles}
+            renderItem={renderArticle}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{
+              paddingTop: 8,
+              paddingBottom: BOTTOM_TABBAR_BASE_HEIGHT + 16,
+            }}
+            showsVerticalScrollIndicator={false}
+            onEndReachedThreshold={0.5}
+            estimatedItemSize={200}
+          />
+        ) : !isLoading ? (
+          <View className="flex-1 items-center justify-center px-6">
+            <InboxLineLinearIcon width={64} height={64} color={colors.grey5} />
+            <Text
+              size="lg"
+              fontFamily="geist-semibold"
+              className="tracking-heading text-primary-foreground mt-4 text-center">
+              No articles yet
+            </Text>
+            <Text size="base" fontFamily="geist" className="text-grey mt-2 text-center">
+              This feed doesn't have any articles yet. Check back later!
+            </Text>
+          </View>
+        ) : null}
+
+        {isLoading && (
+          <Animated.View
+            entering={FadeIn.duration(200)}
+            exiting={FadeOut.duration(300)}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: colors.background,
+              zIndex: 9,
+            }}
+          >
+            <ArticleCardSkeletonList count={6} />
+          </Animated.View>
+        )}
+      </View>
     </View>
   );
 }

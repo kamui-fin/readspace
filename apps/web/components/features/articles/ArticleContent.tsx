@@ -59,8 +59,11 @@ export function ArticleContent({
 
     const handleEnterZenMode = () => {
         if (contentRef.current) {
-            const maxScroll = contentRef.current.scrollHeight - contentRef.current.clientHeight
-            const percentage = maxScroll > 0 ? contentRef.current.scrollTop / maxScroll : 0
+            const maxScroll =
+                contentRef.current.scrollHeight -
+                contentRef.current.clientHeight
+            const percentage =
+                maxScroll > 0 ? contentRef.current.scrollTop / maxScroll : 0
             setScrollRatio(percentage)
         }
         setIsZenMode(true)
@@ -68,14 +71,19 @@ export function ArticleContent({
 
     const handleExitZenMode = () => {
         if (zenScrollRef.current) {
-            const maxScroll = zenScrollRef.current.scrollHeight - zenScrollRef.current.clientHeight
-            const ratio = maxScroll > 0 ? zenScrollRef.current.scrollTop / maxScroll : 0
+            const maxScroll =
+                zenScrollRef.current.scrollHeight -
+                zenScrollRef.current.clientHeight
+            const ratio =
+                maxScroll > 0 ? zenScrollRef.current.scrollTop / maxScroll : 0
             setIsZenMode(false)
-            
+
             // Scroll original reader container back to the same relative position
             setTimeout(() => {
                 if (contentRef.current) {
-                    const originalMaxScroll = contentRef.current.scrollHeight - contentRef.current.clientHeight
+                    const originalMaxScroll =
+                        contentRef.current.scrollHeight -
+                        contentRef.current.clientHeight
                     contentRef.current.scrollTop = ratio * originalMaxScroll
                 }
             }, 50)
@@ -83,8 +91,6 @@ export function ArticleContent({
             setIsZenMode(false)
         }
     }
-
-
 
     const publishedAtString = article.published_at
     const readAtString = article.read_at
@@ -185,7 +191,7 @@ export function ArticleContent({
             if (e.key === "Escape" && isZenMode) {
                 handleExitZenMode()
             }
-            
+
             if (e.key.toLowerCase() === "z" && !isZenMode) {
                 const active = document.activeElement?.tagName.toLowerCase()
                 if (
@@ -207,7 +213,9 @@ export function ArticleContent({
         if (isZenMode && zenScrollRef.current) {
             const timer = setTimeout(() => {
                 if (zenScrollRef.current) {
-                    const maxScroll = zenScrollRef.current.scrollHeight - zenScrollRef.current.clientHeight
+                    const maxScroll =
+                        zenScrollRef.current.scrollHeight -
+                        zenScrollRef.current.clientHeight
                     zenScrollRef.current.scrollTop = scrollRatio * maxScroll
                 }
             }, 50)
@@ -246,9 +254,8 @@ export function ArticleContent({
         return `${contentView}-${article.id}`
     }, [contentView, article.id, translatedLanguage])
 
-    const activeTab = (isLoading || isExtracting)
-        ? ContentView.Extracted
-        : contentView
+    const activeTab =
+        isLoading || isExtracting ? ContentView.Extracted : contentView
 
     const toolbar = (
         <ArticleToolbar
@@ -294,7 +301,10 @@ export function ArticleContent({
                             </button>
                         </TooltipTrigger>
                         <TooltipContent align="end">
-                            Enter Zen Mode <kbd className="ml-1.5 px-1 py-0.5 text-[9px] bg-muted border border-border rounded font-mono text-muted-foreground font-semibold">Z</kbd>
+                            Enter Zen Mode{" "}
+                            <kbd className="ml-1.5 px-1 py-0.5 text-[9px] bg-muted border border-border rounded font-mono text-muted-foreground font-semibold">
+                                Z
+                            </kbd>
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
@@ -391,9 +401,7 @@ export function ArticleContent({
 
             {/* Zen Mode Overlay */}
             {isZenMode && (
-                <div
-                    className="fixed inset-0 z-[1200] flex flex-col bg-background text-foreground transition-colors duration-300 overflow-hidden select-text"
-                >
+                <div className="fixed inset-0 z-[1200] flex flex-col bg-background text-foreground transition-colors duration-300 overflow-hidden select-text">
                     {/* Top Reading Progress Bar */}
                     <div className="absolute top-0 left-0 right-0 h-0.5 bg-muted/20 z-50">
                         <div
@@ -415,7 +423,10 @@ export function ArticleContent({
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent align="end">
-                                Exit Zen Mode <kbd className="ml-1.5 px-1 py-0.5 text-[9px] bg-muted border border-border rounded font-mono text-muted-foreground font-semibold">Esc</kbd>
+                                Exit Zen Mode{" "}
+                                <kbd className="ml-1.5 px-1 py-0.5 text-[9px] bg-muted border border-border rounded font-mono text-muted-foreground font-semibold">
+                                    Esc
+                                </kbd>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -435,7 +446,9 @@ export function ArticleContent({
                                     shouldShowFeedBadge={shouldShowFeedBadge}
                                     isMobile={!!isMobile}
                                     isRecentlyReadMode={isRecentlyReadMode}
-                                    shouldShowPreviewBanner={shouldShowPreviewBanner}
+                                    shouldShowPreviewBanner={
+                                        shouldShowPreviewBanner
+                                    }
                                     toolbar={null}
                                 />
 
@@ -455,7 +468,8 @@ export function ArticleContent({
                                     </div>
                                 ) : (
                                     <div className="space-y-6 mt-8">
-                                        {(article.description || article.user_note) && (
+                                        {(article.description ||
+                                            article.user_note) && (
                                             <blockquote className="border-l-4 border-primary/30 bg-muted/30 pl-4 italic text-muted-foreground prose prose-sm max-w-none">
                                                 <div
                                                     dangerouslySetInnerHTML={{
@@ -470,8 +484,8 @@ export function ArticleContent({
                                         <div className="flex flex-col items-center justify-center py-12 text-center not-prose">
                                             <div className="mx-auto max-w-xs">
                                                 <p className="text-sm text-muted-foreground/60">
-                                                    This article doesn&apos;t have any
-                                                    content available.
+                                                    This article doesn&apos;t
+                                                    have any content available.
                                                 </p>
                                             </div>
                                         </div>

@@ -65,7 +65,11 @@ export function FeedCard({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         {showPreviewButton && (
-                            <Link href={`/feeds/${feed.id}/articles`} target="_blank" rel="noopener noreferrer">
+                            <Link
+                                href={`/feeds/${feed.id}/articles`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
                                 <DropdownMenuItem>
                                     <Eye className="mr-2 h-4 w-4" />
                                     Preview
@@ -73,7 +77,11 @@ export function FeedCard({
                             </Link>
                         )}
                         {showSimilarButton && (
-                            <Link href={`/feeds/${feed.id}/similar`} target="_blank" rel="noopener noreferrer">
+                            <Link
+                                href={`/feeds/${feed.id}/similar`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
                                 <DropdownMenuItem>
                                     <Sparkles className="mr-2 h-4 w-4" />
                                     View Similar Feeds

@@ -45,7 +45,8 @@ const getCategoryIcon = (categoryName: string) => {
 }
 
 export interface CategoryBadgeProps
-    extends React.HTMLAttributes<HTMLDivElement>,
+    extends
+        React.HTMLAttributes<HTMLDivElement>,
         VariantProps<typeof categoryBadgeVariants> {
     category: string
     iconKey?: string

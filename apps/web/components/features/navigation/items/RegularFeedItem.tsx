@@ -38,12 +38,15 @@ export function RegularFeedItem({ feed }: RegularFeedItemProps) {
 
     return (
         <SidebarMenuItem>
-            <div className={cn(
-                "relative flex items-center w-full group/item h-8 rounded-md text-sm transition-colors duration-150 px-1",
-                isAll ? "pl-2" : "pl-[28px]",
-                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                feed.isActive && "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-            )}>
+            <div
+                className={cn(
+                    "relative flex items-center w-full group/item h-8 rounded-md text-sm transition-colors duration-150 px-1",
+                    isAll ? "pl-2" : "pl-[28px]",
+                    "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    feed.isActive &&
+                        "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                )}
+            >
                 <Link
                     href={feed.url}
                     aria-label={`Navigate to ${feed.title} feed`}

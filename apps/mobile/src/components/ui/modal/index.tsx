@@ -103,7 +103,7 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
         {...props}>
         <BottomSheetView
           className={clsx(
-            'flex-1 bg-background ',
+            'bg-background flex-1 ',
             isIOS && 'overflow-hidden rounded-3xl',
             containerClassName
           )}
@@ -116,7 +116,7 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
             (showCloseButton && onClose)) && (
             <>
               <View
-                className={clsx('relative px-4 py-2 flex-row items-center', headerClassName)}
+                className={clsx('relative flex-row items-center px-4 py-2', headerClassName)}
                 style={{ minHeight: 56 }}>
                 {/* Header Left */}
                 {headerLeft && (
@@ -139,7 +139,7 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
                   {headerTitle && (
                     <Text
                       className={clsx(
-                        'font-geist-semibold text-2xl text-primary-foreground',
+                        'font-geist-semibold text-primary-foreground text-2xl',
                         headerTitleAlign === 'center' ? 'text-center' : 'text-left'
                       )}
                       style={{ lineHeight: 28 }}>

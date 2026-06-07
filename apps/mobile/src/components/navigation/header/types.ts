@@ -17,6 +17,7 @@ export interface BaseHeaderProps {
   title: string;
   titleIcon?: ReactNode;
   subtitle?: string;
+  unreadCount?: number;
   showBackButton?: boolean;
   onBackPress?: () => void;
   actions?: HeaderAction[];
@@ -25,6 +26,8 @@ export interface BaseHeaderProps {
   titleFontWeight?: 'bold' | 'semibold'; // Font weight for title
   titleSize?: 'default' | 'medium' | 'small' | 'xs'; // Size for title
   transparentBackground?: boolean; // If true, sets header background to transparent
+  disableSafeAreaTop?: boolean; // If true, disables top safe area padding calculation
+  disableCenteredLayout?: boolean; // If true, disables centered/absolute layout in HeaderForeground
   className?: string; // Custom class for styling
 }
 

@@ -191,9 +191,7 @@ export function SidebarMain() {
 
     return (
         <>
-            <MainNavigationItems
-                items={mainNavItems}
-            />
+            <MainNavigationItems items={mainNavItems} />
             <FeedsNavigation
                 isMobile={isMobile}
                 toggleSidebar={toggleSidebar}

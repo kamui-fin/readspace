@@ -197,8 +197,8 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
           }}>
           <Spinner
             size="small"
-            color={colors.blue}
-            secondaryColor={isDark ? 'rgba(35, 107, 239, 0.3)' : 'rgb(190, 213, 252)'}
+            color={colors.secondary}
+            secondaryColor={isDark ? 'rgba(106, 153, 78, 0.3)' : 'rgba(106, 153, 78, 0.15)'}
           />
         </View>
       );

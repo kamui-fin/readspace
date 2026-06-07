@@ -2,10 +2,7 @@ import * as React from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible"
-import {
-    SidebarMenuItem,
-    SidebarMenuSub,
-} from "@/components/ui/sidebar"
+import { SidebarMenuItem, SidebarMenuSub } from "@/components/ui/sidebar"
 import { ChevronRight } from "lucide-react"
 import { SubFeedItem, type SubFeedItemData } from "./SubFeedItem"
 import { FeedDropdownMenu } from "../menus/FeedContextMenu"
@@ -80,11 +77,14 @@ interface FeedItemRootProps {
 function FeedItemRoot({ children, isActive }: FeedItemRootProps) {
     return (
         <SidebarMenuItem>
-            <div className={cn(
-                "relative flex items-center w-full group/item h-8 rounded-md text-sm transition-colors duration-150 px-1",
-                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                isActive && "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-            )}>
+            <div
+                className={cn(
+                    "relative flex items-center w-full group/item h-8 rounded-md text-sm transition-colors duration-150 px-1",
+                    "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    isActive &&
+                        "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                )}
+            >
                 {children}
             </div>
         </SidebarMenuItem>
@@ -126,11 +126,7 @@ interface FeedItemButtonProps {
     children: React.ReactNode
 }
 
-function FeedItemButton({
-    onClick,
-    title,
-    children,
-}: FeedItemButtonProps) {
+function FeedItemButton({ onClick, title, children }: FeedItemButtonProps) {
     return (
         <button
             type="button"
@@ -168,10 +164,7 @@ export function CollapsibleFeedItem({
         <Collapsible open={isOpen} onOpenChange={toggle}>
             <FeedItemRoot isActive={isActive}>
                 <FeedItemToggle isOpen={isOpen} title={feed.title} />
-                <FeedItemButton
-                    onClick={handleNavigate}
-                    title={feed.title}
-                >
+                <FeedItemButton onClick={handleNavigate} title={feed.title}>
                     {feed.icon &&
                         React.createElement(feed.icon, {
                             className: "ml-1 mr-1 h-4 w-4 shrink-0",

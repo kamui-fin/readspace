@@ -3,18 +3,17 @@ import {
   type ArticleViewMode,
 } from '@components/bottom-sheets/article-options';
 import { ArticleSummaryBottomSheet } from '@components/bottom-sheets/article-summary';
-import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
+
 import { ArticleReader } from '@components/screens/article-reader/index';
 import { ArticleActionBar } from '@components/screens/article-reader/ui/article-actions.bar';
 import { ArticleReaderSkeleton } from '@components/screens/article-reader/ui/article-reader.skeleton';
 import type { LanguageOption } from '@components/screens/discover/ui/language-picker.dropdown';
 import { LanguagePicker } from '@components/screens/discover/ui/language-picker.dropdown';
-import { Button } from '@components/ui/button';
+
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { COLORS } from '@lib/constants/colors';
+
 import { SUPPORTED_LANGUAGES } from '@lib/constants/languages';
 import {
   useArticle,
@@ -44,8 +43,8 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   const scrollY = useSharedValue(0);
   const lastScrollY = useSharedValue(0);
   const scrollDirection = useSharedValue<'up' | 'down'>('down');
-  const isDark = useIsDarkMode();
-  const colors = COLORS[isDark ? 'dark' : 'light'];
+
+
   const { checkAndTriggerUpgrade } = useLimitChecker();
 
   // Bottom sheet refs
@@ -389,6 +388,11 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     );
   }
 
+  const isExtracting =
+    article.article_type === 'feed' &&
+    !article.extracted_content &&
+    (extractMutation.isPending || extractMutation.status === 'idle');
+
   return (
     <View className="bg-background flex-1">
       <ArticleActionBar
@@ -410,6 +414,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         scrollY={scrollY}
         lastScrollY={lastScrollY}
         scrollDirection={scrollDirection}
+        isLoadingContent={isExtracting}
       />
 
       {/* AI Summary Bottom Sheet */}

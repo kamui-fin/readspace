@@ -2,11 +2,7 @@ import { useToast as useToastContext } from '@contexts/toast-provider';
 import { useEffect } from 'react';
 import { getToastShowFunction, getToastUpdateFunction, setToastFunctions } from './functions';
 
-export type {
-  CustomToastConfig,
-  ToastData,
-  ToastType,
-} from '@components/ui/toast/container';
+export type { CustomToastConfig, ToastData, ToastType } from '@components/ui/toast/container';
 
 type ToastOptions = {
   duration?: number;

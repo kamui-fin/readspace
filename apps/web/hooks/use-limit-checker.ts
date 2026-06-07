@@ -29,7 +29,7 @@ export function useLimitChecker() {
             })
             return false
         }
-        
+
         if (type === "ai" && !canUseAI()) {
             open({
                 title: "Daily AI Limit Reached",
@@ -37,7 +37,7 @@ export function useLimitChecker() {
             })
             return false
         }
-        
+
         return true
     }
 

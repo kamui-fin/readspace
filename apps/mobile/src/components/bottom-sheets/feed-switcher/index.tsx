@@ -38,8 +38,10 @@ import { type FeedSwitcherStore, useFeedSwitcherStore } from '@stores/feed-switc
 import { useFeedViewStore } from '@stores/feed-view';
 import { useRouter } from 'expo-router';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Alert, Pressable, View, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
+import LocalRefreshLinearIcon from '@components/icons/local/refresh-linear';
 
 const PINNED_YELLOW = '#EAB308';
 
@@ -73,10 +75,27 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
 
+    const queryClient = useQueryClient();
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedFeedIds, setSelectedFeedIds] = useState<Set<string>>(new Set());
     const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
     const insets = useSafeAreaInsets();
+
+    const handleRefreshFeeds = useCallback(async () => {
+      setIsRefreshing(true);
+      try {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['rss-feeds', 'list'] }),
+          queryClient.invalidateQueries({ queryKey: ['rss-unread-counts'] }),
+        ]);
+        toast.success('Feeds refreshed');
+      } catch (err) {
+        toast.error('Failed to refresh feeds');
+      } finally {
+        setIsRefreshing(false);
+      }
+    }, [queryClient]);
 
     const { data: feedsData } = useFeeds(undefined, { staleTime: 0 });
     const { data: unreadCountsData } = useUnreadCounts();
@@ -115,6 +134,8 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
       present: () => {
         lastPressTime.current = 0;
         bottomSheetRef.current?.present();
+        queryClient.invalidateQueries({ queryKey: ['rss-feeds', 'list'] });
+        queryClient.invalidateQueries({ queryKey: ['rss-unread-counts'] });
       },
       dismiss: () => {
         setIsSelectionMode(false);
@@ -466,6 +487,24 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
             size="small"
             className="h-8 w-8"
             fullWidth={false}
+            disabled={isRefreshing}
+            onPress={handleRefreshFeeds}>
+            {isRefreshing ? (
+              <ActivityIndicator size="small" color={colors.grey} />
+            ) : (
+              <LocalRefreshLinearIcon
+                width={16}
+                height={16}
+                color={colors.grey}
+                strokeWidth={2.4}
+              />
+            )}
+          </Button>
+          <Button
+            variant="icon"
+            size="small"
+            className="h-8 w-8"
+            fullWidth={false}
             onPress={handleCreateFolderPress}>
             <AddFolderBoldIcon width={16} height={16} color={colors.grey} />
           </Button>
@@ -490,6 +529,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
       selectedFolderIds.size,
       handleBulkDelete,
       handleBulkMove,
+      isRefreshing,
     ]);
 
     const selectedFeedId = viewType === 'feed' ? selectedId : null;

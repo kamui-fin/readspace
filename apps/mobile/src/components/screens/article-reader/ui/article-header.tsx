@@ -6,6 +6,7 @@ import { stripHtml } from '@lib/utils/html';
 import { Article } from '@readspace/shared';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -25,11 +26,12 @@ export function ArticleHeader({
   isClipped,
   feedId,
   displayFaviconUrl,
-  fallbackComponent,
+  fallbackComponent: FallbackIcon,
   displaySource,
   displayDate,
   readTime,
 }: ArticleHeaderProps) {
+  const [faviconError, setFaviconError] = useState(false);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isDark = useIsDarkMode();
@@ -82,26 +84,44 @@ export function ArticleHeader({
               paddingVertical: 4,
             }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            {displayFaviconUrl && (
+            {displayFaviconUrl && !faviconError ? (
               <ExpoImage
                 source={{ uri: displayFaviconUrl }}
                 style={{ width: 16, height: 16, borderRadius: 2 }}
                 contentFit="contain"
+                onError={(err) => {
+                  console.error(
+                    `ArticleHeader favicon load error for "${displaySource}" (${displayFaviconUrl}):`,
+                    err.error || err
+                  );
+                  setFaviconError(true);
+                }}
               />
-            )}
+            ) : FallbackIcon ? (
+              <FallbackIcon size={16} className="rounded-sm" />
+            ) : null}
             <Text size="sm" fontFamily="geist" className="text-grey uppercase tracking-wide">
               {displaySource || 'Unknown Source'}
             </Text>
           </Pressable>
         ) : (
           <View className="flex-row items-center gap-2">
-            {displayFaviconUrl && (
+            {displayFaviconUrl && !faviconError ? (
               <ExpoImage
                 source={{ uri: displayFaviconUrl }}
                 style={{ width: 16, height: 16, borderRadius: 2 }}
                 contentFit="contain"
+                onError={(err) => {
+                  console.error(
+                    `ArticleHeader favicon load error for "${displaySource}" (${displayFaviconUrl}):`,
+                    err.error || err
+                  );
+                  setFaviconError(true);
+                }}
               />
-            )}
+            ) : FallbackIcon ? (
+              <FallbackIcon size={16} className="rounded-sm" />
+            ) : null}
             <Text size="sm" fontFamily="geist" className="text-grey uppercase tracking-wide">
               {displaySource || 'Unknown Source'}
             </Text>

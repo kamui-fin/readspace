@@ -88,7 +88,7 @@ export function AppSidebar({
         user?.user_metadata?.display_name ||
         null
     const email = user?.email || null
-    
+
     const isBasicUser = limitData?.role === UserRole.BASIC
 
     return (
@@ -137,7 +137,7 @@ export function AppSidebar({
                 </SidebarHeader>
                 <SidebarContent>
                     <SidebarMain />
-                    
+
                     {isBasicUser && (
                         <div className="mx-3 mt-auto mb-2 p-3 rounded-lg border border-border/80 dark:border-zinc-800 bg-background transition-all duration-200">
                             <h4 className="text-[12px] font-semibold text-foreground tracking-tight">
@@ -147,10 +147,13 @@ export function AppSidebar({
                                 Get unlimited feeds and unlock all features.
                             </p>
                             <button
-                                onClick={() => openUpgrade({
-                                    title: "Upgrade to Readspace Pro",
-                                    description: "Unlock unlimited feeds, advanced AI features, and seamless syncing.",
-                                })}
+                                onClick={() =>
+                                    openUpgrade({
+                                        title: "Upgrade to Readspace Pro",
+                                        description:
+                                            "Unlock unlimited feeds, advanced AI features, and seamless syncing.",
+                                    })
+                                }
                                 className="text-[11px] font-semibold text-primary hover:text-primary/85 transition-colors cursor-pointer select-none text-left w-fit block p-0"
                             >
                                 Upgrade &rarr;

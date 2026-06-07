@@ -134,8 +134,7 @@ const textVariants = cva('text-primary-foreground', {
 export type TextSize = 'xs' | 'sm' | 'base' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | number;
 
 export interface TextProps
-  extends Omit<RNTextProps, 'className'>,
-    Omit<VariantProps<typeof textVariants>, 'size'> {
+  extends Omit<RNTextProps, 'className'>, Omit<VariantProps<typeof textVariants>, 'size'> {
   size?: TextSize;
   className?: string;
   variant?: 'heading' | 'body';

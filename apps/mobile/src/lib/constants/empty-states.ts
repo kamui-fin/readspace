@@ -9,29 +9,35 @@ export interface EmptyStateConfig {
     color?: string;
     strokeWidth?: number;
   }>;
-  message: string;
+  title: string;
+  description: string;
 }
 
 export const EMPTY_STATE_CONFIGS: Record<number, EmptyStateConfig> = {
   0: {
     icon: InboxBrokenIcon,
-    message: 'No articles yet. Add some feeds to get started!',
+    title: 'Your Feed is Empty',
+    description: 'Explore trending topics or import your subscriptions to get started.',
   },
   1: {
     icon: InboxBrokenIcon,
-    message: 'No articles for today yet. Check back later!',
+    title: 'All Caught Up',
+    description: 'No new articles published today. Check back later for fresh updates!',
   },
   2: {
     icon: BookmarkBrokenIcon,
-    message: 'No saved articles. Swipe right on articles to bookmark them.',
+    title: 'No Saved Articles',
+    description: 'Swipe right on articles in your feed to bookmark them for later reading.',
   },
   3: {
     icon: HistoryBrokenIcon,
-    message: 'No recently read articles.',
+    title: 'No Reading History',
+    description: 'Articles you read will show up here so you can easily find them again.',
   },
 };
 
 export const DEFAULT_EMPTY_STATE_CONFIG: EmptyStateConfig = {
   icon: InboxBrokenIcon,
-  message: 'No articles available.',
+  title: 'No Articles Available',
+  description: 'There are no articles to display in this section.',
 };

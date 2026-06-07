@@ -24,6 +24,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
     title,
     titleIcon,
     subtitle,
+    unreadCount,
     showBackButton = false,
     onBackPress,
     actions = [],
@@ -32,6 +33,8 @@ export const Header: React.FC<HeaderProps> = (props) => {
     titleFontWeight = 'bold',
     titleSize,
     transparentBackground = false,
+    disableSafeAreaTop = false,
+    disableCenteredLayout = false,
     className,
     rightElement,
   } = props;
@@ -40,7 +43,11 @@ export const Header: React.FC<HeaderProps> = (props) => {
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const headerBgColor = transparentBackground ? 'transparent' : colors.card;
   const insets = useSafeAreaInsets();
-  const safeAreaTop = insets.top > 0 ? insets.top : Constants.statusBarHeight;
+  const safeAreaTop = disableSafeAreaTop
+    ? 0
+    : insets.top > 0
+      ? insets.top
+      : Constants.statusBarHeight;
 
   const [foregroundHeightState, setForegroundHeight] = useState(0);
   const [tabsHeight, setTabsHeight] = useState(0);
@@ -199,6 +206,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
       transform: [{ translateY: translation }],
       paddingTop: animatedPaddingTop,
       borderBottomWidth: 0,
+      backgroundColor: headerBgColor,
       shadowColor: '#000000',
       shadowOffset: { width: 0, height: shadowOffsetHeight },
       shadowOpacity: shadowOpacity,
@@ -405,6 +413,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
         height,
         overflow: 'hidden' as const,
         paddingTop: animatedPaddingTop,
+        backgroundColor: headerBgColor,
         shadowColor: colors.black,
         shadowOffset: { width: 0, height: 2 },
         shadowRadius: 8,
@@ -421,6 +430,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
       title={title}
       titleIcon={titleIcon}
       subtitle={subtitle}
+      unreadCount={unreadCount}
       showBackButton={showBackButton}
       onBackPress={onBackPress}
       actions={actions}
@@ -430,6 +440,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
       colors={colors}
       onLayout={handleForegroundLayout}
       rightElement={rightElement}
+      disableCenteredLayout={disableCenteredLayout}
     />
   );
 
@@ -505,14 +516,29 @@ export const Header: React.FC<HeaderProps> = (props) => {
 
   // Sticky and Tabbed variants - with animations
   return (
-    <Animated.View
-      className={clsx(headerContainerVariants({ variant }), className)}
-      style={[
-        { paddingTop: safeAreaTop + 10, backgroundColor: headerBgColor },
-        animatedHeaderStyle,
-      ]}>
-      <Animated.View style={animatedForegroundStyle}>{renderForeground()}</Animated.View>
-      {renderTabs()}
-    </Animated.View>
+    <>
+      {variant === 'tabbed' && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: safeAreaTop,
+            backgroundColor: headerBgColor,
+            zIndex: 11,
+          }}
+        />
+      )}
+      <Animated.View
+        className={clsx(headerContainerVariants({ variant }), className)}
+        style={[
+          { paddingTop: safeAreaTop + 10, backgroundColor: headerBgColor },
+          animatedHeaderStyle,
+        ]}>
+        <Animated.View style={animatedForegroundStyle}>{renderForeground()}</Animated.View>
+        {renderTabs()}
+      </Animated.View>
+    </>
   );
 };

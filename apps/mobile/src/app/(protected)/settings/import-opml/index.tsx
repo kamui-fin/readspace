@@ -155,7 +155,13 @@ export default function ImportOPMLScreen() {
   }, []);
 
   return (
-    <View className="bg-background flex-1" style={{ backgroundColor: colors.background }}>
+    <View
+      className="bg-background flex-1"
+      style={{
+        backgroundColor: colors.background,
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+      }}>
       <Header
         variant="static"
         title="Import OPML"
@@ -163,19 +169,17 @@ export default function ImportOPMLScreen() {
         titleSize="xs"
         transparentBackground={true}
         showBackButton={true}
+        disableSafeAreaTop={true}
+        disableCenteredLayout={true}
         onBackPress={() => router.back()}
       />
 
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
-          paddingBottom: insets.bottom + 20,
+          paddingBottom: 20,
         }}>
-        {isCheckingTask ? (
-          <View className="flex-1 items-center justify-center">
-            <Spinner size="large" color={colors.secondary} />
-          </View>
-        ) : currentTaskId && taskStatus ? (
+        {currentTaskId && taskStatus ? (
           <Animated.View entering={FadeIn} exiting={FadeOut} className="px-6">
             <OPMLStatusCard
               taskStatus={taskStatus}

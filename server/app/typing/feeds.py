@@ -5,7 +5,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
-from app.core.config import get_settings
 from app.models.enums import ContentType, FeedCategory
 from app.typing.common import response_config
 from app.typing.entries import ArticleCreate
@@ -86,12 +85,13 @@ class FeedSummary(FeedBase):
     @field_validator("image_url", mode="before")
     @classmethod
     def resolve_image_url(cls, v: str | None) -> str | None:
-        """Resolve relative image paths to full Supabase Storage URLs."""
+        """Resolve relative image paths to host-agnostic Supabase Storage URLs."""
         if v and not v.startswith(("http://", "https://", "data:")):
-            settings = get_settings()
+            if "storage/v1/object/public/favicons/" in v:
+                return "/" + v.lstrip("/")
             # Ensure no double slashes if v starts with /
             path = v.lstrip("/")
-            return f"{settings.SUPABASE_URL}/storage/v1/object/public/favicons/{path}"
+            return f"/storage/v1/object/public/favicons/{path}"
         return v
 
 
@@ -230,11 +230,12 @@ class MeilisearchFeedDocument(BaseModel):
     @field_validator("image_url", mode="before")
     @classmethod
     def resolve_image_url(cls, v: str | None) -> str | None:
-        """Resolve relative image paths to full Supabase Storage URLs."""
+        """Resolve relative image paths to host-agnostic Supabase Storage URLs."""
         if v and not v.startswith(("http://", "https://", "data:")):
-            settings = get_settings()
+            if "storage/v1/object/public/favicons/" in v:
+                return "/" + v.lstrip("/")
             path = v.lstrip("/")
-            return f"{settings.SUPABASE_URL}/storage/v1/object/public/favicons/{path}"
+            return f"/storage/v1/object/public/favicons/{path}"
         return v
 
 

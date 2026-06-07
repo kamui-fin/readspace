@@ -5,5 +5,3 @@ export const users = {
   getProfile: () => ApiClient.get<UserProfile>("/api/users/profile"),
   getLimits: () => ApiClient.get<UserLimits>("/api/users/limits"),
 };
-
-

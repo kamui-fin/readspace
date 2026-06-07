@@ -9,7 +9,6 @@ from pydantic import BaseModel, EmailStr
 from app.models.enums import UserRole
 from app.typing.common import response_config
 
-
 # ================= Requests =================
 
 

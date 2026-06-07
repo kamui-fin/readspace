@@ -26,8 +26,7 @@ const cardVariants = cva('bg-background ', {
 });
 
 export interface CardProps
-  extends Omit<PressableProps, 'children'>,
-    VariantProps<typeof cardVariants> {
+  extends Omit<PressableProps, 'children'>, VariantProps<typeof cardVariants> {
   children?: ReactNode;
   className?: string;
   // Feed variant props
@@ -77,6 +76,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
     ref
   ) => {
     const [imageError, setImageError] = useState(false);
+    const [faviconError, setFaviconError] = useState(false);
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
 
@@ -176,13 +176,20 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
               {(feedName || timestamp) && (
                 <View className="mb-3 flex-row items-center gap-1.5">
                   {/* Favicon */}
-                  {faviconUrl ? (
+                  {faviconUrl && !faviconError ? (
                     <ExpoImage
                       source={{ uri: faviconUrl }}
                       style={{ width: 16, height: 16, borderRadius: 4 }}
                       contentFit="cover"
                       cachePolicy="memory-disk"
                       transition={150}
+                      onError={(err) => {
+                        console.error(
+                          `Card favicon load error for feed "${feedName}" (${faviconUrl}):`,
+                          err.error || err
+                        );
+                        setFaviconError(true);
+                      }}
                     />
                   ) : FallbackComponent ? (
                     <FallbackComponent size={16} className="rounded-sm" />

@@ -122,7 +122,7 @@ export function LoginScreen() {
               }}
               keyboardShouldPersistTaps="handled">
               <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View className="flex-1 px-6 justify-between">
+                <View className="flex-1 justify-between px-6">
                   <View>
                     {/* Header */}
                     <View className="mb-12">

@@ -1,3 +1,4 @@
+import { getSettings } from '@stores/settings';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
@@ -33,4 +34,59 @@ export const resolveHostname = (url: string): string => {
     }
     return url.replace(/\/$/, '');
   }
+};
+
+/**
+ * Resolves Supabase storage URLs (especially in self-hosted mode where the backend
+ * might return 'localhost:18000' or internal container hostname like 'kong:18000')
+ * to the client's configured Supabase URL.
+ */
+export const resolveSupabaseImageUrl = (url: string | null | undefined): string | undefined => {
+  if (!url) return undefined;
+
+  try {
+    // Check if the URL points to Supabase storage
+    if (url.includes('/storage/v1/object/public/')) {
+      const settings = getSettings();
+      const clientSupabaseUrl = settings?.supabase_url;
+
+      if (clientSupabaseUrl) {
+        // Parse clientSupabaseUrl to get its origin (e.g., http://192.168.1.100:18000)
+        const clientOrigin = new URL(clientSupabaseUrl).origin;
+
+        // Find where the storage path begins
+        const storageIndex = url.indexOf('/storage/v1/object/public/');
+        if (storageIndex !== -1) {
+          let storagePath = url.substring(storageIndex);
+
+          // Defensive check: if the path has duplicated bucket segments
+          // e.g. /storage/v1/object/public/favicons/storage/v1/object/public/favicons/...
+          const duplicatePattern =
+            '/storage/v1/object/public/favicons/storage/v1/object/public/favicons/';
+          if (storagePath.includes(duplicatePattern)) {
+            storagePath = storagePath.replace(
+              duplicatePattern,
+              '/storage/v1/object/public/favicons/'
+            );
+          } else {
+            // General check: if it contains /storage/v1/object/public/ multiple times
+            const parts = storagePath.split('/storage/v1/object/public/');
+            if (parts.length > 2) {
+              storagePath = '/storage/v1/object/public/' + parts[parts.length - 1];
+            }
+          }
+
+          // Return the resolved URL combining client supabase origin and storage path, resolving double slashes
+          const resolved = `${clientOrigin}${storagePath}`;
+          // Make sure we resolve any local emulator hostnames if needed
+          return resolveHostname(resolved);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[Network] Error resolving Supabase image URL:', err);
+  }
+
+  // Fallback to resolving hostname (e.g. localhost -> emulator IP)
+  return resolveHostname(url);
 };

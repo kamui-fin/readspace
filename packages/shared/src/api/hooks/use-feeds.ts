@@ -118,7 +118,7 @@ export function useCreateFeed(
           let updatedFolders = old.folders || [];
           if (newSubscription?.folder?.id) {
             const folderAlreadyCached = updatedFolders.some(
-              (f) => f.id === newSubscription.folder.id
+              (f) => f.id === newSubscription.folder.id,
             );
             if (!folderAlreadyCached) {
               updatedFolders = [...updatedFolders, newSubscription.folder];
@@ -130,7 +130,7 @@ export function useCreateFeed(
             folders: updatedFolders,
             subscriptions: [...(old.subscriptions || []), newSubscription],
           };
-        }
+        },
       );
 
       // Update the individual feed detail cache instantly if it exists
@@ -143,15 +143,27 @@ export function useCreateFeed(
               ...old,
               is_subscribed: true,
             };
-          }
+          },
         );
       }
     },
     onSettled: (data) => {
-      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, "list"], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts(), refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FOLDERS], refetchType: 'all' });
+      queryClient.invalidateQueries({
+        queryKey: [RSS_QUERY_KEYS.FEEDS, "list"],
+        refetchType: "all",
+      });
+      queryClient.invalidateQueries({
+        queryKey: [RSS_QUERY_KEYS.ARTICLES],
+        refetchType: "all",
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.unreadCounts(),
+        refetchType: "all",
+      });
+      queryClient.invalidateQueries({
+        queryKey: [RSS_QUERY_KEYS.FOLDERS],
+        refetchType: "all",
+      });
 
       // Invalidate specific feed cache
       if (data?.feed?.id) {
@@ -199,13 +211,19 @@ export function useUpdateFeed(
         { queryKey: [RSS_QUERY_KEYS.FEEDS, "list"] },
         (old) => {
           if (!old) return old;
-          
+
           const updatedSubscriptions = (old.subscriptions || []).map((sub) => {
             if (sub.feed.id === feedId) {
               return {
                 ...sub,
-                is_favorite: data.is_favorite !== undefined ? data.is_favorite : sub.is_favorite,
-                custom_title: data.custom_title !== undefined ? data.custom_title : sub.custom_title,
+                is_favorite:
+                  data.is_favorite !== undefined
+                    ? data.is_favorite
+                    : sub.is_favorite,
+                custom_title:
+                  data.custom_title !== undefined
+                    ? data.custom_title
+                    : sub.custom_title,
                 folder: updatedSubscription.folder || sub.folder,
               };
             }
@@ -226,14 +244,20 @@ export function useUpdateFeed(
           if (!old) return old;
           return {
             ...old,
-            is_favorite: data.is_favorite !== undefined ? data.is_favorite : (old as any).is_favorite,
-            title: data.custom_title !== undefined ? data.custom_title : old.title,
+            is_favorite:
+              data.is_favorite !== undefined
+                ? data.is_favorite
+                : (old as any).is_favorite,
+            title:
+              data.custom_title !== undefined ? data.custom_title : old.title,
           } as any;
         },
       );
     },
     onSettled: (_data, _error, { feedId }) => {
-      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, "list"] });
+      queryClient.invalidateQueries({
+        queryKey: [RSS_QUERY_KEYS.FEEDS, "list"],
+      });
       queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FOLDERS] });
       queryClient.invalidateQueries({ queryKey: queryKeys.feed(feedId) });
     },
@@ -337,7 +361,9 @@ export function useDeleteFeed(
     },
     onSettled: (_data, _error, { feedId }) => {
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, "list"] });
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.FEEDS, "list"],
+        });
         queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
         queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
         queryClient.invalidateQueries({ queryKey: queryKeys.feed(feedId) });
@@ -437,9 +463,13 @@ export function useBulkDeleteFeeds(
     onSettled: () => {
       setTimeout(() => {
         Promise.all([
-          queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, "list"] }),
+          queryClient.invalidateQueries({
+            queryKey: [RSS_QUERY_KEYS.FEEDS, "list"],
+          }),
           queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() }),
-          queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] }),
+          queryClient.invalidateQueries({
+            queryKey: [RSS_QUERY_KEYS.ARTICLES],
+          }),
         ]);
       }, 300);
     },
@@ -471,7 +501,9 @@ export function useBulkUpdateFeedsFolder(
     }) => ApiClient.bulkUpdateFeedsFolder(feedIds, folderId),
     onSettled: () => {
       return Promise.all([
-        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, "list"] }),
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.FEEDS, "list"],
+        }),
       ]);
     },
     ...options,

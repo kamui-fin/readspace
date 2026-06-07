@@ -50,7 +50,7 @@ First off, thank you for considering contributing to Readspace! It's people like
     ./docker/setup.sh
     ```
 
-    This will create `.env` files in `docker/supabase/`, `apps/web/`, and `server/`.
+    This will create `.env` files in `docker/supabase/`, `docker/.env` (Meilisearch keys), `apps/web/`, `apps/mobile/`, and `server/`.
 
 3.  **Install Dependencies**
 
@@ -66,15 +66,11 @@ First off, thank you for considering contributing to Readspace! It's people like
 
 Our recommended development setup uses Docker to run the core infrastructure (Supabase, Redis, RSSHub, Celery workers) while you run the application services (Web, API, Extension, Mobile) directly on your host machine. This gives you the best of both worlds: a stable backend foundation and a fast, hot-reloading development loop for the parts you're actively working on.
 
-### 1. Start Core Infrastructure
-
-First, configure your environment for development mode:
+First, configure your environment for development mode by running the setup script with the `--dev` flag (this automatically configures localhost loopback URLs and disables AI for local work without interactive prompts):
 
 ```bash
-./docker/setup.sh
+./docker/setup.sh --dev
 ```
-
-Select option **3) Development mode** when prompted. This will configure localhost URLs and disable AI support for local development.
 
 Then start the infrastructure services in development mode:
 
@@ -82,12 +78,14 @@ Then start the infrastructure services in development mode:
 ./docker/launch.sh --dev
 ```
 
-This starts:
+This starts the core database and caching infrastructure:
 
-- Supabase (with Studio and Analytics)
+- Supabase (with Studio, Pooler, and database)
 - Redis
-- RSSHub
-- Taskiq worker and scheduler
+- Meilisearch (search engine)
+- RSSHub (optional)
+
+*Note: Application containers (Web, API, Taskiq worker, Taskiq scheduler) are assigned to the `app` profile and are skipped during `--dev` mode so you can run them locally on your host machine for hot-reloading.*
 
 **Supabase Studio:** Access the local dashboard at [http://localhost:18000](http://localhost:18000).
 
@@ -168,6 +166,11 @@ bun ios # or bun android
 
 Follow the Expo CLI instructions to run on iOS simulator, Android emulator, or physical device.
 
+> [!NOTE]
+> **Environment Variables**: The `apps/mobile/.env` file is generated automatically by running `./docker/setup.sh --dev`.
+> 
+> **Physical Device Testing**: If you are running the app on a physical phone via the Expo Go app over Wi-Fi, you must replace `localhost` in `apps/mobile/.env` with your computer's local network IP address (e.g., `192.168.1.50`) so the phone can reach the API.
+
 ### Working on Background Tasks (Taskiq)
 
 Our backend uses Taskiq to manage asynchronous tasks. The architecture consists of two main components:
@@ -190,7 +193,6 @@ poetry run taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-patter
 ```
 
 This gives you immediate feedback and easier debugging compared to running in Docker.
-
 
 ### Database Migrations (Alembic)
 

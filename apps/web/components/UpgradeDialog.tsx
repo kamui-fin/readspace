@@ -11,15 +11,7 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { env } from "@/env"
 import { useUpgradeDialog } from "@/stores/upgrade-dialog"
-import {
-    Check,
-    Rss,
-    Sparkles,
-    Search,
-    BookOpen,
-    Rocket,
-    X,
-} from "lucide-react"
+import { Check, Rss, Sparkles, Search, BookOpen, Rocket, X } from "lucide-react"
 import { useState } from "react"
 import { SubscribeButton } from "./billing/SubscribeButton"
 
@@ -27,8 +19,10 @@ export default function UpgradeDialog() {
     const [selectedPlan, setSelectedPlan] = useState("yearly")
     const { isOpen, title, description, close } = useUpgradeDialog()
 
-    const MONTHLY_PRICE_ID = env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID || "price_mock_monthly_799"
-    const YEARLY_PRICE_ID = env.NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID || "price_mock_yearly_599"
+    const MONTHLY_PRICE_ID =
+        env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID || "price_mock_monthly_799"
+    const YEARLY_PRICE_ID =
+        env.NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID || "price_mock_yearly_599"
 
     return (
         <Dialog open={isOpen} onOpenChange={close}>
@@ -75,11 +69,12 @@ export default function UpgradeDialog() {
                                         Up to 1000 feeds
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Follow all your favorite creators, newsletters, & blogs.
+                                        Follow all your favorite creators,
+                                        newsletters, & blogs.
                                     </p>
                                 </div>
                             </div>
-                            
+
                             {/* Benefit 2: AI Summaries */}
                             <div className="flex items-start">
                                 <div className="mr-3 h-5 w-5 flex-shrink-0 text-primary mt-0.5">
@@ -90,11 +85,12 @@ export default function UpgradeDialog() {
                                         100 AI reader tools / day
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Summarize or translate long-form writing instantly.
+                                        Summarize or translate long-form writing
+                                        instantly.
                                     </p>
                                 </div>
                             </div>
-                            
+
                             {/* Benefit 3: Intelligent discovery */}
                             <div className="flex items-start">
                                 <div className="mr-3 h-5 w-5 flex-shrink-0 text-primary mt-0.5">
@@ -105,11 +101,12 @@ export default function UpgradeDialog() {
                                         Intelligent discovery
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Search and filter articles using natural conversational AI.
+                                        Search and filter articles using natural
+                                        conversational AI.
                                     </p>
                                 </div>
                             </div>
-                            
+
                             {/* Benefit 4: Reading Library */}
                             <div className="flex items-start">
                                 <div className="mr-3 h-5 w-5 flex-shrink-0 text-primary mt-0.5">
@@ -120,7 +117,8 @@ export default function UpgradeDialog() {
                                         Personal reading library
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Keep bookmarks, highlights, and custom notes synced forever.
+                                        Keep bookmarks, highlights, and custom
+                                        notes synced forever.
                                     </p>
                                 </div>
                             </div>
@@ -129,7 +127,9 @@ export default function UpgradeDialog() {
 
                     {/* Plans section */}
                     <div className="p-6 pt-6 bg-background text-foreground">
-                        <h3 className="font-semibold mb-4 text-sm sm:text-base">Choose your plan</h3>
+                        <h3 className="font-semibold mb-4 text-sm sm:text-base">
+                            Choose your plan
+                        </h3>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                             {/* Pro Monthly Card */}

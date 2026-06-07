@@ -36,12 +36,15 @@ interface HeaderForegroundProps {
   colors: typeof COLORS.light | typeof COLORS.dark;
   onLayout: (e: { nativeEvent: { layout: { height: number } } }) => void;
   rightElement?: React.ReactNode;
+  disableCenteredLayout?: boolean;
+  unreadCount?: number;
 }
 
 export function HeaderForeground({
   title,
   titleIcon,
   subtitle,
+  unreadCount,
   showBackButton = false,
   onBackPress,
   actions = [],
@@ -51,14 +54,16 @@ export function HeaderForeground({
   colors,
   onLayout,
   rightElement,
+  disableCenteredLayout = false,
 }: HeaderForegroundProps) {
   // Determine if we should use centered layout (for similar feeds with back button and no actions)
-  const useCenteredLayout = showBackButton && actions.length === 0 && !subtitle;
+  const useCenteredLayout =
+    !disableCenteredLayout && showBackButton && actions.length === 0 && !subtitle;
   const titleSize = titleSizeProp ?? (useCenteredLayout ? 'small' : 'default');
 
   if (useCenteredLayout) {
     return (
-      <View className="absolute w-full flex-row items-center pb-3" onLayout={onLayout}>
+      <View className="w-full flex-row items-center pb-3" onLayout={onLayout}>
         {showBackButton && (
           <View className="absolute left-4 top-0 z-10">
             <Button onPress={onBackPress} variant="icon" size="small" fullWidth={false}>
@@ -136,8 +141,25 @@ export function HeaderForeground({
         )}
       </View>
 
-      {(actions.length > 0 || rightElement) && (
+      {(actions.length > 0 || rightElement || (unreadCount !== undefined && unreadCount > 0)) && (
         <View className={clsx(actionsContainerVariants())}>
+          {unreadCount !== undefined && unreadCount > 0 && (
+            <View
+              className="px-2.5 py-0.5 rounded-full items-center justify-center"
+              style={{
+                backgroundColor: colors === COLORS.dark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.75)',
+                borderWidth: 1,
+                borderColor: colors === COLORS.dark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+              }}>
+              <Text
+                className="font-geist-bold text-sm"
+                style={{
+                  color: colors === COLORS.dark ? '#ffffff' : colors.black,
+                }}>
+                {unreadCount}
+              </Text>
+            </View>
+          )}
           {rightElement}
           {actions.map((action) => (
             <Button

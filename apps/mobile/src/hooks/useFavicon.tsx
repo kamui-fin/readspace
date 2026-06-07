@@ -1,5 +1,6 @@
 import LocalRssIcon from '@components/icons/local/rss';
 import { COLORS } from '@lib/constants/colors';
+import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import { useMemo } from 'react';
 import { View } from 'react-native';
 
@@ -62,7 +63,7 @@ export function useFavicon({
 
     // If RSS feed, prioritize feed image
     if (feedImage) {
-      return feedImage;
+      return resolveSupabaseImageUrl(feedImage) || undefined;
     }
 
     // Fallback for RSS feed: try to get favicon from article link (usually points to source domain)

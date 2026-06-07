@@ -15,6 +15,7 @@ import { BackHandler, Platform, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useUnreadCounts, useFeeds } from '@readspace/shared';
 import { COLORS } from '@/lib/constants/colors';
 
 export default function FollowingRoute() {
@@ -38,6 +39,7 @@ export default function FollowingRoute() {
   // Get selected feed/folder name from feed view store
   const viewType = useFeedViewStore((state) => state.viewType);
   const selectedName = useFeedViewStore((state) => state.selectedName);
+  const selectedId = useFeedViewStore((state) => state.selectedId);
   const clearView = useFeedViewStore((state) => state.clearView);
   const isViewingFeedOrFolder =
     viewType === 'feed' || viewType === 'folder' || viewType === 'feedPreview';
@@ -79,6 +81,51 @@ export default function FollowingRoute() {
     },
     [isViewingFeedOrFolder, clearView, setActiveTab]
   );
+
+  const { data: unreadCountsData } = useUnreadCounts();
+  const { data: feedsData } = useFeeds();
+
+  const unreadCount = useMemo(() => {
+    if (!unreadCountsData) return 0;
+
+    // 1. If we are in activeTab === 1 (Today)
+    if (activeTab === 1 && !isViewingFeedOrFolder) {
+      return unreadCountsData.today || 0;
+    }
+
+    // 2. If activeTab === 2 (Saved), unread count doesn't apply
+    if (activeTab === 2 && !isViewingFeedOrFolder) {
+      return 0;
+    }
+
+    // 3. If viewing a specific feed
+    if ((viewType === 'feed' || viewType === 'feedPreview') && selectedId) {
+      return unreadCountsData.feed_counts?.[selectedId] || 0;
+    }
+
+    // 4. If viewing a specific folder
+    if (viewType === 'folder' && selectedId && feedsData?.subscriptions) {
+      // Sum unread counts for all feeds in this folder
+      const folderFeeds = (feedsData.subscriptions as any[]).filter(
+        (sub) => sub.folder_id === selectedId
+      );
+      return folderFeeds.reduce(
+        (sum, sub) => sum + (unreadCountsData.feed_counts?.[sub.id] || 0),
+        0
+      );
+    }
+
+    // 5. Default case: Not viewing specific feed/folder and activeTab === 0 (All)
+    // Sum of all unread counts
+    if (unreadCountsData.feed_counts) {
+      return Object.values(unreadCountsData.feed_counts).reduce(
+        (sum, count) => sum + (count || 0),
+        0
+      );
+    }
+
+    return 0;
+  }, [unreadCountsData, feedsData, activeTab, viewType, selectedId, isViewingFeedOrFolder]);
 
   // Calculate safe minimum header height (safe area + title + tabs + padding)
   // This ensures content never appears under header, even if headerHeight is 0
@@ -167,6 +214,7 @@ export default function FollowingRoute() {
         variant="tabbed"
         title={headerTitle}
         titleIcon={headerTitleIcon}
+        unreadCount={unreadCount}
         scrollY={scrollY}
         activeTab={isViewingFeedOrFolder ? -1 : activeTab}
         onTabChange={handleTabChange}

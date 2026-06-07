@@ -1,11 +1,9 @@
 import DocumentTextLinearIcon from '@components/icons/solar/document-text-linear';
-import { Button } from '@components/ui/button';
 import { Card } from '@components/ui/card';
 import { EmptyState } from '@components/ui/empty-state';
 import { SectionHeader } from '@components/ui/section-header';
 import { Skeleton } from '@components/ui/skeleton';
-import { Text } from '@components/ui/text';
-import { COLORS } from '@lib/constants/colors';
+import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import { Feed, FeedDiscoveryResult, formatRelativeDate } from '@readspace/shared';
 import { Dimensions, FlatList, View } from 'react-native';
 
@@ -19,7 +17,7 @@ interface FeedRecentArticlesProps {
   feed: FeedDiscoveryResult | Feed;
   onShowMore: () => void;
   onArticlePress: (id: string) => void;
-  colors: typeof COLORS.light | typeof COLORS.dark;
+  colors: unknown;
   greyColor: string;
 }
 
@@ -29,7 +27,7 @@ export function FeedRecentArticles({
   feed,
   onShowMore,
   onArticlePress,
-  colors,
+  colors: _colors,
   greyColor,
 }: FeedRecentArticlesProps) {
   return (
@@ -45,7 +43,13 @@ export function FeedRecentArticles({
         <View className="px-6">
           <View className="flex-row gap-4">
             {Array.from({ length: 2 }, (_, i) => `article-load-skeleton-${i}`).map((key) => (
-              <Skeleton key={key} variant="rectangle" width={CARD_WIDTH} height={200} />
+              <Skeleton
+                key={key}
+                variant="rectangle"
+                width={CARD_WIDTH}
+                height={200}
+                className="rounded-2xl"
+              />
             ))}
           </View>
         </View>
@@ -69,7 +73,7 @@ export function FeedRecentArticles({
                   ? formatRelativeDate(new Date(article.published_at))
                   : 'Unknown date'
               }
-              faviconUrl={feed.image_url || undefined}
+              faviconUrl={resolveSupabaseImageUrl(feed.image_url) || undefined}
               feedName={feed.title || undefined}
               onPress={() => onArticlePress(article.id)}
               className="mr-4"

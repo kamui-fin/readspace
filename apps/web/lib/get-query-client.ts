@@ -7,7 +7,9 @@ function makeQueryClient() {
         if (error instanceof ApiError && error.status === 429) {
             useUpgradeDialog.getState().open({
                 title: "Upgrade to Readspace Pro",
-                description: error.message || "You have reached a limit on your current plan.",
+                description:
+                    error.message ||
+                    "You have reached a limit on your current plan.",
             })
         }
     }
@@ -35,7 +37,6 @@ function makeQueryClient() {
         },
     })
 }
-
 
 let browserQueryClient: QueryClient | undefined = undefined
 

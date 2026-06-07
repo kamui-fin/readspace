@@ -80,7 +80,7 @@ const InputBase = forwardRef((props: InputProps & { TextInputComponent: any }, r
         <>
           <Text
             nativeID={inputId}
-            className={clsx('text-sm font-geist-medium text-gray-900 dark:text-white')}>
+            className={clsx('font-geist-medium text-sm text-gray-900 dark:text-white')}>
             {label}
           </Text>
           <View className="h-2" />
@@ -179,7 +179,7 @@ const InputBase = forwardRef((props: InputProps & { TextInputComponent: any }, r
       {helperText ? (
         <Text
           nativeID={helperTextId}
-          className={clsx('text-sm font-geist-medium text-gray-600 dark:text-gray-400')}
+          className={clsx('font-geist-medium text-sm text-gray-600 dark:text-gray-400')}
           style={{ marginTop: 4 }}>
           {helperText}
         </Text>
@@ -187,7 +187,7 @@ const InputBase = forwardRef((props: InputProps & { TextInputComponent: any }, r
       {errorText ? (
         <Text
           nativeID={errorTextId}
-          className={clsx('text-sm font-geist-medium')}
+          className={clsx('font-geist-medium text-sm')}
           style={{
             marginTop: 4,
             color: isDark ? COLORS.dark.destructive : COLORS.light.destructive,

@@ -26,14 +26,19 @@ export function SubscribeButton({
         setIsLoading(true)
         try {
             // Direct Polar checkout URL
-            const checkoutUrl = new URL("https://buy.polar.sh/polar_cl_2xSvHr4wXvwzLfolIpMv2wPTceXNzDQH4LWgu1vaZWF")
-            
+            const checkoutUrl = new URL(
+                "https://buy.polar.sh/polar_cl_2xSvHr4wXvwzLfolIpMv2wPTceXNzDQH4LWgu1vaZWF"
+            )
+
             if (profile?.email) {
                 checkoutUrl.searchParams.append("customer_email", profile.email)
             }
             if (profile?.id) {
                 // Attach user_id metadata so the webhook can immediately identify and upgrade them
-                checkoutUrl.searchParams.append("metadata", JSON.stringify({ user_id: profile.id }))
+                checkoutUrl.searchParams.append(
+                    "metadata",
+                    JSON.stringify({ user_id: profile.id })
+                )
             }
 
             window.location.href = checkoutUrl.toString()
@@ -41,11 +46,11 @@ export function SubscribeButton({
             console.error("Polar billing checkout error:", err)
             alert(
                 `💳 Premium Subscription Request\n` +
-                `-----------------------------------------\n` +
-                `Polar Checkout failed to load. Please try again.\n\n` +
-                `💡 Self-Hosting/Development Mode:\n` +
-                `If you are self-hosting, database access is fully yours! You can upgrade your account to PRO manually by running this command in your server directory:\n\n` +
-                `./promote-admin.sh your-email@example.com`
+                    `-----------------------------------------\n` +
+                    `Polar Checkout failed to load. Please try again.\n\n` +
+                    `💡 Self-Hosting/Development Mode:\n` +
+                    `If you are self-hosting, database access is fully yours! You can upgrade your account to PRO manually by running this command in your server directory:\n\n` +
+                    `./promote-admin.sh your-email@example.com`
             )
         } finally {
             setIsLoading(false)

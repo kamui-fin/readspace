@@ -28,7 +28,10 @@ export interface EmptyStateProps extends VariantProps<typeof emptyStateVariants>
     color?: string;
     strokeWidth?: number;
   }>;
-  message: string;
+  title?: string;
+  message?: string; // Backwards compatibility fallback for title
+  description?: string;
+  actionButton?: React.ReactNode;
   className?: string;
   style?: StyleProp<ViewStyle>;
 }
@@ -39,22 +42,54 @@ export interface EmptyStateProps extends VariantProps<typeof emptyStateVariants>
  */
 export const EmptyState: React.FC<EmptyStateProps> = ({
   icon: IconComponent,
+  title,
   message,
+  description,
+  actionButton,
   variant = 'default',
   className,
   style,
 }) => {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+  const displayTitle = title || message || '';
 
   return (
     <View className={clsx(emptyStateVariants({ variant }), className)} style={style}>
-      <View className={clsx(iconContainerVariants())}>
-        <IconComponent width={64} height={64} color={colors.grey2} />
+      {/* Premium brand-colored circular icon container */}
+      <View
+        className="mb-5 items-center justify-center rounded-full border"
+        style={{
+          width: 88,
+          height: 88,
+          backgroundColor: colors.primary_light,
+          borderColor: colors.primary + '20', // 12% opacity brand border
+        }}>
+        <IconComponent width={36} height={36} color={colors.primary} />
       </View>
-      <Text size="lg" fontFamily="geist-medium" className="text-center text-grey dark:text-grey">
-        {message}
+
+      {/* Main Title/Message */}
+      <Text
+        size="lg"
+        fontFamily="geist-semibold"
+        className="text-center"
+        style={{ color: colors.black, lineHeight: 26 }}>
+        {displayTitle}
       </Text>
+
+      {/* Descriptive subtext */}
+      {description && (
+        <Text
+          size="sm"
+          fontFamily="geist"
+          className="mt-2 max-w-[280px] text-center"
+          style={{ color: colors.grey, lineHeight: 20 }}>
+          {description}
+        </Text>
+      )}
+
+      {/* Optional Call to Action */}
+      {actionButton && <View className="mt-5">{actionButton}</View>}
     </View>
   );
 };

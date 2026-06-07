@@ -28,9 +28,7 @@ interface MainNavigationItemsProps {
  * Main navigation items component for displaying top-level navigation links.
  * Includes special count handling for Today and Read Later items.
  */
-export function MainNavigationItems({
-    items,
-}: MainNavigationItemsProps) {
+export function MainNavigationItems({ items }: MainNavigationItemsProps) {
     const pathname = usePathname()
 
     // Fetch unread counts for special items
@@ -69,18 +67,23 @@ export function MainNavigationItems({
 
                     return (
                         <SidebarMenuItem key={item.title}>
-                            <div className={cn(
-                                "relative flex items-center w-full group/item h-8 rounded-md text-sm transition-colors duration-150 px-1 pl-2",
-                                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                                isActive && "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-                            )}>
+                            <div
+                                className={cn(
+                                    "relative flex items-center w-full group/item h-8 rounded-md text-sm transition-colors duration-150 px-1 pl-2",
+                                    "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                                    isActive &&
+                                        "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                                )}
+                            >
                                 <Link
                                     href={item.url}
                                     aria-label={`Navigate to ${item.title}`}
                                     className="flex flex-grow items-center overflow-hidden h-full pr-10 outline-none select-none text-sidebar-foreground pl-1"
                                 >
                                     <item.icon className="h-4 w-4 shrink-0" />
-                                    <span className="ml-2 truncate">{item.title}</span>
+                                    <span className="ml-2 truncate">
+                                        {item.title}
+                                    </span>
                                 </Link>
 
                                 {/* Count badge for applicable items positioned absolutely on the right */}

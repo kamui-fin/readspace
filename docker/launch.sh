@@ -45,12 +45,21 @@ fi
 
 # Start any other services (like your custom web/server containers)
 if [ -f "$SCRIPT_DIR/docker-compose.yml" ]; then
-    print_info "› Starting readspace application services (including Meilisearch)..."
-    if ! docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" --env-file "$SCRIPT_DIR/.env" up -d; then
-        print_error "Failed to start custom application services."
-        exit 1
+    if [ "$DEV_MODE" = true ]; then
+        print_info "› Starting readspace development infrastructure (Redis + Meilisearch)..."
+        if ! docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" --env-file "$SCRIPT_DIR/.env" up -d; then
+            print_error "Failed to start infrastructure services."
+            exit 1
+        fi
+        print_success "✓ Database infrastructure is starting in the background (API and Web should be run locally)."
+    else
+        print_info "› Starting readspace production services (including application containers)..."
+        if ! docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" --env-file "$SCRIPT_DIR/.env" --profile app up -d; then
+            print_error "Failed to start application services."
+            exit 1
+        fi
+        print_success "✓ Production application services are starting in the background."
     fi
-    print_success "✓ Custom application services (including Meilisearch) are starting in the background."
 else
     print_info "› No docker/docker-compose.yml found, skipping custom service startup."
 fi

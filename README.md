@@ -115,7 +115,7 @@ Readspace is designed for easy self-hosting, giving you complete control over yo
 6.  **Configure Browser Extension** (Optional)
 
     To connect the browser extension to your self-hosted instance, configure:
-    - **Server URL**: `http://your-ip-or-domain:18042`
+    - **Server URL**: `http://your-ip-or-domain:18008`
     - **Supabase URL**: `http://your-ip-or-domain:18000`
     - **Supabase Anon Key**: `grep NEXT_PUBLIC_SUPABASE_ANON_KEY apps/web/.env`
 

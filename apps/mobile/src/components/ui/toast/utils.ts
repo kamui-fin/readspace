@@ -24,7 +24,10 @@ export const getToastBackgroundColor = (
   if (type === 'error') {
     return 'rgb(255, 245, 245)'; // Very soft rose red
   }
-  if (type === 'promise' || type === 'info') {
+  if (type === 'info') {
+    return 'rgb(255, 248, 240)'; // Soft apricot/orange tint
+  }
+  if (type === 'promise') {
     return 'rgb(244, 247, 244)'; // Cohesive light green-grey (adhering to readspace theme)
   }
 
@@ -53,15 +56,18 @@ export const getToastTextColor = (
   if (type === 'error') {
     return '#a81c1c'; // Deep rose red (AAA contrast)
   }
-  if (type === 'promise' || type === 'info') {
-    return '#2c4f32'; // Deep themed forest green for info/promise
+  if (type === 'info') {
+    return '#9c4203'; // Deep themed orange/rust (AAA contrast)
+  }
+  if (type === 'promise') {
+    return '#2c4f32'; // Deep themed forest green for promise
   }
 
   return '#2c4f32';
 };
 
 export const getToastBorderColor = (
-  type: string,
+  _type: string,
   colors: ThemeColors,
   custom?: { borderColor?: string }
 ) => {
@@ -74,13 +80,6 @@ export const getToastBorderColor = (
     return 'rgba(255, 255, 255, 0.05)'; // Very subtle border in dark mode
   }
 
-  // Premium colorful borders in light mode matching Readspace palette
-  if (type === 'success') {
-    return 'rgba(56, 102, 65, 0.18)'; // Soft primary green border
-  }
-  if (type === 'error') {
-    return 'rgba(234, 67, 53, 0.18)'; // Soft red border
-  }
-  // Info, Promise, Custom, etc.
-  return 'rgba(56, 102, 65, 0.12)';
+  // Premium neutral borders in light mode to blend into the toast
+  return 'rgba(0, 0, 0, 0.08)';
 };

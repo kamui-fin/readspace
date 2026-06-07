@@ -24,7 +24,7 @@ import {
   useUpdateArticle,
 } from '@readspace/shared';
 import { useFeedViewStore } from '@stores/feed-view';
-import { getTabKey, getTabName, useFollowingStore } from '@stores/following';
+import { getTabKey, useFollowingStore } from '@stores/following';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -32,11 +32,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
-  Platform,
   RefreshControl,
   View,
 } from 'react-native';
-import type { SharedValue } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface FollowingScreenProps {
@@ -127,7 +126,7 @@ export function FollowingScreen({
     feedFolderParams,
   });
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } = activeQuery;
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = activeQuery;
 
   // Article mutations
   const updateArticle = useUpdateArticle();
@@ -481,6 +480,7 @@ export function FollowingScreen({
         }
         contentContainerStyle={{
           backgroundColor: colors.background,
+          flexGrow: 1,
           // Always apply paddingTop to account for header height
           // Header is always absolute for tabbed variant, so content needs padding
           // Uses computed safe padding that handles all edge cases:
@@ -495,6 +495,26 @@ export function FollowingScreen({
           paddingBottom: isPreviewMode ? contentPaddingBottom + 80 : contentPaddingBottom,
         }}
       />
+
+      {isLoading && (
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(300)}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: colors.background,
+            zIndex: 9,
+            paddingTop: contentPaddingTop,
+            paddingBottom: isPreviewMode ? contentPaddingBottom + 80 : contentPaddingBottom,
+          }}
+        >
+          <ArticleCardSkeletonList count={8} />
+        </Animated.View>
+      )}
 
       {/* Folder picker modal/bottom sheet */}
       <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />

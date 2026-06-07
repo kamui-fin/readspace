@@ -11,6 +11,7 @@ Readspace consists of three services that need to be exposed:
 | Web Application | `readspace_web` | `8042`        | `18042`   | `app.example.com`      |
 | API Server      | `readspace_api` | `8008`        | `18008`   | `api.example.com`      |
 | Supabase        | `kong`          | `8000`        | `18000`   | `supabase.example.com` |
+| Meilisearch     | `meilisearch`   | `7700`        | `7700`    | `search.example.com`   |
 
 ### Important: Choosing the Right Port
 
@@ -66,6 +67,14 @@ services:
       - "traefik.http.routers.readspace-api.entrypoints=websecure"
       - "traefik.http.routers.readspace-api.tls.certresolver=letsencrypt"
       - "traefik.http.services.readspace-api.loadbalancer.server.port=8008"
+
+  meilisearch:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.readspace-search.rule=Host(`search.example.com`)"
+      - "traefik.http.routers.readspace-search.entrypoints=websecure"
+      - "traefik.http.routers.readspace-search.tls.certresolver=letsencrypt"
+      - "traefik.http.services.readspace-search.loadbalancer.server.port=7700"
 ```
 
 For Supabase, add labels to the `kong` service in `docker/supabase/docker-compose.yml`:
@@ -119,6 +128,14 @@ nginx Proxy Manager provides a web UI for managing reverse proxy configurations,
    - Enable: ☑ Websockets Support
    - SSL Tab: ☑ Request a new SSL Certificate
 
+   **Proxy Host 4 - Meilisearch**
+   - Domain Names: `search.example.com`
+   - Scheme: `http`
+   - Forward Hostname/IP: `meilisearch` (or `localhost`)
+   - Forward Port: `7700`
+   - Enable: ☑ Websockets Support
+   - SSL Tab: ☑ Request a new SSL Certificate
+
 3. **Save** each configuration
 
 **Network Setup**: If NPM is running in Docker, ensure it's in the same network as Readspace:
@@ -158,6 +175,12 @@ supabase.example.com {
     reverse_proxy kong:8000
     encode gzip
 }
+
+# Meilisearch
+search.example.com {
+    reverse_proxy meilisearch:7700
+    encode gzip
+}
 ```
 
 If Caddy is running on the host (not in Docker), use localhost with **host ports**:
@@ -173,6 +196,10 @@ api.example.com {
 
 supabase.example.com {
     reverse_proxy localhost:18000
+}
+
+search.example.com {
+    reverse_proxy localhost:7700
 }
 ```
 
@@ -257,10 +284,29 @@ server {
     }
 }
 
+# Meilisearch
+server {
+    listen 443 ssl http2;
+    server_name search.example.com;
+
+    ssl_certificate /path/to/fullchain.pem;
+    ssl_certificate_key /path/to/privkey.pem;
+
+    location / {
+        # Use localhost:7700 if nginx is on host
+        # Use meilisearch:7700 if nginx is in Docker network
+        proxy_pass http://localhost:7700;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
 # HTTP to HTTPS redirect
 server {
     listen 80;
-    server_name app.example.com api.example.com supabase.example.com;
+    server_name app.example.com api.example.com supabase.example.com search.example.com;
     return 301 https://$host$request_uri;
 }
 ```

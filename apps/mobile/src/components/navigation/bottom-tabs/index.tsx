@@ -90,7 +90,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
     return options?.tabBarIcon !== undefined;
   });
 
-  const blurTint = isDark ? 'systemThickMaterialDark' : 'systemThickMaterialLight';
+  const blurTint = isDark ? 'dark' : 'light';
 
   const tabsContent = (
     <Animated.View style={[styles.floatingBar, animatedOriginalTabBarStyle]}>
@@ -163,21 +163,32 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
                   width: 0,
                   height: 10,
                 },
-                shadowOpacity: isDark ? 0.45 : 0.08,
+                shadowOpacity: Platform.OS === 'ios' ? 0 : isDark ? 0.45 : 0.08,
                 shadowRadius: 20,
-                elevation: 15,
+                elevation: Platform.OS === 'android' ? 15 : 0,
                 backgroundColor:
-                  Platform.OS === 'android' ? (isDark ? '#141414' : '#ffffff') : undefined,
+                  Platform.OS === 'android'
+                    ? (isDark ? '#141414' : tabBarColors.tab_bar_background_default)
+                    : 'transparent',
               },
             ]}>
             <Animated.View style={[styles.floatingBarWrapper, animatedFloatingBarStyle]}>
               {Platform.OS === 'android' ? (
                 <View
-                  style={[styles.blurView, { backgroundColor: isDark ? '#141414' : '#ffffff' }]}>
+                  style={[
+                    styles.blurView,
+                    { backgroundColor: isDark ? '#141414' : tabBarColors.tab_bar_background_default },
+                  ]}>
                   {tabsContent}
                 </View>
               ) : (
-                <BlurView intensity={100} tint={blurTint} style={styles.blurView}>
+                <BlurView
+                  intensity={100}
+                  tint={blurTint}
+                  style={[
+                    styles.blurView,
+                    !isDark && { backgroundColor: tabBarColors.tab_bar_background_ios },
+                  ]}>
                   {tabsContent}
                 </BlurView>
               )}

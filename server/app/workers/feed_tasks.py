@@ -22,7 +22,7 @@ async def refresh_single_feed_task(feed_id: UUID | str) -> None:
 
 @broker.task(
     task_name="feed_tasks.schedule_all_feed_refreshes",
-    schedule=[{"cron": "*/30 * * * *"}],
+    schedule=[{"cron": "*/2 * * * *"}],
 )
 async def schedule_all_feed_refreshes_task() -> None:
     """Cron: Schedule refreshes (Wrapper)."""

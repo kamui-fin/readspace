@@ -128,7 +128,9 @@ export function ArticlesView({
     })
 
     const displayedArticles = useMemo(() => {
-        return allRows.filter((row): row is Article => row !== null && !("type" in row))
+        return allRows.filter(
+            (row): row is Article => row !== null && !("type" in row)
+        )
     }, [allRows])
 
     // Keyboard Shortcuts for navigation
@@ -147,7 +149,12 @@ export function ArticlesView({
             }
 
             // Avoid modifier keys
-            if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
+            if (
+                event.ctrlKey ||
+                event.metaKey ||
+                event.altKey ||
+                event.shiftKey
+            ) {
                 return
             }
 

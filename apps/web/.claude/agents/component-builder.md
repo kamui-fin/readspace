@@ -76,7 +76,8 @@ const componentVariants = cva("base-classes", {
 })
 
 export interface ComponentProps
-    extends React.HTMLAttributes<HTMLDivElement>,
+    extends
+        React.HTMLAttributes<HTMLDivElement>,
         VariantProps<typeof componentVariants> {
     asChild?: boolean
 }

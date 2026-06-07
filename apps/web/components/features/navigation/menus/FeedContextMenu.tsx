@@ -179,22 +179,26 @@ export function FeedDropdownMenu({
         <div className="relative flex items-center justify-end h-6 w-6">
             {/* Count Badge - fades out in place when hovered to make room for three dots */}
             {hasCount && (
-                <span className={cn(
-                    "text-xs font-semibold text-muted-foreground/80 px-1.5 py-0.5 rounded-full bg-muted/40 backdrop-blur-xs select-none",
-                    "transition-opacity duration-150 absolute right-0",
-                    "group-hover/item:opacity-0 group-hover/item:pointer-events-none",
-                    "group-focus-within/item:opacity-0 group-focus-within/item:pointer-events-none"
-                )}>
+                <span
+                    className={cn(
+                        "text-xs font-semibold text-muted-foreground/80 px-1.5 py-0.5 rounded-full bg-muted/40 backdrop-blur-xs select-none",
+                        "transition-opacity duration-150 absolute right-0",
+                        "group-hover/item:opacity-0 group-hover/item:pointer-events-none",
+                        "group-focus-within/item:opacity-0 group-focus-within/item:pointer-events-none"
+                    )}
+                >
                     {count}
                 </span>
             )}
 
             {/* Context Menu Button - fades/scales in on hover */}
-            <div className={cn(
-                "transition-all duration-200 absolute right-0",
-                "opacity-0 pointer-events-none scale-90 group-hover/item:opacity-100 group-hover/item:pointer-events-auto group-hover/item:scale-100",
-                "group-focus-within/item:opacity-100 group-focus-within/item:pointer-events-auto group-focus-within/item:scale-100"
-            )}>
+            <div
+                className={cn(
+                    "transition-all duration-200 absolute right-0",
+                    "opacity-0 pointer-events-none scale-90 group-hover/item:opacity-100 group-hover/item:pointer-events-auto group-hover/item:scale-100",
+                    "group-focus-within/item:opacity-100 group-focus-within/item:pointer-events-auto group-focus-within/item:scale-100"
+                )}
+            >
                 <FeedContextMenu
                     isFolder={isFolder}
                     itemId={itemId}

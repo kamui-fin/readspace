@@ -8,7 +8,9 @@ import { Chip } from '@components/ui/chip';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { COLORS } from '@lib/constants/colors';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { Feed, FeedDiscoveryResult } from '@readspace/shared';
+import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import { Image } from 'expo-image';
 import { memo, useCallback, useState } from 'react';
 import { Linking, View } from 'react-native';
@@ -66,6 +68,9 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
 
   console.log(feed.image_url, imageError);
 
+  const isDark = useIsDarkMode();
+  const linkColor = isDark ? colors.secondary : colors.primary;
+
   return (
     <View className="px-4 pb-4 pt-2">
       {/* Back button row */}
@@ -86,7 +91,7 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
             }}>
             {feed.image_url && !imageError ? (
               <Image
-                source={{ uri: feed.image_url }}
+                source={{ uri: resolveSupabaseImageUrl(feed.image_url) }}
                 style={{ width: '100%', height: '100%' }}
                 contentFit="cover"
                 onError={(e) => {
@@ -183,17 +188,12 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
           size="small"
           onPress={handleUrlPress}
           className="mb-4 h-auto flex-row items-center justify-start gap-2 px-0">
-          <LinkMinimalistic2BoldIcon
-            width={14}
-            height={14}
-            strokeWidth={2.4}
-            color={colors.primary}
-          />
+          <LinkMinimalistic2BoldIcon width={14} height={14} strokeWidth={2.4} color={linkColor} />
           <Text
             size="sm"
             fontFamily="geist"
             className="flex-1 flex-shrink text-left"
-            style={{ color: colors.primary, fontSize: 12 }}
+            style={{ color: linkColor, fontSize: 12 }}
             numberOfLines={1}>
             {feed.link || feed.url}
           </Text>

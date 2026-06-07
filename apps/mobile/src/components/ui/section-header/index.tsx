@@ -1,7 +1,6 @@
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { View } from 'react-native';
-import SolarArrowRightBoldIcon from '@/components/icons/solar/arrow-right-bold';
 
 export interface SectionHeaderProps {
   title: string;
@@ -33,9 +32,8 @@ export function SectionHeader({
           size="small"
           fullWidth={false}
           onPress={onSeeAll}
-          className="h-auto flex-row items-center gap-0.5 px-0"
-          rightIcon={<SolarArrowRightBoldIcon width={16} height={16} color={iconColor} />}>
-          <Text size="sm" fontFamily="geist-medium" style={{ color: iconColor }}>
+          className="h-auto flex-row items-center gap-0.5 px-0">
+          <Text size="sm" fontFamily="geist-medium" className="text-secondary">
             {seeAllText}
           </Text>
         </Button>

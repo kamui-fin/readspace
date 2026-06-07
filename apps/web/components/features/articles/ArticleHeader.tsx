@@ -41,15 +41,19 @@ export function ArticleHeader({
                       .flatMap((tag) => tag.split(","))
                       .map((tag) => {
                           const decoded = tag
-                              .replace(/&amp;/g, '&')
-                              .replace(/&lt;/g, '<')
-                              .replace(/&gt;/g, '>')
+                              .replace(/&amp;/g, "&")
+                              .replace(/&lt;/g, "<")
+                              .replace(/&gt;/g, ">")
                               .replace(/&quot;/g, '"')
                               .replace(/&#39;/g, "'")
                               .replace(/&apos;/g, "'")
-                              .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
-                              .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
-                          return decoded.trim();
+                              .replace(/&#(\d+);/g, (_, dec) =>
+                                  String.fromCharCode(parseInt(dec, 10))
+                              )
+                              .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
+                                  String.fromCharCode(parseInt(hex, 16))
+                              )
+                          return decoded.trim()
                       })
                       .filter(Boolean)
               )

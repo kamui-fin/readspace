@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Image, Pressable, type PressableProps, View } from 'react-native';
+import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import { FollowButton } from './follow.button';
 
 export interface FeedListItemProps extends PressableProps {
@@ -57,7 +58,7 @@ export const FeedListItem = ({
         }}>
         {iconUrl && !imageError ? (
           <Image
-            source={{ uri: iconUrl }}
+            source={{ uri: resolveSupabaseImageUrl(iconUrl) }}
             className="h-full w-full"
             resizeMode="cover"
             onError={() => setImageError(true)}

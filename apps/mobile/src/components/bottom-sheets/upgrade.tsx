@@ -101,7 +101,7 @@ export function UpgradePaywallModal() {
         <View className="absolute right-6 z-30" style={{ top: insets.top + 10 }}>
           <Pressable
             onPress={close}
-            className="p-2.5 rounded-full active:opacity-60"
+            className="rounded-full p-2.5 active:opacity-60"
             style={{ backgroundColor: colors.grey6, borderWidth: 1, borderColor: colors.grey5 }}
             accessibilityLabel="Close Upgrade Screen"
             accessibilityRole="button">
@@ -119,8 +119,8 @@ export function UpgradePaywallModal() {
           {/* Header section with Readspace logo */}
           <View className="mb-6 mt-4 items-center">
             <View
-              className="h-14 w-14 rounded-full items-center justify-center mb-4"
-              style={{ backgroundColor: colors.primary + '18' }}>
+              className="mb-4 h-14 w-14 items-center justify-center rounded-xl"
+              style={{ backgroundColor: '#1A1A1A' }}>
               <ReadspaceLogoIcon width={34} height={34} />
             </View>
             <Text
@@ -134,7 +134,7 @@ export function UpgradePaywallModal() {
               <Text
                 size="base"
                 fontFamily="geist"
-                className="text-center mt-2 px-4"
+                className="mt-2 px-4 text-center"
                 style={{ color: colors.grey }}>
                 {displayDescription}
               </Text>
@@ -142,11 +142,11 @@ export function UpgradePaywallModal() {
           </View>
 
           {/* Features / Benefits list matching Web dialog - Standard spacious layout */}
-          <View className="mb-8 p-6 rounded-3xl" style={{ backgroundColor: colors.grey6 }}>
+          <View className="mb-8 rounded-3xl p-6" style={{ backgroundColor: colors.grey6 }}>
             <Text
               size="xs"
               fontFamily="geist-semibold"
-              className="uppercase tracking-wider mb-5"
+              className="mb-5 uppercase tracking-wider"
               style={{ color: colors.grey }}>
               Readspace Pro benefits
             </Text>
@@ -155,7 +155,7 @@ export function UpgradePaywallModal() {
               {/* Benefit 1: Feed capacity */}
               <View className="flex-row items-start">
                 <View
-                  className="mr-3.5 h-9 w-9 rounded-full items-center justify-center"
+                  className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
                   <RssIcon width={18} height={18} color={colors.primary} />
                 </View>
@@ -176,7 +176,7 @@ export function UpgradePaywallModal() {
               {/* Benefit 2: AI Summaries */}
               <View className="flex-row items-start">
                 <View
-                  className="mr-3.5 h-9 w-9 rounded-full items-center justify-center"
+                  className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
                   <SparkleIcon width={18} height={18} color={colors.primary} />
                 </View>
@@ -197,7 +197,7 @@ export function UpgradePaywallModal() {
               {/* Benefit 3: Intelligent discovery */}
               <View className="flex-row items-start">
                 <View
-                  className="mr-3.5 h-9 w-9 rounded-full items-center justify-center"
+                  className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
                   <SvgXml xml={SEARCH_XML} width={18} height={18} color={colors.primary} />
                 </View>
@@ -218,7 +218,7 @@ export function UpgradePaywallModal() {
               {/* Benefit 4: Reading Library */}
               <View className="flex-row items-start">
                 <View
-                  className="mr-3.5 h-9 w-9 rounded-full items-center justify-center"
+                  className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
                   <SvgXml xml={BOOK_XML} width={18} height={18} color={colors.primary} />
                 </View>
@@ -252,7 +252,7 @@ export function UpgradePaywallModal() {
               {/* Monthly Card */}
               <Pressable
                 onPress={() => setSelectedPlan('monthly')}
-                className="flex-1 p-4 rounded-3xl border-2"
+                className="flex-1 rounded-3xl border-2 p-4"
                 style={{
                   borderColor: selectedPlan === 'monthly' ? colors.primary : colors.grey5,
                   backgroundColor:
@@ -272,7 +272,7 @@ export function UpgradePaywallModal() {
                   style={{ color: colors.grey }}>
                   Billed monthly
                 </Text>
-                <View className="flex-row items-baseline mt-5">
+                <View className="mt-5 flex-row items-baseline">
                   <Text size="2xl" fontFamily="geist-bold" style={{ color: colors.black }}>
                     {monthlyPriceStr}
                   </Text>
@@ -285,7 +285,7 @@ export function UpgradePaywallModal() {
               {/* Yearly Card */}
               <Pressable
                 onPress={() => setSelectedPlan('yearly')}
-                className="flex-1 p-4 rounded-3xl border-2 relative"
+                className="relative flex-1 rounded-3xl border-2 p-4"
                 style={{
                   borderColor: selectedPlan === 'yearly' ? colors.primary : colors.grey5,
                   backgroundColor:
@@ -297,12 +297,12 @@ export function UpgradePaywallModal() {
                 }}>
                 {/* Promo Badge */}
                 <View
-                  className="absolute -top-3 left-4 right-4 rounded-full py-0.5 items-center justify-center shadow-xs"
+                  className="shadow-xs absolute -top-3 left-4 right-4 items-center justify-center rounded-full py-0.5"
                   style={{ backgroundColor: colors.primary }}>
                   <Text
                     size="xs"
                     fontFamily="geist-bold"
-                    className="text-white text-[9px] uppercase tracking-wider">
+                    className="text-[9px] uppercase tracking-wider text-white">
                     Save 25%
                   </Text>
                 </View>
@@ -321,7 +321,7 @@ export function UpgradePaywallModal() {
                   style={{ color: colors.grey }}>
                   Billed annually
                 </Text>
-                <View className="flex-row items-baseline mt-5">
+                <View className="mt-5 flex-row items-baseline">
                   <Text size="2xl" fontFamily="geist-bold" style={{ color: colors.black }}>
                     {yearlyMonthlyEquivalentStr}
                   </Text>
@@ -341,7 +341,7 @@ export function UpgradePaywallModal() {
               ) : (
                 <View className="flex-row items-center justify-center gap-2">
                   <RocketBoldIcon width={18} height={18} color="#ffffff" />
-                  <Text className="text-white font-geist-semibold">Upgrade to Pro</Text>
+                  <Text className="font-geist-semibold text-white">Upgrade to Pro</Text>
                 </View>
               )}
             </Button>

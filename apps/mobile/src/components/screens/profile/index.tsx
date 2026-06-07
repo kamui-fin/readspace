@@ -183,7 +183,7 @@ export function ProfileScreen() {
               />
               {isPro ? (
                 <View
-                  className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full"
+                  className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
                   style={{ backgroundColor: '#F59E0B' }}>
                   <SolarCrownBoldIcon width={14} height={14} color="#FFFFFF" />
                   <Text size="sm" fontFamily="geist-bold" className="text-white">
@@ -192,7 +192,7 @@ export function ProfileScreen() {
                 </View>
               ) : (
                 <View
-                  className="px-3 py-1.5 rounded-full"
+                  className="rounded-full px-3 py-1.5"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : colors.grey6 }}>
                   <Text
                     size="sm"
@@ -355,7 +355,7 @@ export function ProfileScreen() {
           </SettingsGroup>
 
           {/* Developer Tools */}
-          {/* <ToastTester /> */}
+          <ToastTester />
 
           {/* Account Section */}
           <SettingsGroup title="Account" className="mb-8">

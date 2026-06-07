@@ -1,4 +1,3 @@
-import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { View } from 'react-native';
@@ -31,16 +30,7 @@ export function EmptyStateView({
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
   if (isLoading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          minHeight: 400,
-          backgroundColor: colors.background,
-        }}>
-        <ArticleCardSkeletonList count={8} />
-      </View>
-    );
+    return null;
   }
 
   const config: EmptyStateConfig =
@@ -54,7 +44,12 @@ export function EmptyStateView({
         paddingBottom: contentPaddingBottom,
         backgroundColor: colors.background,
       }}>
-      <EmptyState variant="centered" icon={config.icon} message={config.message} />
+      <EmptyState
+        variant="centered"
+        icon={config.icon}
+        title={config.title}
+        description={config.description}
+      />
     </View>
   );
 }

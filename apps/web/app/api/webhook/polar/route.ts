@@ -1,62 +1,64 @@
-import { Webhooks } from "@polar-sh/nextjs";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { Webhooks } from "@polar-sh/nextjs"
+import { getSupabaseAdmin } from "@/lib/supabase/admin"
 
 export const POST = Webhooks({
     webhookSecret: process.env.POLAR_WEBHOOK_SECRET || "",
-    
+
     onPayload: async (payload) => {
-        console.log(`[Polar Webhook] Event payload received: ${payload.type}`);
+        console.log(`[Polar Webhook] Event payload received: ${payload.type}`)
     },
-    
+
     onOrderCreated: async (order) => {
         // Polar webhook payload wraps the resource in the 'data' property
-        const orderData = (order as any).data;
+        const orderData = (order as any).data
         if (!orderData) {
-            console.warn("[Polar Webhook] Order data object is missing.");
-            return;
+            console.warn("[Polar Webhook] Order data object is missing.")
+            return
         }
 
-        console.log(`[Polar Webhook] Order created: ${orderData.id}`);
-        const email = orderData.customer?.email || orderData.customer_email;
-        let userId: string | undefined;
+        console.log(`[Polar Webhook] Order created: ${orderData.id}`)
+        const email = orderData.customer?.email || orderData.customer_email
+        let userId: string | undefined
 
         // Try extracting user_id from metadata if present
         if (orderData.metadata && typeof orderData.metadata === "object") {
-            userId = orderData.metadata.user_id;
+            userId = orderData.metadata.user_id
         }
 
         if (email || userId) {
-            await handleRoleUpgrade(email, userId);
+            await handleRoleUpgrade(email, userId)
         }
     },
-    
+
     onSubscriptionCreated: async (subscription) => {
         // Polar webhook payload wraps the resource in the 'data' property
-        const subData = (subscription as any).data;
+        const subData = (subscription as any).data
         if (!subData) {
-            console.warn("[Polar Webhook] Subscription data object is missing.");
-            return;
+            console.warn("[Polar Webhook] Subscription data object is missing.")
+            return
         }
 
-        console.log(`[Polar Webhook] Subscription created: ${subData.id}`);
-        const email = subData.customer?.email || subData.customer_email;
-        let userId: string | undefined;
+        console.log(`[Polar Webhook] Subscription created: ${subData.id}`)
+        const email = subData.customer?.email || subData.customer_email
+        let userId: string | undefined
 
         // Try extracting user_id from metadata if present
         if (subData.metadata && typeof subData.metadata === "object") {
-            userId = subData.metadata.user_id;
+            userId = subData.metadata.user_id
         }
 
         if (email || userId) {
-            await handleRoleUpgrade(email, userId);
+            await handleRoleUpgrade(email, userId)
         }
     },
-});
+})
 
 async function handleRoleUpgrade(email?: string, userId?: string) {
     try {
-        const supabase = getSupabaseAdmin();
-        console.log(`[Polar Webhook] Upgrading user role to PRO (User ID: ${userId || "None"}, Email: ${email || "None"})`);
+        const supabase = getSupabaseAdmin()
+        console.log(
+            `[Polar Webhook] Upgrading user role to PRO (User ID: ${userId || "None"}, Email: ${email || "None"})`
+        )
 
         // Upgrade by user ID if available
         if (userId) {
@@ -64,14 +66,18 @@ async function handleRoleUpgrade(email?: string, userId?: string) {
                 .from("profiles")
                 .update({ role: "PRO" })
                 .eq("id", userId)
-                .select();
-                
+                .select()
+
             if (!error && data && data.length > 0) {
-                console.log(`[Polar Webhook] User profile successfully upgraded to PRO by ID: ${userId}`);
-                return;
+                console.log(
+                    `[Polar Webhook] User profile successfully upgraded to PRO by ID: ${userId}`
+                )
+                return
             }
             if (error) {
-                console.error(`[Polar Webhook] Supabase RLS bypass update error by User ID: ${error.message}`);
+                console.error(
+                    `[Polar Webhook] Supabase RLS bypass update error by User ID: ${error.message}`
+                )
             }
         }
 
@@ -81,19 +87,25 @@ async function handleRoleUpgrade(email?: string, userId?: string) {
                 .from("profiles")
                 .update({ role: "PRO" })
                 .eq("email", email)
-                .select();
-                
+                .select()
+
             if (!error && data && data.length > 0) {
-                console.log(`[Polar Webhook] User profile successfully upgraded to PRO by email: ${email}`);
-                return;
+                console.log(
+                    `[Polar Webhook] User profile successfully upgraded to PRO by email: ${email}`
+                )
+                return
             }
             if (error) {
-                console.error(`[Polar Webhook] Supabase RLS bypass update error by email: ${error.message}`);
+                console.error(
+                    `[Polar Webhook] Supabase RLS bypass update error by email: ${error.message}`
+                )
             }
         }
 
-        console.warn(`[Polar Webhook] No matching user profile found in the database for User ID: ${userId || "None"} or Email: ${email || "None"}`);
+        console.warn(
+            `[Polar Webhook] No matching user profile found in the database for User ID: ${userId || "None"} or Email: ${email || "None"}`
+        )
     } catch (err) {
-        console.error("[Polar Webhook] Failed to process role upgrade:", err);
+        console.error("[Polar Webhook] Failed to process role upgrade:", err)
     }
 }
