@@ -1,4 +1,5 @@
 .lk
+*.env
 .expo
 .agent/workflows
 .antigravitycli
