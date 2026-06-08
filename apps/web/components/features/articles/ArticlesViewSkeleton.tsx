@@ -65,8 +65,9 @@ export function ArticlesViewSkeleton({
         <div className="flex h-full md:h-[calc(100vh-1rem)] w-full bg-background md:rounded-xl md:shadow-sm">
             {/* Desktop: Resizable panels */}
             <div className="hidden md:flex w-full">
-                <ResizablePanelGroup direction="horizontal">
+                <ResizablePanelGroup id="articles-skeleton-group" direction="horizontal">
                     <ResizablePanel
+                        id="articles-skeleton-sidebar-panel"
                         defaultSize={layout[0]}
                         minSize={15}
                         maxSize={60}
@@ -124,6 +125,7 @@ export function ArticlesViewSkeleton({
                     </ResizablePanel>
                     <ResizableHandle />
                     <ResizablePanel
+                        id="articles-skeleton-detail-panel"
                         defaultSize={layout[1]}
                         className="overflow-hidden"
                     >
