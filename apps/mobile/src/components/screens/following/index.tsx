@@ -25,13 +25,14 @@ import {
 } from '@readspace/shared';
 import { useFeedViewStore } from '@stores/feed-view';
 import { getTabKey, useFollowingStore } from '@stores/following';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  Platform,
   RefreshControl,
   View,
 } from 'react-native';
@@ -59,10 +60,12 @@ export function FollowingScreen({
 
   // Refs for tracking state
   const isResettingRef = useRef(false);
+  const isRefreshingRef = useRef(false);
 
   const prevIsLoadingRef = useRef(false);
   const prevArticleCountRef = useRef(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(Date.now());
   const prevRefreshingRef = useRef(false);
   const firstArticleIdBeforeRefreshRef = useRef<string | undefined>(undefined);
   const articleCountBeforeRefreshRef = useRef<number>(0);
@@ -219,6 +222,8 @@ export function FollowingScreen({
   );
 
   const handleRefresh = useCallback(async () => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
     setRefreshing(true);
     firstArticleIdBeforeRefreshRef.current = allArticles[0]?.id;
     articleCountBeforeRefreshRef.current = allArticles.length;
@@ -240,6 +245,8 @@ export function FollowingScreen({
       ]);
     } finally {
       setRefreshing(false);
+      isRefreshingRef.current = false;
+      setLastRefreshedAt(Date.now());
     }
   }, [queryClient, viewType, selectedId, refreshFeed, allArticles]);
 
@@ -271,6 +278,7 @@ export function FollowingScreen({
       queryClient.invalidateQueries({ queryKey: ['rss-articles'], refetchType: 'active' });
       queryClient.invalidateQueries({ queryKey: ['rss-unread-counts'], refetchType: 'active' });
       queryClient.invalidateQueries({ queryKey: ['rss-feeds', 'list'], refetchType: 'active' });
+      setLastRefreshedAt(Date.now());
     }, [queryClient])
   );
 
@@ -413,6 +421,12 @@ export function FollowingScreen({
 
     const currentScrollY = event.nativeEvent.contentOffset.y;
 
+    // Trigger refresh early on iOS if pulled down past threshold (-65px is a comfortable Reddit-like threshold)
+    if (Platform.OS === 'ios' && currentScrollY < -65 && !isRefreshingRef.current) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      handleRefresh();
+    }
+
     // Clamp very small values to 0 to handle floating point precision issues
     // This prevents header from being slightly sticky when scroll is at top
     const clampedScrollY = currentScrollY < 1 ? 0 : currentScrollY;
@@ -423,10 +437,15 @@ export function FollowingScreen({
   const renderItem = useCallback(
     (item: ListItem) => {
       return (
-        <ArticleListItem item={item} onToggleRead={handleToggleRead} onBookmark={handleBookmark} />
+        <ArticleListItem
+          item={item}
+          onToggleRead={handleToggleRead}
+          onBookmark={handleBookmark}
+          lastRefreshedAt={lastRefreshedAt}
+        />
       );
     },
-    [handleToggleRead, handleBookmark]
+    [handleToggleRead, handleBookmark, lastRefreshedAt]
   );
 
   const renderFooter = () => {
@@ -446,10 +465,19 @@ export function FollowingScreen({
         refreshing={refreshing}
         onRefresh={handleRefresh}
         refreshColor={colors.secondary}
+        contentPaddingTop={contentPaddingTop}
         contentPaddingBottom={contentPaddingBottom}
       />
     );
-  }, [isLoading, activeTab, refreshing, handleRefresh, colors.secondary, contentPaddingBottom]);
+  }, [
+    isLoading,
+    activeTab,
+    refreshing,
+    handleRefresh,
+    colors.secondary,
+    contentPaddingTop,
+    contentPaddingBottom,
+  ]);
 
   return (
     <>
@@ -481,13 +509,8 @@ export function FollowingScreen({
         contentContainerStyle={{
           backgroundColor: colors.background,
           flexGrow: 1,
-          // Always apply paddingTop to account for header height
-          // Header is always absolute for tabbed variant, so content needs padding
-          // Uses computed safe padding that handles all edge cases:
-          // - Initial render (headerHeight = 0) → uses safeMinimumHeight
-          // - Tab switches (headerHeight might temporarily be 0) → uses safeMinimumHeight
-          // - Normal state (headerHeight > 0) → uses actual headerHeight
-          paddingTop: contentPaddingTop,
+          // If empty, pass paddingTop to EmptyStateView container directly to avoid LegendList virtualization rendering issues
+          paddingTop: listItems.length === 0 ? 0 : contentPaddingTop,
           // Always apply paddingBottom to account for bottom tab bar
           // Tab bar is absolutely positioned, so content needs padding to prevent overlap
           // Uses computed padding that accounts for tab bar height + safe area + spacing

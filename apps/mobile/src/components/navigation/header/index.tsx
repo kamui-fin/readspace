@@ -175,43 +175,46 @@ export const Header: React.FC<HeaderProps> = (props) => {
     const shadowOpacity =
       foregroundHeight.value === 0
         ? 0
-        : withTiming(isSticky ? (isDark ? 0.22 : 0.06) : 0, {
+        : withTiming(isSticky ? (isDark ? 0.15 : 0.08) : 0, {
             duration: 200,
           });
 
     const shadowRadius =
       foregroundHeight.value === 0
         ? 0
-        : withTiming(isSticky ? 8 : 0, {
+        : withTiming(isSticky ? 4 : 0, {
             duration: 200,
           });
 
     const shadowOffsetHeight =
       foregroundHeight.value === 0
         ? 0
-        : withTiming(isSticky ? 3 : 0, {
+        : withTiming(isSticky ? 1.5 : 0, {
             duration: 200,
           });
 
     const elevation =
       foregroundHeight.value === 0
         ? 0
-        : withTiming(isSticky ? 4 : 0, {
+        : withTiming(isSticky ? 2 : 0, {
+            duration: 200,
+          });
+
+    const borderBottomWidth =
+      foregroundHeight.value === 0
+        ? 0
+        : withTiming(isSticky ? 0.5 : 0, {
             duration: 200,
           });
 
     return {
-      position: 'absolute' as const,
-      zIndex: 10,
       transform: [{ translateY: translation }],
       paddingTop: animatedPaddingTop,
-      borderBottomWidth: 0,
-      backgroundColor: headerBgColor,
-      shadowColor: '#000000',
       shadowOffset: { width: 0, height: shadowOffsetHeight },
       shadowOpacity: shadowOpacity,
       shadowRadius: shadowRadius,
       elevation: elevation,
+      borderBottomWidth: borderBottomWidth,
     };
   });
 
@@ -314,13 +317,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
 
       if (totalHeight === 0) {
         return {
-          position: 'absolute' as const,
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 10,
           height: paddingTop,
-          overflow: 'hidden' as const,
           paddingTop,
         };
       }
@@ -334,16 +331,10 @@ export const Header: React.FC<HeaderProps> = (props) => {
       // Immediate reveal when scrolling up - refined animation
       if (direction === 'up') {
         return {
-          position: 'absolute' as const,
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 10,
           height: withTiming(totalHeight + paddingTop, {
             duration: 250,
             easing: Easing.bezier(0.25, 0.1, 0.25, 1),
           }),
-          overflow: 'hidden' as const,
           paddingTop: withTiming(paddingTop, {
             duration: 250,
             easing: Easing.bezier(0.25, 0.1, 0.25, 1),
@@ -358,13 +349,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
       // Early return for top position - instant response
       if (clampedScrollY === 0) {
         return {
-          position: 'absolute' as const,
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 10,
           height: totalHeight + paddingTop,
-          overflow: 'hidden' as const,
           paddingTop,
           shadowOpacity: 0,
         };
@@ -376,13 +361,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
       // Ensure normalizedScroll is valid
       if (!Number.isFinite(normalizedScroll) || normalizedScroll < 0) {
         return {
-          position: 'absolute' as const,
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 10,
           height: totalHeight + paddingTop,
-          overflow: 'hidden' as const,
           paddingTop,
           shadowOpacity: 0,
         };
@@ -405,18 +384,8 @@ export const Header: React.FC<HeaderProps> = (props) => {
       );
 
       return {
-        position: 'absolute' as const,
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 10,
         height,
-        overflow: 'hidden' as const,
         paddingTop: animatedPaddingTop,
-        backgroundColor: headerBgColor,
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 8,
         shadowOpacity,
         elevation: shadowOpacity > 0 ? 4 : 0, // Android shadow
       };
@@ -486,7 +455,21 @@ export const Header: React.FC<HeaderProps> = (props) => {
     return (
       <Animated.View
         className={clsx(headerContainerVariants({ variant }), className)}
-        style={[animatedContainerStyle, { backgroundColor: headerBgColor }]}>
+        style={[
+          {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 10,
+            overflow: 'hidden',
+            backgroundColor: headerBgColor,
+            shadowColor: colors.black,
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 8,
+          },
+          animatedContainerStyle,
+        ]}>
         <Animated.View style={animatedForegroundStyle}>
           {renderForeground()}
           {bottomContent && <View onLayout={handleBottomContentLayout}>{bottomContent}</View>}
@@ -533,7 +516,17 @@ export const Header: React.FC<HeaderProps> = (props) => {
       <Animated.View
         className={clsx(headerContainerVariants({ variant }), className)}
         style={[
-          { paddingTop: safeAreaTop + 10, backgroundColor: headerBgColor },
+          {
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            zIndex: 10,
+            paddingTop: safeAreaTop + 10,
+            backgroundColor: headerBgColor,
+            borderBottomColor: colors.grey4,
+            shadowColor: '#000000',
+          },
           animatedHeaderStyle,
         ]}>
         <Animated.View style={animatedForegroundStyle}>{renderForeground()}</Animated.View>

@@ -1,8 +1,6 @@
 import { Appearance, type ColorSchemeName } from 'react-native';
 import 'expo-sqlite/localStorage/install';
 import { Uniwind } from 'uniwind';
-// @ts-expect-error
-import { UniwindStore } from 'uniwind/src/core/native/store';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -31,14 +29,6 @@ export const useThemeStore = create<ThemeStore>()(
       isHydrated: false,
 
       setTheme: (theme) => {
-        // Clear style cache synchronously before render phase to prevent dirty cache hits
-        try {
-          if (UniwindStore && UniwindStore.cache) {
-            UniwindStore.cache.clear();
-          }
-        } catch (e) {
-          console.warn('Uniwind cache clear failed', e);
-        }
         set({ theme });
         Uniwind.setTheme(theme);
       },
@@ -67,12 +57,6 @@ export const useThemeStore = create<ThemeStore>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          // Clear cache on hydration
-          try {
-            if (UniwindStore && UniwindStore.cache) {
-              UniwindStore.cache.clear();
-            }
-          } catch (e) {}
           state.setHydrated();
           Uniwind.setTheme(state.theme);
         }

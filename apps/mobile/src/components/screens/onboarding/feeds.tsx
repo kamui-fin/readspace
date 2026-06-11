@@ -1,10 +1,10 @@
-import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { FeedListSkeleton } from '@components/screens/discover/ui/feed-list.skeleton';
+import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { useCreateFeed, useDeleteFeed } from '@readspace/shared';
 import { useOnboardingStore } from '@stores/onboarding';
-import { useQueryClient, useIsMutating } from '@tanstack/react-query';
+import { useIsMutating, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';

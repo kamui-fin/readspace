@@ -6,6 +6,7 @@ import { FollowingScreen } from '@components/screens/following';
 import { FilterActionButton } from '@components/screens/following/ui/filter-action.button';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { useFeeds, useUnreadCounts } from '@readspace/shared';
 import { useFeedViewStore } from '@stores/feed-view';
 import { useFollowingStore } from '@stores/following';
 import Constants from 'expo-constants';
@@ -14,8 +15,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Platform, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { useUnreadCounts, useFeeds } from '@readspace/shared';
 import { COLORS } from '@/lib/constants/colors';
 
 export default function FollowingRoute() {
@@ -210,6 +209,12 @@ export default function FollowingRoute() {
 
   return (
     <View className="bg-background flex-1" style={{ backgroundColor: colors.background }}>
+      <FollowingScreen
+        activeTab={activeTab}
+        scrollY={scrollY}
+        headerHeight={headerHeight}
+        safeMinimumHeight={safeMinimumHeight}
+      />
       <Header
         variant="tabbed"
         title={headerTitle}
@@ -221,12 +226,6 @@ export default function FollowingRoute() {
         onHeaderHeightChange={handleHeaderHeightChange}
         actionButton={filterActionButton}
         onTitlePress={handleTitlePress}
-      />
-      <FollowingScreen
-        activeTab={activeTab}
-        scrollY={scrollY}
-        headerHeight={headerHeight}
-        safeMinimumHeight={safeMinimumHeight}
       />
 
       {/* Feed Switcher Bottom Sheet */}

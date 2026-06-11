@@ -38,6 +38,7 @@ export const InfiniteScrollList = forwardRef<any, InfiniteScrollListProps<any>>(
       initialContainerPoolRatio = 10,
       onScroll,
       scrollEventThrottle,
+      style,
       ...props
     },
     ref
@@ -90,11 +91,14 @@ export const InfiniteScrollList = forwardRef<any, InfiniteScrollListProps<any>>(
         onScroll={onScroll}
         scrollEventThrottle={scrollEventThrottle}
         initialContainerPoolRatio={initialContainerPoolRatio}
-        style={{
-          // List content should be below header (zIndex: 10)
-          // The native scrollbar will naturally appear above due to platform rendering
-          zIndex: 9,
-        }}
+        style={[
+          {
+            // List content should be below header (zIndex: 10)
+            // The native scrollbar will naturally appear above due to platform rendering
+            zIndex: 1,
+          },
+          style,
+        ]}
         {...props}
       />
     );

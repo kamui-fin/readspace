@@ -1,5 +1,5 @@
-import { COLORS } from '@lib/constants/colors';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 import { ActivityIndicator, View } from 'react-native';
 
 export default function OAuthRedirectScreen() {

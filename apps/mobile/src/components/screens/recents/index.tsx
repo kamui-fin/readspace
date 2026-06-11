@@ -14,8 +14,9 @@ import { createListItems, type ListItem } from '@lib/utils/article';
 import type { Article } from '@readspace/shared';
 import { useInfiniteRecentlyReadArticles, useUpdateArticle } from '@readspace/shared';
 import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshControl, View } from 'react-native';
+import { Platform, RefreshControl, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/ui/empty-state';
 
@@ -28,8 +29,17 @@ export function RecentsScreen() {
 
   const loadingToastIdRef = useRef<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(Date.now());
+  const isRefreshingRef = useRef(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const prevArticleCountRef = useRef(0);
+
+  // Focus effect to update relative timestamps reference time when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      setLastRefreshedAt(Date.now());
+    }, [])
+  );
 
   // Compute bottom padding to account for tab bar (matches FollowingScreen)
   const contentPaddingBottom = useMemo(() => {
@@ -100,11 +110,15 @@ export function RecentsScreen() {
   );
 
   const handleRefresh = useCallback(async () => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
     setRefreshing(true);
     try {
       await refetch();
     } finally {
       setRefreshing(false);
+      isRefreshingRef.current = false;
+      setLastRefreshedAt(Date.now());
     }
   }, [refetch]);
 
@@ -159,6 +173,15 @@ export function RecentsScreen() {
     }
   };
 
+  const scrollHandler = (event: any) => {
+    const currentScrollY = event.nativeEvent.contentOffset.y;
+    // Trigger refresh early on iOS if pulled down past threshold (-65px is a comfortable Reddit-like threshold)
+    if (Platform.OS === 'ios' && currentScrollY < -65 && !isRefreshingRef.current) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      handleRefresh();
+    }
+  };
+
   const renderItem = useCallback(
     (item: ListItem) => (
       <ArticleListItem
@@ -166,9 +189,10 @@ export function RecentsScreen() {
         onToggleRead={handleToggleRead}
         onBookmark={handleBookmark}
         hideReadState
+        lastRefreshedAt={lastRefreshedAt}
       />
     ),
-    [handleToggleRead, handleBookmark]
+    [handleToggleRead, handleBookmark, lastRefreshedAt]
   );
 
   const renderFooter = () => {
@@ -220,6 +244,8 @@ export function RecentsScreen() {
         estimatedItemSize={200}
         showsVerticalScrollIndicator={false}
         className="bg-background"
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

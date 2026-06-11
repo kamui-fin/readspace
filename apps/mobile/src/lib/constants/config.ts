@@ -35,9 +35,19 @@ export const CLOUD_CONFIG = {
     process.env.EXPO_PUBLIC_CLOUD_APP_URL ||
     'https://app.readspace.ai',
   SUPABASE_URL:
-    process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_CLOUD_SUPABASE_URL || '',
+    process.env.EXPO_PUBLIC_SUPABASE_URL ||
+    process.env.EXPO_PUBLIC_CLOUD_SUPABASE_URL ||
+    'https://supabase.readspace.ai',
   SUPABASE_ANON_KEY:
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
     process.env.EXPO_PUBLIC_CLOUD_SUPABASE_ANON_KEY ||
-    '',
+    'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.ewogICJyb2xlIjogImFub24iLAogICJpc3MiOiAic3VwYWJhc2UiLAogICJpYXQiOiAxNzY0MDM0MzQ2LAogICJleHAiOiAxOTIxNzE0MzQ2Cn0.s0f50HbzrOO5boLjTmCYXImtCqZrw0vjYwPXtyIZKyE',
+  MEILISEARCH_URL:
+    process.env.EXPO_PUBLIC_MEILISEARCH_URL ||
+    process.env.EXPO_PUBLIC_CLOUD_MEILISEARCH_URL ||
+    'https://search.readspace.ai',
+  MEILISEARCH_SEARCH_KEY:
+    process.env.EXPO_PUBLIC_MEILISEARCH_SEARCH_KEY ||
+    process.env.EXPO_PUBLIC_CLOUD_MEILISEARCH_SEARCH_KEY ||
+    '8ceccba3f103a1d826ac3109a149f3c1fe6d68253e395d92b59fdae0a0eaf1b5',
 } as const;

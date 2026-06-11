@@ -8,6 +8,8 @@ const CLOUD_SETTINGS = {
   readspace_url: CLOUD_CONFIG.READSPACE_URL,
   supabase_url: CLOUD_CONFIG.SUPABASE_URL,
   supabase_anon_key: CLOUD_CONFIG.SUPABASE_ANON_KEY,
+  meilisearch_url: CLOUD_CONFIG.MEILISEARCH_URL,
+  meilisearch_search_key: CLOUD_CONFIG.MEILISEARCH_SEARCH_KEY,
 };
 
 export interface AppSettings {

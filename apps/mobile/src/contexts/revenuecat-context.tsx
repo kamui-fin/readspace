@@ -1,8 +1,8 @@
-import { useSession } from '@contexts/auth-context';
 import { toast } from '@components/ui/toast';
+import { useSession } from '@contexts/auth-context';
 import { supabase } from '@lib/supabase/client';
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { Platform, NativeModules } from 'react-native';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { NativeModules, Platform } from 'react-native';
 import type { CustomerInfo, PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 
 // Dynamically import Purchases core to prevent crashes in Expo Go or when native modules are not linked
@@ -114,7 +114,11 @@ interface RevenueCatProviderProps {
   children: React.ReactNode;
 }
 
-const REVENUECAT_API_KEY = 'test_cfHuzuhOXcYuSOZuLbNixiMXADV';
+const REVENUECAT_API_KEY = Platform.select({
+  ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || process.env.EXPO_PUBLIC_REVENUECAT_API_KEY,
+  android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || process.env.EXPO_PUBLIC_REVENUECAT_API_KEY,
+}) || 'test_cfHuzuhOXcYuSOZuLbNixiMXADV';
+
 const ENTITLEMENT_ID = 'Readspace Pro';
 
 export function RevenueCatProvider({ children }: RevenueCatProviderProps) {

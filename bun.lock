@@ -386,6 +386,7 @@
     "react-native": "0.81.5",
     "react-native-gesture-handler": "2.28.0",
     "react-native-reanimated": "4.1.7",
+    "react-native-renderer": "19.1.2",
     "react-native-safe-area-context": "5.6.2",
     "react-native-screens": "4.16.0",
     "react-native-svg": "15.12.1",

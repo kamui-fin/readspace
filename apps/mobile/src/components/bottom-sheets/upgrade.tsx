@@ -1,15 +1,15 @@
-import SparkleIcon from '@components/icons/local/sparkle';
-import RssIcon from '@components/icons/local/rss';
 import ReadspaceLogoIcon from '@components/icons/local/readspace-logo';
+import RssIcon from '@components/icons/local/rss';
+import SparkleIcon from '@components/icons/local/sparkle';
 import RocketBoldIcon from '@components/icons/solar/rocket-bold';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useRevenueCat } from '@contexts/revenuecat-context';
-import { useUpgradeDialog } from '@stores/upgrade-dialog';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { useUpgradeDialog } from '@stores/upgrade-dialog';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, View, ActivityIndicator, Modal, ScrollView, Platform } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 

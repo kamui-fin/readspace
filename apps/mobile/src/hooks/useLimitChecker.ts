@@ -1,6 +1,6 @@
+import { useRevenueCat } from '@contexts/revenuecat-context';
 import { useUserLimits } from '@readspace/shared';
 import { useUpgradeDialog } from '@stores/upgrade-dialog';
-import { useRevenueCat } from '@contexts/revenuecat-context';
 
 export function useLimitChecker() {
   const { data: limitData, isLoading, refetch } = useUserLimits();

@@ -1,5 +1,74 @@
-/docker/
-/apps/web/
-/apps/extension
-/server/
-/apps/docs
+# EAS Build Ignore File
+# When .easignore is present, EAS CLI ignores .gitignore completely and ONLY uses .easignore.
+# Therefore, we must include all git-ignored items plus mobile-specific ignores to keep the archive small.
+
+# Monorepo workspaces we don't need for the mobile build
+apps/web/
+apps/extension/
+apps/docs/
+server/
+docker/
+
+# Local native build directories and compiler caches (Android C++ debug artifacts, Xcode builds, etc.)
+apps/mobile/android/
+apps/mobile/ios/
+
+# Dependencies (EAS runs its own install on the build server; uploading local node_modules is unnecessary)
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Local caches & Build outputs
+.expo/
+.turbo/
+build/
+dist/
+.next/
+.cache/
+.parcel-cache/
+coverage/
+*.lcov
+tmp/
+temp/
+
+# Environment files
+*.env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.prod
+
+# Version Control
+.git/
+
+# IDE and Editor configs
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+
+# AI Agent directories
+.agent/
+.antigravitycli/
+.claude/
+.playwright-mcp/
+
+# Python & backend specific folders
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Temporary search / data files
+favicons/
+rss-r-us
+feeds.jsonl

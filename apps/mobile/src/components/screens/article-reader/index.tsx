@@ -5,12 +5,12 @@ import { useFavicon } from '@hooks/useFavicon';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import type { Article } from '@readspace/shared';
-import { useMemo, useRef, useState, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Linking,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   ScrollView,
-  Linking,
   View,
 } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';

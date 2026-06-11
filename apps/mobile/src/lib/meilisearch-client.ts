@@ -1,3 +1,4 @@
+import { CLOUD_CONFIG } from '@lib/constants/config';
 import { resolveHostname } from '@lib/utils/network';
 import { instantMeiliSearch } from '@meilisearch/instant-meilisearch';
 import type { HybridSearchConfig } from '@readspace/shared';
@@ -5,8 +6,10 @@ import { getSettings } from '@stores/settings';
 import { MeiliSearch } from 'meilisearch';
 import { Platform } from 'react-native';
 
-export const MEILISEARCH_URL = process.env.EXPO_PUBLIC_MEILISEARCH_URL || 'http://localhost:7700';
-export const MEILISEARCH_SEARCH_KEY = process.env.EXPO_PUBLIC_MEILISEARCH_SEARCH_KEY || '';
+export const MEILISEARCH_URL =
+  process.env.EXPO_PUBLIC_MEILISEARCH_URL || CLOUD_CONFIG.MEILISEARCH_URL;
+export const MEILISEARCH_SEARCH_KEY =
+  process.env.EXPO_PUBLIC_MEILISEARCH_SEARCH_KEY || CLOUD_CONFIG.MEILISEARCH_SEARCH_KEY;
 
 if (!MEILISEARCH_SEARCH_KEY) {
   console.warn(

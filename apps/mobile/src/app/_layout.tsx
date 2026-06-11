@@ -1,8 +1,8 @@
 import 'global.css';
 import { SessionProvider, useSession } from '@contexts/auth-context';
+import { RevenueCatProvider } from '@contexts/revenuecat-context';
 import { ThemeProvider } from '@contexts/theme-provider';
 import { ToastProvider } from '@contexts/toast-provider';
-import { RevenueCatProvider } from '@contexts/revenuecat-context';
 import {
   EBGaramond_400Regular,
   EBGaramond_400Regular_Italic,
@@ -31,25 +31,25 @@ import {
   GeistMono_600SemiBold,
   GeistMono_700Bold,
 } from '@expo-google-fonts/geist-mono';
-import { BottomSheetModalProvider, BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { useThemeStore } from '@stores/theme';
-import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 import { ApiError } from '@readspace/shared';
+import { useThemeStore } from '@stores/theme';
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import clsx from 'clsx';
 import * as Font from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import '@lib/api-client';
-import { configureApiClient } from '@lib/api-client';
-import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 import { UpgradePaywallModal } from '@components/bottom-sheets/upgrade';
+import { configureApiClient } from '@lib/api-client';
 import { useUpgradeDialog } from '@stores/upgrade-dialog';
+import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();

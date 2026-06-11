@@ -7,6 +7,7 @@ import {
   RenameFolderModal,
   type RenameFolderModalRef,
 } from '@components/bottom-sheets/rename-folder';
+import LocalRefreshLinearIcon from '@components/icons/local/refresh-linear';
 import AddFolderBoldIcon from '@components/icons/solar/add-folder-bold';
 import ChecklistMinimalisticLinearIcon from '@components/icons/solar/checklist-minimalistic-linear';
 import FolderWithFilesBoldIcon from '@components/icons/solar/folder-with-files-bold';
@@ -36,12 +37,11 @@ import {
 } from '@readspace/shared';
 import { type FeedSwitcherStore, useFeedSwitcherStore } from '@stores/feed-switcher';
 import { useFeedViewStore } from '@stores/feed-view';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, View, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQueryClient } from '@tanstack/react-query';
-import LocalRefreshLinearIcon from '@components/icons/local/refresh-linear';
 
 const PINNED_YELLOW = '#EAB308';
 

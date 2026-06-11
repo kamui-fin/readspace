@@ -19,6 +19,8 @@ interface ArticleListItemProps {
   onBookmark: (articleId: string, currentlySaved: boolean, articleType: 'feed' | 'clipped') => void;
   /** When true, articles won't be greyed out even if is_read=true */
   hideReadState?: boolean;
+  /** Force re-render on list refresh or screen focus */
+  lastRefreshedAt?: number;
 }
 
 export function ArticleListItem({
@@ -26,6 +28,7 @@ export function ArticleListItem({
   onToggleRead,
   onBookmark,
   hideReadState = false,
+  lastRefreshedAt,
 }: ArticleListItemProps) {
   // Optimistically set read state instantly on click while backend handles it.
   const [hasMarkedRead, setHasMarkedRead] = useState(false);

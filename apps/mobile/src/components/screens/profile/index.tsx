@@ -1,17 +1,19 @@
 import DiscordIcon from '@components/icons/local/discord';
-import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
 import GitHubIcon from '@components/icons/local/github';
 import ArchiveUpMinimlisticLinearIcon from '@components/icons/solar/archive-up-minimlistic-linear';
+import SolarCloudBoldIcon from '@components/icons/solar/cloud-bold';
+import SolarCrownBoldIcon from '@components/icons/solar/crown-bold';
 import DownloadLinearIcon from '@components/icons/solar/download-linear';
 import HistoryLinearIcon from '@components/icons/solar/history-linear';
 import Logout2LinearIcon from '@components/icons/solar/logout-2-linear';
 import PaletteLinearIcon from '@components/icons/solar/palette-linear';
+import SolarServerBoldIcon from '@components/icons/solar/server-bold';
+import SolarShieldCheckBoldIcon from '@components/icons/solar/shield-check-bold';
 import { Header } from '@components/navigation/header';
 import { SettingsGroup } from '@components/screens/profile/ui/settings-group';
 import { SettingsItem } from '@components/screens/profile/ui/settings-item';
-import { ToastTester } from '@components/screens/profile/ui/toast-tester';
+// import { ToastTester } from '@components/screens/profile/ui/toast-tester';
 import { UserProfile } from '@components/screens/profile/ui/user-profile';
-import { Button } from '@components/ui/button';
 import { Chip } from '@components/ui/chip';
 import {
   DropdownMenuCheckboxItem,
@@ -26,12 +28,6 @@ import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useSession } from '@contexts/auth-context';
 import { useRevenueCat } from '@contexts/revenuecat-context';
-import { useUpgradeDialog } from '@stores/upgrade-dialog';
-import SolarCrownBoldIcon from '@components/icons/solar/crown-bold';
-import SolarShieldCheckBoldIcon from '@components/icons/solar/shield-check-bold';
-import SolarCloudBoldIcon from '@components/icons/solar/cloud-bold';
-import SolarServerBoldIcon from '@components/icons/solar/server-bold';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
@@ -40,11 +36,12 @@ import { exportFeedsToOPML } from '@lib/utils/opml';
 import { useFeeds } from '@readspace/shared';
 import { useSettingsStore } from '@stores/settings';
 import { type Theme, useThemeStore } from '@stores/theme';
+import { useUpgradeDialog } from '@stores/upgrade-dialog';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Linking, Platform, ScrollView, View } from 'react-native';
+import { Alert, Linking, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function ProfileScreen() {
@@ -355,7 +352,7 @@ export function ProfileScreen() {
           </SettingsGroup>
 
           {/* Developer Tools */}
-          <ToastTester />
+          {/* <ToastTester /> */}
 
           {/* Account Section */}
           <SettingsGroup title="Account" className="mb-8">

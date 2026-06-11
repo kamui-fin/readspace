@@ -24,6 +24,7 @@ interface EmptyStateViewProps {
 export function EmptyStateView({
   isLoading,
   activeTab,
+  contentPaddingTop = 0,
   contentPaddingBottom = 0,
 }: EmptyStateViewProps) {
   const isDark = useIsDarkMode();
@@ -41,6 +42,7 @@ export function EmptyStateView({
     <View
       style={{
         flex: 1,
+        paddingTop: contentPaddingTop,
         paddingBottom: contentPaddingBottom,
         backgroundColor: colors.background,
       }}>

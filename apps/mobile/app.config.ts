@@ -18,6 +18,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // The scheme is constructed from your Google OAuth iOS Client ID
     // Format: com.googleusercontent.apps.{CLIENT_ID_WITHOUT_SUFFIX}
     infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
       CFBundleURLTypes: [
         {
           CFBundleURLSchemes: [
