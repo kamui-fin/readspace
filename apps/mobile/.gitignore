@@ -35,3 +35,4 @@ expo-env.d.ts
 # @end expo-cli
 
 src/components/icons/solar
+.env.local

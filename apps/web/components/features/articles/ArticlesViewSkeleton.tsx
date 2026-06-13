@@ -65,7 +65,10 @@ export function ArticlesViewSkeleton({
         <div className="flex h-full md:h-[calc(100vh-1rem)] w-full bg-background md:rounded-xl md:shadow-sm">
             {/* Desktop: Resizable panels */}
             <div className="hidden md:flex w-full">
-                <ResizablePanelGroup id="articles-skeleton-group" direction="horizontal">
+                <ResizablePanelGroup
+                    id="articles-skeleton-group"
+                    direction="horizontal"
+                >
                     <ResizablePanel
                         id="articles-skeleton-sidebar-panel"
                         defaultSize={layout[0]}

@@ -114,10 +114,14 @@ interface RevenueCatProviderProps {
   children: React.ReactNode;
 }
 
-const REVENUECAT_API_KEY = Platform.select({
-  ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || process.env.EXPO_PUBLIC_REVENUECAT_API_KEY,
-  android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || process.env.EXPO_PUBLIC_REVENUECAT_API_KEY,
-}) || 'test_cfHuzuhOXcYuSOZuLbNixiMXADV';
+const REVENUECAT_API_KEY =
+  Platform.select({
+    ios:
+      process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || process.env.EXPO_PUBLIC_REVENUECAT_API_KEY,
+    android:
+      process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY ||
+      process.env.EXPO_PUBLIC_REVENUECAT_API_KEY,
+  }) || 'test_cfHuzuhOXcYuSOZuLbNixiMXADV';
 
 const ENTITLEMENT_ID = 'Readspace Pro';
 
@@ -178,6 +182,21 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
         }
         console.log('[RevenueCat] 🚀 Initializing RevenueCat SDK...');
         purchasesInstance.setLogLevel(LOG_LEVEL.DEBUG);
+
+        // Validate the API key prefix before passing to native SDK
+        // (RevenueCat public keys must start with 'appl_' on iOS and 'goog_' on Android)
+        const isValidApiKey =
+          Platform.OS === 'ios'
+            ? REVENUECAT_API_KEY.startsWith('appl_')
+            : REVENUECAT_API_KEY.startsWith('goog_');
+
+        if (!isValidApiKey) {
+          console.warn(
+            `[RevenueCat] Invalid or placeholder API key ("${REVENUECAT_API_KEY}") detected for ${Platform.OS}. Falling back to mock mode.`
+          );
+          setIsLoading(false);
+          return;
+        }
 
         // Configure SDK
         purchasesInstance.configure({

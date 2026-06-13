@@ -22,9 +22,9 @@
     "packages/*"
   ],
   "resolutions": {
-    "react": "19.1.2",
-    "react-dom": "19.1.2",
-    "react-native-renderer": "19.1.2",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native-renderer": "19.1.0",
     "@types/react": "19.1.10",
     "@types/react-dom": "19.0.1",
     "react-native-svg": "15.12.1",

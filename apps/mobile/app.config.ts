@@ -76,6 +76,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         experimentalLauncherActivity: true,
       },
     ],
+    [
+      '@sentry/react-native/expo',
+      {
+        url: 'https://sentry.io/',
+        project: 'react-native',
+        organization: 'readspace',
+      },
+    ],
   ],
   extra: {
     eas: {

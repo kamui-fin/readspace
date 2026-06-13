@@ -22,10 +22,13 @@ export const createSignUpSchema = (isCloudProd: boolean) => {
                 message: "You must accept the terms and conditions",
             }),
         })
-        return cloudSchema.refine((data) => data.password === data.confirmPassword, {
-            message: "Passwords don't match",
-            path: ["confirmPassword"],
-        })
+        return cloudSchema.refine(
+            (data) => data.password === data.confirmPassword,
+            {
+                message: "Passwords don't match",
+                path: ["confirmPassword"],
+            }
+        )
     }
 
     return baseSchema.refine((data) => data.password === data.confirmPassword, {

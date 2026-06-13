@@ -26,8 +26,7 @@ const cardVariants = cva('bg-background ', {
 });
 
 export interface CardProps
-  extends Omit<PressableProps, 'children'>,
-    VariantProps<typeof cardVariants> {
+  extends Omit<PressableProps, 'children'>, VariantProps<typeof cardVariants> {
   children?: ReactNode;
   className?: string;
   // Feed variant props

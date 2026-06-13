@@ -1,4 +1,5 @@
 import 'global.css';
+import * as Sentry from '@sentry/react-native';
 import { SessionProvider, useSession } from '@contexts/auth-context';
 import { RevenueCatProvider } from '@contexts/revenuecat-context';
 import { ThemeProvider } from '@contexts/theme-provider';
@@ -51,6 +52,20 @@ import { configureApiClient } from '@lib/api-client';
 import { useUpgradeDialog } from '@stores/upgrade-dialog';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
+Sentry.init({
+  dsn: 'https://71c98634e6904ab52224714c8664fec9@o4511544654036992.ingest.us.sentry.io/4511544655609856',
+
+  // Adds more context data to events (IP address, cookies, user, etc.)
+  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
+  sendDefaultPii: true,
+
+  // Enable Logs
+  enableLogs: true,
+
+  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
+  // spotlight: __DEV__,
+});
+
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
@@ -79,7 +94,7 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function RootLayout() {
+function RootLayout() {
   // Configure API client on app startup
   useEffect(() => {
     configureApiClient();
@@ -223,3 +238,5 @@ function RootNavigator() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(RootLayout);

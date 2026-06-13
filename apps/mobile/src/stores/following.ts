@@ -1,4 +1,4 @@
-import 'expo-sqlite/localStorage/install';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -100,7 +100,7 @@ export const useFollowingStore = create<FollowingStore>()(
     }),
     {
       name: 'readspace-following',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         // Persist the active tab and filter, not loading states or counts
         // Don't persist previousTab as it's only for navigation within session

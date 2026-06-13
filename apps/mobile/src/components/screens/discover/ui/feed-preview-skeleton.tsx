@@ -24,7 +24,7 @@ export function FeedPreviewSkeleton() {
 
         {/* Recent Articles horizontal list */}
         <View className="mb-8">
-          <Skeleton variant="text" width="40%" height={24} className="mb-4 mx-6" />
+          <Skeleton variant="text" width="40%" height={24} className="mx-6 mb-4" />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}

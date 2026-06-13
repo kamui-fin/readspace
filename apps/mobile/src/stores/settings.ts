@@ -1,5 +1,5 @@
 import { CLOUD_CONFIG } from '@lib/constants/config';
-import 'expo-sqlite/localStorage/install';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -82,7 +82,7 @@ export const useSettingsStore = create<SettingsStore>()(
     }),
     {
       name: 'readspace-settings',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         settings: state.settings,
       }),

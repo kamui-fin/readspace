@@ -145,7 +145,7 @@ export function HeaderForeground({
         <View className={clsx(actionsContainerVariants())}>
           {unreadCount !== undefined && unreadCount > 0 && (
             <View
-              className="px-2.5 py-0.5 rounded-full items-center justify-center"
+              className="items-center justify-center rounded-full px-2.5 py-0.5"
               style={{
                 backgroundColor:
                   colors === COLORS.dark

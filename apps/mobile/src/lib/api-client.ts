@@ -1,7 +1,7 @@
 import { supabase } from '@lib/supabase/client';
 import { resolveHostname } from '@lib/utils/network';
 import { ApiClient } from '@readspace/shared';
-import { getSettings } from '@stores/settings';
+import { getSettings, useSettingsStore } from '@stores/settings';
 import { Platform } from 'react-native';
 
 /**
@@ -67,5 +67,10 @@ export function configureApiClient(readspaceUrl?: string) {
   });
 }
 
-// Auto-configure on import
-configureApiClient();
+// Listen for settings changes to reconfigure client
+if (typeof useSettingsStore !== 'undefined') {
+  useSettingsStore.subscribe((state) => {
+    configureApiClient(state.settings.readspace_url);
+  });
+}
+

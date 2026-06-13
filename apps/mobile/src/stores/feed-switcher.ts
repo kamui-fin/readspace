@@ -1,4 +1,4 @@
-import 'expo-sqlite/localStorage/install';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -33,7 +33,7 @@ export const useFeedSwitcherStore = create<FeedSwitcherStore>()(
     }),
     {
       name: 'feed-switcher-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => AsyncStorage),
       // Custom serialization for Set
       partialize: (state) => ({
         expandedFolders: Array.from(state.expandedFolders),
@@ -46,3 +46,4 @@ export const useFeedSwitcherStore = create<FeedSwitcherStore>()(
     }
   )
 );
+

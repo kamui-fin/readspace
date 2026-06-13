@@ -350,6 +350,7 @@ services:
       # Volume mappings for dataset imports
       - ./feeds.jsonl:/feeds.jsonl:ro
       - ./favicons:/favicons:ro
+      - /home/ubuntu/gcp-key.json:/app/gcp-key.json:ro
     environment:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
@@ -373,6 +374,7 @@ services:
       - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
       - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION:-us-central1}
       - GCS_BUCKET=${GCS_BUCKET}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
     logging:
       driver: json-file
       options:
@@ -393,6 +395,8 @@ services:
         condition: service_healthy
       supavisor:
         condition: service_healthy
+    volumes:
+      - /home/ubuntu/gcp-key.json:/app/gcp-key.json:ro
     environment:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
@@ -416,6 +420,7 @@ services:
       - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
       - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION:-us-central1}
       - GCS_BUCKET=${GCS_BUCKET}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
   scheduler:
     build:
@@ -429,6 +434,8 @@ services:
         condition: service_healthy
       supavisor:
         condition: service_healthy
+    volumes:
+      - /home/ubuntu/gcp-key.json:/app/gcp-key.json:ro
     environment:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
@@ -452,6 +459,7 @@ services:
       - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
       - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION:-us-central1}
       - GCS_BUCKET=${GCS_BUCKET}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
 volumes:
   redis-data:

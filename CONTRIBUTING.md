@@ -85,7 +85,7 @@ This starts the core database and caching infrastructure:
 - Meilisearch (search engine)
 - RSSHub (optional)
 
-*Note: Application containers (Web, API, Taskiq worker, Taskiq scheduler) are assigned to the `app` profile and are skipped during `--dev` mode so you can run them locally on your host machine for hot-reloading.*
+_Note: Application containers (Web, API, Taskiq worker, Taskiq scheduler) are assigned to the `app` profile and are skipped during `--dev` mode so you can run them locally on your host machine for hot-reloading._
 
 **Supabase Studio:** Access the local dashboard at [http://localhost:18000](http://localhost:18000).
 
@@ -168,7 +168,7 @@ Follow the Expo CLI instructions to run on iOS simulator, Android emulator, or p
 
 > [!NOTE]
 > **Environment Variables**: The `apps/mobile/.env` file is generated automatically by running `./docker/setup.sh --dev`.
-> 
+>
 > **Physical Device Testing**: If you are running the app on a physical phone via the Expo Go app over Wi-Fi, you must replace `localhost` in `apps/mobile/.env` with your computer's local network IP address (e.g., `192.168.1.50`) so the phone can reach the API.
 
 ### Working on Background Tasks (Taskiq)

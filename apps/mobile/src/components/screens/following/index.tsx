@@ -225,6 +225,7 @@ export function FollowingScreen({
     if (isRefreshingRef.current) return;
     isRefreshingRef.current = true;
     setRefreshing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     firstArticleIdBeforeRefreshRef.current = allArticles[0]?.id;
     articleCountBeforeRefreshRef.current = allArticles.length;
     try {
@@ -244,8 +245,17 @@ export function FollowingScreen({
         queryClient.invalidateQueries({ queryKey: ['rss-feeds', 'list'], refetchType: 'active' }),
       ]);
     } finally {
-      setRefreshing(false);
-      isRefreshingRef.current = false;
+      // Add a small delay on iOS before dismissing RefreshControl to let the layout settle.
+      // This prevents the scroll view from stuttering or getting stuck halfway during the dismiss animation.
+      if (Platform.OS === 'ios') {
+        setTimeout(() => {
+          setRefreshing(false);
+          isRefreshingRef.current = false;
+        }, 150);
+      } else {
+        setRefreshing(false);
+        isRefreshingRef.current = false;
+      }
       setLastRefreshedAt(Date.now());
     }
   }, [queryClient, viewType, selectedId, refreshFeed, allArticles]);
@@ -389,6 +399,25 @@ export function FollowingScreen({
     }
   };
 
+  // Reset scroll to top when loading finishes (e.g. after login or initial mount)
+  // This ensures the list starts perfectly at the top once data is populated.
+  useEffect(() => {
+    if (!isLoading) {
+      const scrollToTop = () => {
+        try {
+          listRef.current?.scrollToOffset({ offset: 0, animated: false });
+          scrollY.value = 0;
+        } catch {
+          // Ignore if ref is not ready
+        }
+      };
+
+      scrollToTop();
+      const t = setTimeout(scrollToTop, 100);
+      return () => clearTimeout(t);
+    }
+  }, [isLoading, scrollY]);
+
   // Reset scroll position when tab, filter, or view changes
   useScrollReset({
     listRef,
@@ -420,12 +449,6 @@ export function FollowingScreen({
     }
 
     const currentScrollY = event.nativeEvent.contentOffset.y;
-
-    // Trigger refresh early on iOS if pulled down past threshold (-65px is a comfortable Reddit-like threshold)
-    if (Platform.OS === 'ios' && currentScrollY < -65 && !isRefreshingRef.current) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      handleRefresh();
-    }
 
     // Clamp very small values to 0 to handle floating point precision issues
     // This prevents header from being slightly sticky when scroll is at top
@@ -465,7 +488,7 @@ export function FollowingScreen({
         refreshing={refreshing}
         onRefresh={handleRefresh}
         refreshColor={colors.secondary}
-        contentPaddingTop={contentPaddingTop}
+        contentPaddingTop={0} // Padding is already handled by contentContainerStyle
         contentPaddingBottom={contentPaddingBottom}
       />
     );
@@ -475,7 +498,6 @@ export function FollowingScreen({
     refreshing,
     handleRefresh,
     colors.secondary,
-    contentPaddingTop,
     contentPaddingBottom,
   ]);
 
@@ -509,8 +531,8 @@ export function FollowingScreen({
         contentContainerStyle={{
           backgroundColor: colors.background,
           flexGrow: 1,
-          // If empty, pass paddingTop to EmptyStateView container directly to avoid LegendList virtualization rendering issues
-          paddingTop: listItems.length === 0 ? 0 : contentPaddingTop,
+          // Always apply paddingTop to keep header height layout stable and prevent scroll starting offset issues on mount
+          paddingTop: contentPaddingTop,
           // Always apply paddingBottom to account for bottom tab bar
           // Tab bar is absolutely positioned, so content needs padding to prevent overlap
           // Uses computed padding that accounts for tab bar height + safe area + spacing

@@ -113,11 +113,21 @@ export function RecentsScreen() {
     if (isRefreshingRef.current) return;
     isRefreshingRef.current = true;
     setRefreshing(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await refetch();
     } finally {
-      setRefreshing(false);
-      isRefreshingRef.current = false;
+      // Add a small delay on iOS before dismissing RefreshControl to let the layout settle.
+      // This prevents the scroll view from stuttering or getting stuck halfway during the dismiss animation.
+      if (Platform.OS === 'ios') {
+        setTimeout(() => {
+          setRefreshing(false);
+          isRefreshingRef.current = false;
+        }, 150);
+      } else {
+        setRefreshing(false);
+        isRefreshingRef.current = false;
+      }
       setLastRefreshedAt(Date.now());
     }
   }, [refetch]);
@@ -148,6 +158,24 @@ export function RecentsScreen() {
     prevArticleCountRef.current = allArticles.length;
   }, [isFetchingNextPage, isLoadingMore, allArticles.length, updateToast]);
 
+  // Reset scroll to top when loading finishes (e.g. after login or initial mount)
+  // This ensures the list starts perfectly at the top once data is populated.
+  useEffect(() => {
+    if (!isLoading) {
+      const scrollToTop = () => {
+        try {
+          listRef.current?.scrollToOffset({ offset: 0, animated: false });
+        } catch {
+          // Ignore if ref is not ready
+        }
+      };
+
+      scrollToTop();
+      const t = setTimeout(scrollToTop, 100);
+      return () => clearTimeout(t);
+    }
+  }, [isLoading]);
+
   const handleEndReached = () => {
     if (hasNextPage && !isFetchingNextPage && !isLoadingMore) {
       setIsLoadingMore(true);
@@ -173,14 +201,7 @@ export function RecentsScreen() {
     }
   };
 
-  const scrollHandler = (event: any) => {
-    const currentScrollY = event.nativeEvent.contentOffset.y;
-    // Trigger refresh early on iOS if pulled down past threshold (-65px is a comfortable Reddit-like threshold)
-    if (Platform.OS === 'ios' && currentScrollY < -65 && !isRefreshingRef.current) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      handleRefresh();
-    }
-  };
+
 
   const renderItem = useCallback(
     (item: ListItem) => (
@@ -244,8 +265,6 @@ export function RecentsScreen() {
         estimatedItemSize={200}
         showsVerticalScrollIndicator={false}
         className="bg-background"
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

@@ -1,4 +1,4 @@
-import 'expo-sqlite/localStorage/install';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -56,13 +56,14 @@ export const useSearchHistory = create<SearchHistoryStore>()(
     }),
     {
       name: 'readspace-search-history',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         searches: state.searches,
       }),
     }
   )
 );
+
 
 // Helper function to get recent searches synchronously
 export const getRecentSearches = (): string[] => {

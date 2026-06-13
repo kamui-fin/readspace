@@ -1,4 +1,4 @@
-import 'expo-sqlite/localStorage/install';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -38,10 +38,11 @@ export const useTranslationHistory = create<TranslationHistoryStore>()(
     }),
     {
       name: 'readspace-translation-history',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         recentLanguages: state.recentLanguages,
       }),
     }
   )
 );
+

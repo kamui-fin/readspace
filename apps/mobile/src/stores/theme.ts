@@ -1,5 +1,5 @@
 import { Appearance, type ColorSchemeName } from 'react-native';
-import 'expo-sqlite/localStorage/install';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Uniwind } from 'uniwind';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -51,7 +51,7 @@ export const useThemeStore = create<ThemeStore>()(
     }),
     {
       name: 'readspace-theme',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         theme: state.theme,
       }),

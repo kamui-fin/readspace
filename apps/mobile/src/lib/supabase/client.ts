@@ -1,8 +1,8 @@
 import { AppState, Platform } from 'react-native';
-import 'expo-sqlite/localStorage/install';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import 'react-native-url-polyfill/auto';
 import { resolveHostname } from '@lib/utils/network';
-import { getSettings } from '@stores/settings';
+import { getSettings, useSettingsStore } from '@stores/settings';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 // Singleton Supabase client
@@ -37,7 +37,7 @@ export function getSupabaseClient(supabaseUrl?: string, supabaseAnonKey?: string
   // Create new client (or override existing one if params provided)
   const client = createClient(resolvedUrl, key, {
     auth: {
-      storage: localStorage,
+      storage: AsyncStorage as any,
       autoRefreshToken: !supabaseUrl, // Don't auto-refresh for validation clients
       persistSession: !supabaseUrl, // Don't persist for validation clients
       detectSessionInUrl: false,
@@ -102,10 +102,6 @@ export async function validateSupabaseConnection(
   }
 }
 
-// Initialize default client on module load
-// This will use cloud config until settings store is rehydrated
-getSupabaseClient();
-
 // Auto-refresh session when app becomes active
 AppState.addEventListener('change', (state) => {
   const client = supabaseClient;
@@ -118,5 +114,22 @@ AppState.addEventListener('change', (state) => {
   }
 });
 
-// Backward compatibility export
-export const supabase = getSupabaseClient();
+// Reset the Supabase client when settings change
+if (typeof useSettingsStore !== 'undefined') {
+  useSettingsStore.subscribe(() => {
+    resetSupabaseClient();
+  });
+}
+
+// Backward compatibility export as a Proxy to dynamically refer to the active client
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(target, prop, receiver) {
+    const client = getSupabaseClient();
+    const value = Reflect.get(client, prop, receiver);
+    if (typeof value === 'function') {
+      return value.bind(client);
+    }
+    return value;
+  },
+});
+
