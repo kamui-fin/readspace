@@ -45,4 +45,3 @@ export const useTranslationHistory = create<TranslationHistoryStore>()(
     }
   )
 );
-

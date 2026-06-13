@@ -9,13 +9,13 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
+import { FeedIcon } from '@components/ui/feed-icon';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import type { Subscription } from '@readspace/shared';
-import { Image as ExpoImage } from 'expo-image';
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import { View } from 'react-native';
 
 function getFaviconUrl(feed: { link?: string | null; image_url?: string | null }): string | null {
@@ -61,13 +61,20 @@ const FeedListItemComponent = ({
   isSelectionMode = false,
   isSelected = false,
 }: FeedListItemProps) => {
-  const [imageError, setImageError] = useState(false);
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
   const feed = sub.feed;
   const faviconUrl = getFaviconUrl(feed);
   const title = sub.custom_title || feed.title;
+
+  const Fallback = () => (
+    <View className="bg-grey4 h-10 w-10 items-center justify-center overflow-hidden rounded-lg">
+      <Text className="font-geist-medium text-grey text-base">
+        {feed.title.charAt(0).toUpperCase()}
+      </Text>
+    </View>
+  );
 
   const content = (
     <>
@@ -87,28 +94,8 @@ const FeedListItemComponent = ({
           <View className="h-10 w-10 items-center justify-center">
             <CheckCircleBoldIcon width={32} height={32} color={colors.secondary} />
           </View>
-        ) : faviconUrl && !imageError ? (
-          <View className="h-10 w-10 items-center justify-center overflow-hidden rounded-md">
-            <ExpoImage
-              source={{ uri: faviconUrl }}
-              style={{ width: 40, height: 40 }}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              onError={(err) => {
-                console.error(
-                  `FeedListItem favicon load error for "${title}" (${faviconUrl}):`,
-                  err.error || err
-                );
-                setImageError(true);
-              }}
-            />
-          </View>
         ) : (
-          <View className="bg-grey4 h-10 w-10 items-center justify-center overflow-hidden rounded-lg">
-            <Text className="font-geist-medium text-grey text-base">
-              {feed.title.charAt(0).toUpperCase()}
-            </Text>
-          </View>
+          <FeedIcon url={faviconUrl} fallbackComponent={Fallback} size={40} borderRadius={8} />
         )}
       </View>
 

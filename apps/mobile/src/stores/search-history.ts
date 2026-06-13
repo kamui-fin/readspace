@@ -64,7 +64,6 @@ export const useSearchHistory = create<SearchHistoryStore>()(
   )
 );
 
-
 // Helper function to get recent searches synchronously
 export const getRecentSearches = (): string[] => {
   return useSearchHistory.getState().searches;

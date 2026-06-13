@@ -1,5 +1,4 @@
 import 'global.css';
-import * as Sentry from '@sentry/react-native';
 import { SessionProvider, useSession } from '@contexts/auth-context';
 import { RevenueCatProvider } from '@contexts/revenuecat-context';
 import { ThemeProvider } from '@contexts/theme-provider';
@@ -36,6 +35,7 @@ import { BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { ApiError } from '@readspace/shared';
+import * as Sentry from '@sentry/react-native';
 import { useThemeStore } from '@stores/theme';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import clsx from 'clsx';

@@ -6,8 +6,9 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
+  makeMutable,
   useAnimatedStyle,
-  useSharedValue,
   withRepeat,
   withSequence,
   withTiming,
@@ -38,6 +39,12 @@ export interface SkeletonProps extends VariantProps<typeof skeletonVariants> {
   animate?: boolean;
 }
 
+// A single static mutable value shared by all skeletons across the app.
+// This runs exactly one animation loop on the UI thread, preventing CPU flooding
+// and ensuring all skeleton elements pulse in perfect sync.
+const globalSkeletonOpacity = makeMutable(1);
+let activeSkeletonCount = 0;
+
 export function Skeleton({
   variant,
   size,
@@ -48,18 +55,21 @@ export function Skeleton({
 }: SkeletonProps) {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
-  const opacity = useSharedValue(1);
 
   useEffect(() => {
-    if (animate) {
-      opacity.value = withRepeat(
+    if (!animate) return;
+
+    activeSkeletonCount++;
+    if (activeSkeletonCount === 1) {
+      // Start the single global loop on the UI thread
+      globalSkeletonOpacity.value = withRepeat(
         withSequence(
-          withTiming(0.5, {
-            duration: 1000,
+          withTiming(0.4, {
+            duration: 850,
             easing: Easing.inOut(Easing.ease),
           }),
           withTiming(1, {
-            duration: 1000,
+            duration: 850,
             easing: Easing.inOut(Easing.ease),
           })
         ),
@@ -67,11 +77,20 @@ export function Skeleton({
         false
       );
     }
-  }, [animate, opacity]);
+
+    return () => {
+      activeSkeletonCount--;
+      if (activeSkeletonCount === 0) {
+        // Last skeleton unmounted: stop the animation loop to conserve battery
+        cancelAnimation(globalSkeletonOpacity);
+        globalSkeletonOpacity.value = 1;
+      }
+    };
+  }, [animate]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
-      opacity: opacity.value,
+      opacity: globalSkeletonOpacity.value,
     };
   });
 

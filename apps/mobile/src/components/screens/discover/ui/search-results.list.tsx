@@ -39,48 +39,13 @@ export function SearchResults({
 }: SearchResultsProps) {
   const listRef = useRef<any>(null);
   const isDark = useIsDarkMode();
+  const scrollOffsetRef = useRef(0);
 
+  // Force remount when changing between skeleton and real search results.
+  // This prevents LegendList layout state contamination or stale measurements.
   const listKey = useMemo(() => {
-    const themeKey = isDark ? 'dark' : 'light';
-    const viewKey = selectedCategory ? `category-${selectedCategory}` : 'search';
-    return `${themeKey}-${viewKey}`;
-  }, [isDark, selectedCategory]);
-
-  const firstHitId = hits?.[0]?.id;
-  const hitsLength = hits?.length;
-
-  useEffect(() => {
-    // Reset scroll position to top whenever search results change (e.g. typing query or loaded hits)
-    // This prevents the LegendList scroll offset from being out-of-bounds when results shrink
-    try {
-      listRef.current?.scrollToOffset({ offset: 0, animated: false });
-    } catch {
-      // Ignore if list/ref is not ready
-    }
-  }, [firstHitId, hitsLength, showSearchSkeleton]);
-
-  const categoryHeader = useMemo(() => {
-    if (!selectedCategory) return null;
-    return (
-      <View className="mb-6">
-        <CategoriesList
-          selectedCategory={selectedCategory}
-          categoriesRow1={categoriesRow1}
-          categoriesRow2={categoriesRow2}
-          onCategoryPress={onCategoryPress}
-          onClearCategory={onClearCategory}
-          categoryScrollRef={categoryScrollRef}
-        />
-      </View>
-    );
-  }, [
-    selectedCategory,
-    categoriesRow1,
-    categoriesRow2,
-    onCategoryPress,
-    onClearCategory,
-    categoryScrollRef,
-  ]);
+    return `${isDark ? 'dark' : 'light'}-${showSearchSkeleton ? 'skeleton' : 'results'}`;
+  }, [isDark, showSearchSkeleton]);
 
   // Combine hits and skeletons into one unified data source for InfiniteScrollList.
   // This keeps the list component mounted, preventing measurement & rendering issues.
@@ -93,6 +58,27 @@ export function SearchResults({
     }
     return (hits || []).filter(Boolean);
   }, [showSearchSkeleton, hits]);
+
+  const listItemsLength = listItems.length;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset scroll top when category or list items change
+  useEffect(() => {
+    // Only reset scroll position to top if the user has actually scrolled.
+    // Calling scrollToOffset(0) unconditionally when already at top triggers
+    // incorrect layout calculations/measurements in LegendList during rendering.
+    if (scrollOffsetRef.current > 0) {
+      try {
+        listRef.current?.scrollToOffset({ offset: 0, animated: false });
+        scrollOffsetRef.current = 0;
+      } catch {
+        // Ignore if list/ref is not ready
+      }
+    }
+  }, [selectedCategory, listItemsLength]);
+
+  const handleScroll = useCallback((event: any) => {
+    scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+  }, []);
 
   const renderItem = useCallback((item: SearchListItem) => {
     if (item.isSkeleton) {
@@ -135,6 +121,18 @@ export function SearchResults({
 
   return (
     <View className="flex-1">
+      {selectedCategory && (
+        <View className="mb-4 mt-3">
+          <CategoriesList
+            selectedCategory={selectedCategory}
+            categoriesRow1={categoriesRow1}
+            categoriesRow2={categoriesRow2}
+            onCategoryPress={onCategoryPress}
+            onClearCategory={onClearCategory}
+            categoryScrollRef={categoryScrollRef}
+          />
+        </View>
+      )}
       <InfiniteScrollList
         ref={listRef}
         key={listKey}
@@ -142,11 +140,14 @@ export function SearchResults({
         estimatedItemSize={80}
         drawDistance={1500}
         initialContainerPoolRatio={20}
-        ListHeaderComponent={categoryHeader || undefined}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={renderEmpty}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           paddingBottom: contentPaddingBottom,
         }}
@@ -154,4 +155,3 @@ export function SearchResults({
     </View>
   );
 }
-

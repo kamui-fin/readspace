@@ -1,5 +1,5 @@
-import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState, Platform } from 'react-native';
 import 'react-native-url-polyfill/auto';
 import { resolveHostname } from '@lib/utils/network';
 import { getSettings, useSettingsStore } from '@stores/settings';
@@ -132,4 +132,3 @@ export const supabase = new Proxy({} as SupabaseClient, {
     return value;
   },
 });
-

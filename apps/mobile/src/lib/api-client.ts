@@ -73,4 +73,3 @@ if (typeof useSettingsStore !== 'undefined') {
     configureApiClient(state.settings.readspace_url);
   });
 }
-

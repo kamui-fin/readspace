@@ -29,7 +29,7 @@ import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Share, View } from 'react-native';
-import { useSharedValue } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, useSharedValue } from 'react-native-reanimated';
 
 interface ArticleScreenProps {
   articleId: string;
@@ -350,23 +350,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     [article, extractedData, extractFullText]
   );
 
-  if (isArticleLoading) {
-    return (
-      <View className="bg-background flex-1">
-        <ArticleActionBar
-          onClose={handleClose}
-          onShare={handleShare}
-          onBookmark={handleBookmark}
-          onMenuPress={() => {}}
-          isBookmarked={false}
-          isClipped={false}
-        />
-        <ArticleReaderSkeleton article={article} />
-      </View>
-    );
-  }
-
-  if (!article) {
+  if (!isArticleLoading && !article) {
     return (
       <View className="bg-background flex-1">
         <ArticleActionBar
@@ -386,34 +370,48 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     );
   }
 
-  const isExtracting =
-    article.article_type === 'feed' &&
-    !article.extracted_content &&
-    (extractMutation.isPending || extractMutation.status === 'idle');
+  const isExtracting = article
+    ? article.article_type === 'feed' &&
+      !article.extracted_content &&
+      (extractMutation.isPending || extractMutation.status === 'idle')
+    : false;
 
   return (
     <View className="bg-background flex-1">
       <ArticleActionBar
-        scrollY={scrollY}
-        scrollDirection={scrollDirection}
+        scrollY={isArticleLoading ? undefined : scrollY}
+        scrollDirection={isArticleLoading ? undefined : scrollDirection}
         onClose={handleClose}
         onShare={handleShare}
-        onBookmark={isClipped ? handleMarkAsDone : handleBookmark}
-        onMenuPress={handleMenuPress}
-        isBookmarked={article.is_saved || false}
+        onBookmark={
+          isArticleLoading ? handleBookmark : isClipped ? handleMarkAsDone : handleBookmark
+        }
+        onMenuPress={isArticleLoading ? () => {} : handleMenuPress}
+        isBookmarked={article?.is_saved || false}
         isClipped={isClipped}
       />
-      <ArticleReader
-        article={{
-          ...article,
-          // Override content with active content
-          content: activeContent || article.content,
-        }}
-        scrollY={scrollY}
-        lastScrollY={lastScrollY}
-        scrollDirection={scrollDirection}
-        isLoadingContent={isExtracting}
-      />
+
+      {isArticleLoading ? (
+        <Animated.View key="skeleton-view" exiting={FadeOut.duration(300)} className="flex-1">
+          <ArticleReaderSkeleton article={article} />
+        </Animated.View>
+      ) : (
+        <Animated.View key="content-view" entering={FadeIn.duration(400)} className="flex-1">
+          {article && (
+            <ArticleReader
+              article={{
+                ...article,
+                // Override content with active content
+                content: activeContent || article.content,
+              }}
+              scrollY={scrollY}
+              lastScrollY={lastScrollY}
+              scrollDirection={scrollDirection}
+              isLoadingContent={isExtracting}
+            />
+          )}
+        </Animated.View>
+      )}
 
       {/* AI Summary Bottom Sheet */}
       <ArticleSummaryBottomSheet

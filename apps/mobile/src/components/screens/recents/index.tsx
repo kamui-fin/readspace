@@ -201,8 +201,6 @@ export function RecentsScreen() {
     }
   };
 
-
-
   const renderItem = useCallback(
     (item: ListItem) => (
       <ArticleListItem

@@ -1,12 +1,11 @@
 import { Chip } from '@components/ui/chip';
+import { FeedIcon } from '@components/ui/feed-icon';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { stripHtml } from '@lib/utils/html';
 import { Article } from '@readspace/shared';
-import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,7 +30,6 @@ export function ArticleHeader({
   displayDate,
   readTime,
 }: ArticleHeaderProps) {
-  const [faviconError, setFaviconError] = useState(false);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isDark = useIsDarkMode();
@@ -84,44 +82,24 @@ export function ArticleHeader({
               paddingVertical: 4,
             }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            {displayFaviconUrl && !faviconError ? (
-              <ExpoImage
-                source={{ uri: displayFaviconUrl }}
-                style={{ width: 16, height: 16, borderRadius: 2 }}
-                contentFit="contain"
-                onError={(err) => {
-                  console.error(
-                    `ArticleHeader favicon load error for "${displaySource}" (${displayFaviconUrl}):`,
-                    err.error || err
-                  );
-                  setFaviconError(true);
-                }}
-              />
-            ) : FallbackIcon ? (
-              <FallbackIcon size={16} className="rounded-sm" />
-            ) : null}
+            <FeedIcon
+              url={displayFaviconUrl}
+              fallbackComponent={FallbackIcon}
+              size={16}
+              borderRadius={2}
+            />
             <Text size="sm" fontFamily="geist" className="text-grey uppercase tracking-wide">
               {displaySource || 'Unknown Source'}
             </Text>
           </Pressable>
         ) : (
           <View className="flex-row items-center gap-2">
-            {displayFaviconUrl && !faviconError ? (
-              <ExpoImage
-                source={{ uri: displayFaviconUrl }}
-                style={{ width: 16, height: 16, borderRadius: 2 }}
-                contentFit="contain"
-                onError={(err) => {
-                  console.error(
-                    `ArticleHeader favicon load error for "${displaySource}" (${displayFaviconUrl}):`,
-                    err.error || err
-                  );
-                  setFaviconError(true);
-                }}
-              />
-            ) : FallbackIcon ? (
-              <FallbackIcon size={16} className="rounded-sm" />
-            ) : null}
+            <FeedIcon
+              url={displayFaviconUrl}
+              fallbackComponent={FallbackIcon}
+              size={16}
+              borderRadius={2}
+            />
             <Text size="sm" fontFamily="geist" className="text-grey uppercase tracking-wide">
               {displaySource || 'Unknown Source'}
             </Text>

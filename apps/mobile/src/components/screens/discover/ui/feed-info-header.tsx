@@ -5,13 +5,12 @@ import TrashBinTrashBoldIcon from '@components/icons/solar/trash-bin-trash-bold'
 import UserCircleLinearIcon from '@components/icons/solar/user-circle-linear';
 import { Button } from '@components/ui/button';
 import { Chip } from '@components/ui/chip';
+import { FeedIcon } from '@components/ui/feed-icon';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import { Feed, FeedDiscoveryResult } from '@readspace/shared';
-import { Image } from 'expo-image';
 import { memo, useCallback, useState } from 'react';
 import { Linking, View } from 'react-native';
 
@@ -44,7 +43,6 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
   greyColor,
 }: FeedInfoHeaderProps) {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-  const [imageError, setImageError] = useState(false);
 
   const toggleDescription = useCallback(() => {
     setIsDescriptionExpanded((prev) => !prev);
@@ -66,8 +64,6 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
   const author = (feed as FeedDiscoveryResult).author || (feed as any).author;
   const trimmedDescription = feed.description?.trim();
 
-  console.log(feed.image_url, imageError);
-
   const isDark = useIsDarkMode();
   const linkColor = isDark ? colors.secondary : colors.primary;
 
@@ -84,27 +80,25 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
       <View className="mb-4 flex-row items-center gap-4">
         {/* Feed Icon */}
         <View className="relative">
-          <View
-            className="h-20 w-20 items-center justify-center overflow-hidden rounded-2xl"
-            style={{
-              backgroundColor: colors.grey5,
-            }}>
-            {feed.image_url && !imageError ? (
-              <Image
-                source={{ uri: resolveSupabaseImageUrl(feed.image_url) }}
-                style={{ width: '100%', height: '100%' }}
-                contentFit="cover"
-                onError={(e) => {
-                  console.log(e);
-                  setImageError(true);
-                }}
-              />
-            ) : (
-              <Text size="lg" fontFamily="geist-bold" style={{ color: colors.grey, fontSize: 28 }}>
-                {(feed.title || 'F').charAt(0).toUpperCase()}
-              </Text>
+          <FeedIcon
+            url={feed.image_url}
+            fallbackComponent={() => (
+              <View
+                className="h-20 w-20 items-center justify-center overflow-hidden rounded-2xl"
+                style={{
+                  backgroundColor: colors.grey5,
+                }}>
+                <Text
+                  size="lg"
+                  fontFamily="geist-bold"
+                  style={{ color: colors.grey, fontSize: 28 }}>
+                  {(feed.title || 'F').charAt(0).toUpperCase()}
+                </Text>
+              </View>
             )}
-          </View>
+            size={80}
+            borderRadius={16}
+          />
           {isFeedDead && (
             <Chip
               label="Dead"

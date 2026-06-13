@@ -492,14 +492,7 @@ export function FollowingScreen({
         contentPaddingBottom={contentPaddingBottom}
       />
     );
-  }, [
-    isLoading,
-    activeTab,
-    refreshing,
-    handleRefresh,
-    colors.secondary,
-    contentPaddingBottom,
-  ]);
+  }, [isLoading, activeTab, refreshing, handleRefresh, colors.secondary, contentPaddingBottom]);
 
   return (
     <>

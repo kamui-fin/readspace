@@ -13,7 +13,13 @@ import {
   ScrollView,
   View,
 } from 'react-native';
-import type { SharedValue } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  type SharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 
 export interface ArticleReaderProps {
@@ -37,6 +43,12 @@ export function ArticleReader({
   const webViewRef = useRef<WebView>(null);
   const [webViewHeight, setWebViewHeight] = useState(1);
   const [isReady, setIsReady] = useState(false);
+
+  const animatedWebViewStyle = useAnimatedStyle(() => {
+    return {
+      opacity: withTiming(isReady ? 1 : 0, { duration: 400 }),
+    };
+  });
 
   // Handle scroll events to track position and direction
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -528,43 +540,53 @@ export function ArticleReader({
       />
 
       {/* Article Content - rendered inside auto-height WebView or Skeleton */}
-      {isLoadingContent ? (
-        <View className="px-6">
-          <View className="mb-4">
-            <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-            <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-            <Skeleton variant="text" height={20} width="85%" />
-          </View>
-          <View className="mb-4">
-            <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-            <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-            <Skeleton variant="text" height={20} width="70%" />
-          </View>
-          <View className="mb-4">
-            <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-            <Skeleton variant="text" height={20} width="95%" className="mb-1.5" />
-            <Skeleton variant="text" height={20} width="60%" />
-          </View>
-        </View>
-      ) : (
-        <WebView
-          ref={webViewRef}
-          scrollEnabled={false}
-          style={{
-            height: webViewHeight,
-            width: '100%',
-            backgroundColor: 'transparent',
-            opacity: isReady ? 1 : 0,
-          }}
-          containerStyle={{
-            backgroundColor: 'transparent',
-          }}
-          originWhitelist={['*']}
-          source={webViewSource}
-          onMessage={handleMessage}
-          injectedJavaScript={injectedJS}
-        />
-      )}
+      <View style={{ position: 'relative', minHeight: isLoadingContent || !isReady ? 240 : 0 }}>
+        {(isLoadingContent || !isReady) && (
+          <Animated.View
+            key="content-skeleton"
+            entering={FadeIn.duration(150)}
+            exiting={FadeOut.duration(300)}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
+            className="px-6">
+            <View className="mb-4">
+              <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+              <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+              <Skeleton variant="text" height={20} width="85%" />
+            </View>
+            <View className="mb-4">
+              <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+              <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+              <Skeleton variant="text" height={20} width="70%" />
+            </View>
+            <View className="mb-4">
+              <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+              <Skeleton variant="text" height={20} width="95%" className="mb-1.5" />
+              <Skeleton variant="text" height={20} width="60%" />
+            </View>
+          </Animated.View>
+        )}
+
+        {!isLoadingContent && (
+          <Animated.View style={animatedWebViewStyle}>
+            <WebView
+              ref={webViewRef}
+              scrollEnabled={false}
+              style={{
+                height: webViewHeight,
+                width: '100%',
+                backgroundColor: 'transparent',
+              }}
+              containerStyle={{
+                backgroundColor: 'transparent',
+              }}
+              originWhitelist={['*']}
+              source={webViewSource}
+              onMessage={handleMessage}
+              injectedJavaScript={injectedJS}
+            />
+          </Animated.View>
+        )}
+      </View>
     </ScrollView>
   );
 }

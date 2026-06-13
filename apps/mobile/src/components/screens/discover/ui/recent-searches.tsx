@@ -22,7 +22,8 @@ export function RecentSearches({
     <ScrollView
       showsVerticalScrollIndicator={false}
       className="px-6"
-      keyboardShouldPersistTaps="always"
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       contentContainerStyle={{
         paddingBottom: contentPaddingBottom,
       }}>

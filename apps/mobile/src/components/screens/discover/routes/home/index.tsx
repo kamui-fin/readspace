@@ -23,8 +23,7 @@ import type { FeedSummary } from '@readspace/shared';
 import { MOBILE_CATEGORY_NAMES, useCreateFeed } from '@readspace/shared';
 import { useSearchHistory } from '@stores/search-history';
 import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Configure,
   InstantSearch,
@@ -33,10 +32,11 @@ import {
   useMenu,
   useSearchBox,
 } from 'react-instantsearch';
+import { MotiView } from 'moti';
+import { Easing } from 'react-native-reanimated';
 import type { TextInput as RNTextInput } from 'react-native';
 import {
   Keyboard,
-  LayoutAnimation,
   Pressable,
   ScrollView,
   TouchableWithoutFeedback,
@@ -68,10 +68,11 @@ export function DiscoverScreen() {
 function DiscoverScreenInner() {
   const [viewState, setViewState] = useState<ViewState>('default');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeQuery, setActiveQuery] = useState('');
+  const [_activeQuery, setActiveQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('english');
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [_isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isPendingFilter, setIsPendingFilter] = useState(false);
 
   const addFeedModalRef = useRef<AddFeedBottomSheetRef>(null);
   const folderPickerModalRef = useRef<FolderPickerBottomSheetRef>(null);
@@ -122,21 +123,33 @@ function DiscoverScreenInner() {
   const { status } = useInstantSearch();
 
   const isSearchLoading = status === 'loading' || status === 'stalled';
-  const showSearchSkeleton = isSearchLoading && hits.length === 0;
+  const showSearchSkeleton = (isSearchLoading && hits.length === 0) || isPendingFilter;
 
-  const handleCategoryPress = useCallback((category: string) => {
-    setSelectedCategory(category);
-    refineCategory(category);
+  useEffect(() => {
+    if (!isSearchLoading) {
+      setIsPendingFilter(false);
+    }
+  }, [isSearchLoading]);
 
-    setViewState('category');
-    setSearchQuery('');
-    setActiveQuery('');
-    refineQuery('');
-    setIsSearchFocused(false);
-    setTimeout(() => {
-      categoryScrollRef.current?.scrollTo({ x: 0, animated: true });
-    }, 0);
-  }, []);
+  const handleCategoryPress = useCallback(
+    (category: string) => {
+      // 1. Immediately highlight chip, swap view state to show results list, and trigger skeleton loading
+      setSelectedCategory(category);
+      setIsPendingFilter(true);
+      setViewState('category');
+      setSearchQuery('');
+      setActiveQuery('');
+      setIsSearchFocused(false);
+
+      // 2. Defer heavy Meilisearch query and scrolling to next event tick
+      setTimeout(() => {
+        refineCategory(category);
+        refineQuery('');
+        categoryScrollRef.current?.scrollTo({ x: 0, animated: true });
+      }, 0);
+    },
+    [refineCategory, refineQuery]
+  );
 
   const orderedCategories = selectedCategory
     ? [selectedCategory, ...CATEGORIES.filter((c) => c !== selectedCategory)]
@@ -150,17 +163,17 @@ function DiscoverScreenInner() {
     if (!searchQuery.trim()) return;
     addSearch(searchQuery);
     setActiveQuery(searchQuery);
-    refineQuery(searchQuery);
-
+    setIsPendingFilter(true);
     setViewState('search');
-    if (selectedCategory) {
-      refineCategory(selectedCategory);
-    }
-    setSelectedCategory(null);
     setIsSearchFocused(false);
     searchBarRef.current?.blur();
     Keyboard.dismiss();
-  }, [searchQuery, addSearch, refineQuery, selectedCategory, refineCategory]);
+
+    // Defer query refinement to next tick
+    setTimeout(() => {
+      refineQuery(searchQuery);
+    }, 0);
+  }, [searchQuery, addSearch, refineQuery]);
 
   const handleAddFeedConfirm = useCallback((url: string) => {
     setPendingAddFeedUrl(url);
@@ -206,29 +219,28 @@ function DiscoverScreenInner() {
   );
 
   const handleSearchFocus = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsSearchFocused(true);
     setViewState('focused');
-    if (selectedCategory) {
-      refineCategory(selectedCategory);
-    }
-    setSelectedCategory(null);
-  }, [selectedCategory, refineCategory]);
+  }, []);
 
   const handleSearchCancel = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsSearchFocused(false);
     setSearchQuery('');
     setActiveQuery('');
-    refineQuery('');
-    setViewState('default');
-    if (selectedCategory) {
-      refineCategory(selectedCategory);
-    }
-    setSelectedCategory(null);
+    setIsPendingFilter(true);
+
+    // If a category is selected, return to the category view; otherwise default discover view
+    const hasCategory = selectedCategory !== null;
+    setViewState(hasCategory ? 'category' : 'default');
+
     searchBarRef.current?.blur();
     Keyboard.dismiss();
-  }, [refineQuery, selectedCategory, refineCategory]);
+
+    // Defer queries to next tick
+    setTimeout(() => {
+      refineQuery('');
+    }, 0);
+  }, [refineQuery, selectedCategory]);
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
@@ -252,35 +264,42 @@ function DiscoverScreenInner() {
       addSearch(query);
       setSearchQuery(query);
       setActiveQuery(query);
-      refineQuery(query);
+      setIsPendingFilter(true);
       setViewState('search');
-      if (selectedCategory) {
-        refineCategory(selectedCategory);
-      }
-      setSelectedCategory(null);
       setIsSearchFocused(false);
       searchBarRef.current?.blur();
       Keyboard.dismiss();
+
+      // Defer query refinement to next tick
+      setTimeout(() => {
+        refineQuery(query);
+      }, 0);
     },
-    [addSearch, refineQuery, selectedCategory, refineCategory]
+    [addSearch, refineQuery]
   );
 
   const showCancelButton = viewState !== 'default';
 
   const handleOutsidePress = useCallback(() => {
-    // Only cancel search when in focused mode
-    if (viewState === 'focused') {
-      handleSearchCancel();
-    }
-  }, [viewState, handleSearchCancel]);
+    Keyboard.dismiss();
+  }, []);
 
   const handleClearCategory = useCallback(() => {
-    setViewState('default');
-    if (selectedCategory) {
-      refineCategory(selectedCategory);
-    }
+    setIsPendingFilter(true);
+    const prevCategory = selectedCategory;
     setSelectedCategory(null);
-  }, [selectedCategory, refineCategory]);
+
+    // If search query is active, stay in search results globally; otherwise return to default dashboard
+    const hasSearch = searchQuery.trim().length > 0;
+    setViewState(hasSearch ? 'search' : 'default');
+
+    // Defer query to next tick
+    setTimeout(() => {
+      if (prevCategory) {
+        refineCategory(prevCategory);
+      }
+    }, 0);
+  }, [selectedCategory, refineCategory, searchQuery]);
 
   const insets = useSafeAreaInsets();
 
@@ -293,9 +312,41 @@ function DiscoverScreenInner() {
       style={{ paddingTop: insets.top, backgroundColor: colors.background }}>
       <TouchableWithoutFeedback onPress={handleOutsidePress}>
         <View className="flex-1">
-          {/* In non-default states (focused/search/category), search bar is at top */}
-          {viewState !== 'default' && (
-            <View className="px-6 pb-6 pt-3">
+          {/* Fixed Header & SearchBar Wrapper */}
+          <View>
+            {/* Discover Header - slides/collapses beautifully when search is active */}
+            <MotiView
+              animate={{
+                opacity: viewState === 'default' ? 1 : 0,
+                height: viewState === 'default' ? 62 : 0,
+                scale: viewState === 'default' ? 1 : 0.95,
+              }}
+              transition={{
+                type: 'timing',
+                duration: 250,
+                easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+              }}
+              style={{ overflow: 'hidden' }}>
+              <View className="flex-row items-center justify-between px-6 pb-2 pt-3">
+                <Text
+                  size="3xl"
+                  fontFamily="geist-bold"
+                  className="tracking-heading text-primary-foreground">
+                  Discover
+                </Text>
+                <Button
+                  variant="icon"
+                  size="small"
+                  className="bg-grey6"
+                  fullWidth={false}
+                  onPress={() => addFeedModalRef.current?.present()}>
+                  <PlusIcon width={34} height={34} color={colors.black} strokeWidth={2} />
+                </Button>
+              </View>
+            </MotiView>
+
+            {/* Sticky Search Bar - always mounted for seamless, non-janky morph animations */}
+            <View className="px-6 pb-4 pt-2">
               <Pressable onPress={(e) => e.stopPropagation()}>
                 <SearchBar
                   ref={searchBarRef}
@@ -309,11 +360,11 @@ function DiscoverScreenInner() {
                   onCancel={handleSearchCancel}
                   onSubmit={handleSearchSubmit}
                   showCancelButton={showCancelButton}
-                  autoFocus={viewState === 'focused'}
+                  autoFocus={false}
                 />
               </Pressable>
             </View>
-          )}
+          </View>
 
           {/* Content Area */}
           <View className="flex-1">
@@ -327,54 +378,15 @@ function DiscoverScreenInner() {
                 colors={colors}
               />
             ) : viewState === 'default' ? (
-              /* Default: header scrolls away, search bar pins via stickyHeaderIndices */
+              /* Default Feed Content */
               <ScrollView
                 showsVerticalScrollIndicator={false}
                 className="flex-1"
                 keyboardShouldPersistTaps="always"
-                stickyHeaderIndices={[1]}
                 contentContainerStyle={{
                   paddingBottom: contentPaddingBottom,
                 }}>
-                {/* Child 0 — Discover header, scrolls away */}
-                <View className="flex-row items-center justify-between px-6 pb-4 pt-3">
-                  <Text
-                    size="3xl"
-                    fontFamily="geist-bold"
-                    className="tracking-heading text-primary-foreground">
-                    Discover
-                  </Text>
-                  <Button
-                    variant="icon"
-                    size="small"
-                    className="bg-grey6"
-                    fullWidth={false}
-                    onPress={() => addFeedModalRef.current?.present()}>
-                    <PlusIcon width={34} height={34} color={colors.black} strokeWidth={2} />
-                  </Button>
-                </View>
-
-                {/* Child 1 — search bar, becomes sticky once header is gone */}
-                <View className="bg-background px-6 pb-4">
-                  <Pressable onPress={(e) => e.stopPropagation()}>
-                    <SearchBar
-                      ref={searchBarRef}
-                      value={searchQuery}
-                      onChangeText={handleSearchChange}
-                      onFocus={handleSearchFocus}
-                      onLanguageChange={handleLanguageChange}
-                      selectedLanguage={selectedLanguage}
-                      languagePickerRef={languagePickerRef}
-                      onClear={handleClearSearch}
-                      onCancel={handleSearchCancel}
-                      onSubmit={handleSearchSubmit}
-                      showCancelButton={showCancelButton}
-                      autoFocus={false}
-                    />
-                  </Pressable>
-                </View>
-
-                {/* Child 2 — categories, scrolls with content */}
+                {/* Categories, scrolls with content */}
                 <View className="mb-2">
                   <CategoriesList
                     selectedCategory={selectedCategory}
@@ -386,7 +398,7 @@ function DiscoverScreenInner() {
                   />
                 </View>
 
-                {/* Child 3 — trending */}
+                {/* Trending section */}
                 <TrendingSection
                   showTrendingSkeleton={showTrendingSkeleton}
                   trendingError={trendingError}
@@ -394,7 +406,7 @@ function DiscoverScreenInner() {
                 />
               </ScrollView>
             ) : (
-              /* Search/Category Results (also shown for instant search while focused) */
+              /* Search/Category Results */
               <SearchResults
                 showSearchSkeleton={showSearchSkeleton}
                 hits={hits as any}

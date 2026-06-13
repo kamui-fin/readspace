@@ -1,5 +1,5 @@
-import { Appearance, type ColorSchemeName } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Appearance, type ColorSchemeName } from 'react-native';
 import { Uniwind } from 'uniwind';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';

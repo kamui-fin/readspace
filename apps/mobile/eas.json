@@ -9,6 +9,7 @@
       "distribution": "internal",
       "bun": "1.3.14",
       "env": {
+        "APP_VARIANT": "development",
         "EAS_NO_FROZEN_LOCKFILE": "1",
         "SENTRY_ALLOW_FAILURE": "true",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "29989057291-3do0s0goe10dem6fsl8t6lch7rci7vo1.apps.googleusercontent.com",
@@ -21,6 +22,7 @@
       "distribution": "internal",
       "bun": "1.3.14",
       "env": {
+        "APP_VARIANT": "preview",
         "EAS_NO_FROZEN_LOCKFILE": "1",
         "NODE_OPTIONS": "--max-old-space-size=8192",
         "SENTRY_ALLOW_FAILURE": "true",
@@ -34,6 +36,7 @@
       "autoIncrement": true,
       "bun": "1.3.14",
       "env": {
+        "APP_VARIANT": "production",
         "SENTRY_ALLOW_FAILURE": "true",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "29989057291-3do0s0goe10dem6fsl8t6lch7rci7vo1.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "29989057291-ao019ihnv1afmctdg52dj6l3manpk1jm.apps.googleusercontent.com",

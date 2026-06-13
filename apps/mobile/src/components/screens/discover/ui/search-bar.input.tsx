@@ -5,6 +5,7 @@ import MagniferLinearIcon from '@components/icons/solar/magnifer-linear';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { MotiView } from 'moti';
 import { forwardRef, useCallback } from 'react';
 import {
   Keyboard,
@@ -78,12 +79,33 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
         <TouchableOpacity
           onPress={isFocused ? onCancel : undefined}
           activeOpacity={isFocused ? 0.6 : 1}
-          style={{ padding: 8, paddingLeft: 12 }}>
-          {isFocused ? (
-            <ArrowLeftLinearIcon width={20} height={20} color={colors.grey} strokeWidth={2.4} />
-          ) : (
+          style={{
+            width: 44,
+            height: 44,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginLeft: 4,
+          }}>
+          <MotiView
+            animate={{
+              opacity: isFocused ? 0 : 1,
+              scale: isFocused ? 0.9 : 1,
+            }}
+            transition={{ type: 'timing', duration: 180 }}
+            style={{ position: 'absolute' }}>
             <MagniferLinearIcon width={20} height={20} color={colors.grey} strokeWidth={2.4} />
-          )}
+          </MotiView>
+
+          <MotiView
+            animate={{
+              opacity: isFocused ? 1 : 0,
+              scale: isFocused ? 1 : 0.9,
+              translateX: isFocused ? 0 : -6,
+            }}
+            transition={{ type: 'timing', duration: 180 }}
+            style={{ position: 'absolute' }}>
+            <ArrowLeftLinearIcon width={20} height={20} color={colors.grey} strokeWidth={2.4} />
+          </MotiView>
         </TouchableOpacity>
 
         {/* Text input fills remaining space */}
@@ -98,6 +120,7 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
               color: isDark ? COLORS.dark.black : COLORS.light.black,
               paddingTop: Platform.select({ ios: 16, default: 12 }),
               paddingBottom: Platform.select({ ios: 16, default: 12 }),
+              paddingLeft: 4,
             },
             // @ts-expect-error web outline
             Platform.select({ web: { outline: 'none' }, default: undefined }),
@@ -114,12 +137,26 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
         />
 
         {/* Right icon: clear X when typing, language picker when idle/focused-empty */}
-        <View style={{ paddingRight: 8 }}>
-          {hasText ? (
+        <View style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center', marginRight: 4 }}>
+          <MotiView
+            animate={{
+              opacity: hasText ? 1 : 0,
+              scale: hasText ? 1 : 0.9,
+            }}
+            transition={{ type: 'timing', duration: 180 }}
+            style={{ position: 'absolute' }}>
             <TouchableOpacity onPress={handleClear} style={{ padding: 8 }}>
               <CloseCircleBoldIcon width={20} height={20} color={colors.grey} />
             </TouchableOpacity>
-          ) : (
+          </MotiView>
+
+          <MotiView
+            animate={{
+              opacity: hasText ? 0 : 1,
+              scale: hasText ? 0.9 : 1,
+            }}
+            transition={{ type: 'timing', duration: 180 }}
+            style={{ position: 'absolute' }}>
             <TouchableOpacity
               onPress={() => {
                 Keyboard.dismiss();
@@ -128,7 +165,7 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
               style={{ padding: 8 }}>
               <LanguageIcon width={20} height={20} color={colors.black} fill="none" />
             </TouchableOpacity>
-          )}
+          </MotiView>
         </View>
       </View>
     );

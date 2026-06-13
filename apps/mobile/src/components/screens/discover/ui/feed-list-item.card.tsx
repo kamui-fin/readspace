@@ -1,11 +1,10 @@
+import { FeedIcon } from '@components/ui/feed-icon';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { stripHtml } from '@lib/utils/html';
-import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import clsx from 'clsx';
 import { Link } from 'expo-router';
-import { useState } from 'react';
 import { Image, Pressable, type PressableProps, View } from 'react-native';
 import { FollowButton } from './follow.button';
 
@@ -41,32 +40,20 @@ export const FeedListItem = ({
   disabled = false,
   ...props
 }: FeedListItemProps) => {
-  const [imageError, setImageError] = useState(false);
   const isDark = useIsDarkMode();
-  const colors = COLORS[isDark ? 'dark' : 'light'];
+  const _colors = COLORS[isDark ? 'dark' : 'light'];
 
   // Generate UI Avatars fallback URL
   const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(title)}&size=128&background=random&length=2&bold=true&format=png`;
 
+  const Fallback = () => (
+    <Image source={{ uri: fallbackAvatarUrl }} className="h-full w-full" resizeMode="cover" />
+  );
+
   const innerPressable = (
     <Pressable className={clsx('flex-row items-center gap-4 py-3', className)} {...props}>
       {/* Icon */}
-      <View
-        className="h-12 w-12 items-center justify-center overflow-hidden rounded-lg"
-        style={{
-          backgroundColor: colors.grey5,
-        }}>
-        {iconUrl && !imageError ? (
-          <Image
-            source={{ uri: resolveSupabaseImageUrl(iconUrl) }}
-            className="h-full w-full"
-            resizeMode="cover"
-            onError={() => setImageError(true)}
-          />
-        ) : (
-          <Image source={{ uri: fallbackAvatarUrl }} className="h-full w-full" resizeMode="cover" />
-        )}
-      </View>
+      <FeedIcon url={iconUrl} fallbackComponent={Fallback} size={48} borderRadius={8} />
 
       {/* Content */}
       <View className="flex-1">
