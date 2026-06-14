@@ -18,6 +18,8 @@ interface SearchResultsProps {
   onCategoryPress: (category: string) => void;
   onClearCategory: () => void;
   categoryScrollRef: React.RefObject<ScrollView | null>;
+  searchQuery: string;
+  showCategoriesList?: boolean;
 }
 
 interface SearchListItem extends Partial<FeedSummary> {
@@ -36,16 +38,21 @@ export function SearchResults({
   onCategoryPress,
   onClearCategory,
   categoryScrollRef,
+  searchQuery,
+  showCategoriesList = false,
 }: SearchResultsProps) {
   const listRef = useRef<any>(null);
   const isDark = useIsDarkMode();
   const scrollOffsetRef = useRef(0);
 
-  // Force remount when changing between skeleton and real search results.
-  // This prevents LegendList layout state contamination or stale measurements.
+  const firstHitId = hits?.[0]?.id || '';
+
+  // We keep the list component mounted (key only changes on dark/light mode) to prevent costly
+  // native list recreation and layout measurement passes. This eliminates blank flashes when
+  // switching categories, loading skeletons, or displaying results.
   const listKey = useMemo(() => {
-    return `${isDark ? 'dark' : 'light'}-${showSearchSkeleton ? 'skeleton' : 'results'}`;
-  }, [isDark, showSearchSkeleton]);
+    return isDark ? 'dark' : 'light';
+  }, [isDark]);
 
   // Combine hits and skeletons into one unified data source for InfiniteScrollList.
   // This keeps the list component mounted, preventing measurement & rendering issues.
@@ -121,7 +128,7 @@ export function SearchResults({
 
   return (
     <View className="flex-1">
-      {selectedCategory && (
+      {showCategoriesList && (
         <View className="mb-4 mt-3">
           <CategoriesList
             selectedCategory={selectedCategory}
@@ -140,6 +147,7 @@ export function SearchResults({
         estimatedItemSize={80}
         drawDistance={1500}
         initialContainerPoolRatio={20}
+        recycleItems={false}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}

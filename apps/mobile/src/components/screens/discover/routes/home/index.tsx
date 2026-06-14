@@ -23,7 +23,7 @@ import type { FeedSummary } from '@readspace/shared';
 import { MOBILE_CATEGORY_NAMES, useCreateFeed } from '@readspace/shared';
 import { useSearchHistory } from '@stores/search-history';
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
   Configure,
   InstantSearch,
@@ -36,6 +36,7 @@ import { MotiView } from 'moti';
 import { Easing } from 'react-native-reanimated';
 import type { TextInput as RNTextInput } from 'react-native';
 import {
+  DeviceEventEmitter,
   Keyboard,
   Pressable,
   ScrollView,
@@ -73,6 +74,7 @@ function DiscoverScreenInner() {
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('english');
   const [_isSearchFocused, setIsSearchFocused] = useState(false);
   const [isPendingFilter, setIsPendingFilter] = useState(false);
+  const [_, startTransition] = useTransition();
 
   const addFeedModalRef = useRef<AddFeedBottomSheetRef>(null);
   const folderPickerModalRef = useRef<FolderPickerBottomSheetRef>(null);
@@ -86,6 +88,14 @@ function DiscoverScreenInner() {
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const { searches: recentSearches, addSearch, clearHistory } = useSearchHistory();
   const createFeed = useCreateFeed();
+
+  // Focus search bar on bottom tab double tap
+  useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener('bottom-tab-double-tap:discover', () => {
+      searchBarRef.current?.focus();
+    });
+    return () => subscription.remove();
+  }, []);
 
   // Compute bottom padding to account for tab bar
   // Tab bar height = BOTTOM_TABBAR_BASE_HEIGHT + 0.8 * safeAreaBottom (from BottomTabbar component)
@@ -133,20 +143,21 @@ function DiscoverScreenInner() {
 
   const handleCategoryPress = useCallback(
     (category: string) => {
-      // 1. Immediately highlight chip, swap view state to show results list, and trigger skeleton loading
+      // 1. Immediately highlight chip, clear search query inputs, close search focus, and scroll to beginning
       setSelectedCategory(category);
-      setIsPendingFilter(true);
-      setViewState('category');
       setSearchQuery('');
       setActiveQuery('');
       setIsSearchFocused(false);
+      categoryScrollRef.current?.scrollTo({ x: 0, animated: true });
 
-      // 2. Defer heavy Meilisearch query and scrolling to next event tick
-      setTimeout(() => {
+      // 2. Defer the heavy view state swap, skeleton loading, and Meilisearch query to allow
+      // the chip color highlight and position change to render instantly.
+      startTransition(() => {
+        setIsPendingFilter(true);
+        setViewState('category');
         refineCategory(category);
         refineQuery('');
-        categoryScrollRef.current?.scrollTo({ x: 0, animated: true });
-      }, 0);
+      });
     },
     [refineCategory, refineQuery]
   );
@@ -163,16 +174,16 @@ function DiscoverScreenInner() {
     if (!searchQuery.trim()) return;
     addSearch(searchQuery);
     setActiveQuery(searchQuery);
-    setIsPendingFilter(true);
-    setViewState('search');
     setIsSearchFocused(false);
     searchBarRef.current?.blur();
     Keyboard.dismiss();
 
-    // Defer query refinement to next tick
-    setTimeout(() => {
+    // Defer query refinement and view state swap
+    startTransition(() => {
+      setIsPendingFilter(true);
+      setViewState('search');
       refineQuery(searchQuery);
-    }, 0);
+    });
   }, [searchQuery, addSearch, refineQuery]);
 
   const handleAddFeedConfirm = useCallback((url: string) => {
@@ -208,12 +219,14 @@ function DiscoverScreenInner() {
   const handleSearchChange = useCallback(
     (text: string) => {
       setSearchQuery(text);
-      // Live instant search: refine query as user types
-      if (text.trim()) {
-        refineQuery(text);
-      } else {
-        refineQuery('');
-      }
+      // Live instant search: refine query as user types inside transition to keep typing lag-free
+      startTransition(() => {
+        if (text.trim()) {
+          refineQuery(text);
+        } else {
+          refineQuery('');
+        }
+      });
     },
     [refineQuery]
   );
@@ -227,28 +240,29 @@ function DiscoverScreenInner() {
     setIsSearchFocused(false);
     setSearchQuery('');
     setActiveQuery('');
-    setIsPendingFilter(true);
-
-    // If a category is selected, return to the category view; otherwise default discover view
-    const hasCategory = selectedCategory !== null;
-    setViewState(hasCategory ? 'category' : 'default');
-
     searchBarRef.current?.blur();
     Keyboard.dismiss();
 
-    // Defer queries to next tick
-    setTimeout(() => {
+    const hasCategory = selectedCategory !== null;
+
+    // Defer queries and view state changes until after urgent keyboard dismissals
+    startTransition(() => {
+      setIsPendingFilter(true);
+      setViewState(hasCategory ? 'category' : 'default');
       refineQuery('');
-    }, 0);
+    });
   }, [refineQuery, selectedCategory]);
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
     setActiveQuery('');
-    refineQuery('');
     setIsSearchFocused(true);
-    setViewState('focused');
     searchBarRef.current?.focus();
+
+    startTransition(() => {
+      refineQuery('');
+      setViewState('focused');
+    });
   }, [refineQuery]);
 
   const handleLanguageChange = useCallback(
@@ -264,16 +278,16 @@ function DiscoverScreenInner() {
       addSearch(query);
       setSearchQuery(query);
       setActiveQuery(query);
-      setIsPendingFilter(true);
-      setViewState('search');
       setIsSearchFocused(false);
       searchBarRef.current?.blur();
       Keyboard.dismiss();
 
-      // Defer query refinement to next tick
-      setTimeout(() => {
+      // Defer query refinement and view state swap
+      startTransition(() => {
+        setIsPendingFilter(true);
+        setViewState('search');
         refineQuery(query);
-      }, 0);
+      });
     },
     [addSearch, refineQuery]
   );
@@ -285,20 +299,18 @@ function DiscoverScreenInner() {
   }, []);
 
   const handleClearCategory = useCallback(() => {
-    setIsPendingFilter(true);
     const prevCategory = selectedCategory;
     setSelectedCategory(null);
 
-    // If search query is active, stay in search results globally; otherwise return to default dashboard
-    const hasSearch = searchQuery.trim().length > 0;
-    setViewState(hasSearch ? 'search' : 'default');
-
-    // Defer query to next tick
-    setTimeout(() => {
+    // Defer the view state swap and query refinement to make the chip state change instant
+    startTransition(() => {
+      setIsPendingFilter(true);
+      const hasSearch = searchQuery.trim().length > 0;
+      setViewState(hasSearch ? 'search' : 'default');
       if (prevCategory) {
         refineCategory(prevCategory);
       }
-    }, 0);
+    });
   }, [selectedCategory, refineCategory, searchQuery]);
 
   const insets = useSafeAreaInsets();
@@ -417,6 +429,8 @@ function DiscoverScreenInner() {
                 onCategoryPress={handleCategoryPress}
                 onClearCategory={handleClearCategory}
                 categoryScrollRef={categoryScrollRef}
+                searchQuery={searchQuery}
+                showCategoriesList={viewState === 'category' || selectedCategory !== null}
               />
             )}
           </View>

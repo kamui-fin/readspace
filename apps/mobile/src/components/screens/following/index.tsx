@@ -30,6 +30,7 @@ import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  DeviceEventEmitter,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Platform,
@@ -279,6 +280,19 @@ export function FollowingScreen({
     prevIsLoadingRef.current = isLoading;
     prevArticleCountRef.current = allArticles.length;
   }, [isLoading, allArticles.length, isFetchingNextPage, isLoadingMore, setIsLoadingMore]);
+
+  // Scroll to top on bottom tab double tap
+  useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener('bottom-tab-double-tap:index', () => {
+      try {
+        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+        scrollY.value = 0;
+      } catch (e) {
+        console.warn('Failed to scroll to top:', e);
+      }
+    });
+    return () => subscription.remove();
+  }, [scrollY]);
 
   // Refetch active query and associated data when screen receives focus.
   // Use invalidateQueries instead of bare refetch() so we bypass the 5-min

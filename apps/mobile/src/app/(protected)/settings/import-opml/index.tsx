@@ -7,6 +7,7 @@ import { SettingsItem } from '@components/screens/profile/ui/settings-item';
 import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
+import { Button } from '@components/ui/button';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
@@ -20,8 +21,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ScrollView, View, Pressable } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -42,6 +43,8 @@ export default function ImportOPMLScreen() {
   const [localTaskId, setLocalTaskId] = useState<string | null>(null);
   const [shouldPoll, setShouldPoll] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
+
+
 
   // Get active task if one exists in the background
   const { data: activeTask, isLoading: isCheckingTask } = useActiveImportTask();
@@ -71,6 +74,8 @@ export default function ImportOPMLScreen() {
       ]);
     }
   }, [taskStatus?.status, queryClient]);
+
+  const hasActiveTask = !!(currentTaskId && taskStatus);
 
   const handleImportStarted = useCallback((taskId: string) => {
     setLocalTaskId(taskId);
@@ -164,13 +169,11 @@ export default function ImportOPMLScreen() {
       }}>
       <Header
         variant="static"
-        title="Import OPML"
+        title={hasActiveTask ? "Import Status" : ""}
         titleFontWeight="semibold"
-        titleSize="xs"
         transparentBackground={true}
         showBackButton={true}
         disableSafeAreaTop={true}
-        disableCenteredLayout={true}
         onBackPress={() => router.back()}
       />
 
@@ -179,7 +182,8 @@ export default function ImportOPMLScreen() {
         contentContainerStyle={{
           paddingBottom: 20,
         }}>
-        {currentTaskId && taskStatus ? (
+        
+        {hasActiveTask && taskStatus ? (
           <Animated.View entering={FadeIn} exiting={FadeOut} className="px-6">
             <OPMLStatusCard
               taskStatus={taskStatus}
@@ -190,26 +194,59 @@ export default function ImportOPMLScreen() {
           </Animated.View>
         ) : (
           <View className="px-6">
-            <SettingsGroup title="Source File" className="mb-2">
-              {isPicking ? (
-                <View
-                  className="items-center justify-center rounded-2xl py-4"
-                  style={{ backgroundColor: colors.grey6 }}>
-                  <Spinner size="small" color={colors.primary} />
+            {/* Screen Header Info */}
+            <View className="mb-6">
+              <Text size="2xl" fontFamily="geist-bold" className="text-black dark:text-white mb-2">
+                Import Subscriptions
+              </Text>
+              <Text size="sm" fontFamily="geist-medium" className="text-grey dark:text-grey leading-relaxed">
+                Bring your reading list with you. Upload an OPML file exported from your previous RSS reader to import all your feeds at once.
+              </Text>
+            </View>
+
+            {/* Premium Upload Card */}
+            {isPicking ? (
+              <View
+                className="items-center justify-center rounded-2xl py-12 border"
+                style={{ 
+                  backgroundColor: colors.grey6, 
+                  borderColor: isDark ? colors.grey5 : colors.grey4,
+                  borderStyle: 'dashed',
+                  borderWidth: 1.5,
+                }}>
+                <Spinner size="medium" color={colors.secondary} />
+                <Text size="base" fontFamily="geist-semibold" className="text-black dark:text-white mt-4 text-center">
+                  Analyzing file...
+                </Text>
+                <Text size="xs" fontFamily="geist" className="text-grey dark:text-grey text-center mt-1">
+                  Reading OPML structure and counting feeds
+                </Text>
+              </View>
+            ) : (
+              <Pressable
+                onPress={handleOPMLImport}
+                className="items-center justify-center rounded-2xl py-12 px-5 border"
+                style={({ pressed }) => ({
+                  backgroundColor: colors.grey6,
+                  borderColor: isDark ? colors.grey5 : colors.grey4,
+                  borderStyle: 'dashed',
+                  borderWidth: 1.5,
+                  opacity: pressed ? 0.85 : 1,
+                })}>
+                <View 
+                  className="h-16 w-16 rounded-full items-center justify-center mb-4"
+                  style={{ backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)' }}>
+                  <DocumentTextBoldIcon width={32} height={32} color={colors.secondary} />
                 </View>
-              ) : (
-                <SettingsItem
-                  label="Upload OPML File"
-                  variant="button"
-                  leftIcon={<DocumentTextBoldIcon width={22} height={22} color={colors.black} />}
-                  onPress={handleOPMLImport}
-                />
-              )}
-            </SettingsGroup>
-            <Text className="font-geist-medium text-grey dark:text-grey px-2 text-sm">
-              Select a .opml or .xml file containing your exported subscriptions from another RSS
-              reader to import them directly into your account.
-            </Text>
+                
+                <Text size="lg" fontFamily="geist-bold" className="text-black dark:text-white text-center">
+                  Select OPML File
+                </Text>
+                <Text size="xs" fontFamily="geist-medium" className="text-grey dark:text-grey text-center mt-1.5">
+                  Tap to browse .opml or .xml subscription files
+                </Text>
+              </Pressable>
+            )}
           </View>
         )}
       </ScrollView>

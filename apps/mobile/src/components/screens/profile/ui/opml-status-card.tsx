@@ -8,7 +8,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
-import { TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 import Animated, {
   interpolateColor,
   useAnimatedProps,
@@ -178,6 +178,7 @@ export function OPMLStatusCard({
   const router = useRouter();
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+  const [showErrorDetails, setShowErrorDetails] = React.useState(false);
 
   if (!taskStatus) return null;
 
@@ -186,6 +187,7 @@ export function OPMLStatusCard({
   const progressData = 'progress' in taskStatus ? taskStatus.progress : null;
   const errorMsg = 'error' in taskStatus ? taskStatus.error : null;
   const message = 'message' in taskStatus ? taskStatus.message : null;
+  const filename = taskStatus.metadata?.filename || 'subscriptions.opml';
 
   const progress = status === 'in_progress' ? progressData : result;
 
@@ -198,22 +200,30 @@ export function OPMLStatusCard({
   const totalFeeds = status === 'in_progress' ? progressData?.total || 0 : result?.total_feeds || 0;
   const progressPercentage = totalFeeds > 0 ? (totalProcessed / totalFeeds) * 100 : 0;
 
+  // Premium card styling values
+  const cardBorderColor = isDark ? colors.grey5 : colors.grey4;
+  const statItemBgColor = colors.grey6;
+
   return (
     <View>
       {/* Pending State */}
       {status === 'pending' && (
-        <View className="rounded-3xl p-5" style={{ backgroundColor: colors.grey6 }}>
-          <View className="mb-4 items-center">
-            <ClockCircleLinearIcon width={48} height={48} color={colors.grey} />
-            <Text className="font-geist-bold mt-3 text-xl text-black dark:text-white">
+        <View className="py-8">
+          <View className="items-center">
+            <View 
+              className="h-14 w-14 rounded-full items-center justify-center mb-4"
+              style={{ backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' }}>
+              <ClockCircleLinearIcon width={32} height={32} color={colors.grey} />
+            </View>
+            <Text className="font-geist-bold text-xl text-black dark:text-white">
               Import Queued
             </Text>
-            <Text className="font-geist-medium text-grey dark:text-grey mt-1 text-center text-base">
+            <Text className="font-geist-medium text-grey dark:text-grey mt-1.5 text-center text-sm leading-5 px-6">
               {message || 'Your import will start processing shortly.'}
             </Text>
           </View>
 
-          <View className="mt-4 w-full">
+          <View className="mt-8 w-full">
             <Button
               onPress={onCancel}
               disabled={isCancelling}
@@ -230,29 +240,24 @@ export function OPMLStatusCard({
 
       {/* In Progress State */}
       {status === 'in_progress' && (
-        <View className="rounded-3xl p-5" style={{ backgroundColor: colors.grey6 }}>
+        <View className="py-6">
           {/* File Info Header */}
-          <View className="mb-8 flex-row items-start gap-3">
-            <DocumentTextBoldIcon width={48} height={48} color={colors.secondary} />
-            <View className="flex-1 flex-row items-start justify-between">
+          <View className="mb-6 flex-row items-center gap-3">
+            <View 
+              className="h-12 w-12 rounded-xl items-center justify-center"
+              style={{ backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)' }}>
+              <DocumentTextBoldIcon width={24} height={24} color={colors.secondary} />
+            </View>
+            <View className="flex-1 flex-row items-center justify-between">
               <View className="flex-1">
                 <Text
                   className="font-geist-semibold text-base text-black dark:text-white"
                   numberOfLines={1}>
-                  OPML File
+                  {filename}
                 </Text>
-                <Text className="font-geist-medium text-grey dark:text-grey text-sm">
-                  {totalFeeds > 0 ? `${totalFeeds} feeds` : ''}
+                <Text className="font-geist text-grey dark:text-grey text-xs">
+                  {totalFeeds > 0 ? `${totalFeeds} feeds` : 'Importing...'}
                 </Text>
-              </View>
-              <View className="ml-2 flex-row items-baseline">
-                <AnimatedTicker
-                  value={Math.round(progressPercentage)}
-                  color={colors.grey}
-                  fontSize={24}
-                  fontWeight="700"
-                />
-                <Text className="font-geist-mono-bold text-grey dark:text-grey text-2xl">%</Text>
               </View>
             </View>
           </View>
@@ -262,27 +267,48 @@ export function OPMLStatusCard({
             <TickProgressBar progress={progressPercentage / 100} totalTicks={35} colors={colors} />
           </View>
 
-          {/* Progress Counter */}
+          {/* Progress Counter & Live Stats */}
           <View className="mb-4 items-center">
-            <View className="mt-2 flex-row items-baseline">
+            <View className="flex-row items-baseline">
               <AnimatedTicker
                 value={totalProcessed}
-                color={colors.primary_foreground}
-                fontSize={36}
+                color={colors.black}
+                fontSize={32}
                 fontWeight="700"
               />
-              <Text className="font-geist-bold text-grey dark:text-grey mx-1 text-2xl">/</Text>
-              <Text className="font-geist-bold text-grey dark:text-grey text-2xl">
+              <Text className="font-geist-bold text-grey dark:text-grey mx-1 text-xl">/</Text>
+              <Text className="font-geist-bold text-grey dark:text-grey text-xl">
                 {totalFeeds}
               </Text>
             </View>
-            <Text className="font-geist-medium text-grey dark:text-grey mt-1 text-sm">
+            <Text className="font-geist-medium text-grey dark:text-grey mt-0.5 text-xs">
               feeds processed
             </Text>
+
+            {/* Live Progress Stats Sub-row */}
+            {progressData && (
+              <View className="flex-row justify-center gap-3 mt-4 px-2 py-1.5 rounded-lg" style={{ backgroundColor: statItemBgColor }}>
+                <Text size="xs" fontFamily="geist-medium" className="text-secondary">
+                  {progressData.successful} imported
+                </Text>
+                <Text size="xs" fontFamily="geist-medium" className="text-grey dark:text-grey">•</Text>
+                <Text size="xs" fontFamily="geist-medium" style={{ color: '#F59E0B' }}>
+                  {progressData.already_existed} existed
+                </Text>
+                {progressData.failed > 0 && (
+                  <>
+                    <Text size="xs" fontFamily="geist-medium" className="text-grey dark:text-grey">•</Text>
+                    <Text size="xs" fontFamily="geist-medium" style={{ color: colors.red }}>
+                      {progressData.failed} failed
+                    </Text>
+                  </>
+                )}
+              </View>
+            )}
           </View>
 
           {/* Cancel Button */}
-          <View className="border-grey5 dark:border-grey5 mt-4 border-t pt-4">
+          <View className="mt-8 w-full">
             <Button
               onPress={onCancel}
               disabled={isCancelling}
@@ -299,81 +325,83 @@ export function OPMLStatusCard({
 
       {/* Completed State */}
       {status === 'completed' && (
-        <View>
-          <View className="mb-6 rounded-3xl p-5" style={{ backgroundColor: colors.grey6 }}>
-            <View className="mb-4 items-center">
-              <CheckCircleLinearIcon width={48} height={48} color={colors.secondary} />
-              <Text className="font-geist-bold mt-3 text-xl text-black dark:text-white">
-                Import Complete
-              </Text>
-              <Text className="font-geist-medium text-grey dark:text-grey mt-1 text-center text-base">
-                Your OPML file has been successfully processed.
-              </Text>
+        <View className="py-6">
+          <View className="items-center mb-6">
+            <View 
+              className="h-14 w-14 rounded-full items-center justify-center mb-3"
+              style={{ backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)' }}>
+              <CheckCircleLinearIcon width={32} height={32} color={colors.secondary} />
             </View>
+            <Text className="font-geist-bold text-xl text-black dark:text-white">
+              Import Complete
+            </Text>
+            <Text className="font-geist-medium text-grey dark:text-grey mt-1.5 text-center text-sm leading-5 px-6">
+              Your subscriptions have been successfully processed.
+            </Text>
+          </View>
 
-            {/* Statistics */}
-            {progress && (
-              <View className="gap-2.5">
+          {/* Statistics */}
+          {progress && (
+            <View className="gap-2">
+              <View
+                className="flex-row items-center justify-between rounded-xl px-4 py-3"
+                style={{ backgroundColor: statItemBgColor }}>
+                <View className="flex-row items-center gap-2.5">
+                  <View
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: colors.secondary }}
+                  />
+                  <Text className="font-geist-medium text-grey dark:text-grey text-sm">
+                    Successfully Imported
+                  </Text>
+                </View>
+                <Text className="font-geist-bold text-base" style={{ color: colors.secondary }}>
+                  {progress.successful}
+                </Text>
+              </View>
+
+              {progress.already_existed > 0 && (
                 <View
-                  className="flex-row items-center justify-between rounded-2xl border px-4 py-3"
-                  style={{ backgroundColor: colors.card, borderColor: colors.grey4 }}>
+                  className="flex-row items-center justify-between rounded-xl px-4 py-3"
+                  style={{ backgroundColor: statItemBgColor }}>
                   <View className="flex-row items-center gap-2.5">
                     <View
                       className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: colors.secondary }}
+                      style={{ backgroundColor: '#F59E0B' }}
                     />
                     <Text className="font-geist-medium text-grey dark:text-grey text-sm">
-                      Successfully Imported
+                      Already Existed
                     </Text>
                   </View>
-                  <Text className="font-geist-bold text-base" style={{ color: colors.secondary }}>
-                    {progress.successful}
+                  <Text className="font-geist-bold text-base" style={{ color: '#F59E0B' }}>
+                    {progress.already_existed}
                   </Text>
                 </View>
+              )}
 
-                {progress.already_existed > 0 && (
-                  <View
-                    className="flex-row items-center justify-between rounded-2xl border px-4 py-3"
-                    style={{ backgroundColor: colors.card, borderColor: colors.grey4 }}>
-                    <View className="flex-row items-center gap-2.5">
-                      <View
-                        className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: '#F59E0B' }}
-                      />
-                      <Text className="font-geist-medium text-grey dark:text-grey text-sm">
-                        Already Existed
-                      </Text>
-                    </View>
-                    <Text className="font-geist-bold text-base" style={{ color: '#F59E0B' }}>
-                      {progress.already_existed}
+              {progress.failed > 0 && (
+                <View
+                  className="flex-row items-center justify-between rounded-xl px-4 py-3"
+                  style={{ backgroundColor: statItemBgColor }}>
+                  <View className="flex-row items-center gap-2.5">
+                    <View
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: colors.red }}
+                    />
+                    <Text className="font-geist-medium text-grey dark:text-grey text-sm">
+                      Failed
                     </Text>
                   </View>
-                )}
-
-                {progress.failed > 0 && (
-                  <View
-                    className="flex-row items-center justify-between rounded-2xl border px-4 py-3"
-                    style={{ backgroundColor: colors.card, borderColor: colors.grey4 }}>
-                    <View className="flex-row items-center gap-2.5">
-                      <View
-                        className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: colors.red }}
-                      />
-                      <Text className="font-geist-medium text-grey dark:text-grey text-sm">
-                        Failed
-                      </Text>
-                    </View>
-                    <Text className="font-geist-bold text-base" style={{ color: colors.red }}>
-                      {progress.failed}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
+                  <Text className="font-geist-bold text-base" style={{ color: colors.red }}>
+                    {progress.failed}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Action Buttons */}
-          <View className="mt-2 w-full">
+          <View className="mt-8 w-full">
             <Button
               onPress={() => router.push('/(tabs)')}
               variant="primary"
@@ -388,20 +416,54 @@ export function OPMLStatusCard({
 
       {/* Failed State */}
       {status === 'failed' && (
-        <View className="rounded-3xl p-5" style={{ backgroundColor: colors.grey6 }}>
-          <View className="mb-4 items-center">
-            <CloseCircleLinearIcon width={48} height={48} color={colors.red} />
-            <Text className="font-geist-bold mt-3 text-xl text-black dark:text-white">
+        <View className="py-8">
+          <View className="items-center">
+            <View 
+              className="h-14 w-14 rounded-full items-center justify-center mb-3"
+              style={{ backgroundColor: isDark ? 'rgba(234, 67, 53, 0.15)' : 'rgba(234, 67, 53, 0.08)' }}>
+              <CloseCircleLinearIcon width={32} height={32} color={colors.red} />
+            </View>
+            <Text className="font-geist-bold text-xl text-black dark:text-white">
               Import Failed
             </Text>
-            <Text
-              className="font-geist-medium mt-1 text-center text-base"
-              style={{ color: colors.red }}>
-              {errorMsg || 'The import process encountered an error.'}
+            <Text className="font-geist-medium text-grey dark:text-grey mt-1.5 text-center text-sm leading-5 px-6">
+              We ran into an issue processing your OPML file. Please ensure it is a valid subscription export.
             </Text>
           </View>
 
-          <View className="mt-4">
+          {/* Technical Details Toggle */}
+          {errorMsg && (
+            <View className="mt-4 w-full">
+              <Pressable
+                onPress={() => setShowErrorDetails(!showErrorDetails)}
+                className="py-1.5 flex-row justify-center items-center gap-1">
+                <Text 
+                  size="xs" 
+                  fontFamily="geist-semibold" 
+                  style={{ color: colors.secondary }}>
+                  {showErrorDetails ? 'Hide technical details' : 'Show technical details'}
+                </Text>
+              </Pressable>
+              
+              {showErrorDetails && (
+                <View 
+                  className="mt-2 p-3 rounded-lg border" 
+                  style={{ 
+                    backgroundColor: statItemBgColor, 
+                    borderColor: cardBorderColor 
+                  }}>
+                  <Text 
+                    fontFamily="mono"
+                    size="xs" 
+                    className="leading-relaxed text-black dark:text-white">
+                    {errorMsg}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          <View className="mt-8">
             <Button
               onPress={onClear}
               variant="primary"

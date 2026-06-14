@@ -72,35 +72,67 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
       onCancel?.();
     }, [ref, onCancel]);
 
+    const cardBorderColor = isDark ? colors.grey5 : colors.grey4;
+    const innerCardBg = isDark ? 'rgb(24, 24, 24)' : colors.background;
+
     return (
       <BottomSheet ref={ref} headerTitle="Confirm Import">
         <View>
-          <Text className="font-geist-medium text-grey dark:text-grey mb-6 text-base">
+          <Text className="font-geist-medium text-grey dark:text-grey mb-6 text-sm">
             Review the details below before importing your feeds.
           </Text>
 
           {/* File Info Card */}
-          <View className="bg-grey5 dark:bg-grey5 mb-6 rounded-xl p-4">
+          <View 
+            className="mb-5 rounded-xl p-4 border" 
+            style={{ 
+              backgroundColor: colors.grey6,
+              borderColor: cardBorderColor 
+            }}>
             <View className="flex-row items-center gap-3">
-              <DocumentTextBoldIcon width={24} height={24} color={colors.primary} />
+              <View 
+                className="h-10 w-10 rounded-lg items-center justify-center"
+                style={{ backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)' }}>
+                <DocumentTextBoldIcon width={20} height={20} color={colors.secondary} />
+              </View>
               <View className="flex-1">
-                <Text className="font-geist-semibold text-base text-black dark:text-white">
+                <Text className="font-geist-semibold text-base text-black dark:text-white" numberOfLines={1}>
                   {file?.name || 'Unknown file'}
                 </Text>
-                <Text className="font-geist text-grey dark:text-grey text-sm">
-                  {feedCount} {feedCount === 1 ? 'subscription' : 'subscriptions'}
-                </Text>
+                
+                {/* Details Badges */}
+                <View className="flex-row gap-2 mt-1.5">
+                  <View 
+                    className="rounded-full px-2.5 py-0.5" 
+                    style={{ backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)' }}>
+                    <Text size="xs" fontFamily="geist-semibold" style={{ color: colors.secondary }}>
+                      {feedCount} {feedCount === 1 ? 'feed' : 'feeds'}
+                    </Text>
+                  </View>
+                  {file?.size && file.size > 0 && (
+                    <View className="rounded-full px-2.5 py-0.5" style={{ backgroundColor: isDark ? colors.grey5 : colors.grey5 }}>
+                      <Text size="xs" fontFamily="geist-medium" className="text-grey dark:text-grey">
+                        {(file.size / 1024).toFixed(1)} KB
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
             </View>
           </View>
 
           {/* Import Info */}
-          <View className="bg-grey6 mb-6 rounded-xl p-4">
-            <View className="flex-row gap-2">
+          <View 
+            className="mb-6 rounded-xl p-4 border" 
+            style={{ 
+              backgroundColor: innerCardBg, 
+              borderColor: cardBorderColor 
+            }}>
+            <View className="flex-row gap-2.5 items-start">
               <View style={{ marginTop: 2 }}>
                 <InfoCircleBoldIcon width={16} height={16} color={colors.grey} />
               </View>
-              <Text className="font-geist-medium text-grey dark:text-grey flex-1 text-sm">
+              <Text className="font-geist-medium text-grey dark:text-grey flex-1 text-xs leading-5">
                 The import will run in the background. You can track its progress immediately after.
               </Text>
             </View>

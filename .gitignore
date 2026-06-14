@@ -1,4 +1,5 @@
 .lk
+.codegraph
 *.env
 .expo
 .agent/workflows

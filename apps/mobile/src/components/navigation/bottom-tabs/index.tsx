@@ -11,7 +11,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import React, { useRef } from 'react';
-import { Platform, View } from 'react-native';
+import { DeviceEventEmitter, Platform, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -24,6 +24,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
   const tabBarColors = COLORS[isDark ? 'dark' : 'light'];
   const animationProgress = useSharedValue(0);
   const feedSwitcherRef = useRef<FeedSwitcherBottomSheetRef>(null);
+  const lastTapRef = useRef<{ [key: string]: number }>({});
 
   const animatedTabBarStyle = useAnimatedStyle(() => {
     const scale = interpolate(
@@ -99,6 +100,16 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
         const isFocused = state.index === state.routes.indexOf(route);
 
         const onPress = (): void => {
+          const now = Date.now();
+          const DOUBLE_TAP_DELAY = 300;
+          if (
+            lastTapRef.current[route.name] &&
+            now - lastTapRef.current[route.name] < DOUBLE_TAP_DELAY
+          ) {
+            DeviceEventEmitter.emit(`bottom-tab-double-tap:${route.name}`);
+          }
+          lastTapRef.current[route.name] = now;
+
           const event = navigation.emit({
             type: 'tabPress',
             target: route.key,
