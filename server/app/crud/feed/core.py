@@ -356,6 +356,7 @@ async def get_feeds_needing_enrichment(db: AsyncSession, *, limit: int) -> list[
                 Feed.content_type.is_(None),  # Missing Content Type (Enrichment signal)
             )
         )
+        .where(~Feed.url.like("newsletter://%"))  # Exclude private newsletter feeds
         .limit(limit)
     )
     result = await db.execute(stmt)

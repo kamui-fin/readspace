@@ -94,6 +94,11 @@ async def sync_feed(settings: Settings, feed: Feed) -> None:
         settings: Application settings
         feed: Feed ORM object to sync
     """
+    # Exclude newsletter feeds to prevent indexing private newsletters
+    if feed.url and feed.url.startswith("newsletter://"):
+        logger.debug("Skipping Meilisearch sync for newsletter feed", feed_id=str(feed.id))
+        return
+
     client = None
     try:
         client = get_client(settings)
@@ -125,13 +130,23 @@ async def sync_feeds_batch(
     if not feeds:
         return
 
+    # Filter out newsletter feeds to prevent indexing private newsletters
+    filtered_feeds = [
+        f for f in feeds
+        if not (isinstance(f, Feed) and f.url and f.url.startswith("newsletter://"))
+        and not (isinstance(f, dict) and str(f.get("url", "")).startswith("newsletter://"))
+    ]
+
+    if not filtered_feeds:
+        return
+
     client = None
     try:
         client = get_client(settings)
         index = await client.get_index(settings.MEILISEARCH_INDEX_NAME)
 
         # Convert feeds to documents (pure function)
-        documents = [feed_to_document(feed) for feed in feeds]
+        documents = [feed_to_document(feed) for feed in filtered_feeds]
 
         # Batch upsert using update_documents
         await index.update_documents(documents)
