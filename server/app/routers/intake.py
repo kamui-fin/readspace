@@ -8,7 +8,7 @@ from typing import Annotated
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -73,11 +73,22 @@ class TokenResponse(BaseModel):
 )
 async def webhook_intake(
     payload: WebhookPayload,
+    request: Request,
     x_readspace_secret: Annotated[str | None, Header(alias="X-Readspace-Secret")] = None,
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ) -> dict:
     # 1. Security Check
     settings = get_settings()
+
+    # Log incoming request headers and secrets for debugging
+    logger.info(
+        "Webhook intake headers check",
+        received_headers=dict(request.headers),
+        x_readspace_header=x_readspace_secret,
+        expected_secret_configured=bool(settings.INBOUND_WEBHOOK_SECRET),
+        secret_match=(x_readspace_secret == settings.INBOUND_WEBHOOK_SECRET) if x_readspace_secret else False
+    )
+
     if not x_readspace_secret or x_readspace_secret != settings.INBOUND_WEBHOOK_SECRET:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
