@@ -46,6 +46,7 @@ class WebhookPayload(BaseModel):
     from_address: str = Field(..., alias="from")
     subject: str
     html: str
+    list_url: str | None = None  # Extracted from List-Unsubscribe/List-Archive headers
 
 
 class ManualNewsletterSubscribe(BaseModel):
@@ -119,6 +120,7 @@ async def webhook_intake(
                 content_type=ContentType.NEWSLETTER,
                 language="en",
                 tags_native=[],
+                link=payload.list_url or None,
             ),
         )
         # Queue background task to fetch favicon

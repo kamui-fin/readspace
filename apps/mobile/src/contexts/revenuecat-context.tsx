@@ -1,6 +1,6 @@
 import { toast } from '@components/ui/toast';
 import { useSession } from '@contexts/auth-context';
-import { supabase } from '@lib/supabase/client';
+import { ApiClient } from '@readspace/shared';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { NativeModules, Platform } from 'react-native';
 import type { CustomerInfo, PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
@@ -137,33 +137,30 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
   const lastSyncedUserId = useRef<string | null | undefined>(undefined);
   const isConfiguring = useRef(false);
 
-  const isDbPro = dbRole === 'PRO' || dbRole === 'ADMIN';
+  const isDbPro = dbRole?.toUpperCase() === 'PRO' || dbRole?.toUpperCase() === 'ADMIN';
   const combinedIsPro = isRcPro || isDbPro;
 
-  // Sync DB role from Supabase
+  // Sync DB role from API
   useEffect(() => {
-    if (!user?.id || !isSdkReady) {
+    if (!user?.id) {
       setDbRole(null);
       return;
     }
 
     const fetchRole = async () => {
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        if (!error && data) {
-          console.log(`[RevenueCat] 👤 Fetched DB role: ${data.role}`);
-          setDbRole(data.role);
+        console.log(`[RevenueCat] 🔄 Syncing role for user ${user.id}...`);
+        const profile = await ApiClient.getProfile();
+        if (profile?.role) {
+          console.log(`[RevenueCat] 👤 Fetched profile role from API: ${profile.role}`);
+          setDbRole(profile.role);
         }
-      } catch (err) {
-        console.error('[RevenueCat] Failed to fetch database role:', err);
+      } catch (apiErr) {
+        console.warn('[RevenueCat] Failed to fetch profile role from API:', apiErr);
       }
     };
     fetchRole();
-  }, [user?.id, isSdkReady]);
+  }, [user?.id]);
 
   // Initialize Purchases SDK
   useEffect(() => {

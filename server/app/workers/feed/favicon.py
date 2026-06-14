@@ -8,6 +8,7 @@ from app.core.config import get_settings
 from app.crud.feed import core as feed_crud
 from app.services.feeds.favicon import extract_favicon_and_canonical_url
 from app.services.feeds.meilisearch import sync_feed
+from app.utils.urls import extract_favicon_url_for_newsletter
 from app.workers.common import worker_db_factory
 
 logger = structlog.get_logger(__name__)
@@ -23,26 +24,19 @@ async def fetch_feed_favicon(feed_id: UUID) -> None:
             logger.warning("Feed not found for background favicon fetch", feed_id=str(feed_id))
             return
 
-        target_url = feed.link or str(feed.url)
-        if target_url and target_url.startswith("newsletter://"):
-            try:
-                parts = target_url.replace("newsletter://", "").split("/")
-                if len(parts) >= 2:
-                    sender_email = parts[1]
-                    if "@" in sender_email:
-                        domain = sender_email.split("@")[1]
-                        target_url = f"https://{domain}"
-                    else:
-                        target_url = None
-                else:
-                    target_url = None
-            except Exception as e:
-                logger.warning("Failed to parse newsletter URL for favicon extraction", url=target_url, error=str(e))
-                target_url = None
+        feed_url = str(feed.url)
+        feed_link = str(feed.link) if feed.link else None
+
+        if feed_url.startswith("newsletter://"):
+            target_url = extract_favicon_url_for_newsletter(feed_url, feed_link)
+        else:
+            target_url = feed_link or feed_url
 
         if not target_url:
             logger.warning("No URL found for favicon extraction", feed_id=str(feed_id))
             return
+
+        logger.info("Resolved favicon target URL", feed_id=str(feed_id), target_url=target_url)
 
     # Call external library and download/upload to Supabase outside the DB transaction block
     try:
