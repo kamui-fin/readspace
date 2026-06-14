@@ -24,6 +24,22 @@ async def fetch_feed_favicon(feed_id: UUID) -> None:
             return
 
         target_url = feed.link or str(feed.url)
+        if target_url and target_url.startswith("newsletter://"):
+            try:
+                parts = target_url.replace("newsletter://", "").split("/")
+                if len(parts) >= 2:
+                    sender_email = parts[1]
+                    if "@" in sender_email:
+                        domain = sender_email.split("@")[1]
+                        target_url = f"https://{domain}"
+                    else:
+                        target_url = None
+                else:
+                    target_url = None
+            except Exception as e:
+                logger.warning("Failed to parse newsletter URL for favicon extraction", url=target_url, error=str(e))
+                target_url = None
+
         if not target_url:
             logger.warning("No URL found for favicon extraction", feed_id=str(feed_id))
             return

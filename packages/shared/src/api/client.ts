@@ -5,6 +5,7 @@ import { opml } from "./endpoints/opml";
 import { articles } from "./endpoints/articles";
 import { discover } from "./endpoints/discover";
 import { users } from "./endpoints/users";
+import { newsletters } from "./endpoints/newsletters";
 
 export * from "./core";
 export * from "./types/common";
@@ -25,7 +26,7 @@ class BaseApiClient extends CoreApiClient {
   }
 }
 
-Object.assign(BaseApiClient, feeds, folders, opml, articles, discover, users);
+Object.assign(BaseApiClient, feeds, folders, opml, articles, discover, users, newsletters);
 
 export const ApiClient = BaseApiClient as typeof CoreApiClient &
   typeof feeds &
@@ -33,6 +34,7 @@ export const ApiClient = BaseApiClient as typeof CoreApiClient &
   typeof opml &
   typeof articles &
   typeof discover &
-  typeof users;
+  typeof users &
+  typeof newsletters;
 
 export type ApiClient = InstanceType<typeof CoreApiClient>;

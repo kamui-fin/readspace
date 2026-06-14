@@ -161,6 +161,7 @@ async def get_feeds_for_worker(db: AsyncSession, *, limit: int = 100) -> list[Fe
         select(Feed)
         .where(Feed.next_fetch_at <= now)
         .where(Feed.subscriber_count > 0)  # Don't refresh ghost feeds
+        .where(~Feed.url.like("newsletter://%"))  # Exclude virtual newsletter feeds
         .order_by(Feed.subscriber_count.desc())  # Prioritize popular feeds
         .limit(limit)
         .with_for_update(skip_locked=True)  # Concurrency safety

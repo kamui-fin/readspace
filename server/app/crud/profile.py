@@ -17,6 +17,12 @@ async def get_profile_by_id(db: AsyncSession, *, user_id: UUID) -> Profile | Non
     return result.scalar_one_or_none()
 
 
+async def get_profile_by_newsletter_token(db: AsyncSession, *, token: str) -> Profile | None:
+    """Get profile by newsletter token"""
+    result = await db.execute(select(Profile).where(Profile.newsletter_token == token))
+    return result.scalar_one_or_none()
+
+
 async def get_current_usage(db: AsyncSession, user_id: UUID, resource: str) -> int:
     """
     Get current usage count for a specific resource type.

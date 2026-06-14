@@ -6,6 +6,7 @@ import { CategoryGrid } from "./CategoryGrid"
 import { CustomSearchBox } from "./CustomSearchBox"
 import { DiscoverLayout } from "./DiscoverLayout"
 import { SearchResults } from "./SearchResults"
+import { NewsletterSection } from "./NewsletterSection"
 import { useDiscoverController } from "@/components/features/discover/hooks/use-discover-controller"
 import { CATEGORY_CONFIG } from "@/lib/categories"
 import { FeedCategory } from "@readspace/shared"
@@ -114,7 +115,10 @@ export function DiscoverContent({ onAiSettingsChange }: DiscoverContentProps) {
                         <SearchResults onClearSearch={clearSearch} />
                     ) : (
                         /* Show category grid when no search */
-                        <CategoryGrid onCategoryClick={handleCategoryClick} />
+                        <div className="space-y-12">
+                            <CategoryGrid onCategoryClick={handleCategoryClick} />
+                            <NewsletterSection />
+                        </div>
                     )}
                 </div>
             </DiscoverLayout>

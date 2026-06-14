@@ -25,6 +25,9 @@ async def _enrich_with_auto_extract(article: EntryDetail) -> EntryDetail:
     Business Logic: Checks if content is short/incomplete and attempts
     to fetch full content from the source URL. Returns enriched response.
     """
+    if article.link and str(article.link).startswith("newsletter://"):
+        return article
+
     if not is_content_complete(article.content, threshold=MIN_CONTENT_LENGTH):
         if article.link:
             logger.info("Auto-extracting content", article_id=article.id)
