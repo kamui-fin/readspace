@@ -2,31 +2,34 @@
 
 import { useEffect, useState } from "react"
 import { ApiClient } from "@/lib/api-client"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
 import { toast } from "react-hot-toast"
-import { Mail, Copy, Check, RefreshCw, Info, Sparkles } from "lucide-react"
+import { MailOpen, Copy, Check } from "lucide-react"
+import { useUserRole } from "@/hooks/use-user-role"
+import { useUpgradeDialog } from "@/stores/upgrade-dialog"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+} from "@/components/ui/dialog"
 
 export function NewsletterSection() {
-    // Token & Email state
+    const { isBasic } = useUserRole()
+    const { open: openUpgrade } = useUpgradeDialog()
+    const [isOpen, setIsOpen] = useState(false)
     const [tokenData, setTokenData] = useState<{ token: string; email: string } | null>(null)
-    const [isTokenLoading, setIsTokenLoading] = useState(true)
-    const [isTokenRefreshing, setIsTokenRefreshing] = useState(false)
+    const [isTokenLoading, setIsTokenLoading] = useState(false)
     const [copied, setCopied] = useState(false)
 
-    // Fetch token on mount
+    // Fetch token when modal opens (and only if the user is not basic)
     useEffect(() => {
-        fetchToken()
-    }, [])
-
-    const fetchToken = async (refresh = false) => {
-        if (refresh) {
-            setIsTokenRefreshing(true)
-        } else {
-            setIsTokenLoading(true)
+        if (isOpen && !isBasic && !tokenData) {
+            fetchToken()
         }
+    }, [isOpen, isBasic, tokenData])
 
+    const fetchToken = async () => {
+        setIsTokenLoading(true)
         try {
             const response = await ApiClient.getNewsletterToken()
             setTokenData(response)
@@ -35,7 +38,6 @@ export function NewsletterSection() {
             toast.error("Failed to load your personal newsletter email.")
         } finally {
             setIsTokenLoading(false)
-            setIsTokenRefreshing(false)
         }
     }
 
@@ -47,87 +49,109 @@ export function NewsletterSection() {
         setTimeout(() => setCopied(false), 2000)
     }
 
+    const handleTriggerClick = () => {
+        if (isBasic) {
+            openUpgrade({
+                title: "Upgrade to Readspace Pro",
+                description: "Unlock newsletter ingestion and subscribe to Substack, Mailchimp, or any mailing list directly in your feed.",
+            })
+        } else {
+            setIsOpen(true)
+        }
+    }
+
     return (
-        <div className="space-y-6 max-w-2xl mx-auto mt-8">
-            {/* Main Email Inbound Card */}
-            <Card className="border-border/60 bg-card/40 backdrop-blur-sm shadow-md overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                    <Mail className="w-32 h-32 rotate-12" />
-                </div>
-                <CardHeader>
-                    <div className="flex items-center gap-2 text-primary mb-1">
-                        <Sparkles className="w-4 h-4" />
-                        <span className="text-xs font-semibold uppercase tracking-wider">New Feature</span>
-                    </div>
-                    <CardTitle className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-                        📬 Newsletter Ingestion
-                    </CardTitle>
-                    <CardDescription className="text-sm text-muted-foreground max-w-lg">
-                        Ditch the clogged email inbox. Subscribe to Substack, Mailchimp, or any mailing list directly within Readspace using your private email alias.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    {/* Inbound Address Box */}
-                    <div className="space-y-2">
-                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Your Personal Newsletter Address
-                        </Label>
-                        <div className="flex items-center gap-2">
-                            <div className="relative flex-1">
-                                {isTokenLoading ? (
-                                    <div className="h-10 w-full rounded-md border border-input bg-muted/40 animate-pulse flex items-center px-3 text-sm text-muted-foreground">
-                                        Generating private email address...
-                                    </div>
-                                ) : (
-                                    <input
-                                        type="text"
-                                        readOnly
-                                        value={tokenData?.email || ""}
-                                        className="h-10 w-full rounded-md border border-input bg-muted/20 px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring pr-10 truncate cursor-text"
-                                        onClick={(e) => (e.target as HTMLInputElement).select()}
-                                    />
-                                )}
+        <>
+            {/* Minimalist text link trigger */}
+            <button
+                onClick={handleTriggerClick}
+                className="mt-6 text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 cursor-pointer group font-medium"
+            >
+                <MailOpen className="w-3.5 h-3.5" />
+                <span>Subscribe to newsletters via email</span>
+                <span className="transition-transform duration-200 group-hover:translate-x-0.5">→</span>
+            </button>
+
+            {/* Modal only for premium users */}
+            {!isBasic && (
+                <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                    <DialogContent className="w-full max-w-md p-6 bg-background border-border rounded-lg shadow-lg">
+                        <div className="flex flex-col space-y-5">
+                            <div className="space-y-1">
+                                <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">
+                                    Newsletter Ingestion
+                                </DialogTitle>
+                                <DialogDescription className="text-sm text-muted-foreground">
+                                    Subscribe to mailing lists directly using your private email alias.
+                                </DialogDescription>
                             </div>
 
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                onClick={copyToClipboard}
-                                disabled={isTokenLoading || !tokenData}
-                                className="shrink-0 h-10 w-10 hover:bg-muted/50"
-                                title="Copy to clipboard"
-                            >
-                                {copied ? (
-                                    <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-                                ) : (
-                                    <Copy className="h-4 w-4" />
-                                )}
-                            </Button>
+                            <div className="space-y-6 pt-2">
+                                {/* Step 1 */}
+                                <div className="flex gap-4">
+                                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold shrink-0">
+                                        1
+                                    </div>
+                                    <div className="space-y-2 flex-1 min-w-0">
+                                        <span className="text-sm font-medium text-foreground">
+                                            Copy your private email address
+                                        </span>
+                                        <div className="flex items-center justify-between gap-3 mt-2 p-2 px-2.5 bg-muted/40 border border-border/40 rounded-lg font-mono text-xs max-w-full overflow-hidden">
+                                            {isTokenLoading ? (
+                                                <span className="text-muted-foreground animate-pulse">Generating address...</span>
+                                            ) : (
+                                                <span className="truncate flex-1 select-all text-foreground font-semibold">{tokenData?.email || ""}</span>
+                                            )}
+                                            <button
+                                                onClick={copyToClipboard}
+                                                disabled={isTokenLoading || !tokenData}
+                                                className="text-muted-foreground hover:text-foreground transition-colors p-1.5 hover:bg-muted rounded-md cursor-pointer shrink-0 disabled:opacity-50"
+                                                title="Copy email alias"
+                                            >
+                                                {copied ? (
+                                                    <Check className="w-4 h-4 text-secondary dark:text-secondary" />
+                                                ) : (
+                                                    <Copy className="w-4 h-4" />
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
 
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                onClick={() => fetchToken(true)}
-                                disabled={isTokenLoading || isTokenRefreshing}
-                                className="shrink-0 h-10 w-10 hover:bg-muted/50"
-                                title="Refresh Address"
-                            >
-                                <RefreshCw className={`h-4 w-4 ${isTokenRefreshing ? 'animate-spin' : ''}`} />
-                            </Button>
-                        </div>
-                    </div>
+                                {/* Step 2 */}
+                                <div className="flex gap-4">
+                                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold shrink-0">
+                                        2
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-sm font-medium text-foreground">
+                                            Subscribe on any website
+                                        </span>
+                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                            Paste this private email address in the subscription form of Substack, Mailchimp, or any other publication.
+                                        </p>
+                                    </div>
+                                </div>
 
-                    {/* How it works info */}
-                    <div className="rounded-lg bg-muted/30 border border-border/30 p-3.5 flex gap-3 text-xs leading-relaxed text-muted-foreground">
-                        <Info className="w-4 h-4 shrink-0 text-primary/80 mt-0.5" />
-                        <div>
-                            <strong>How to use:</strong> Paste this email alias when subscribing to any newsletter. The first email received will automatically register the newsletter in your <strong>Newsletters</strong> folder.
+                                {/* Step 3 */}
+                                <div className="flex gap-4">
+                                    <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold shrink-0">
+                                        3
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="text-sm font-medium text-foreground">
+                                            Read in Readspace
+                                        </span>
+                                        <p className="text-xs text-muted-foreground leading-relaxed">
+                                            The first email received will automatically create the feed and place it in your <strong className="text-primary font-semibold">Newsletters</strong> folder.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
+        </>
     )
 }

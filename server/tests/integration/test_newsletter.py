@@ -19,6 +19,12 @@ class TestNewsletterFeature:
         self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
     ):
         """Test getting/generating the newsletter inbound email token."""
+        # Upgrade user to PRO to pass premium check
+        from app.models.enums import UserRole
+        test_user.role = UserRole.PRO
+        db_session.add(test_user)
+        await db_session.commit()
+
         # 1. First call - should generate a new token
         response = await async_client.get("/api/intake/token")
         assert response.status_code == 200
@@ -42,6 +48,11 @@ class TestNewsletterFeature:
         self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
     ):
         """Test that inbound webhook correctly parses email and saves it as a feed article."""
+        # Upgrade user to PRO to pass premium check
+        from app.models.enums import UserRole
+        test_user.role = UserRole.PRO
+        db_session.add(test_user)
+
         # Set token on test user
         token = "testtoken123"
         test_user.newsletter_token = token
@@ -156,6 +167,12 @@ class TestNewsletterFeature:
         self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
     ):
         """Test manually subscribing to a newsletter before any email is received."""
+        # Upgrade user to PRO to pass premium check
+        from app.models.enums import UserRole
+        test_user.role = UserRole.PRO
+        db_session.add(test_user)
+        await db_session.commit()
+
         payload = {
             "name": "Python Weekly",
             "sender_email": "newsletter@pythonweekly.com"
@@ -195,13 +212,75 @@ class TestNewsletterFeature:
         assert folder.name == "Newsletters"
 
     @pytest.mark.asyncio
-    async def test_subscribe_newsletter_invalid_email(self, async_client: AsyncClient):
+    async def test_subscribe_newsletter_invalid_email(
+        self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
+    ):
         """Test subscribing with an invalid sender email format."""
+        # Upgrade user to PRO to pass premium check
+        from app.models.enums import UserRole
+        test_user.role = UserRole.PRO
+        db_session.add(test_user)
+        await db_session.commit()
+
         payload = {
             "name": "Python Weekly",
             "sender_email": "not-an-email"
         }
-
+ 
         response = await async_client.post("/api/intake/subscribe", json=payload)
         assert response.status_code == 400
         assert "sender email" in response.json()["detail"].lower()
+
+    @pytest.mark.asyncio
+    async def test_premium_endpoints_forbidden_for_basic_user(
+        self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
+    ):
+        """Test that BASIC users are blocked from generating tokens or manually subscribing."""
+        # Ensure user is BASIC
+        from app.models.enums import UserRole
+        test_user.role = UserRole.BASIC
+        db_session.add(test_user)
+        await db_session.commit()
+
+        # 1. Test get token is forbidden
+        response = await async_client.get("/api/intake/token")
+        assert response.status_code == 403
+        assert "premium subscription required" in response.json()["detail"].lower()
+
+        # 2. Test manual subscribe is forbidden
+        payload = {
+            "name": "Python Weekly",
+            "sender_email": "newsletter@pythonweekly.com"
+        }
+        response = await async_client.post("/api/intake/subscribe", json=payload)
+        assert response.status_code == 403
+        assert "premium subscription required" in response.json()["detail"].lower()
+
+    @pytest.mark.asyncio
+    async def test_webhook_intake_forbidden_for_basic_user(
+        self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
+    ):
+        """Test that webhook fails with 403 if the matching profile is a BASIC user."""
+        token = "basic_user_token"
+        test_user.newsletter_token = token
+        # Ensure user is BASIC
+        from app.models.enums import UserRole
+        test_user.role = UserRole.BASIC
+        db_session.add(test_user)
+        await db_session.commit()
+
+        settings = get_settings()
+        payload = {
+            "token": token,
+            "from": "Python Weekly <newsletter@pythonweekly.com>",
+            "subject": "Issue 500",
+            "html": "<p>Awesome Python stuff</p>"
+        }
+
+        response = await async_client.post(
+            "/api/intake/webhook",
+            json=payload,
+            headers={"X-Readspace-Secret": settings.INBOUND_WEBHOOK_SECRET}
+        )
+        assert response.status_code == 403
+        assert "premium subscription required" in response.json()["detail"].lower()

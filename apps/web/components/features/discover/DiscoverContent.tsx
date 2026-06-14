@@ -115,7 +115,7 @@ export function DiscoverContent({ onAiSettingsChange }: DiscoverContentProps) {
                         <SearchResults onClearSearch={clearSearch} />
                     ) : (
                         /* Show category grid when no search */
-                        <div className="space-y-12">
+                        <div className="space-y-6 flex flex-col items-center">
                             <CategoryGrid onCategoryClick={handleCategoryClick} />
                             <NewsletterSection />
                         </div>

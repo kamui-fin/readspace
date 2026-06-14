@@ -10,7 +10,7 @@ export default {
 	// We use the 'email' method instead of 'fetch' to intercept incoming mail traffic
 	async email(message: any, env: Env, ctx: any): Promise<void> {
 
-		// 1. Grab the "To" address (e.g., kamui.f83k9a@news.readspace.com)
+		// 1. Grab the "To" address (e.g., kamui.f83k9a@newsletters.readspace.com)
 		const toAddress = message.to;
 
 		// 2. Safely parse out the custom routing token
@@ -37,7 +37,7 @@ export default {
 		};
 
 		// 5. Fire a POST request straight to your FastAPI/Dokploy VPS backend
-		const backendUrl = env.BACKEND_URL || "https://api.readspace.com";
+		const backendUrl = env.BACKEND_URL || "https://api.readspace.ai";
 		const backendResponse = await fetch(`${backendUrl}/api/intake/webhook`, {
 			method: "POST",
 			headers: {
@@ -61,7 +61,7 @@ export default {
 
 		try {
 			const body: any = await request.json();
-			const toAddress = body.to || "test.kamuitoken@newsletters.readspace.com";
+			const toAddress = body.to || "user.token@newsletters.readspace.com";
 			const fromAddress = body.from || "newsletter@substack.com";
 			const subject = body.subject || "E2E Test Email";
 			const html = body.html || "<h1>Test</h1>";

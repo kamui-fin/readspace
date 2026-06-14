@@ -23,7 +23,7 @@ from app.crud.feed.subscription import (
 from app.crud.article.ingester import create_articles_batch
 from app.crud.folder import upsert_batch
 from app.db.session import get_db
-from app.models.enums import ContentType
+from app.models.enums import ContentType, UserRole
 from app.models.user import Profile
 from app.routers.feeds.feeds_subscription import resolve_target_folder
 from app.services.user.auth import get_current_user
@@ -87,6 +87,13 @@ async def webhook_intake(
     profile = await crud_profile.get_profile_by_newsletter_token(db, token=payload.token)
     if not profile:
         raise NotFoundError("Profile not found for token")
+
+    # Guard: only allow premium users (PRO or ADMIN)
+    if profile.role not in (UserRole.PRO, UserRole.ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Premium subscription required for newsletter ingestion",
+        )
 
     # 3. Parse Sender email
     sender_name, sender_email = email.utils.parseaddr(payload.from_address)
@@ -173,6 +180,12 @@ async def get_or_generate_token(
     if not profile:
         raise NotFoundError("Profile not found")
 
+    if profile.role not in (UserRole.PRO, UserRole.ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Premium subscription required for newsletter ingestion",
+        )
+
     # Generate token if missing
     if not profile.newsletter_token:
         # Generate an 8-character secure token
@@ -208,6 +221,16 @@ async def subscribe_newsletter(
     current_user: Annotated[TokenData, Depends(get_current_user)],
 ) -> SubscriptionResponse:
     user_uuid = UUID(current_user.sub)
+    profile = await crud_profile.get_profile_by_id(db, user_id=user_uuid)
+    if not profile:
+        raise NotFoundError("Profile not found")
+
+    if profile.role not in (UserRole.PRO, UserRole.ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Premium subscription required for newsletter ingestion",
+        )
+
     sender_email = subscribe_in.sender_email.strip().lower()
     if not sender_email or "@" not in sender_email:
         raise HTTPException(
