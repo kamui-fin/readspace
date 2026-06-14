@@ -204,6 +204,9 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID) -> None:
             return
 
         url = str(feed.url)
+        if url.startswith("newsletter://"):
+            logger.info("Skipping refresh for virtual newsletter feed", feed_id=feed_id)
+            return
         etag = feed.etag_header
         last_modified = feed.last_modified_header
         current_hash = feed.content_hash

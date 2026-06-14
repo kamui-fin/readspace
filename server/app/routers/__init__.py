@@ -27,6 +27,7 @@ from app.routers.info import router as info_router
 from app.routers.opml.import_opml import router as opml_import_router
 from app.routers.opml.task_management import router as opml_task_management_router
 from app.routers.users import router as users_router
+from app.routers.intake import router as intake_router
 
 # Create main API router
 api_router = APIRouter()
@@ -36,6 +37,7 @@ api_router.include_router(discover_router)
 api_router.include_router(folders_router)
 api_router.include_router(users_router)
 api_router.include_router(info_router)
+api_router.include_router(intake_router)
 
 # Include article routers with prefix
 # Note: Order matters! More specific routes must come before generic /{article_id} routes

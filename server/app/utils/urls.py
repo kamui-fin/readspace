@@ -74,6 +74,75 @@ def extract_domain_from_url(url: str | None) -> str:
         return ""
 
 
+# Subdomains that are generic mail-routing prefixes — not the real brand.
+# We strip these so e.g. "mail.tldr.tech" → "tldr.tech".
+# Deliberately narrow: only clear infra prefixes, not brand ones
+# (*.substack.com, *.beehiiv.com etc. are kept as-is).
+_GENERIC_MAIL_SUBDOMAINS = frozenset({
+    "mail", "email", "e", "em", "send", "sends",
+    "news", "newsletter", "newsletters",
+    "mg", "sg",                         # Mailgun / Sendgrid routing
+    "reply", "bounce", "return",
+    "click", "track", "trk", "go", "get", "links", "link",
+    "messages", "delivery", "mailer",
+    "updates", "notify", "notifications",
+    "noreply", "no-reply",
+    "hello", "hi", "info",
+})
+
+
+def normalize_newsletter_domain(domain: str) -> str:
+    """Strip generic mail-routing subdomains, preserve brand subdomains.
+
+    Examples:
+        mail.tldr.tech        → tldr.tech
+        news.ycombinator.com  → ycombinator.com
+        tony.substack.com     → tony.substack.com   (kept — brand subdomain)
+        overlap.beehiiv.com   → overlap.beehiiv.com (kept — brand subdomain)
+        tldr.tech             → tldr.tech            (no subdomain to strip)
+    """
+    parts = domain.lower().split(".")
+    # Need at least 3 parts (sub.domain.tld) before we consider stripping
+    if len(parts) <= 2:
+        return domain
+    if parts[0] in _GENERIC_MAIL_SUBDOMAINS:
+        return ".".join(parts[1:])
+    return domain
+
+
+def extract_favicon_url_for_newsletter(feed_url: str, feed_link: str | None) -> str | None:
+    """Determine the best root URL to fetch a favicon for a newsletter feed.
+
+    Priority:
+      1. feed.link — set from List-Unsubscribe / List-Archive header URL.
+         Extract just the origin so we hit the brand homepage.
+      2. Sender-email domain from the newsletter:// virtual URL,
+         with generic mail subdomains stripped.
+    """
+    # Primary: List-Unsubscribe / List-Archive URL stored on feed.link
+    if feed_link:
+        try:
+            parsed = urlparse(feed_link)
+            if parsed.scheme in ("http", "https") and parsed.netloc:
+                domain = normalize_newsletter_domain(parsed.netloc)
+                return f"{parsed.scheme}://{domain}"
+        except Exception:
+            pass
+
+    # Secondary: parse sender domain from newsletter://<uuid>/<sender_email>
+    try:
+        path = feed_url.replace("newsletter://", "")
+        parts = path.split("/")
+        if len(parts) >= 2 and "@" in parts[1]:
+            raw_domain = parts[1].split("@")[1]
+            domain = normalize_newsletter_domain(raw_domain)
+            return f"https://{domain}"
+    except Exception:
+        pass
+
+    return None
+
+
 def _is_head_response_bad(resp: aiohttp.ClientResponse) -> bool:
     """
     Check if a HEAD response is unreliable and requires a GET fallback.

@@ -326,17 +326,23 @@ async def admin_user(db_session: AsyncSession) -> Profile:
 
 
 @pytest.fixture
-def mock_current_user(test_user: Profile):
+def mock_current_user(test_user: Profile, db_session: AsyncSession):
     async def override_get_current_user() -> TokenData:
-        return TokenData(sub=str(test_user.id), email=test_user.email)
+        from app.models.user import Profile
+        profile = await db_session.get(Profile, test_user.id)
+        role_val = profile.role.value if profile else "BASIC"
+        return TokenData(sub=str(test_user.id), email=test_user.email, role=role_val)
 
     return override_get_current_user
 
 
 @pytest.fixture
-def mock_admin_user(admin_user: Profile):
+def mock_admin_user(admin_user: Profile, db_session: AsyncSession):
     async def override_get_current_user() -> TokenData:
-        return TokenData(sub=str(admin_user.id), email=admin_user.email)
+        from app.models.user import Profile
+        profile = await db_session.get(Profile, admin_user.id)
+        role_val = profile.role.value if profile else "ADMIN"
+        return TokenData(sub=str(admin_user.id), email=admin_user.email, role=role_val)
 
     return override_get_current_user
 

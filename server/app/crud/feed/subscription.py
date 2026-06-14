@@ -75,9 +75,11 @@ async def create_subscription(
     # 3. Handle Folder
     folder_id = subscription_in.folder_id
     if isinstance(folder_id, str) and folder_id == "default":
-        # Ensure "My Feeds" folder exists using centralized CRUD
-        folder_map = await upsert_batch(db, folder_names=["My Feeds"], user_id=user_id)
-        folder_id = folder_map["My Feeds"]
+        # Check if the feed is a newsletter feed (starts with newsletter://)
+        is_newsletter = feed.url.startswith("newsletter://")
+        default_folder = "Newsletters" if is_newsletter else "My Feeds"
+        folder_map = await upsert_batch(db, folder_names=[default_folder], user_id=user_id)
+        folder_id = folder_map[default_folder]
 
     # 4. Create Subscription
     cutoff = await get_initial_cutoff(db, feed.id)

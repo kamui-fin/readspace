@@ -174,3 +174,49 @@ async def test_background_favicon_fetch_success(favicon_server, db_session, test
     except Exception as e:
         logger.warning(f"Cleanup failed: {e}")
 
+
+@pytest.mark.asyncio
+async def test_background_favicon_fetch_newsletter(db_session, test_user, monkeypatch):
+    """
+    Test that background favicon extraction for newsletter:// feeds correctly extracts
+    the domain from the sender email and calls extract_favicon_and_canonical_url.
+    """
+    from app.models.feed import Feed
+    from app.workers.feed.favicon import fetch_feed_favicon
+    from app.typing.feeds import FaviconResult
+    import app.workers.feed.favicon
+
+    # Mock extract_favicon_and_canonical_url to assert it receives the domain URL
+    called_with_url = None
+
+    async def mock_extract(url, timeout=10):
+        nonlocal called_with_url
+        called_with_url = url
+        res = FaviconResult()
+        res.image_url = "mock_uploaded_favicon.png"
+        return res
+
+    monkeypatch.setattr(app.workers.feed.favicon, "extract_favicon_and_canonical_url", mock_extract)
+
+    # 1. Create a virtual newsletter feed
+    feed = Feed(
+        url=f"newsletter://{test_user.id}/newsletter@pythonweekly.com",
+        title="Python Weekly",
+        description="Newsletter subscription from Python Weekly",
+        content_type="newsletter",
+        language="en",
+        tags_native=[],
+    )
+    db_session.add(feed)
+    await db_session.flush()
+
+    # 2. Call background task
+    await fetch_feed_favicon(feed_id=feed.id)
+
+    # 3. Assert the mock was called with the domain URL
+    assert called_with_url == "https://pythonweekly.com"
+
+    # 4. Verify DB was updated
+    await db_session.refresh(feed)
+    assert feed.image_url == "mock_uploaded_favicon.png"
+

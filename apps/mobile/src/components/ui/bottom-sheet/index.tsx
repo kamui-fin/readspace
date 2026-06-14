@@ -182,13 +182,25 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
           contentContainerStyle={{
             paddingHorizontal: 24,
             paddingTop: headerTitle || headerLeft || headerRight || secondaryAction ? 64 : 16,
-            paddingBottom: 18 + insets.bottom,
+            paddingBottom: footerActions ? 12 : 18 + insets.bottom,
           }}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}
           keyboardShouldPersistTaps="handled">
           {children}
         </BottomSheetScrollView>
+
+        {/* Fixed Footer */}
+        {footerActions && (
+          <View
+            className={clsx('px-6 pb-4 pt-2', footerClassName)}
+            style={{
+              backgroundColor: colors.background,
+              paddingBottom: 12 + insets.bottom,
+            }}>
+            {footerActions}
+          </View>
+        )}
       </BottomSheetModal>
     );
   }

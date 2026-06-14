@@ -27,6 +27,7 @@ class Profile(Base):
     id = Column(SQLUUID(as_uuid=True), ForeignKey(AuthUser.id, ondelete="CASCADE"), primary_key=True)
     email = Column(Text, nullable=False)
     role = Column(SQLEnum(UserRole, name="userrole"), nullable=False, server_default="BASIC")
+    newsletter_token = Column(Text, unique=True, nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 

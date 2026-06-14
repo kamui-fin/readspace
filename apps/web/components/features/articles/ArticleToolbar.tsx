@@ -135,8 +135,9 @@ export function ArticleToolbar({
             <div
                 className={`flex items-center ${isMobile ? "gap-1" : "gap-1"}`}
             >
-                {/* Content Source Tabs - Show when link is available */}
+                {/* Content Source Tabs - Show when link is available and not a newsletter */}
                 {article.link &&
+                    !article.link.startsWith("newsletter://") &&
                     setContentView &&
                     (article.article_type !== "clipped" ||
                         hasTranslatedContent) && (
@@ -145,7 +146,7 @@ export function ArticleToolbar({
                                 value={contentView}
                                 onValueChange={(value) => {
                                     const newView = value as ContentView
-
+ 
                                     // If switching to extracted and no content exists yet, trigger extraction
                                     // which switches the view to Extracted immediately
                                     if (
@@ -155,7 +156,7 @@ export function ArticleToolbar({
                                         handleExtractContent()
                                         return
                                     }
-
+ 
                                     // Otherwise switch immediately
                                     setContentView(newView)
                                 }}
@@ -240,44 +241,48 @@ export function ArticleToolbar({
                                   : "Save for Later"}
                         </TooltipContent>
                     </Tooltip>
-
+ 
                     {/* Open Original */}
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
-                                onClick={handleOpenOriginal}
-                                disabled={!article.link}
-                            >
-                                <ExternalLink className="h-4 w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            {article.link
-                                ? "Open Original Article"
-                                : "No original URL available"}
-                        </TooltipContent>
-                    </Tooltip>
-
+                    {!article.link?.startsWith("newsletter://") && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
+                                    onClick={handleOpenOriginal}
+                                    disabled={!article.link}
+                                >
+                                    <ExternalLink className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                {article.link
+                                    ? "Open Original Article"
+                                    : "No original URL available"}
+                            </TooltipContent>
+                        </Tooltip>
+                    )}
+ 
                     {/* Copy URL */}
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
-                                onClick={handleCopyUrl}
-                                disabled={!article.link}
-                            >
-                                <Copy className="h-4 w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            {article.link ? "Copy URL" : "No URL to copy"}
-                        </TooltipContent>
-                    </Tooltip>
+                    {!article.link?.startsWith("newsletter://") && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
+                                    onClick={handleCopyUrl}
+                                    disabled={!article.link}
+                                >
+                                    <Copy className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                {article.link ? "Copy URL" : "No URL to copy"}
+                            </TooltipContent>
+                        </Tooltip>
+                    )}
 
                     {/* AI Summary */}
                     <Tooltip>
