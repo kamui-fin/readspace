@@ -364,6 +364,7 @@ services:
       - MEILISEARCH_INDEX_NAME=feeds
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
+      - INBOUND_WEBHOOK_SECRET=${INBOUND_WEBHOOK_SECRET}
       
       # Google Cloud / Vertex AI & Gemini configurations
       - ENABLE_AI=${ENABLE_AI:-true}

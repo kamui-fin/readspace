@@ -79,17 +79,10 @@ async def webhook_intake(
 ) -> dict:
     # 1. Security Check
     settings = get_settings()
+    expected = settings.INBOUND_WEBHOOK_SECRET.strip().strip('"').strip("'") if settings.INBOUND_WEBHOOK_SECRET else ""
+    received = x_readspace_secret.strip().strip('"').strip("'") if x_readspace_secret else ""
 
-    # Log incoming request headers and secrets for debugging
-    logger.info(
-        "Webhook intake headers check",
-        received_headers=dict(request.headers),
-        x_readspace_header=x_readspace_secret,
-        expected_secret_configured=bool(settings.INBOUND_WEBHOOK_SECRET),
-        secret_match=(x_readspace_secret == settings.INBOUND_WEBHOOK_SECRET) if x_readspace_secret else False
-    )
-
-    if not x_readspace_secret or x_readspace_secret != settings.INBOUND_WEBHOOK_SECRET:
+    if not received or received != expected:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid signature or secret",
