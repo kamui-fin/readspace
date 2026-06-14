@@ -19,6 +19,7 @@ export interface InfiniteScrollListProps<T>
   onScroll?: (event: any) => void;
   scrollEventThrottle?: number;
   initialContainerPoolRatio?: number;
+  alwaysBounceVertical?: boolean;
 }
 
 export const InfiniteScrollList = forwardRef<any, InfiniteScrollListProps<any>>(
@@ -39,6 +40,7 @@ export const InfiniteScrollList = forwardRef<any, InfiniteScrollListProps<any>>(
       onScroll,
       scrollEventThrottle,
       style,
+      alwaysBounceVertical = true,
       ...props
     },
     ref
@@ -99,6 +101,7 @@ export const InfiniteScrollList = forwardRef<any, InfiniteScrollListProps<any>>(
           },
           style,
         ]}
+        alwaysBounceVertical={alwaysBounceVertical}
         {...props}
       />
     );

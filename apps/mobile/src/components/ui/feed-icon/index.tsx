@@ -43,16 +43,31 @@ export function FeedIcon({
             width: size,
             height: size,
             borderRadius: borderRadius,
-            backgroundColor: '#FFFFFF', // Fixes transparent icons showing black/transparent
             overflow: 'hidden', // Ensures perfect rounded corners clipping, preventing white corners leaking
           },
           style,
         ]}
         className={className}
       >
+        {/* White background backing, slightly inset to prevent corner bleeding/halo on dark/opaque icons */}
+        <View
+          style={{
+            position: 'absolute',
+            top: 1,
+            left: 1,
+            right: 1,
+            bottom: 1,
+            borderRadius: Math.max(0, borderRadius - 1),
+            backgroundColor: '#FFFFFF',
+          }}
+        />
         <ExpoImage
           source={{ uri: resolvedUrl }}
-          style={{ width: '100%', height: '100%' }}
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: borderRadius,
+          }}
           contentFit="cover"
           cachePolicy="memory-disk"
           transition={150}

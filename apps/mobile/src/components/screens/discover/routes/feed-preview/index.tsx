@@ -12,7 +12,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
-import { ApiClient, queryKeys, useCreateFeed, useDeleteFeed, useFeed } from '@readspace/shared';
+import { ApiClient, queryKeys, useCreateFeed, useDeleteFeed, useFeed, RSS_QUERY_KEYS } from '@readspace/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -120,6 +120,20 @@ export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPre
         {
           onSuccess: () => {
             toast.success('Unfollowed feed');
+            queryClient.invalidateQueries({
+              queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'],
+            });
+            queryClient.invalidateQueries({
+              queryKey: [RSS_QUERY_KEYS.ARTICLES],
+            });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.unreadCounts(),
+            });
+            if (feed?.id) {
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.feed(feed.id),
+              });
+            }
           },
           onError: () => {
             toast.error('Failed to unfollow feed');
@@ -180,9 +194,17 @@ export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPre
         }
         setPendingSimilarFeedUrl(null);
 
-        // If we just followed the current feed (not a similar feed)
+        // Invalidate the feeds list, articles, and unread counts cache to ensure the Following screen gets updated data
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.ARTICLES],
+        });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.unreadCounts(),
+        });
         if (isMainFeed && feed?.id) {
-          // Invalidate the feed cache to ensure the Following screen gets updated data
           queryClient.invalidateQueries({
             queryKey: queryKeys.feed(feed.id),
           });

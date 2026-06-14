@@ -274,6 +274,7 @@ export function RecentsScreen() {
         }
         contentContainerStyle={{
           backgroundColor: colors.background,
+          flexGrow: 1,
           paddingBottom: contentPaddingBottom,
         }}
       />
