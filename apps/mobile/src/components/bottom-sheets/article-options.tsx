@@ -26,6 +26,7 @@ interface ArticleOptionsBottomSheetProps {
   hasTranslatedContent: boolean;
   canExtractContent: boolean;
   isClipped: boolean;
+  isNewsletter?: boolean;
 }
 
 export const ArticleOptionsBottomSheet = forwardRef<
@@ -45,6 +46,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
       hasTranslatedContent,
       canExtractContent,
       isClipped,
+      isNewsletter = false,
     },
     ref
   ) => {
@@ -134,72 +136,78 @@ export const ArticleOptionsBottomSheet = forwardRef<
                 onTranslate
               )}
 
-            {renderOption(
-              <CopyBoldIcon width={22} height={22} color={greyColor} />,
-              'Copy Link',
-              undefined,
-              onCopyLink
-            )}
+            {!isNewsletter &&
+              renderOption(
+                <CopyBoldIcon width={22} height={22} color={greyColor} />,
+                'Copy Link',
+                undefined,
+                onCopyLink
+              )}
 
-            {renderOption(
-              <GlobalBoldIcon width={22} height={22} color={greyColor} />,
-              'Open in Browser',
-              undefined,
-              onOpenInBrowser
-            )}
+            {!isNewsletter &&
+              renderOption(
+                <GlobalBoldIcon width={22} height={22} color={greyColor} />,
+                'Open in Browser',
+                undefined,
+                onOpenInBrowser
+              )}
           </View>
 
           {/* View Mode Section */}
-          <Text
-            size="sm"
-            fontFamily="geist-semibold"
-            className="text-grey mb-2 mt-2 uppercase tracking-wide">
-            Viewing Mode
-          </Text>
-          <View className="mb-4">
-            {renderOption(
-              <DocumentTextBoldIcon
-                width={22}
-                height={22}
-                color={currentView === 'original' ? activeColor : greyColor}
-              />,
-              'Original RSS',
-              'Fastest, provided by feed',
-              () => onSelectView('original'),
-              currentView === 'original'
-            )}
+          {!isNewsletter && (
+            <>
+              <Text
+                size="sm"
+                fontFamily="geist-semibold"
+                className="text-grey mb-2 mt-2 uppercase tracking-wide">
+                Viewing Mode
+              </Text>
+              <View className="mb-4">
+                {renderOption(
+                  <DocumentTextBoldIcon
+                    width={22}
+                    height={22}
+                    color={currentView === 'original' ? activeColor : greyColor}
+                  />,
+                  'Original RSS',
+                  'Fastest, provided by feed',
+                  () => onSelectView('original'),
+                  currentView === 'original'
+                )}
 
-            {!isClipped &&
-              renderOption(
-                <GlobalBoldIcon
-                  width={22}
-                  height={22}
-                  color={currentView === 'extracted' ? activeColor : greyColor}
-                />,
-                canExtractContent && !hasExtractedContent ? 'Extract Full Text' : 'Full Text',
-                'Extracted from original site',
-                () => onSelectView('extracted'),
-                currentView === 'extracted'
-              )}
+                {!isClipped &&
+                  renderOption(
+                    <GlobalBoldIcon
+                      width={22}
+                      height={22}
+                      color={currentView === 'extracted' ? activeColor : greyColor}
+                    />,
+                    canExtractContent && !hasExtractedContent ? 'Extract Full Text' : 'Full Text',
+                    'Extracted from original site',
+                    () => onSelectView('extracted'),
+                    currentView === 'extracted'
+                  )}
 
-            {renderOption(
-              <EarthBoldIcon
-                width={22}
-                height={22}
-                color={currentView === 'translated' ? activeColor : greyColor}
-              />,
-              'Translated',
-              hasTranslatedContent
-                ? currentView === 'translated'
-                  ? 'Tap to change language'
-                  : 'View current translation'
-                : 'Pick a language to translate',
-              hasTranslatedContent && currentView !== 'translated'
-                ? () => onSelectView('translated')
-                : onTranslate,
-              currentView === 'translated'
-            )}
-          </View>
+                {renderOption(
+                  <EarthBoldIcon
+                    width={22}
+                    height={22}
+                    color={currentView === 'translated' ? activeColor : greyColor}
+                  />,
+                  'Translated',
+                  hasTranslatedContent
+                    ? currentView === 'translated'
+                      ? 'Tap to change language'
+                      : 'View current translation'
+                    : 'Pick a language to translate',
+                  hasTranslatedContent && currentView !== 'translated'
+                    ? () => onSelectView('translated')
+                    : onTranslate,
+                  currentView === 'translated'
+                )}
+              </View>
+            </>
+          )}
         </BottomSheetScrollView>
       </BottomSheet>
     );

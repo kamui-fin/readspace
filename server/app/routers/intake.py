@@ -31,9 +31,34 @@ from app.typing.entries import ArticleCreate
 from app.typing.feeds import FeedBase
 from app.typing.subscriptions import SubscriptionCreate, SubscriptionResponse
 from app.typing.user import TokenData
+from app.utils.text import clean_html_text
+
+import nh3
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/intake", tags=["Intake"])
+
+ALLOWED_TAGS = {
+    "a", "b", "blockquote", "br", "code", "div", "em", "h1", "h2", "h3", "h4", "h5", "h6",
+    "hr", "i", "img", "li", "ol", "p", "pre", "span", "strong", "style", "sub", "sup",
+    "table", "tbody", "td", "tfoot", "th", "thead", "tr", "u", "ul"
+}
+
+ALLOWED_ATTRIBUTES = {
+    "a": {"href", "title", "target"},
+    "img": {"src", "alt", "title", "width", "height", "style"},
+    # The "*" key allows these layout/style attributes on ALL tags
+    "*": {"style", "class", "id", "colspan", "rowspan", "align", "valign"}
+}
+
+def clean_newsletter_html(raw_html: str) -> str:
+    return nh3.clean(
+        raw_html,
+        tags=ALLOWED_TAGS,
+        attributes=ALLOWED_ATTRIBUTES,
+        clean_content_tags={"script"},  # Don't strip contents of style tags
+        link_rel="noopener noreferrer" # Automatically secures links!
+    )
 
 
 # ==========================================
@@ -44,6 +69,7 @@ router = APIRouter(prefix="/intake", tags=["Intake"])
 class WebhookPayload(BaseModel):
     token: str
     from_address: str = Field(..., alias="from")
+    from_name: str | None = None
     subject: str
     html: str
     list_url: str | None = None  # Extracted from List-Unsubscribe/List-Archive headers
@@ -101,14 +127,17 @@ async def webhook_intake(
         )
 
     # 3. Parse Sender email
-    sender_name, sender_email = email.utils.parseaddr(payload.from_address)
+    parsed_name, sender_email = email.utils.parseaddr(payload.from_address)
     sender_email = sender_email.strip().lower()
     if not sender_email:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid sender email",
         )
-    sender_name = sender_name.strip() or sender_email
+    
+    # Use the real display name (from_name) if available from PostalMime, otherwise parseaddr name, otherwise email
+    display_sender_name = payload.from_name.strip() if payload.from_name else parsed_name.strip()
+    display_sender_name = display_sender_name or sender_email
 
     # 4. Find or Create Virtual Feed
     virtual_url = f"newsletter://{profile.id}/{sender_email}"
@@ -119,8 +148,8 @@ async def webhook_intake(
             db,
             feed_data=FeedBase(
                 url=virtual_url,
-                title=sender_name,
-                description=f"Newsletter subscription from {sender_name}",
+                title=display_sender_name,
+                description=f"Newsletter subscription from {display_sender_name}",
                 content_type=ContentType.NEWSLETTER,
                 language="en",
                 tags_native=[],
@@ -151,16 +180,20 @@ async def webhook_intake(
         )
 
     # 6. Insert Article Content
-    content_hash = hashlib.sha256((payload.html + payload.subject).encode("utf-8")).hexdigest()
+    clean_html = clean_newsletter_html(payload.html) if payload.html else ""
+    content_hash = hashlib.sha256((clean_html + payload.subject).encode("utf-8")).hexdigest()
     guid = f"newsletter://{profile.id}/{sender_email}/{content_hash}"
+
+    plain_text = clean_html_text(payload.html) if payload.html else ""
+    excerpt = (plain_text[:200] + "...") if len(plain_text) > 200 else plain_text
 
     article_create = ArticleCreate(
         feed_id=feed.id,
         title=payload.subject,
         link=guid,
-        description=payload.html[:200] + "..." if payload.html else None,
-        content=payload.html,
-        author=sender_name,
+        description=excerpt or None,
+        content=clean_html,
+        author=display_sender_name,
         published_at=datetime.now(timezone.utc),
         guid=guid,
     )

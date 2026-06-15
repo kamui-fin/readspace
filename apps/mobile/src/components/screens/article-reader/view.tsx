@@ -131,6 +131,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
       !article.extracted_content &&
       article.article_type === 'feed' &&
       article.link &&
+      !article.link.startsWith('newsletter://') &&
       extractMutation.status === 'idle'
     ) {
       // Trigger extraction automatically
@@ -373,6 +374,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   const isExtracting = article
     ? article.article_type === 'feed' &&
       !article.extracted_content &&
+      !article.link?.startsWith('newsletter://') &&
       (extractMutation.isPending || extractMutation.status === 'idle')
     : false;
 
@@ -444,6 +446,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         hasTranslatedContent={!!translateData?.translated_content}
         canExtractContent={true}
         isClipped={isClipped}
+        isNewsletter={!!article?.link?.startsWith('newsletter://')}
       />
     </View>
   );

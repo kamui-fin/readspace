@@ -46,7 +46,8 @@ export default {
 		// 5. Construct the clean JSON payload for your backend
 		const payload = {
 			token: token,
-			from: message.from,
+			from: parsedEmail.from?.address || message.from,
+			from_name: parsedEmail.from?.name || '',
 			subject: parsedEmail.subject || '(No Subject)',
 			html: parsedEmail.html || parsedEmail.text || '',
 			list_url: listUrl || null,

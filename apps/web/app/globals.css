@@ -98,7 +98,7 @@ pre {
 
 .article-content img,
 .article-content video,
-.article-content iframe,
+.article-content iframe:not(.newsletter-iframe),
 .article-content embed,
 .article-content object {
     max-width: 100% !important;

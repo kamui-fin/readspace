@@ -2,6 +2,7 @@ import { useRef, useState, useMemo, useEffect } from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { type Article, ContentView } from "@readspace/shared"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useTheme } from "next-themes"
 
 import { AiSummaryCard } from "./AiSummaryCard"
 import { AnimatedContent } from "./AnimatedContent"
@@ -37,6 +38,91 @@ interface ArticleContentProps {
 
 import { estimateReadingTime } from "@readspace/shared"
 
+function NewsletterIframe({ content, isDark }: { content: string; isDark: boolean }) {
+    const iframeRef = useRef<HTMLIFrameElement>(null)
+
+    const handleLoad = () => {
+        const iframe = iframeRef.current
+        if (iframe && iframe.contentWindow) {
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow.document
+                if (doc && doc.body) {
+                    iframe.style.height = "0px"
+                    iframe.style.height = `${doc.documentElement.scrollHeight || doc.body.scrollHeight}px`
+                }
+            } catch (e) {
+                console.error("Failed to resize iframe", e)
+            }
+        }
+    }
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            handleLoad()
+        }, 1000)
+        return () => clearInterval(interval)
+    }, [content, isDark])
+
+    const srcDoc = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <style>
+              html, body {
+                margin: 0;
+                padding: 16px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                background-color: transparent;
+                color: ${isDark ? "#e2e8f0" : "#1a202c"};
+              }
+
+              ${isDark ? `
+                html {
+                  filter: invert(1) hue-rotate(180deg);
+                  background-color: #121212 !important;
+                }
+                
+                img, video, svg, .no-invert {
+                  filter: invert(1) hue-rotate(180deg) !important;
+                }
+              ` : ''}
+
+              img {
+                max-width: 100% !important;
+                height: auto !important;
+              }
+              table {
+                max-width: 100% !important;
+                width: 100% !important;
+              }
+            </style>
+          </head>
+          <body>
+            ${content}
+          </body>
+        </html>
+    `
+
+    return (
+        <iframe
+            ref={iframeRef}
+            srcDoc={srcDoc}
+            className="newsletter-iframe w-full"
+            sandbox="allow-popups allow-popups-to-escape-sandbox"
+            loading="lazy"
+            onLoad={handleLoad}
+            style={{
+                width: "100%",
+                border: "none",
+                background: "transparent",
+                overflow: "hidden",
+                minHeight: "500px",
+            }}
+        />
+    )
+}
+
 export function ArticleContent({
     article,
     isRecentlyReadMode,
@@ -50,6 +136,8 @@ export function ArticleContent({
 }: ArticleContentProps) {
     const contentRef = useRef<HTMLDivElement>(null)
     const isMobile = useIsMobile()
+    const { resolvedTheme } = useTheme()
+    const isDark = resolvedTheme === "dark"
 
     // Zen Mode States
     const [isZenMode, setIsZenMode] = useState(false)
@@ -357,19 +445,23 @@ export function ArticleContent({
                                 contentKey={contentKey}
                                 className="mt-8"
                             >
-                                <div
-                                    className="text-xl leading-relaxed"
-                                    style={{
-                                        fontFamily:
-                                            "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
-                                    }}
-                                >
+                                {article.link?.startsWith("newsletter://") ? (
+                                    <NewsletterIframe content={displayContent} isDark={isDark} />
+                                ) : (
                                     <div
-                                        dangerouslySetInnerHTML={{
-                                            __html: displayContent,
+                                        className="text-xl leading-relaxed"
+                                        style={{
+                                            fontFamily:
+                                                "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
                                         }}
-                                    />
-                                </div>
+                                    >
+                                        <div
+                                            dangerouslySetInnerHTML={{
+                                                __html: displayContent,
+                                            }}
+                                        />
+                                    </div>
+                                )}
                             </AnimatedContent>
                         ) : (
                             <div className="space-y-6 mt-8">
@@ -453,19 +545,23 @@ export function ArticleContent({
                                 />
 
                                 {displayContent ? (
-                                    <div
-                                        className="text-xl leading-relaxed mt-8"
-                                        style={{
-                                            fontFamily:
-                                                "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
-                                        }}
-                                    >
+                                    article.link?.startsWith("newsletter://") ? (
+                                        <NewsletterIframe content={displayContent} isDark={isDark} />
+                                    ) : (
                                         <div
-                                            dangerouslySetInnerHTML={{
-                                                __html: displayContent || "",
+                                            className="text-xl leading-relaxed mt-8"
+                                            style={{
+                                                fontFamily:
+                                                    "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
                                             }}
-                                        />
-                                    </div>
+                                        >
+                                            <div
+                                                dangerouslySetInnerHTML={{
+                                                    __html: displayContent || "",
+                                                }}
+                                            />
+                                        </div>
+                                    )
                                 ) : (
                                     <div className="space-y-6 mt-8">
                                         {(article.description ||

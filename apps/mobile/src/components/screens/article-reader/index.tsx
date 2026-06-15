@@ -39,6 +39,7 @@ export function ArticleReader({
 }: ArticleReaderProps) {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+  const isNewsletter = article.link?.startsWith('newsletter://');
 
   const webViewRef = useRef<WebView>(null);
   const [webViewHeight, setWebViewHeight] = useState(1);
@@ -202,7 +203,7 @@ export function ArticleReader({
       color: var(--color-text);
       margin: 0;
       padding: 0;
-      font-family: 'EB Garamond', Georgia, Cambria, "Times New Roman", Times, serif;
+      ${isNewsletter ? '' : "font-family: 'EB Garamond', Georgia, Cambria, 'Times New Roman', Times, serif;"}
       font-size: 18px;
       line-height: 1.65;
       -webkit-text-size-adjust: 100%;
@@ -228,13 +229,23 @@ export function ArticleReader({
     }
 
     h1, h2, h3, h4, h5, h6 {
-      font-family: 'EB Garamond', Georgia, Cambria, "Times New Roman", Times, serif;
+      ${isNewsletter ? '' : "font-family: 'EB Garamond', Georgia, Cambria, 'Times New Roman', Times, serif;"}
       color: var(--color-text);
       font-weight: 700;
       line-height: 1.25;
       margin-top: 1.5em;
       margin-bottom: 0.5em;
     }
+
+    ${isDark && isNewsletter ? `
+      html {
+        filter: invert(1) hue-rotate(180deg);
+        background-color: ${bgColor} !important;
+      }
+      img, video, svg, .no-invert {
+        filter: invert(1) hue-rotate(180deg) !important;
+      }
+    ` : ''}
 
     h1 { font-size: 32px; font-weight: 700; }
     h2 { font-size: 28px; font-weight: 700; }
@@ -442,7 +453,7 @@ export function ArticleReader({
 </body>
 </html>
     `;
-  }, [cleanedContent, textColor, greyColor, bgColor, lightGreyColor, midGreyColor, colors]);
+  }, [cleanedContent, textColor, greyColor, bgColor, lightGreyColor, midGreyColor, colors, isNewsletter, isDark]);
 
   const webViewSource = useMemo(() => {
     return { html: htmlContent, baseUrl: '' };
