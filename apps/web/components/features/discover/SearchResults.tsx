@@ -2,7 +2,6 @@ import NextImage from "next/image"
 import {
     useInfiniteHits,
     useInstantSearch,
-    usePagination,
     useStats,
 } from "react-instantsearch"
 
@@ -17,8 +16,6 @@ import {
     FeedCategory,
     ContentType,
 } from "@readspace/shared"
-
-import { Pagination } from "./Pagination"
 
 interface SearchResultsProps {
     /** Callback to clear all search filters and query */
@@ -68,9 +65,8 @@ export function SearchResults({
     previewError,
 }: SearchResultsProps) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { hits: items } = useInfiniteHits({} as any)
+    const { hits: items, showMore, isLastPage } = useInfiniteHits({} as any)
     const { nbHits } = useStats()
-    const { currentRefinement, nbPages } = usePagination()
     const { status } = useInstantSearch()
 
     // Don't show "no results" while the search is still loading OR while preview is loading
@@ -120,11 +116,6 @@ export function SearchResults({
                 <div className="flex items-center justify-between mb-2 pl-5 pr-2">
                     <div className="text-[#91998C] dark:text-muted-foreground text-sm">
                         {nbHits} {nbHits === 1 ? "result" : "results"}
-                        {nbPages > 1 && (
-                            <span className="ml-2">
-                                · Page {currentRefinement + 1} of {nbPages}
-                            </span>
-                        )}
                     </div>
                     <Button
                         variant="ghost"
@@ -192,8 +183,18 @@ export function SearchResults({
                         })}
                     </div>
 
-                    {/* Pagination controls */}
-                    <Pagination />
+                    {/* Load More button */}
+                    {!isLastPage && items.length > 0 && (
+                        <div className="flex justify-center mt-8 mb-4">
+                            <Button
+                                variant="outline"
+                                onClick={() => showMore()}
+                                className="h-9 px-6 hover:bg-[#F3F9EF] dark:hover:bg-accent text-[#91998C] hover:text-[#6A994E] dark:hover:text-primary transition-colors cursor-pointer"
+                            >
+                                Load More
+                            </Button>
+                        </div>
+                    )}
                 </>
             )}
         </>
