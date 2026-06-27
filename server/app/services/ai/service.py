@@ -3,8 +3,10 @@ Functional AI Service: Summarization and Translation.
 """
 
 import hashlib
+import json
 import re
 from functools import lru_cache
+from typing import Any
 
 import structlog
 from google import genai
@@ -104,7 +106,82 @@ async def translate_content(content: str, target_lang_code: str) -> str | None:
         result = re.sub(r"^```(?:html)?\n|\n```$", "", result.strip(), flags=re.MULTILINE)
         await redis_cache.set(cache_key, result, ttl_seconds=AI_CACHE_TTL)
 
-    return result
+
+def get_metadata_translation_system_prompt(target_lang: str) -> str:
+    return (
+        f"You are a professional translator. Translate the given article metadata (title, description, and tags) to {target_lang}.\n"
+        "Return ONLY a JSON object matching this schema:\n"
+        "{\n"
+        '  "title": "translated title",\n'
+        '  "description": "translated description",\n'
+        '  "tags": ["translated tag 1", "translated tag 2"]\n'
+        "}\n"
+        "Do not include any explanation, markdown formatting (like ```json), or extra text. Output only raw JSON."
+    )
+
+
+async def translate_metadata(
+    title: str,
+    description: str,
+    tags: list[str],
+    target_lang_code: str,
+) -> dict[str, Any]:
+    """Translate title, description, and tags concurrently in a single LLM call with caching."""
+    client = _get_client()
+    if not client:
+        return {"title": title, "description": description, "tags": tags}
+
+    # Short-circuit if nothing to translate
+    if not title and not description and not tags:
+        return {"title": title, "description": description, "tags": tags}
+
+    target_lang = _get_lang_name(target_lang_code)
+
+    # Create request payload for caching
+    input_data = {
+        "title": title or "",
+        "description": description or "",
+        "tags": tags or [],
+    }
+    serialized_input = json.dumps(input_data, sort_keys=True, ensure_ascii=False)
+
+    cache_key = _make_cache_key("translate_metadata", f"{target_lang}:{serialized_input}")
+    if cached := await redis_cache.get(cache_key):
+        try:
+            return json.loads(cached)
+        except Exception:
+            pass
+
+    system_prompt = get_metadata_translation_system_prompt(target_lang)
+    result = await _call_gemini(
+        client,
+        prompt=serialized_input,
+        system_instruction=system_prompt,
+        max_tokens=1000,
+        temperature=0.1,
+    )
+
+    output = {"title": title, "description": description, "tags": tags}
+    if result:
+        # Cleanup potential markdown fences
+        clean_result = re.sub(r"^```(?:json)?\n|\n```$", "", result.strip(), flags=re.MULTILINE)
+        try:
+            parsed = json.loads(clean_result)
+            if isinstance(parsed, dict):
+                output["title"] = parsed.get("title", title)
+                output["description"] = parsed.get("description", description)
+                output["tags"] = parsed.get("tags", tags)
+                # Ensure tags is a list of strings
+                if not isinstance(output["tags"], list):
+                    output["tags"] = tags
+                else:
+                    output["tags"] = [str(t) for t in output["tags"]]
+
+            await redis_cache.set(cache_key, json.dumps(output, ensure_ascii=False), ttl_seconds=AI_CACHE_TTL)
+        except Exception as e:
+            logger.warn("Failed to parse metadata translation response", error=str(e), raw_response=result)
+
+    return output
 
 
 # --- Internal Helpers ---

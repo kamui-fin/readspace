@@ -1,6 +1,6 @@
 import { useCurrentUser } from "@/hooks/use-current-user"
 import { useOnboardingStore } from "@/stores/onboarding"
-import { useFeeds } from "@readspace/shared"
+import { useFeeds, ApiClient } from "@readspace/shared"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useOnboardingFeeds } from "@/components/features/onboarding/hooks/use-onboarding-feeds"
@@ -44,6 +44,12 @@ export function useFeedSelection() {
 
     const handleComplete = async () => {
         if (!user) return
+        try {
+            // Mark the user as onboarded so future sign-ins don't re-trigger this flow
+            await ApiClient.patch("/api/users/profile", { is_onboarded: true })
+        } catch (e) {
+            console.warn("Failed to mark user as onboarded:", e)
+        }
         try {
             router.push("/today")
         } catch (error) {

@@ -32,5 +32,14 @@ async def get_current_usage(db: AsyncSession, user_id: UUID, resource: str) -> i
         result = await db.execute(query)
         return result.scalar() or 0
 
-    # Add other resources here as needed (e.g. max_bookmarks, max_daily_reads)
-    return 0
+
+async def update_profile(db: AsyncSession, *, user_id: UUID, is_onboarded: bool | None = None) -> Profile | None:
+    """Update profile fields."""
+    profile = await get_profile_by_id(db, user_id=user_id)
+    if not profile:
+        return None
+    if is_onboarded is not None:
+        profile.is_onboarded = is_onboarded
+    await db.commit()
+    await db.refresh(profile)
+    return profile

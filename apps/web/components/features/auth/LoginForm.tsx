@@ -14,7 +14,6 @@ import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import * as React from "react"
-import { isCloudProd } from "@/lib/is-cloud-prod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { GoogleSignInButton } from "@/components/features/auth/GoogleSignInButton"
@@ -30,11 +29,11 @@ import { loginSchema, type LoginFormValues } from "./lib/schemas"
 
 export function LoginForm({
     className,
+    isProd = false,
     ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<"div"> & { isProd?: boolean }) {
     const router = useRouter()
     const supabase = createClient()
-    const isProd = isCloudProd()
 
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),

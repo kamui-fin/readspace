@@ -7,24 +7,24 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
+import nh3
 import structlog
-from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.custom_exceptions import NotFoundError, FeedSubscriptionError
+from app.core.custom_exceptions import FeedSubscriptionError, NotFoundError
 from app.crud import profile as crud_profile
+from app.crud.article.ingester import create_articles_batch
 from app.crud.feed import core as feed_crud
 from app.crud.feed.subscription import (
     create_subscription,
     get_subscription_by_feed_id,
 )
-from app.crud.article.ingester import create_articles_batch
 from app.crud.folder import upsert_batch
 from app.db.session import get_db
 from app.models.enums import ContentType, UserRole
-from app.models.user import Profile
 from app.routers.feeds.feeds_subscription import resolve_target_folder
 from app.services.user.auth import get_current_user
 from app.typing.entries import ArticleCreate
@@ -33,23 +33,53 @@ from app.typing.subscriptions import SubscriptionCreate, SubscriptionResponse
 from app.typing.user import TokenData
 from app.utils.text import clean_html_text
 
-import nh3
-
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/intake", tags=["Intake"])
 
 ALLOWED_TAGS = {
-    "a", "b", "blockquote", "br", "code", "div", "em", "h1", "h2", "h3", "h4", "h5", "h6",
-    "hr", "i", "img", "li", "ol", "p", "pre", "span", "strong", "style", "sub", "sup",
-    "table", "tbody", "td", "tfoot", "th", "thead", "tr", "u", "ul"
+    "a",
+    "b",
+    "blockquote",
+    "br",
+    "code",
+    "div",
+    "em",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "hr",
+    "i",
+    "img",
+    "li",
+    "ol",
+    "p",
+    "pre",
+    "span",
+    "strong",
+    "style",
+    "sub",
+    "sup",
+    "table",
+    "tbody",
+    "td",
+    "tfoot",
+    "th",
+    "thead",
+    "tr",
+    "u",
+    "ul",
 }
 
 ALLOWED_ATTRIBUTES = {
     "a": {"href", "title", "target"},
     "img": {"src", "alt", "title", "width", "height", "style"},
     # The "*" key allows these layout/style attributes on ALL tags
-    "*": {"style", "class", "id", "colspan", "rowspan", "align", "valign"}
+    "*": {"style", "class", "id", "colspan", "rowspan", "align", "valign"},
 }
+
 
 def clean_newsletter_html(raw_html: str) -> str:
     return nh3.clean(
@@ -57,7 +87,7 @@ def clean_newsletter_html(raw_html: str) -> str:
         tags=ALLOWED_TAGS,
         attributes=ALLOWED_ATTRIBUTES,
         clean_content_tags={"script"},  # Don't strip contents of style tags
-        link_rel="noopener noreferrer" # Automatically secures links!
+        link_rel="noopener noreferrer",  # Automatically secures links!
     )
 
 
@@ -134,7 +164,7 @@ async def webhook_intake(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid sender email",
         )
-    
+
     # Use the real display name (from_name) if available from PostalMime, otherwise parseaddr name, otherwise email
     display_sender_name = payload.from_name.strip() if payload.from_name else parsed_name.strip()
     display_sender_name = display_sender_name or sender_email
@@ -159,6 +189,7 @@ async def webhook_intake(
         # Queue background task to fetch favicon
         try:
             from app.workers.feed_tasks import fetch_favicon_task
+
             await fetch_favicon_task.kiq(feed_id=str(feed.id))
         except Exception as e:
             logger.warning(
@@ -296,6 +327,7 @@ async def subscribe_newsletter(
         # Queue background task to fetch favicon
         try:
             from app.workers.feed_tasks import fetch_favicon_task
+
             await fetch_favicon_task.kiq(feed_id=str(feed.id))
         except Exception as e:
             logger.warning(
@@ -317,9 +349,7 @@ async def subscribe_newsletter(
         sub = await create_subscription(
             db,
             user_id=user_uuid,
-            subscription_in=SubscriptionCreate(
-                url=virtual_url, folder_id=folder_id, custom_title=subscribe_in.name
-            ),
+            subscription_in=SubscriptionCreate(url=virtual_url, folder_id=folder_id, custom_title=subscribe_in.name),
             feed_db=feed,
         )
     except FeedSubscriptionError as e:

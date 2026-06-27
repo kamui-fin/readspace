@@ -14,13 +14,13 @@ export function normalizeUrl(url: string): string {
     const urlObj = new URL(url);
 
     // Normalize protocol to https (most feeds use https)
-    urlObj.protocol = "https:";
+    urlObj.protocol = 'https:';
 
     // Remove www prefix from hostname
-    urlObj.hostname = urlObj.hostname.replace(/^www\./, "");
+    urlObj.hostname = urlObj.hostname.replace(/^www\./, '');
 
     // Remove trailing slash from pathname
-    urlObj.pathname = urlObj.pathname.replace(/\/$/, "") || "/";
+    urlObj.pathname = urlObj.pathname.replace(/\/$/, '') || '/';
 
     // Sort query parameters for consistent comparison
     urlObj.searchParams.sort();

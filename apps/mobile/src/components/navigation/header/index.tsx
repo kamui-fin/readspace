@@ -207,6 +207,8 @@ export const Header: React.FC<HeaderProps> = (props) => {
             duration: 200,
           });
 
+    const zIndex = scrollY.value < 0 ? 1 : 10;
+
     return {
       transform: [{ translateY: translation }],
       paddingTop: animatedPaddingTop,
@@ -215,6 +217,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
       shadowRadius: shadowRadius,
       elevation: elevation,
       borderBottomWidth: borderBottomWidth,
+      zIndex,
     };
   });
 
@@ -383,11 +386,14 @@ export const Header: React.FC<HeaderProps> = (props) => {
         Extrapolation.CLAMP
       );
 
+      const zIndex = scrollY.value < 0 ? 1 : 10;
+
       return {
         height,
         paddingTop: animatedPaddingTop,
         shadowOpacity,
         elevation: shadowOpacity > 0 ? 4 : 0, // Android shadow
+        zIndex,
       };
     }
 
@@ -435,6 +441,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
       return (
         <View
           className={clsx(headerContainerVariants({ variant }), className)}
+          pointerEvents="box-none"
           onLayout={handleStickyContainerLayout}
           style={{
             position: 'absolute',
@@ -455,6 +462,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
     return (
       <Animated.View
         className={clsx(headerContainerVariants({ variant }), className)}
+        pointerEvents="box-none"
         style={[
           {
             position: 'absolute',
@@ -515,6 +523,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
       )}
       <Animated.View
         className={clsx(headerContainerVariants({ variant }), className)}
+        pointerEvents="box-none"
         style={[
           {
             position: 'absolute',

@@ -13,11 +13,18 @@ import { EmailSchema, PasswordSchema } from '@lib/validation/auth-schemas';
 import { useSettingsStore } from '@stores/settings';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, BackHandler, Keyboard, Platform, Pressable, View } from 'react-native';
+import {
+  BackHandler,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmailStep } from '@/components/screens/auth/routes/new-account/email';
 import { PasswordStep } from '@/components/screens/auth/routes/new-account/password';
-// import { VerificationStep } from '@/components/screens/auth/routes/new-account/verification';
+import { VerificationStep } from '@/components/screens/auth/routes/new-account/verification';
 
 export function SignupScreen() {
   const stepperRef = useRef<StepperRef>(null);
@@ -31,33 +38,24 @@ export function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const buttonBottomAnim = useRef(new Animated.Value(0)).current;
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
-  // Track keyboard height and animate button position
+  // Track keyboard visibility to adjust layout/padding and conditionally hide secondary links
   useEffect(() => {
-    const showSubscription = Keyboard.addListener('keyboardWillShow', (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
-      Animated.timing(buttonBottomAnim, {
-        toValue: e.endCoordinates.height,
-        duration: e.duration || 250,
-        useNativeDriver: false,
-      }).start();
-    });
-    const hideSubscription = Keyboard.addListener('keyboardWillHide', (e) => {
-      setKeyboardHeight(0);
-      Animated.timing(buttonBottomAnim, {
-        toValue: 0,
-        duration: e.duration || 250,
-        useNativeDriver: false,
-      }).start();
-    });
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
 
     return () => {
       showSubscription.remove();
       hideSubscription.remove();
     };
-  }, [buttonBottomAnim]);
+  }, []);
 
   // Handle Android back button
   useFocusEffect(
@@ -96,7 +94,7 @@ export function SignupScreen() {
       selfHostSettingsRef={selfHostSettingsRef}
     />,
     <PasswordStep key="password" initialPassword={password} onPasswordChange={setPassword} />,
-    // <VerificationStep key="verification" email={email} />,
+    <VerificationStep key="verification" email={email} />,
   ];
 
   const isValid = () => {
@@ -140,10 +138,15 @@ export function SignupScreen() {
       // Last step before verification - create account
       setIsLoading(true);
       try {
-        await signUp({ email: email.trim(), password });
-        // toast.success('Verification email sent! Check your inbox.');
-        // Move to verification screen
-        stepperRef.current?.goToNext();
+        const signUpResult = await signUp({ email: email.trim(), password });
+        const requiresVerification = !signUpResult?.session;
+
+        if (requiresVerification) {
+          toast.success('Verification code sent! Check your inbox.');
+          stepperRef.current?.goToNext();
+        } else {
+          toast.success('Account created successfully!');
+        }
       } catch (error) {
         handleAuthError(error, 'signup');
       } finally {
@@ -153,8 +156,6 @@ export function SignupScreen() {
       // Move to next step
       stepperRef.current?.goToNext();
     }
-    // On verification screen (step 2), do nothing - user must click email link
-    // Auth provider will handle the redirect once they verify
   };
 
   const handleBack = () => {
@@ -184,21 +185,28 @@ export function SignupScreen() {
         onFirstStepBack={handleBack}
       />
 
-      {/* Fixed Buttons at Bottom - Hide on verification screen - Adjusts for keyboard with smooth animation */}
-      {currentStep < pages.length && (
-        <Animated.View
-          className="absolute left-0 right-0"
+      {/* Fixed Buttons at Bottom - Hide on verification screen - Adjusts for keyboard using native layout constraints */}
+      {currentStep < 2 && (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{
-            bottom: buttonBottomAnim,
-            paddingHorizontal: Math.max(
-              Math.min(SPACING.ONBOARDING_CONTENT_PADDING * (393 / 393), 36),
-              20
-            ),
-            paddingBottom: keyboardHeight > 0 ? 20 : Math.max(insets.bottom + 20, 40),
-            backgroundColor: 'transparent',
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
           }}
           pointerEvents="box-none">
-          <View className="gap-3">
+          <View
+            className="gap-3"
+            style={{
+              paddingHorizontal: Math.max(
+                Math.min(SPACING.ONBOARDING_CONTENT_PADDING * (393 / 393), 36),
+                20
+              ),
+              paddingBottom: isKeyboardVisible ? 20 : Math.max(insets.bottom + 20, 40),
+              backgroundColor: 'transparent',
+            }}
+            pointerEvents="box-none">
             {/* Main Action Button */}
             {buttonText && (
               <Button
@@ -213,7 +221,7 @@ export function SignupScreen() {
             )}
 
             {/* Back Button or Sign In Link - Hide sign in link when keyboard is visible */}
-            {currentStep === 0 && keyboardHeight === 0 && (
+            {currentStep === 0 && !isKeyboardVisible && (
               <View className="flex-row items-center justify-center gap-1 py-3">
                 <Text size="base" fontFamily="geist" className="text-grey dark:text-grey">
                   Already have an account?
@@ -229,7 +237,7 @@ export function SignupScreen() {
               </View>
             )}
           </View>
-        </Animated.View>
+        </KeyboardAvoidingView>
       )}
 
       {/* Self-hosting modal/bottom sheet - rendered at screen level */}

@@ -1,25 +1,25 @@
-import { PaginatedResponse } from "./common";
+import { PaginatedResponse } from './common';
 
 export enum ArticlePriority {
-  LOW = "LOW",
-  MEDIUM = "MEDIUM",
-  HIGH = "HIGH",
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
 }
 
 // Alias for backward compatibility
 export type Priority = ArticlePriority;
 
 export enum ArticleFilterMode {
-  AllArticles = "allArticles",
-  RecentlyRead = "recentlyRead",
-  ReadLater = "readLater",
-  Today = "today",
+  AllArticles = 'allArticles',
+  RecentlyRead = 'recentlyRead',
+  ReadLater = 'readLater',
+  Today = 'today',
 }
 
 export enum ContentView {
-  Original = "original",
-  Extracted = "extracted",
-  Translated = "translated",
+  Original = 'original',
+  Extracted = 'extracted',
+  Translated = 'translated',
 }
 
 // ============= Core Types =============
@@ -143,7 +143,7 @@ export interface DiscoveredFeed {
   url: string;
   title?: string;
   description?: string;
-  type: "rss" | "atom" | "json";
+  type: 'rss' | 'atom' | 'json';
 }
 
 export interface PageMetadata {
@@ -176,6 +176,9 @@ export type SummarizeResponse = {
 export type TranslateResponse = {
   translated_content: string;
   target_language: string;
+  translated_title?: string;
+  translated_description?: string;
+  translated_tags?: string[];
 };
 
 export type SummarizeRequest = {

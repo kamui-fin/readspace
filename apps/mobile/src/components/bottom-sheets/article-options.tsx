@@ -1,5 +1,3 @@
-import SparkleIcon from '@components/icons/local/sparkle';
-import CopyBoldIcon from '@components/icons/solar/copy-bold';
 import DocumentTextBoldIcon from '@components/icons/solar/document-text-bold';
 import EarthBoldIcon from '@components/icons/solar/earth-bold';
 import GlobalBoldIcon from '@components/icons/solar/global-bold';
@@ -18,9 +16,7 @@ interface ArticleOptionsBottomSheetProps {
   currentView: ArticleViewMode;
   onSelectView: (view: ArticleViewMode) => void;
   onTranslate: () => void;
-  onGenerateSummary: () => void;
-  onCopyLink: () => void;
-  onOpenInBrowser: () => void;
+  onOpenInBrowser?: () => void;
   onClose?: () => void;
   hasExtractedContent: boolean;
   hasTranslatedContent: boolean;
@@ -38,8 +34,6 @@ export const ArticleOptionsBottomSheet = forwardRef<
       currentView,
       onSelectView,
       onTranslate,
-      onGenerateSummary,
-      onCopyLink,
       onOpenInBrowser,
       onClose,
       hasExtractedContent,
@@ -55,7 +49,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
     const greyColor = isDark ? COLORS.dark.grey : COLORS.light.grey;
     const activeColor = colors.secondary;
 
-    const snapPoints = useMemo(() => ['50%', '75%'], []);
+    const snapPoints = useMemo(() => ['45%', '65%'], []);
 
     // Helper for rendering an option row
     const renderOption = (
@@ -122,14 +116,6 @@ export const ArticleOptionsBottomSheet = forwardRef<
           <View className="mb-4">
             {!isClipped &&
               renderOption(
-                <SparkleIcon width={22} height={22} color={greyColor} fill={greyColor} />,
-                'Generate AI Summary',
-                undefined,
-                onGenerateSummary
-              )}
-
-            {!isClipped &&
-              renderOption(
                 <EarthBoldIcon width={22} height={22} color={greyColor} />,
                 hasTranslatedContent ? 'Translate to a different language' : 'Translate Article',
                 hasTranslatedContent ? 'Change current language' : 'Pick a language',
@@ -137,14 +123,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
               )}
 
             {!isNewsletter &&
-              renderOption(
-                <CopyBoldIcon width={22} height={22} color={greyColor} />,
-                'Copy Link',
-                undefined,
-                onCopyLink
-              )}
-
-            {!isNewsletter &&
+              onOpenInBrowser &&
               renderOption(
                 <GlobalBoldIcon width={22} height={22} color={greyColor} />,
                 'Open in Browser',

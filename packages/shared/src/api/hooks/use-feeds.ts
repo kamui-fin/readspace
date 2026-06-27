@@ -4,15 +4,10 @@ import {
   useQueryClient,
   type UseMutationOptions,
   type UseQueryOptions,
-} from "@tanstack/react-query";
-import { ApiClient } from "../client";
-import { RSS_QUERY_KEYS, mutationKeys, queryKeys } from "../query-keys";
-import type {
-  FeedDetail,
-  Subscription,
-  FeedDiscoveryResult,
-  FeedsResponse,
-} from "../types";
+} from '@tanstack/react-query';
+import { ApiClient } from '../client';
+import { RSS_QUERY_KEYS, mutationKeys, queryKeys } from '../query-keys';
+import type { FeedDetail, Subscription, FeedDiscoveryResult, FeedsResponse } from '../types';
 
 export function useFeeds(
   params?: {
@@ -21,14 +16,9 @@ export function useFeeds(
     extended?: boolean;
   },
   options?: Omit<
-    UseQueryOptions<
-      FeedsResponse,
-      Error,
-      FeedsResponse,
-      ReturnType<typeof queryKeys.feeds>
-    >,
-    "queryKey" | "queryFn"
-  >,
+    UseQueryOptions<FeedsResponse, Error, FeedsResponse, ReturnType<typeof queryKeys.feeds>>,
+    'queryKey' | 'queryFn'
+  >
 ) {
   return useQuery({
     queryKey: queryKeys.feeds(params),
@@ -46,14 +36,9 @@ export function useFeeds(
 export function useFeed(
   feedId: string,
   options?: Omit<
-    UseQueryOptions<
-      FeedDetail,
-      Error,
-      FeedDetail,
-      ReturnType<typeof queryKeys.feed>
-    >,
-    "queryKey" | "queryFn"
-  >,
+    UseQueryOptions<FeedDetail, Error, FeedDetail, ReturnType<typeof queryKeys.feed>>,
+    'queryKey' | 'queryFn'
+  >
 ) {
   return useQuery({
     queryKey: queryKeys.feed(feedId),
@@ -66,18 +51,13 @@ export function useFeed(
 export function usePreviewFeedUrl(
   url: string,
   options?: Omit<
-    UseQueryOptions<
-      FeedDiscoveryResult,
-      Error,
-      FeedDiscoveryResult,
-      ["feedPreview", string]
-    >,
-    "queryKey" | "queryFn"
-  >,
+    UseQueryOptions<FeedDiscoveryResult, Error, FeedDiscoveryResult, ['feedPreview', string]>,
+    'queryKey' | 'queryFn'
+  >
 ) {
   const trimmedQuery = url.trim();
   return useQuery({
-    queryKey: ["feedPreview", trimmedQuery],
+    queryKey: ['feedPreview', trimmedQuery],
     queryFn: async () => {
       const response = await ApiClient.previewFeed(trimmedQuery);
       return response;
@@ -97,17 +77,16 @@ export function useCreateFeed(
       url: string;
       folder_id?: string;
     }
-  >,
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: mutationKeys.createFeed(),
-    mutationFn: (feed: { url: string; folder_id?: string }) =>
-      ApiClient.createFeed(feed),
+    mutationFn: (feed: { url: string; folder_id?: string }) => ApiClient.createFeed(feed),
     onSuccess: (newSubscription) => {
       // Update feeds list with new subscription (and its folder if new) across all variations
       queryClient.setQueriesData<FeedsResponse>(
-        { queryKey: [RSS_QUERY_KEYS.FEEDS, "list"] },
+        { queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] },
         (old) => {
           if (!old) return old;
 
@@ -118,7 +97,7 @@ export function useCreateFeed(
           let updatedFolders = old.folders || [];
           if (newSubscription?.folder?.id) {
             const folderAlreadyCached = updatedFolders.some(
-              (f) => f.id === newSubscription.folder.id,
+              (f) => f.id === newSubscription.folder.id
             );
             if (!folderAlreadyCached) {
               updatedFolders = [...updatedFolders, newSubscription.folder];
@@ -130,7 +109,7 @@ export function useCreateFeed(
             folders: updatedFolders,
             subscriptions: [...(old.subscriptions || []), newSubscription],
           };
-        },
+        }
       );
 
       // Update the individual feed detail cache instantly if it exists
@@ -143,26 +122,26 @@ export function useCreateFeed(
               ...old,
               is_subscribed: true,
             };
-          },
+          }
         );
       }
     },
     onSettled: (data) => {
       queryClient.invalidateQueries({
-        queryKey: [RSS_QUERY_KEYS.FEEDS, "list"],
-        refetchType: "all",
+        queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'],
+        refetchType: 'all',
       });
       queryClient.invalidateQueries({
         queryKey: [RSS_QUERY_KEYS.ARTICLES],
-        refetchType: "all",
+        refetchType: 'all',
       });
       queryClient.invalidateQueries({
         queryKey: queryKeys.unreadCounts(),
-        refetchType: "all",
+        refetchType: 'all',
       });
       queryClient.invalidateQueries({
         queryKey: [RSS_QUERY_KEYS.FOLDERS],
-        refetchType: "all",
+        refetchType: 'all',
       });
 
       // Invalidate specific feed cache
@@ -189,7 +168,7 @@ export function useUpdateFeed(
       };
     },
     unknown
-  >,
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -208,7 +187,7 @@ export function useUpdateFeed(
     onSuccess: (updatedSubscription, { feedId, data }) => {
       // Update feeds list cache instantly
       queryClient.setQueriesData<FeedsResponse>(
-        { queryKey: [RSS_QUERY_KEYS.FEEDS, "list"] },
+        { queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] },
         (old) => {
           if (!old) return old;
 
@@ -216,14 +195,9 @@ export function useUpdateFeed(
             if (sub.feed.id === feedId) {
               return {
                 ...sub,
-                is_favorite:
-                  data.is_favorite !== undefined
-                    ? data.is_favorite
-                    : sub.is_favorite,
+                is_favorite: data.is_favorite !== undefined ? data.is_favorite : sub.is_favorite,
                 custom_title:
-                  data.custom_title !== undefined
-                    ? data.custom_title
-                    : sub.custom_title,
+                  data.custom_title !== undefined ? data.custom_title : sub.custom_title,
                 folder: updatedSubscription.folder || sub.folder,
               };
             }
@@ -234,29 +208,26 @@ export function useUpdateFeed(
             ...old,
             subscriptions: updatedSubscriptions,
           };
-        },
+        }
       );
 
       // Update the individual feed detail cache instantly if it exists
       queryClient.setQueriesData<FeedDetail>(
-        { queryKey: [RSS_QUERY_KEYS.FEEDS, "detail", feedId] },
+        { queryKey: [RSS_QUERY_KEYS.FEEDS, 'detail', feedId] },
         (old) => {
           if (!old) return old;
           return {
             ...old,
             is_favorite:
-              data.is_favorite !== undefined
-                ? data.is_favorite
-                : (old as any).is_favorite,
-            title:
-              data.custom_title !== undefined ? data.custom_title : old.title,
+              data.is_favorite !== undefined ? data.is_favorite : (old as any).is_favorite,
+            title: data.custom_title !== undefined ? data.custom_title : old.title,
           } as any;
-        },
+        }
       );
     },
     onSettled: (_data, _error, { feedId }) => {
       queryClient.invalidateQueries({
-        queryKey: [RSS_QUERY_KEYS.FEEDS, "list"],
+        queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'],
       });
       queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FOLDERS] });
       queryClient.invalidateQueries({ queryKey: queryKeys.feed(feedId) });
@@ -273,7 +244,7 @@ export function useRefreshFeed(
       feedId: string;
       forceRefetch?: boolean;
     }
-  >,
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -297,11 +268,7 @@ export function useRefreshFeed(
 }
 
 export function useMarkFeedAllRead(
-  options?: UseMutationOptions<
-    { message: string; feed_id: string },
-    unknown,
-    string
-  >,
+  options?: UseMutationOptions<{ message: string; feed_id: string }, unknown, string>
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -325,7 +292,7 @@ export function useDeleteFeed(
       silent?: boolean;
     },
     unknown
-  >,
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -335,34 +302,29 @@ export function useDeleteFeed(
     },
     onSuccess: (_, { feedId }) => {
       queryClient.setQueriesData<FeedsResponse>(
-        { queryKey: [RSS_QUERY_KEYS.FEEDS, "list"] },
+        { queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] },
         (old) => {
           if (!old) return old;
           return {
             ...old,
-            subscriptions: (old.subscriptions || []).filter(
-              (s) => s.feed.id !== feedId,
-            ),
+            subscriptions: (old.subscriptions || []).filter((s) => s.feed.id !== feedId),
           };
-        },
+        }
       );
 
       // Update the individual feed detail cache instantly if it exists
-      queryClient.setQueriesData<FeedDetail>(
-        { queryKey: queryKeys.feed(feedId) },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            is_subscribed: false,
-          };
-        },
-      );
+      queryClient.setQueriesData<FeedDetail>({ queryKey: queryKeys.feed(feedId) }, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          is_subscribed: false,
+        };
+      });
     },
     onSettled: (_data, _error, { feedId }) => {
       setTimeout(() => {
         queryClient.invalidateQueries({
-          queryKey: [RSS_QUERY_KEYS.FEEDS, "list"],
+          queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'],
         });
         queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
         queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
@@ -382,7 +344,7 @@ export function useAdminDeleteFeed(
       silent?: boolean;
     },
     unknown
-  >,
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -418,7 +380,7 @@ export function useAdminUpdateFeed(
       };
     },
     unknown
-  >,
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -439,32 +401,29 @@ export function useBulkDeleteFeeds(
     unknown,
     { feedIds: string[] },
     unknown
-  >,
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: mutationKeys.bulkDeleteFeeds(),
-    mutationFn: ({ feedIds }: { feedIds: string[] }) =>
-      ApiClient.bulkDeleteFeeds(feedIds),
+    mutationFn: ({ feedIds }: { feedIds: string[] }) => ApiClient.bulkDeleteFeeds(feedIds),
     onSuccess: (_, { feedIds }) => {
       queryClient.setQueriesData<FeedsResponse>(
-        { queryKey: [RSS_QUERY_KEYS.FEEDS, "list"] },
+        { queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] },
         (old) => {
           if (!old) return old;
           return {
             ...old,
-            subscriptions: (old.subscriptions || []).filter(
-              (s) => !feedIds.includes(s.feed.id),
-            ),
+            subscriptions: (old.subscriptions || []).filter((s) => !feedIds.includes(s.feed.id)),
           };
-        },
+        }
       );
     },
     onSettled: () => {
       setTimeout(() => {
         Promise.all([
           queryClient.invalidateQueries({
-            queryKey: [RSS_QUERY_KEYS.FEEDS, "list"],
+            queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'],
           }),
           queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() }),
           queryClient.invalidateQueries({
@@ -487,22 +446,17 @@ export function useBulkUpdateFeedsFolder(
     unknown,
     { feedIds: string[]; folderId: string },
     unknown
-  >,
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: mutationKeys.bulkUpdateFeedsFolder(),
-    mutationFn: ({
-      feedIds,
-      folderId,
-    }: {
-      feedIds: string[];
-      folderId: string;
-    }) => ApiClient.bulkUpdateFeedsFolder(feedIds, folderId),
+    mutationFn: ({ feedIds, folderId }: { feedIds: string[]; folderId: string }) =>
+      ApiClient.bulkUpdateFeedsFolder(feedIds, folderId),
     onSettled: () => {
       return Promise.all([
         queryClient.invalidateQueries({
-          queryKey: [RSS_QUERY_KEYS.FEEDS, "list"],
+          queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'],
         }),
       ]);
     },

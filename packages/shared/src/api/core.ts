@@ -14,10 +14,10 @@ export interface ApiClientConfig {
 export class ApiError extends Error {
   constructor(
     public status: number,
-    message: string,
+    message: string
   ) {
     super(message);
-    this.name = "ApiError";
+    this.name = 'ApiError';
   }
 }
 
@@ -25,28 +25,26 @@ export class ApiError extends Error {
  * Normalize URL by removing trailing slash from base and ensuring endpoint starts with /
  */
 function normalizeUrl(baseUrl: string, endpoint: string): string {
-  const base = baseUrl.replace(/\/$/, "");
-  const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const base = baseUrl.replace(/\/$/, '');
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   return `${base}${path}`;
 }
 
 /**
  * Get authorization headers with token
  */
-async function getAuthHeaders(
-  getAuthToken: AuthTokenProvider,
-): Promise<Record<string, string>> {
+async function getAuthHeaders(getAuthToken: AuthTokenProvider): Promise<Record<string, string>> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   };
 
   try {
     const token = await getAuthToken();
     if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+      headers['Authorization'] = `Bearer ${token}`;
     }
   } catch (error) {
-    console.warn("Failed to get auth token:", error);
+    console.warn('Failed to get auth token:', error);
   }
 
   return headers;
@@ -62,37 +60,32 @@ function parseErrorMessage(error: any): string {
 
     // Check for file size validation error
     const fileSizeError = validationErrors.find(
-      (err: any) =>
-        err.type === "less_than_equal" && err.loc?.includes("file_size_bytes"),
+      (err: any) => err.type === 'less_than_equal' && err.loc?.includes('file_size_bytes')
     );
 
     if (fileSizeError?.ctx?.le) {
       const maxSizeMB = (fileSizeError.ctx.le / (1024 * 1024)).toFixed(0);
       const actualSizeMB = fileSizeError.input
         ? (fileSizeError.input / (1024 * 1024)).toFixed(1)
-        : "unknown";
+        : 'unknown';
       return `File is too large (${actualSizeMB} MB). Maximum file size is ${maxSizeMB} MB.`;
     }
 
     // Generic validation error message
-    return validationErrors
-      .map((err: any) => err.msg || JSON.stringify(err))
-      .join(", ");
+    return validationErrors.map((err: any) => err.msg || JSON.stringify(err)).join(', ');
   }
 
   // Handle string detail
-  if (typeof error.detail === "string") {
+  if (typeof error.detail === 'string') {
     return error.detail;
   }
 
   // Handle message field
   if (error.message) {
-    return typeof error.message === "string"
-      ? error.message
-      : JSON.stringify(error.message);
+    return typeof error.message === 'string' ? error.message : JSON.stringify(error.message);
   }
 
-  return "An error occurred";
+  return 'An error occurred';
 }
 
 /**
@@ -100,9 +93,7 @@ function parseErrorMessage(error: any): string {
  */
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ detail: "An error occurred" }));
+    const error = await response.json().catch(() => ({ detail: 'An error occurred' }));
 
     throw new ApiError(response.status, parseErrorMessage(error));
   }
@@ -121,26 +112,26 @@ async function retryWithFreshToken<T>(
   url: string,
   options: RequestInit,
   getAuthToken: AuthTokenProvider,
-  refreshToken?: TokenRefreshProvider,
+  refreshToken?: TokenRefreshProvider
 ): Promise<T> {
-  console.log("Received 401, attempting token refresh and retry");
+  console.log('Received 401, attempting token refresh and retry');
 
   // Try refresh provider first, fallback to getAuthToken
   let freshToken: string | null = null;
 
   if (refreshToken) {
-    console.log("Calling refresh token provider");
+    console.log('Calling refresh token provider');
     freshToken = await refreshToken();
   }
 
   if (!freshToken) {
-    console.log("Refresh provider unavailable, trying getAuthToken");
+    console.log('Refresh provider unavailable, trying getAuthToken');
     freshToken = await getAuthToken();
   }
 
   // Only retry if we got a fresh token
   if (!freshToken) {
-    throw new Error("Unable to refresh authentication token");
+    throw new Error('Unable to refresh authentication token');
   }
 
   // Retry request with fresh token
@@ -164,26 +155,20 @@ async function fetchWithRetry<T>(
   url: string,
   options: RequestInit,
   getAuthToken: AuthTokenProvider,
-  refreshToken?: TokenRefreshProvider,
+  refreshToken?: TokenRefreshProvider
 ): Promise<T> {
   const response = await fetch(url, options);
 
   // If we get a 401 and had a token, try refreshing
   if (response.status === 401) {
     const hadToken =
-      options.headers &&
-      "Authorization" in (options.headers as Record<string, string>);
+      options.headers && 'Authorization' in (options.headers as Record<string, string>);
 
     if (hadToken) {
       try {
-        return await retryWithFreshToken<T>(
-          url,
-          options,
-          getAuthToken,
-          refreshToken,
-        );
+        return await retryWithFreshToken<T>(url, options, getAuthToken, refreshToken);
       } catch (retryError) {
-        console.warn("Token refresh retry failed:", retryError);
+        console.warn('Token refresh retry failed:', retryError);
         // Fall through to handle the original 401 response
       }
     }
@@ -199,14 +184,9 @@ export class ApiClient {
     this.config = config;
   }
 
-  static async fetch<T>(
-    endpoint: string,
-    options: RequestInit = {},
-  ): Promise<T> {
+  static async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     if (!this.config) {
-      throw new Error(
-        "ApiClient must be configured before use. Call ApiClient.configure() first.",
-      );
+      throw new Error('ApiClient must be configured before use. Call ApiClient.configure() first.');
     }
 
     const url = normalizeUrl(this.config.baseUrl, endpoint);
@@ -222,67 +202,51 @@ export class ApiClient {
             ...headers,
             ...options.headers,
           },
-          cache: "no-store", // Disable caching for authenticated requests
+          cache: 'no-store', // Disable caching for authenticated requests
         },
         this.config.getAuthToken,
-        this.config.refreshToken,
+        this.config.refreshToken
       );
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
-        throw new Error("Authentication required");
+        throw new Error('Authentication required');
       }
       throw error;
     }
   }
 
   static async get<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    return this.fetch<T>(endpoint, { ...options, method: "GET" });
+    return this.fetch<T>(endpoint, { ...options, method: 'GET' });
   }
 
-  static async post<T>(
-    endpoint: string,
-    data?: unknown,
-    options?: RequestInit,
-  ): Promise<T> {
+  static async post<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
     return this.fetch<T>(endpoint, {
       ...options,
-      method: "POST",
+      method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  static async put<T>(
-    endpoint: string,
-    data?: unknown,
-    options?: RequestInit,
-  ): Promise<T> {
+  static async put<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
     return this.fetch<T>(endpoint, {
       ...options,
-      method: "PUT",
+      method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  static async patch<T>(
-    endpoint: string,
-    data?: unknown,
-    options?: RequestInit,
-  ): Promise<T> {
+  static async patch<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
     return this.fetch<T>(endpoint, {
       ...options,
-      method: "PATCH",
+      method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
     });
   }
 
-  static async delete<T>(
-    endpoint: string,
-    data?: unknown,
-    options?: RequestInit,
-  ): Promise<T> {
+  static async delete<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
     return this.fetch<T>(endpoint, {
       ...options,
-      method: "DELETE",
+      method: 'DELETE',
       body: data ? JSON.stringify(data) : undefined,
     });
   }
@@ -290,10 +254,10 @@ export class ApiClient {
   static async uploadFile(
     endpoint: string,
     formData: FormData,
-    signal?: AbortSignal,
+    signal?: AbortSignal
   ): Promise<unknown> {
     if (!this.config) {
-      throw new Error("ApiClient must be configured before use");
+      throw new Error('ApiClient must be configured before use');
     }
 
     const url = normalizeUrl(this.config.baseUrl, endpoint);
@@ -301,10 +265,10 @@ export class ApiClient {
     try {
       const headers = await getAuthHeaders(this.config.getAuthToken);
       // Remove Content-Type header for form data to let the browser set it with the boundary
-      const { "Content-Type": _, ...uploadHeaders } = headers;
+      const { 'Content-Type': _, ...uploadHeaders } = headers;
 
       const response = await fetch(url, {
-        method: "POST",
+        method: 'POST',
         body: formData,
         signal,
         headers: uploadHeaders,
@@ -315,12 +279,12 @@ export class ApiClient {
         try {
           return await retryWithFreshToken(
             url,
-            { method: "POST", body: formData, signal },
+            { method: 'POST', body: formData, signal },
             this.config.getAuthToken,
-            this.config.refreshToken,
+            this.config.refreshToken
           );
         } catch (retryError) {
-          console.warn("Upload token refresh retry failed:", retryError);
+          console.warn('Upload token refresh retry failed:', retryError);
           // Fall through to handle the original 401 response
         }
       }
@@ -328,7 +292,7 @@ export class ApiClient {
       return handleResponse(response);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
-        throw new Error("Authentication required");
+        throw new Error('Authentication required');
       }
       throw error;
     }

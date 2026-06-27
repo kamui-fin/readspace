@@ -101,7 +101,7 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
           <View
             style={{
               paddingHorizontal: stepperHorizontalPadding,
-              paddingTop: 1.2 * insets.top,
+              paddingTop: Math.max(1.2 * insets.top, 24),
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
@@ -117,8 +117,8 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
                 }}
                 style={{
                   position: 'absolute',
-                  left: stepperHorizontalPadding,
-                  padding: 8,
+                  left: stepperHorizontalPadding - 4,
+                  padding: 12,
                   zIndex: 10,
                 }}
                 activeOpacity={0.7}>

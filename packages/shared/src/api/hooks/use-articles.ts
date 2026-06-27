@@ -9,14 +9,14 @@ import {
   type UseMutationOptions,
   type UseQueryOptions,
   type InfiniteData,
-} from "@tanstack/react-query";
-import { ApiClient } from "../client";
+} from '@tanstack/react-query';
+import { ApiClient } from '../client';
 import {
   ARTICLE_ENHANCEMENT_QUERY_KEYS,
   RSS_QUERY_KEYS,
   mutationKeys,
   queryKeys,
-} from "../query-keys";
+} from '../query-keys';
 import type {
   Article,
   ArticleCountsResponse,
@@ -28,7 +28,7 @@ import type {
   SummarizeResponse,
   TranslateRequest,
   TranslateResponse,
-} from "../types";
+} from '../types';
 
 // Re-export for convenience
 export { ARTICLE_ENHANCEMENT_QUERY_KEYS };
@@ -38,8 +38,7 @@ export { ARTICLE_ENHANCEMENT_QUERY_KEYS };
  */
 function createContentHash(content: string): string {
   try {
-    const snippet =
-      content.substring(0, 50) + content.substring(content.length - 50);
+    const snippet = content.substring(0, 50) + content.substring(content.length - 50);
     let hash = 0;
     for (let i = 0; i < snippet.length; i++) {
       const char = snippet.charCodeAt(i);
@@ -58,9 +57,9 @@ function createContentHash(content: string): string {
 export function createTranslationQueryKey(
   articleId: string,
   targetLanguage: string,
-  content?: string,
+  content?: string
 ) {
-  const contentHash = content ? createContentHash(content) : "original";
+  const contentHash = content ? createContentHash(content) : 'original';
   return queryKeys.translation(articleId, targetLanguage, contentHash);
 }
 
@@ -72,8 +71,8 @@ export function useUnreadCounts(
       ArticleCountsResponse,
       ReturnType<typeof queryKeys.unreadCounts>
     >,
-    "queryKey" | "queryFn"
-  >,
+    'queryKey' | 'queryFn'
+  >
 ) {
   return useQuery({
     queryKey: queryKeys.unreadCounts(),
@@ -85,14 +84,9 @@ export function useUnreadCounts(
 export function useArticle(
   articleId: string,
   options?: Omit<
-    UseQueryOptions<
-      Article,
-      Error,
-      Article,
-      ReturnType<typeof queryKeys.article>
-    >,
-    "queryKey" | "queryFn"
-  > & { articleType?: string },
+    UseQueryOptions<Article, Error, Article, ReturnType<typeof queryKeys.article>>,
+    'queryKey' | 'queryFn'
+  > & { articleType?: string }
 ) {
   const { articleType, ...queryOptions } = options || {};
   return useQuery({
@@ -121,7 +115,7 @@ export function useUpdateArticle(
       previousArticle: Article | undefined;
       previousUnreadCounts: ArticleCountsResponse | undefined;
     }
-  >,
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -161,13 +155,10 @@ export function useUpdateArticle(
       ]);
 
       // Snapshot the previous values
-      const previousArticle = queryClient.getQueryData<Article>(
-        queryKeys.article(articleId),
+      const previousArticle = queryClient.getQueryData<Article>(queryKeys.article(articleId));
+      const previousUnreadCounts = queryClient.getQueryData<ArticleCountsResponse>(
+        queryKeys.unreadCounts()
       );
-      const previousUnreadCounts =
-        queryClient.getQueryData<ArticleCountsResponse>(
-          queryKeys.unreadCounts(),
-        );
 
       // Optimistically update article detail
       queryClient.setQueryData<Article>(queryKeys.article(articleId), (old) => {
@@ -183,116 +174,87 @@ export function useUpdateArticle(
       });
 
       // Optimistically update all infinite lists (generic update)
-      queryClient.setQueriesData(
-        { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
-        (oldData: any) => {
+      queryClient.setQueriesData({ queryKey: [RSS_QUERY_KEYS.ARTICLES] }, (oldData: any) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page: any) => ({
+            ...page,
+            items: page.items.map((item: ArticleSummary) =>
+              item.id === articleId
+                ? {
+                    ...item,
+                    ...data,
+                    ...(data.priority && { priority: data.priority as any }),
+                  }
+                : item
+            ),
+          })),
+        };
+      });
+
+      // Specific handling for Read Later list: Remove item if unsaving
+      if (data.is_saved === false) {
+        queryClient.setQueriesData({ queryKey: queryKeys.infiniteReadLater() }, (oldData: any) => {
           if (!oldData?.pages) return oldData;
           return {
             ...oldData,
             pages: oldData.pages.map((page: any) => ({
               ...page,
-              items: page.items.map((item: ArticleSummary) =>
-                item.id === articleId
-                  ? {
-                      ...item,
-                      ...data,
-                      ...(data.priority && { priority: data.priority as any }),
-                    }
-                  : item,
-              ),
+              items: page.items.filter((item: ArticleSummary) => item.id !== articleId),
             })),
           };
-        },
-      );
-
-      // Specific handling for Read Later list: Remove item if unsaving
-      if (data.is_saved === false) {
-        queryClient.setQueriesData(
-          { queryKey: queryKeys.infiniteReadLater() },
-          (oldData: any) => {
-            if (!oldData?.pages) return oldData;
-            return {
-              ...oldData,
-              pages: oldData.pages.map((page: any) => ({
-                ...page,
-                items: page.items.filter(
-                  (item: ArticleSummary) => item.id !== articleId,
-                ),
-              })),
-            };
-          },
-        );
+        });
       }
 
       // Optimistically update unread counts
-      queryClient.setQueryData<ArticleCountsResponse>(
-        queryKeys.unreadCounts(),
-        (old) => {
-          if (!old) return old;
+      queryClient.setQueryData<ArticleCountsResponse>(queryKeys.unreadCounts(), (old) => {
+        if (!old) return old;
 
-          const newFeedCounts = { ...old.feed_counts };
-          let newReadLater = old.read_later;
+        const newFeedCounts = { ...old.feed_counts };
+        let newReadLater = old.read_later;
 
-          // Handle is_read changes
-          if (data.is_read !== undefined) {
-            // We need the feedId to update specific feed counts
-            // If we don't have previousArticle (e.g. from list view without detail),
-            // we can't reliably update the specific feed count, so we skip it.
-            const feedId = previousArticle?.feed_id;
+        // Handle is_read changes
+        if (data.is_read !== undefined) {
+          // We need the feedId to update specific feed counts
+          // If we don't have previousArticle (e.g. from list view without detail),
+          // we can't reliably update the specific feed count, so we skip it.
+          const feedId = previousArticle?.feed_id;
 
-            if (feedId && newFeedCounts[feedId] !== undefined) {
-              if (
-                data.is_read === true &&
-                (!previousArticle || !previousArticle.is_read)
-              ) {
-                newFeedCounts[feedId] = Math.max(0, newFeedCounts[feedId] - 1);
-              } else if (
-                data.is_read === false &&
-                (!previousArticle || previousArticle.is_read)
-              ) {
-                newFeedCounts[feedId] = newFeedCounts[feedId] + 1;
-              }
+          if (feedId && newFeedCounts[feedId] !== undefined) {
+            if (data.is_read === true && (!previousArticle || !previousArticle.is_read)) {
+              newFeedCounts[feedId] = Math.max(0, newFeedCounts[feedId] - 1);
+            } else if (data.is_read === false && (!previousArticle || previousArticle.is_read)) {
+              newFeedCounts[feedId] = newFeedCounts[feedId] + 1;
             }
           }
+        }
 
-          // Handle is_saved changes
-          if (data.is_saved !== undefined) {
-            if (
-              data.is_saved === true &&
-              (!previousArticle || !previousArticle.is_saved)
-            ) {
-              newReadLater++;
-            } else if (
-              data.is_saved === false &&
-              (!previousArticle || previousArticle.is_saved)
-            ) {
-              newReadLater = Math.max(0, newReadLater - 1);
-            }
+        // Handle is_saved changes
+        if (data.is_saved !== undefined) {
+          if (data.is_saved === true && (!previousArticle || !previousArticle.is_saved)) {
+            newReadLater++;
+          } else if (data.is_saved === false && (!previousArticle || previousArticle.is_saved)) {
+            newReadLater = Math.max(0, newReadLater - 1);
           }
+        }
 
-          return {
-            ...old,
-            feed_counts: newFeedCounts,
-            read_later: newReadLater,
-          };
-        },
-      );
+        return {
+          ...old,
+          feed_counts: newFeedCounts,
+          read_later: newReadLater,
+        };
+      });
 
       return { previousArticle, previousUnreadCounts };
     },
     onError: (_err, { articleId }, context) => {
       // Rollback
       if (context?.previousArticle) {
-        queryClient.setQueryData(
-          queryKeys.article(articleId),
-          context.previousArticle,
-        );
+        queryClient.setQueryData(queryKeys.article(articleId), context.previousArticle);
       }
       if (context?.previousUnreadCounts) {
-        queryClient.setQueryData(
-          queryKeys.unreadCounts(),
-          context.previousUnreadCounts,
-        );
+        queryClient.setQueryData(queryKeys.unreadCounts(), context.previousUnreadCounts);
       }
 
       // Invalidate to be safe
@@ -317,8 +279,8 @@ export function useUpdateArticle(
       queryClient.invalidateQueries({
         predicate: (query) =>
           query.queryKey[0] === RSS_QUERY_KEYS.ARTICLE &&
-          typeof query.queryKey[1] === "string" &&
-          query.queryKey[1].startsWith("check-"),
+          typeof query.queryKey[1] === 'string' &&
+          query.queryKey[1].startsWith('check-'),
       });
 
       // Invalidate article lists
@@ -362,17 +324,14 @@ export function useInfiniteArticles(
       ReturnType<typeof queryKeys.infiniteArticles>,
       string | null
     >,
-    "queryKey" | "queryFn" | "getNextPageParam" | "initialPageParam"
-  >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
 ) {
   return useInfiniteQuery({
     queryKey: queryKeys.infiniteArticles(params),
     queryFn: ({
       pageParam,
-    }: QueryFunctionContext<
-      ReturnType<typeof queryKeys.infiniteArticles>,
-      string | null
-    >) =>
+    }: QueryFunctionContext<ReturnType<typeof queryKeys.infiniteArticles>, string | null>) =>
       ApiClient.getArticles({
         feed_id: params.feedId,
         folder_id: params.folderId,
@@ -412,18 +371,15 @@ export function useInfiniteRecentlyReadArticles(
       ReturnType<typeof queryKeys.infiniteRecentlyRead>,
       string | null
     >,
-    "queryKey" | "queryFn" | "getNextPageParam" | "initialPageParam"
-  >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
 ) {
   const limit = params.limit || 25;
   return useInfiniteQuery({
     queryKey: queryKeys.infiniteRecentlyRead(),
     queryFn: ({
       pageParam,
-    }: QueryFunctionContext<
-      ReturnType<typeof queryKeys.infiniteRecentlyRead>,
-      string | null
-    >) =>
+    }: QueryFunctionContext<ReturnType<typeof queryKeys.infiniteRecentlyRead>, string | null>) =>
       ApiClient.getRecentlyReadArticles({
         cursor: pageParam || undefined,
         limit,
@@ -459,18 +415,15 @@ export function useInfiniteReadLaterArticles(
       ReturnType<typeof queryKeys.infiniteReadLater>,
       string | null
     >,
-    "queryKey" | "queryFn" | "getNextPageParam" | "initialPageParam"
-  >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
 ) {
   const limit = params.limit || 25;
   return useInfiniteQuery({
     queryKey: queryKeys.infiniteReadLater(),
     queryFn: ({
       pageParam,
-    }: QueryFunctionContext<
-      ReturnType<typeof queryKeys.infiniteReadLater>,
-      string | null
-    >) =>
+    }: QueryFunctionContext<ReturnType<typeof queryKeys.infiniteReadLater>, string | null>) =>
       ApiClient.getReadLaterArticles({
         cursor: pageParam || undefined,
         limit,
@@ -506,18 +459,15 @@ export function useInfiniteTodayArticles(
       ReturnType<typeof queryKeys.infiniteToday>,
       string | null
     >,
-    "queryKey" | "queryFn" | "getNextPageParam" | "initialPageParam"
-  >,
+    'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+  >
 ) {
   const limit = params?.limit || 25;
   return useInfiniteQuery({
     queryKey: queryKeys.infiniteToday(),
     queryFn: ({
       pageParam,
-    }: QueryFunctionContext<
-      ReturnType<typeof queryKeys.infiniteToday>,
-      string | null
-    >) =>
+    }: QueryFunctionContext<ReturnType<typeof queryKeys.infiniteToday>, string | null>) =>
       ApiClient.getTodaysArticles({
         cursor: pageParam || undefined,
         limit,
@@ -542,11 +492,11 @@ export function useCheckArticleSaved(
       CheckArticleSavedResponse,
       ReturnType<typeof queryKeys.checkArticleSaved>
     >,
-    "queryKey" | "queryFn" | "enabled"
-  >,
+    'queryKey' | 'queryFn' | 'enabled'
+  >
 ) {
   // Always return a valid query key structure, even if empty
-  const queryKey = queryKeys.checkArticleSaved(url || "");
+  const queryKey = queryKeys.checkArticleSaved(url || '');
   return useQuery({
     queryKey,
     queryFn: () => ApiClient.checkArticleSaved(url!),
@@ -568,7 +518,7 @@ export function useSaveArticle(
       priority?: string;
       note?: string;
     }
-  >,
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -597,19 +547,13 @@ export function useSaveArticle(
 }
 
 export function useUnsaveArticle(
-  options?: UseMutationOptions<
-    void,
-    unknown,
-    { articleId: string; url: string }
-  >,
+  options?: UseMutationOptions<void, unknown, { articleId: string; url: string }>
 ) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: mutationKeys.unsaveArticle(),
     mutationFn: ({ articleId }: { articleId: string; url: string }) => {
-      return ApiClient.updateArticle(articleId, { is_saved: false }).then(
-        () => undefined,
-      );
+      return ApiClient.updateArticle(articleId, { is_saved: false }).then(() => undefined);
     },
     onSettled: async (_data, _error, variables) => {
       await queryClient.invalidateQueries({
@@ -631,20 +575,15 @@ export async function fetchTranslation(
   articleId: string,
   targetLanguage: string,
   content?: string,
-  articleType?: string,
+  articleType?: string
 ): Promise<TranslateResponse> {
-  const isValidArticleId =
-    articleId && articleId !== "skip" && articleId.length > 0;
+  const isValidArticleId = articleId && articleId !== 'skip' && articleId.length > 0;
 
   if (!isValidArticleId) {
-    throw new Error("Invalid article ID for translation");
+    throw new Error('Invalid article ID for translation');
   }
 
-  const queryKey = createTranslationQueryKey(
-    articleId,
-    targetLanguage,
-    content,
-  );
+  const queryKey = createTranslationQueryKey(articleId, targetLanguage, content);
 
   return await queryClient.fetchQuery({
     queryKey,
@@ -669,7 +608,7 @@ export function useExtractFullTextMutation(
     ExtractFullTextResponse,
     unknown,
     { articleId: string; articleUrl: string; articleType?: string }
-  >,
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -693,16 +632,13 @@ export function useExtractFullTextMutation(
     },
     onSuccess: (data, variables) => {
       // Optimistically update the article with the extracted content
-      queryClient.setQueryData<Article>(
-        queryKeys.article(variables.articleId),
-        (oldArticle) => {
-          if (!oldArticle) return oldArticle;
-          return {
-            ...oldArticle,
-            extracted_content: data.content,
-          };
-        },
-      );
+      queryClient.setQueryData<Article>(queryKeys.article(variables.articleId), (oldArticle) => {
+        if (!oldArticle) return oldArticle;
+        return {
+          ...oldArticle,
+          extracted_content: data.content,
+        };
+      });
 
       // Invalidate the article to pick up extracted_content field
       queryClient.invalidateQueries({
@@ -726,14 +662,14 @@ export function useSummarizeArticleMutation(
       languageKey?: string;
       articleType?: string;
     }
-  >,
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       articleId,
       content,
-      languageKey = "original",
+      languageKey = 'original',
       articleType,
     }: {
       articleId: string;
@@ -772,7 +708,7 @@ export function useTranslateArticleMutation(
       content?: string;
       articleType?: string;
     }
-  >,
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -787,13 +723,7 @@ export function useTranslateArticleMutation(
       content?: string;
       articleType?: string;
     }) => {
-      return await fetchTranslation(
-        queryClient,
-        articleId,
-        targetLanguage,
-        content,
-        articleType,
-      );
+      return await fetchTranslation(queryClient, articleId, targetLanguage, content, articleType);
     },
     ...options,
   });

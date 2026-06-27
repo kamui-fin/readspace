@@ -44,8 +44,6 @@ export default function ImportOPMLScreen() {
   const [shouldPoll, setShouldPoll] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
 
-
-
   // Get active task if one exists in the background
   const { data: activeTask, isLoading: isCheckingTask } = useActiveImportTask();
 
@@ -169,7 +167,7 @@ export default function ImportOPMLScreen() {
       }}>
       <Header
         variant="static"
-        title={hasActiveTask ? "Import Status" : ""}
+        title={hasActiveTask ? 'Import Status' : ''}
         titleFontWeight="semibold"
         transparentBackground={true}
         showBackButton={true}
@@ -182,7 +180,6 @@ export default function ImportOPMLScreen() {
         contentContainerStyle={{
           paddingBottom: 20,
         }}>
-        
         {hasActiveTask && taskStatus ? (
           <Animated.View entering={FadeIn} exiting={FadeOut} className="px-6">
             <OPMLStatusCard
@@ -196,36 +193,46 @@ export default function ImportOPMLScreen() {
           <View className="px-6">
             {/* Screen Header Info */}
             <View className="mb-6">
-              <Text size="2xl" fontFamily="geist-bold" className="text-black dark:text-white mb-2">
+              <Text size="2xl" fontFamily="geist-bold" className="mb-2 text-black dark:text-white">
                 Import Subscriptions
               </Text>
-              <Text size="sm" fontFamily="geist-medium" className="text-grey dark:text-grey leading-relaxed">
-                Bring your reading list with you. Upload an OPML file exported from your previous RSS reader to import all your feeds at once.
+              <Text
+                size="sm"
+                fontFamily="geist-medium"
+                className="text-grey dark:text-grey leading-relaxed">
+                Bring your reading list with you. Upload an OPML file exported from your previous
+                RSS reader to import all your feeds at once.
               </Text>
             </View>
 
             {/* Premium Upload Card */}
             {isPicking ? (
               <View
-                className="items-center justify-center rounded-2xl py-12 border"
-                style={{ 
-                  backgroundColor: colors.grey6, 
+                className="items-center justify-center rounded-2xl border py-12"
+                style={{
+                  backgroundColor: colors.grey6,
                   borderColor: isDark ? colors.grey5 : colors.grey4,
                   borderStyle: 'dashed',
                   borderWidth: 1.5,
                 }}>
                 <Spinner size="medium" color={colors.secondary} />
-                <Text size="base" fontFamily="geist-semibold" className="text-black dark:text-white mt-4 text-center">
+                <Text
+                  size="base"
+                  fontFamily="geist-semibold"
+                  className="mt-4 text-center text-black dark:text-white">
                   Analyzing file...
                 </Text>
-                <Text size="xs" fontFamily="geist" className="text-grey dark:text-grey text-center mt-1">
+                <Text
+                  size="xs"
+                  fontFamily="geist"
+                  className="text-grey dark:text-grey mt-1 text-center">
                   Reading OPML structure and counting feeds
                 </Text>
               </View>
             ) : (
               <Pressable
                 onPress={handleOPMLImport}
-                className="items-center justify-center rounded-2xl py-12 px-5 border"
+                className="items-center justify-center rounded-2xl border px-5 py-12"
                 style={({ pressed }) => ({
                   backgroundColor: colors.grey6,
                   borderColor: isDark ? colors.grey5 : colors.grey4,
@@ -233,16 +240,26 @@ export default function ImportOPMLScreen() {
                   borderWidth: 1.5,
                   opacity: pressed ? 0.85 : 1,
                 })}>
-                <View 
-                  className="h-16 w-16 rounded-full items-center justify-center mb-4"
-                  style={{ backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)' }}>
+                <View
+                  className="mb-4 h-16 w-16 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: isDark
+                      ? 'rgba(106, 153, 78, 0.15)'
+                      : 'rgba(106, 153, 78, 0.1)',
+                  }}>
                   <DocumentTextBoldIcon width={32} height={32} color={colors.secondary} />
                 </View>
-                
-                <Text size="lg" fontFamily="geist-bold" className="text-black dark:text-white text-center">
+
+                <Text
+                  size="lg"
+                  fontFamily="geist-bold"
+                  className="text-center text-black dark:text-white">
                   Select OPML File
                 </Text>
-                <Text size="xs" fontFamily="geist-medium" className="text-grey dark:text-grey text-center mt-1.5">
+                <Text
+                  size="xs"
+                  fontFamily="geist-medium"
+                  className="text-grey dark:text-grey mt-1.5 text-center">
                   Tap to browse .opml or .xml subscription files
                 </Text>
               </Pressable>

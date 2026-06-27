@@ -54,27 +54,27 @@ Add these labels to `docker/docker-compose.yml`:
 services:
   web:
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.readspace-web.rule=Host(`app.example.com`)"
-      - "traefik.http.routers.readspace-web.entrypoints=websecure"
-      - "traefik.http.routers.readspace-web.tls.certresolver=letsencrypt"
-      - "traefik.http.services.readspace-web.loadbalancer.server.port=8042"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.readspace-web.rule=Host(`app.example.com`)'
+      - 'traefik.http.routers.readspace-web.entrypoints=websecure'
+      - 'traefik.http.routers.readspace-web.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.readspace-web.loadbalancer.server.port=8042'
 
   api:
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.readspace-api.rule=Host(`api.example.com`)"
-      - "traefik.http.routers.readspace-api.entrypoints=websecure"
-      - "traefik.http.routers.readspace-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.readspace-api.loadbalancer.server.port=8008"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.readspace-api.rule=Host(`api.example.com`)'
+      - 'traefik.http.routers.readspace-api.entrypoints=websecure'
+      - 'traefik.http.routers.readspace-api.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.readspace-api.loadbalancer.server.port=8008'
 
   meilisearch:
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.readspace-search.rule=Host(`search.example.com`)"
-      - "traefik.http.routers.readspace-search.entrypoints=websecure"
-      - "traefik.http.routers.readspace-search.tls.certresolver=letsencrypt"
-      - "traefik.http.services.readspace-search.loadbalancer.server.port=7700"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.readspace-search.rule=Host(`search.example.com`)'
+      - 'traefik.http.routers.readspace-search.entrypoints=websecure'
+      - 'traefik.http.routers.readspace-search.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.readspace-search.loadbalancer.server.port=7700'
 ```
 
 For Supabase, add labels to the `kong` service in `docker/supabase/docker-compose.yml`:
@@ -83,11 +83,11 @@ For Supabase, add labels to the `kong` service in `docker/supabase/docker-compos
 services:
   kong:
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.readspace-supabase.rule=Host(`supabase.example.com`)"
-      - "traefik.http.routers.readspace-supabase.entrypoints=websecure"
-      - "traefik.http.routers.readspace-supabase.tls.certresolver=letsencrypt"
-      - "traefik.http.services.readspace-supabase.loadbalancer.server.port=8000"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.readspace-supabase.rule=Host(`supabase.example.com`)'
+      - 'traefik.http.routers.readspace-supabase.entrypoints=websecure'
+      - 'traefik.http.routers.readspace-supabase.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.readspace-supabase.loadbalancer.server.port=8000'
 ```
 
 **Note**: Replace `letsencrypt` with your Traefik certificate resolver name.

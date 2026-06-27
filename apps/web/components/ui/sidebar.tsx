@@ -360,7 +360,7 @@ const Sidebar = React.forwardRef<
                 />
                 <div
                     className={cn(
-                        "fixed inset-y-0 z-10 hidden h-svh w-[var(--width-var)] transition-[left,right,width] duration-200 ease-linear md:flex",
+                        "fixed inset-y-0 z-10 hidden h-svh w-[var(--width-var)] transition-[left,right,width] duration-200 ease-linear md:flex overflow-hidden",
                         side === "left"
                             ? "left-0 group-data-[collapsible=offcanvas]:w-0"
                             : "right-0 group-data-[collapsible=offcanvas]:w-0",

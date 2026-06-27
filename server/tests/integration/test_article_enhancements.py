@@ -19,9 +19,16 @@ def mock_ai_service():
     """Mock AI service to return test responses."""
     with patch("app.services.ai.service.generate_summary") as mock_summary, patch(
         "app.services.ai.service.translate_content"
-    ) as mock_translate:
+    ) as mock_translate, patch(
+        "app.services.ai.service.translate_metadata"
+    ) as mock_translate_metadata:
         mock_summary.return_value = "This is a test summary of the article content."
         mock_translate.return_value = "Este es el contenido traducido."
+        mock_translate_metadata.return_value = {
+            "title": "Titulo Traducido",
+            "description": "Descripcion Traducida",
+            "tags": ["Etiqueta 1", "Etiqueta 2"],
+        }
         yield
 
 
@@ -167,6 +174,9 @@ class TestTranslateArticle:
         data = response.json()
         assert data["target_language"] == "es"
         assert "translated_content" in data
+        assert data["translated_title"] == "Titulo Traducido"
+        assert data["translated_description"] == "Descripcion Traducida"
+        assert data["translated_tags"] == ["Etiqueta 1", "Etiqueta 2"]
 
     @pytest.mark.asyncio
     async def test_translate_with_custom_content(

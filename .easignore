@@ -72,3 +72,5 @@ __pycache__/
 favicons/
 rss-r-us
 feeds.jsonl
+
+.codegraph

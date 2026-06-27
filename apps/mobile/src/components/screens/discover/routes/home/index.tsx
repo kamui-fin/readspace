@@ -16,13 +16,17 @@ import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
+import {
+  BOTTOM_TABBAR_BASE_HEIGHT,
+  MAX_TRENDING_ITEMS,
+  TRENDING_PAGE_SIZE,
+} from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { createSearchClient, FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import type { FeedSummary } from '@readspace/shared';
 import { MOBILE_CATEGORY_NAMES, useCreateFeed } from '@readspace/shared';
 import { useSearchHistory } from '@stores/search-history';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
   Configure,
@@ -38,6 +42,8 @@ import type { TextInput as RNTextInput } from 'react-native';
 import {
   DeviceEventEmitter,
   Keyboard,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   ScrollView,
   TouchableWithoutFeedback,
@@ -101,35 +107,66 @@ function DiscoverScreenInner() {
   // Tab bar height = BOTTOM_TABBAR_BASE_HEIGHT + 0.8 * safeAreaBottom (from BottomTabbar component)
   // Add extra spacing (24px) for better visual separation
   const contentPaddingBottom = BOTTOM_TABBAR_BASE_HEIGHT + 24;
+  const trendingScrollRef = useRef<ScrollView>(null);
 
   const languageCode =
     selectedLanguage === 'english' ? 'en' : selectedLanguage === 'chinese' ? 'zh' : 'ja';
 
-  // Fetch trending feeds using Meilisearch directly
+  // Fetch trending feeds using Meilisearch directly — infinite paginated, capped at MAX_TRENDING_ITEMS
   const {
-    data: trendingData,
+    data: trendingInfiniteData,
     isLoading: isTrendingLoading,
-    isFetching: isTrendingFetching,
+    isFetchingNextPage: isTrendingFetchingNextPage,
+    fetchNextPage: fetchTrendingNextPage,
+    hasNextPage: trendingHasNextPage,
     error: trendingError,
-  } = useQuery({
+  } = useInfiniteQuery({
     queryKey: ['trending', languageCode],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
       const res = await meilisearchClient.index(FEEDS_INDEX_NAME).search('', {
-        limit: 20,
-        filter: [`language=${languageCode}`], // Assuming 'language' is a filterable attribute
+        limit: TRENDING_PAGE_SIZE,
+        offset: pageParam,
+        filter: [`language=${languageCode}`],
       });
-      return res.hits as unknown as FeedSummary[];
+      return { hits: res.hits as unknown as FeedSummary[], offset: pageParam };
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      const totalFetched = allPages.reduce((sum, p) => sum + p.hits.length, 0);
+      if (lastPage.hits.length < TRENDING_PAGE_SIZE || totalFetched >= MAX_TRENDING_ITEMS) {
+        return undefined;
+      }
+      return lastPage.offset + TRENDING_PAGE_SIZE;
     },
     enabled: viewState === 'default',
   });
 
-  const showTrendingSkeleton =
-    (isTrendingLoading || isTrendingFetching) && (!trendingData || trendingData.length === 0);
+  // Flatten pages into a single list, capped at MAX_TRENDING_ITEMS
+  const trendingData = useMemo(() => {
+    const all = trendingInfiniteData?.pages.flatMap((p) => p.hits) || [];
+    return all.slice(0, MAX_TRENDING_ITEMS);
+  }, [trendingInfiniteData]);
+
+  const showTrendingSkeleton = isTrendingLoading && (!trendingData || trendingData.length === 0);
+
+  const handleTrendingScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!trendingHasNextPage || isTrendingFetchingNextPage) return;
+      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+      const paddingToBottom = 200;
+      const isNearBottom =
+        layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+      if (isNearBottom) {
+        fetchTrendingNextPage();
+      }
+    },
+    [trendingHasNextPage, isTrendingFetchingNextPage, fetchTrendingNextPage]
+  );
 
   const { refine: refineQuery } = useSearchBox();
   const { refine: refineCategory } = useMenu({ attribute: 'top_level_category', limit: 100 });
   const { refine: refineLanguage } = useMenu({ attribute: 'language', limit: 10 });
-  const { items: hits, isLastPage } = useInfiniteHits();
+  const { items: hits, isLastPage, showMore } = useInfiniteHits();
   const { status } = useInstantSearch();
 
   const isSearchLoading = status === 'loading' || status === 'stalled';
@@ -394,7 +431,10 @@ function DiscoverScreenInner() {
               <ScrollView
                 showsVerticalScrollIndicator={false}
                 className="flex-1"
+                ref={trendingScrollRef}
                 keyboardShouldPersistTaps="always"
+                onScroll={handleTrendingScroll}
+                scrollEventThrottle={16}
                 contentContainerStyle={{
                   paddingBottom: contentPaddingBottom,
                 }}>
@@ -415,6 +455,8 @@ function DiscoverScreenInner() {
                   showTrendingSkeleton={showTrendingSkeleton}
                   trendingError={trendingError}
                   trendingData={trendingData}
+                  hasNextPage={trendingHasNextPage}
+                  isFetchingNextPage={isTrendingFetchingNextPage}
                 />
               </ScrollView>
             ) : (
@@ -431,6 +473,8 @@ function DiscoverScreenInner() {
                 categoryScrollRef={categoryScrollRef}
                 searchQuery={searchQuery}
                 showCategoriesList={viewState === 'category' || selectedCategory !== null}
+                hasMore={!isLastPage}
+                onLoadMore={showMore}
               />
             )}
           </View>

@@ -47,8 +47,7 @@ export function FeedIcon({
           },
           style,
         ]}
-        className={className}
-      >
+        className={className}>
         {/* White background backing, slightly inset to prevent corner bleeding/halo on dark/opaque icons */}
         <View
           style={{

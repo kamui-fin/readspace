@@ -12,8 +12,6 @@ export function Pagination() {
 
     const handlePageChange = (page: number) => {
         refine(page)
-        // Scroll to top smoothly
-        window.scrollTo({ top: 0, behavior: "smooth" })
     }
 
     if (nbPages <= 1) {

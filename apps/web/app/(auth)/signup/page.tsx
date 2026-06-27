@@ -2,6 +2,7 @@ import { Logo } from "@/components/ui/logo"
 import { SignupForm } from "@/components/features/auth/SignupForm"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
+import { headers } from "next/headers"
 
 export const metadata = {
     title: "Sign up | Readspace",
@@ -19,6 +20,10 @@ export default async function SignupPage() {
         redirect("/")
     }
 
+    const headerList = await headers()
+    const host = headerList.get("host") || ""
+    const isProd = host === "app.readspace.ai"
+
     return (
         <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
             <div className="flex w-full max-w-sm flex-col gap-6">
@@ -28,7 +33,7 @@ export default async function SignupPage() {
                 >
                     <Logo />
                 </a>
-                <SignupForm />
+                <SignupForm isProd={isProd} />
             </div>
         </div>
     )

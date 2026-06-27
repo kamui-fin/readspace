@@ -389,11 +389,13 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
           isArticleLoading ? handleBookmark : isClipped ? handleMarkAsDone : handleBookmark
         }
         onMenuPress={isArticleLoading ? () => {} : handleMenuPress}
+        onGenerateSummary={isArticleLoading ? undefined : handleGenerateSummary}
+        onCopyLink={isArticleLoading ? undefined : handleCopyLink}
         isBookmarked={article?.is_saved || false}
         isClipped={isClipped}
       />
 
-      {isArticleLoading ? (
+      {isArticleLoading || translateMutation.isPending ? (
         <Animated.View key="skeleton-view" exiting={FadeOut.duration(300)} className="flex-1">
           <ArticleReaderSkeleton article={article} />
         </Animated.View>
@@ -405,6 +407,19 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
                 ...article,
                 // Override content with active content
                 content: activeContent || article.content,
+                // Override title, description and tags when translated
+                title:
+                  contentSource === 'translated' && translateData?.translated_title
+                    ? translateData.translated_title
+                    : article.title,
+                description:
+                  contentSource === 'translated' && translateData?.translated_description
+                    ? translateData.translated_description
+                    : article.description,
+                tags:
+                  contentSource === 'translated' && translateData?.translated_tags
+                    ? translateData.translated_tags
+                    : article.tags,
               }}
               scrollY={scrollY}
               lastScrollY={lastScrollY}
@@ -439,9 +454,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         currentView={contentSource}
         onSelectView={handleSelectView}
         onTranslate={() => languagePickerRef.current?.present()}
-        onGenerateSummary={handleGenerateSummary}
-        onCopyLink={handleCopyLink}
-        onOpenInBrowser={handleOpenInBrowser}
+        onOpenInBrowser={isArticleLoading ? undefined : handleOpenInBrowser}
         hasExtractedContent={!!article?.extracted_content || !!extractedData?.content}
         hasTranslatedContent={!!translateData?.translated_content}
         canExtractContent={true}

@@ -26,12 +26,25 @@ export const SpinnerView = ({
 }: SpinnerProps) => {
   const isDark = useIsDarkMode();
 
-  const primaryColor = color ?? COLORS.light.secondary;
+  const primaryColor = color ?? (isDark ? COLORS.dark.secondary : COLORS.light.secondary);
+
+  const isWhiteColor = (c: string) => {
+    const lower = c.toLowerCase().trim();
+    return (
+      lower === '#ffffff' ||
+      lower === 'white' ||
+      lower === 'rgb(252, 255, 252)' ||
+      lower === 'rgb(255, 255, 255)'
+    );
+  };
+
   const secondaryColor = secondaryColorProp
     ? secondaryColorProp
-    : isDark
-      ? COLORS.dark.grey4
-      : COLORS.light.grey5;
+    : isWhiteColor(primaryColor)
+      ? 'rgba(255, 255, 255, 0.2)'
+      : isDark
+        ? COLORS.dark.grey4
+        : COLORS.light.grey5;
 
   return (
     <Svg

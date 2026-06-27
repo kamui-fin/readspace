@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import { checkNewUser } from "@/lib/auth-helpers"
 import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {
@@ -12,25 +11,47 @@ export async function GET(request: Request) {
         const supabase = await createClient()
         const { error } = await supabase.auth.exchangeCodeForSession(code)
         if (!error) {
-            // Check if user is new (has no feed subscriptions)
+            // Check is_onboarded flag from the API to decide if onboarding is needed.
+            // This works correctly for both email sign-ups and Google OAuth first-time sign-ins.
             const {
-                data: { user },
-            } = await supabase.auth.getUser()
+                data: { session },
+            } = await supabase.auth.getSession()
 
-            if (user) {
-                // Check if user has any feed subscriptions
-                const isNewUser = await checkNewUser(user.id)
-                const redirectPath = isNewUser ? "/onboarding" : next
+            let redirectPath = next
 
-                // behind a load‑balancer? trust x‑forwarded-host, else origin
-                const host = request.headers.get("x-forwarded-host")
-                const targetOrigin =
-                    process.env.NODE_ENV === "production" && host
-                        ? `https://${host}`
-                        : origin
-
-                return NextResponse.redirect(`${targetOrigin}${redirectPath}`)
+            if (session?.access_token) {
+                try {
+                    const apiBase =
+                        process.env.NEXT_PUBLIC_API_URL ||
+                        "http://localhost:8008"
+                    const profileRes = await fetch(
+                        `${apiBase}/api/users/profile`,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${session.access_token}`,
+                            },
+                            cache: "no-store",
+                        }
+                    )
+                    if (profileRes.ok) {
+                        const profile = await profileRes.json()
+                        if (!profile.is_onboarded) {
+                            redirectPath = "/onboarding"
+                        }
+                    }
+                } catch {
+                    // Fallback: go to next (don't block sign-in on API error)
+                }
             }
+
+            // behind a load-balancer? trust x-forwarded-host, else origin
+            const host = request.headers.get("x-forwarded-host")
+            const targetOrigin =
+                process.env.NODE_ENV === "production" && host
+                    ? `https://${host}`
+                    : origin
+
+            return NextResponse.redirect(`${targetOrigin}${redirectPath}`)
         }
     }
     // on failure, send them somewhere safe

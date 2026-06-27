@@ -78,17 +78,42 @@ def extract_domain_from_url(url: str | None) -> str:
 # We strip these so e.g. "mail.tldr.tech" → "tldr.tech".
 # Deliberately narrow: only clear infra prefixes, not brand ones
 # (*.substack.com, *.beehiiv.com etc. are kept as-is).
-_GENERIC_MAIL_SUBDOMAINS = frozenset({
-    "mail", "email", "e", "em", "send", "sends",
-    "news", "newsletter", "newsletters",
-    "mg", "sg",                         # Mailgun / Sendgrid routing
-    "reply", "bounce", "return",
-    "click", "track", "trk", "go", "get", "links", "link",
-    "messages", "delivery", "mailer",
-    "updates", "notify", "notifications",
-    "noreply", "no-reply",
-    "hello", "hi", "info",
-})
+_GENERIC_MAIL_SUBDOMAINS = frozenset(
+    {
+        "mail",
+        "email",
+        "e",
+        "em",
+        "send",
+        "sends",
+        "news",
+        "newsletter",
+        "newsletters",
+        "mg",
+        "sg",  # Mailgun / Sendgrid routing
+        "reply",
+        "bounce",
+        "return",
+        "click",
+        "track",
+        "trk",
+        "go",
+        "get",
+        "links",
+        "link",
+        "messages",
+        "delivery",
+        "mailer",
+        "updates",
+        "notify",
+        "notifications",
+        "noreply",
+        "no-reply",
+        "hello",
+        "hi",
+        "info",
+    }
+)
 
 
 def normalize_newsletter_domain(domain: str) -> str:

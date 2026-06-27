@@ -22,12 +22,12 @@ from app.routers.feeds.feeds_refresh import router as feeds_refresh_router
 from app.routers.feeds.feeds_subscription import router as feeds_subscription_router
 from app.routers.folders import router as folders_router
 from app.routers.info import router as info_router
+from app.routers.intake import router as intake_router
 
 # OPML routers
 from app.routers.opml.import_opml import router as opml_import_router
 from app.routers.opml.task_management import router as opml_task_management_router
 from app.routers.users import router as users_router
-from app.routers.intake import router as intake_router
 
 # Create main API router
 api_router = APIRouter()

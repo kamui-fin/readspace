@@ -51,7 +51,9 @@ export function DiscoverContent({ onAiSettingsChange }: DiscoverContentProps) {
             />
 
             <DiscoverLayout centerVertically={!hasActiveSearch}>
-                <div className="max-w-full md:max-w-4xl mx-auto w-full pb-24">
+                <div
+                    className={`max-w-full md:max-w-4xl mx-auto w-full ${hasActiveSearch ? "pb-24" : "pb-0"}`}
+                >
                     {/* Header */}
                     <div className="flex flex-col items-center">
                         {hasActiveSearch ? (
@@ -116,7 +118,9 @@ export function DiscoverContent({ onAiSettingsChange }: DiscoverContentProps) {
                     ) : (
                         /* Show category grid when no search */
                         <div className="space-y-6 flex flex-col items-center">
-                            <CategoryGrid onCategoryClick={handleCategoryClick} />
+                            <CategoryGrid
+                                onCategoryClick={handleCategoryClick}
+                            />
                             <NewsletterSection />
                         </div>
                     )}

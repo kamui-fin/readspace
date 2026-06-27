@@ -12,7 +12,14 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
-import { ApiClient, queryKeys, useCreateFeed, useDeleteFeed, useFeed, RSS_QUERY_KEYS } from '@readspace/shared';
+import {
+  ApiClient,
+  queryKeys,
+  useCreateFeed,
+  useDeleteFeed,
+  useFeed,
+  RSS_QUERY_KEYS,
+} from '@readspace/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';

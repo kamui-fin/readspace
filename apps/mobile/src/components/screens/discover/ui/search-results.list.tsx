@@ -20,6 +20,8 @@ interface SearchResultsProps {
   categoryScrollRef: React.RefObject<ScrollView | null>;
   searchQuery: string;
   showCategoriesList?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 interface SearchListItem extends Partial<FeedSummary> {
@@ -40,6 +42,8 @@ export function SearchResults({
   categoryScrollRef,
   searchQuery,
   showCategoriesList = false,
+  hasMore = false,
+  onLoadMore,
 }: SearchResultsProps) {
   const listRef = useRef<any>(null);
   const isDark = useIsDarkMode();
@@ -68,7 +72,7 @@ export function SearchResults({
 
   const listItemsLength = listItems.length;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset scroll top when category or list items change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset scroll top when category or search query changes
   useEffect(() => {
     // Only reset scroll position to top if the user has actually scrolled.
     // Calling scrollToOffset(0) unconditionally when already at top triggers
@@ -81,16 +85,34 @@ export function SearchResults({
         // Ignore if list/ref is not ready
       }
     }
-  }, [selectedCategory, listItemsLength]);
+  }, [selectedCategory, searchQuery]);
 
   const handleScroll = useCallback((event: any) => {
     scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
   }, []);
 
+  const renderFooter = useCallback(() => {
+    if (!hasMore || showSearchSkeleton) return null;
+    return (
+      <View className="gap-4 px-6 pt-3">
+        {Array.from({ length: 3 }, (_, i) => `search-footer-skeleton-${i}`).map((key) => (
+          <View key={key} className="flex-row items-center gap-4 py-2">
+            <Skeleton variant="rectangle" width={48} height={48} className="rounded-lg" />
+            <View className="flex-1 gap-2">
+              <Skeleton variant="text" width="70%" height={20} />
+              <Skeleton variant="text" width="100%" height={16} />
+              <Skeleton variant="text" width="80%" height={16} />
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  }, [hasMore, showSearchSkeleton]);
+
   const renderItem = useCallback((item: SearchListItem) => {
     if (item.isSkeleton) {
       return (
-        <View className="flex-row items-center gap-4 py-3 px-6">
+        <View className="flex-row items-center gap-4 px-6 py-3">
           <Skeleton variant="rectangle" width={48} height={48} className="rounded-lg" />
           <View className="flex-1 gap-2">
             <Skeleton variant="text" width="70%" height={20} />
@@ -108,6 +130,7 @@ export function SearchResults({
         description={item.description || ''}
         iconUrl={item.image_url || undefined}
         isFollowing={item.is_subscribed || false}
+        feedUrl={item.url || undefined}
         className="px-6"
         isPreview={item.is_preview}
       />
@@ -152,10 +175,13 @@ export function SearchResults({
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
+        hasMore={hasMore}
+        onEndReached={onLoadMore}
         contentContainerStyle={{
           paddingBottom: contentPaddingBottom,
         }}

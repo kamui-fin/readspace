@@ -25,6 +25,8 @@ interface FollowingState {
   };
   // Track if we're currently loading more articles
   isLoadingMore: boolean;
+  // Whether the store has been rehydrated from AsyncStorage
+  _hasHydrated: boolean;
 }
 
 interface FollowingActions {
@@ -33,6 +35,7 @@ interface FollowingActions {
   setLoadingState: (tab: 'today' | 'saved' | 'all', isLoading: boolean) => void;
   setArticleCount: (tab: 'today' | 'saved' | 'all', count: number) => void;
   setIsLoadingMore: (isLoading: boolean) => void;
+  setHasHydrated: (hasHydrated: boolean) => void;
   reset: () => void;
 }
 
@@ -53,6 +56,7 @@ const initialState: FollowingState = {
     all: 0,
   },
   isLoadingMore: false,
+  _hasHydrated: false,
 };
 
 export const useFollowingStore = create<FollowingStore>()(
@@ -94,6 +98,10 @@ export const useFollowingStore = create<FollowingStore>()(
         set({ isLoadingMore: isLoading });
       },
 
+      setHasHydrated: (hasHydrated) => {
+        set({ _hasHydrated: hasHydrated });
+      },
+
       reset: () => {
         set(initialState);
       },
@@ -107,9 +115,15 @@ export const useFollowingStore = create<FollowingStore>()(
         activeTab: state.activeTab,
         filter: state.filter,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
+
+// Hook to check if the following store has been hydrated from AsyncStorage
+export const useHasFollowingHydrated = () => useFollowingStore((state) => state._hasHydrated);
 
 // Helper function to get current active tab synchronously
 export const getActiveTab = () => useFollowingStore.getState().activeTab;

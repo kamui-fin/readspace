@@ -16,6 +16,7 @@ class ProfileUpdate(BaseModel):
     """Update profile - all fields optional for PATCH."""
 
     email: EmailStr | None = None
+    is_onboarded: bool | None = None
 
 
 # ================= Responses =================
@@ -29,6 +30,7 @@ class ProfileResponse(BaseModel):
     id: UUID
     email: str
     role: UserRole
+    is_onboarded: bool
     created_at: datetime
     updated_at: datetime
 

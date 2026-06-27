@@ -137,7 +137,14 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
         />
 
         {/* Right icon: clear X when typing, language picker when idle/focused-empty */}
-        <View style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center', marginRight: 4 }}>
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: 4,
+          }}>
           <MotiView
             animate={{
               opacity: hasText ? 1 : 0,

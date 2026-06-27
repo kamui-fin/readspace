@@ -38,29 +38,66 @@ interface ArticleContentProps {
 
 import { estimateReadingTime } from "@readspace/shared"
 
-function NewsletterIframe({ content, isDark }: { content: string; isDark: boolean }) {
+function NewsletterIframe({
+    content,
+    isDark,
+}: {
+    content: string
+    isDark: boolean
+}) {
     const iframeRef = useRef<HTMLIFrameElement>(null)
 
-    const handleLoad = () => {
+    useEffect(() => {
         const iframe = iframeRef.current
-        if (iframe && iframe.contentWindow) {
+        if (!iframe) return
+
+        let observer: ResizeObserver | null = null
+
+        const setupObserver = () => {
             try {
-                const doc = iframe.contentDocument || iframe.contentWindow.document
+                const doc =
+                    iframe.contentDocument ||
+                    (iframe.contentWindow
+                        ? iframe.contentWindow.document
+                        : null)
                 if (doc && doc.body) {
-                    iframe.style.height = "0px"
-                    iframe.style.height = `${doc.documentElement.scrollHeight || doc.body.scrollHeight}px`
+                    const updateHeight = () => {
+                        const height = Math.max(
+                            doc.body.scrollHeight,
+                            doc.body.offsetHeight,
+                            doc.documentElement.scrollHeight,
+                            doc.documentElement.offsetHeight
+                        )
+                        if (height > 0) {
+                            iframe.style.height = `${height}px`
+                        }
+                    }
+
+                    // Initial height set
+                    updateHeight()
+
+                    if (window.ResizeObserver) {
+                        if (observer) {
+                            observer.disconnect()
+                        }
+                        observer = new ResizeObserver(updateHeight)
+                        observer.observe(doc.body)
+                    }
                 }
             } catch (e) {
-                console.error("Failed to resize iframe", e)
+                console.error("Failed to setup resize observer", e)
             }
         }
-    }
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            handleLoad()
-        }, 1000)
-        return () => clearInterval(interval)
+        iframe.addEventListener("load", setupObserver)
+        setupObserver()
+
+        return () => {
+            if (observer) {
+                observer.disconnect()
+            }
+            iframe.removeEventListener("load", setupObserver)
+        }
     }, [content, isDark])
 
     const srcDoc = `
@@ -77,16 +114,26 @@ function NewsletterIframe({ content, isDark }: { content: string; isDark: boolea
                 color: ${isDark ? "#e2e8f0" : "#1a202c"};
               }
 
-              ${isDark ? `
+              html, body, .document, [class*="document"], [class*="body"] {
+                height: auto !important;
+                min-height: auto !important;
+                overflow: visible !important;
+              }
+
+              ${
+                  isDark
+                      ? `
                 html {
                   filter: invert(1) hue-rotate(180deg);
-                  background-color: #121212 !important;
+                  background-color: #ededed !important; /* Inverts to #121212 */
                 }
                 
                 img, video, svg, .no-invert {
                   filter: invert(1) hue-rotate(180deg) !important;
                 }
-              ` : ''}
+              `
+                      : ""
+              }
 
               img {
                 max-width: 100% !important;
@@ -96,10 +143,20 @@ function NewsletterIframe({ content, isDark }: { content: string; isDark: boolea
                 max-width: 100% !important;
                 width: 100% !important;
               }
+
+              /* Prevent email internal dark styles from causing double-inversion grey looks */
+              @media (prefers-color-scheme: dark) {
+                body, p, td, tr, .body, table, h1, h2, h3, h4, h5, h6, div, span, .document, [class*="document"], [class*="body"] {
+                  background-color: #FEFEFE !important;
+                  color: #010101 !important;
+                }
+              }
             </style>
           </head>
           <body>
-            ${content}
+            <div id="mail-content-root" style="display: flow-root;">
+              ${content}
+            </div>
           </body>
         </html>
     `
@@ -109,9 +166,9 @@ function NewsletterIframe({ content, isDark }: { content: string; isDark: boolea
             ref={iframeRef}
             srcDoc={srcDoc}
             className="newsletter-iframe w-full"
-            sandbox="allow-popups allow-popups-to-escape-sandbox"
+            sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+            scrolling="no"
             loading="lazy"
-            onLoad={handleLoad}
             style={{
                 width: "100%",
                 border: "none",
@@ -446,7 +503,10 @@ export function ArticleContent({
                                 className="mt-8"
                             >
                                 {article.link?.startsWith("newsletter://") ? (
-                                    <NewsletterIframe content={displayContent} isDark={isDark} />
+                                    <NewsletterIframe
+                                        content={displayContent}
+                                        isDark={isDark}
+                                    />
                                 ) : (
                                     <div
                                         className="text-xl leading-relaxed"
@@ -545,8 +605,13 @@ export function ArticleContent({
                                 />
 
                                 {displayContent ? (
-                                    article.link?.startsWith("newsletter://") ? (
-                                        <NewsletterIframe content={displayContent} isDark={isDark} />
+                                    article.link?.startsWith(
+                                        "newsletter://"
+                                    ) ? (
+                                        <NewsletterIframe
+                                            content={displayContent}
+                                            isDark={isDark}
+                                        />
                                     ) : (
                                         <div
                                             className="text-xl leading-relaxed mt-8"
@@ -557,7 +622,8 @@ export function ArticleContent({
                                         >
                                             <div
                                                 dangerouslySetInnerHTML={{
-                                                    __html: displayContent || "",
+                                                    __html:
+                                                        displayContent || "",
                                                 }}
                                             />
                                         </div>

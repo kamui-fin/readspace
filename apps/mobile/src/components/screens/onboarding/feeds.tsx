@@ -2,7 +2,7 @@ import { FeedListSkeleton } from '@components/screens/discover/ui/feed-list.skel
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
-import { useCreateFeed, useDeleteFeed } from '@readspace/shared';
+import { useCreateFeed, useDeleteFeed, ApiClient } from '@readspace/shared';
 import { useOnboardingStore } from '@stores/onboarding';
 import { useIsMutating, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -64,12 +64,8 @@ export function FeedSelectionStep({ onNext: _onNext }: { onNext: () => void }) {
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
     // Wait for any still-in-flight createFeed mutations to settle before navigating.
-    // Without this, the following screen could load before the server has processed
-    // the subscriptions, resulting in an empty feed that can't be fixed without
-    // a full app reload (due to React Query's 5-min staleTime).
     if (pendingFeedCreations > 0) {
       await queryClient.getMutationCache().subscribe(() => {});
-      // Poll until all createFeed mutations finish
       await new Promise<void>((resolve) => {
         const check = () => {
           const stillPending = queryClient
@@ -85,8 +81,14 @@ export function FeedSelectionStep({ onNext: _onNext }: { onNext: () => void }) {
       });
     }
 
+    // Mark the user as onboarded on the server so future sign-ins skip onboarding
+    try {
+      await ApiClient.patch('/api/users/profile', { is_onboarded: true });
+    } catch (e) {
+      console.warn('[Onboarding] Failed to mark user as onboarded:', e);
+    }
+
     // Invalidate caches so the following screen starts with a fresh fetch
-    // rather than serving stale empty data from before the subscriptions existed.
     queryClient.invalidateQueries({ queryKey: ['rss-articles'], refetchType: 'all' });
     queryClient.invalidateQueries({ queryKey: ['rss-feeds', 'list'], refetchType: 'all' });
     queryClient.invalidateQueries({ queryKey: ['rss-unread-counts'], refetchType: 'all' });

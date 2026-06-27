@@ -132,7 +132,8 @@ async def sync_feeds_batch(
 
     # Filter out newsletter feeds to prevent indexing private newsletters
     filtered_feeds = [
-        f for f in feeds
+        f
+        for f in feeds
         if not (isinstance(f, Feed) and f.url and f.url.startswith("newsletter://"))
         and not (isinstance(f, dict) and str(f.get("url", "")).startswith("newsletter://"))
     ]

@@ -1,13 +1,14 @@
 export enum UserRole {
-  BASIC = "BASIC",
-  PRO = "PRO",
-  ADMIN = "ADMIN",
+  BASIC = 'BASIC',
+  PRO = 'PRO',
+  ADMIN = 'ADMIN',
 }
 
 export interface ProfileResponse {
   id: string;
   email: string;
   role: UserRole;
+  is_onboarded: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -18,6 +19,7 @@ export type UserProfile = ProfileResponse;
 
 export interface ProfileUpdate {
   email?: string;
+  is_onboarded?: boolean;
 }
 
 export interface TokenData {

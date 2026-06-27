@@ -17,7 +17,10 @@ export function NewsletterSection() {
     const { isBasic } = useUserRole()
     const { open: openUpgrade } = useUpgradeDialog()
     const [isOpen, setIsOpen] = useState(false)
-    const [tokenData, setTokenData] = useState<{ token: string; email: string } | null>(null)
+    const [tokenData, setTokenData] = useState<{
+        token: string
+        email: string
+    } | null>(null)
     const [isTokenLoading, setIsTokenLoading] = useState(false)
     const [copied, setCopied] = useState(false)
 
@@ -53,7 +56,8 @@ export function NewsletterSection() {
         if (isBasic) {
             openUpgrade({
                 title: "Upgrade to Readspace Pro",
-                description: "Unlock newsletter ingestion and subscribe to Substack, Mailchimp, or any mailing list directly in your feed.",
+                description:
+                    "Unlock newsletter ingestion and subscribe to Substack, Mailchimp, or any mailing list directly in your feed.",
             })
         } else {
             setIsOpen(true)
@@ -69,7 +73,9 @@ export function NewsletterSection() {
             >
                 <MailOpen className="w-3.5 h-3.5" />
                 <span>Subscribe to newsletters via email</span>
-                <span className="transition-transform duration-200 group-hover:translate-x-0.5">→</span>
+                <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+                    →
+                </span>
             </button>
 
             {/* Modal only for premium users */}
@@ -82,7 +88,8 @@ export function NewsletterSection() {
                                     Newsletter Ingestion
                                 </DialogTitle>
                                 <DialogDescription className="text-sm text-muted-foreground">
-                                    Subscribe to mailing lists directly using your private email alias.
+                                    Subscribe to mailing lists directly using
+                                    your private email alias.
                                 </DialogDescription>
                             </div>
 
@@ -98,13 +105,19 @@ export function NewsletterSection() {
                                         </span>
                                         <div className="flex items-center justify-between gap-3 mt-2 p-2 px-2.5 bg-muted/40 border border-border/40 rounded-lg font-mono text-xs max-w-full overflow-hidden">
                                             {isTokenLoading ? (
-                                                <span className="text-muted-foreground animate-pulse">Generating address...</span>
+                                                <span className="text-muted-foreground animate-pulse">
+                                                    Generating address...
+                                                </span>
                                             ) : (
-                                                <span className="truncate flex-1 select-all text-foreground font-semibold">{tokenData?.email || ""}</span>
+                                                <span className="truncate flex-1 select-all text-foreground font-semibold">
+                                                    {tokenData?.email || ""}
+                                                </span>
                                             )}
                                             <button
                                                 onClick={copyToClipboard}
-                                                disabled={isTokenLoading || !tokenData}
+                                                disabled={
+                                                    isTokenLoading || !tokenData
+                                                }
                                                 className="text-muted-foreground hover:text-foreground transition-colors p-1.5 hover:bg-muted rounded-md cursor-pointer shrink-0 disabled:opacity-50"
                                                 title="Copy email alias"
                                             >
@@ -128,7 +141,9 @@ export function NewsletterSection() {
                                             Subscribe on any website
                                         </span>
                                         <p className="text-xs text-muted-foreground leading-relaxed">
-                                            Paste this private email address in the subscription form of Substack, Mailchimp, or any other publication.
+                                            Paste this private email address in
+                                            the subscription form of Substack,
+                                            Mailchimp, or any other publication.
                                         </p>
                                     </div>
                                 </div>
@@ -143,7 +158,13 @@ export function NewsletterSection() {
                                             Read in Readspace
                                         </span>
                                         <p className="text-xs text-muted-foreground leading-relaxed">
-                                            The first email received will automatically create the feed and place it in your <strong className="text-primary font-semibold">Newsletters</strong> folder.
+                                            The first email received will
+                                            automatically create the feed and
+                                            place it in your{" "}
+                                            <strong className="text-primary font-semibold">
+                                                Newsletters
+                                            </strong>{" "}
+                                            folder.
                                         </p>
                                     </div>
                                 </div>

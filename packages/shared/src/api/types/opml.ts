@@ -1,4 +1,4 @@
-import { ImportStatus } from "./common";
+import { ImportStatus } from './common';
 
 // OPML Import types
 

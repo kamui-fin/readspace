@@ -207,7 +207,12 @@ function RootNavigator() {
       if (session && !inProtectedGroup) return;
       if (!session && !inAuthGroup) return;
 
-      SplashScreen.hideAsync();
+      const timer = setTimeout(() => {
+        SplashScreen.hideAsync().catch((err) => {
+          console.warn('[Layout] Failed to hide splash screen:', err);
+        });
+      }, 150);
+      return () => clearTimeout(timer);
     }
   }, [fontsLoaded, fontError, isAuthLoading, session, segments, isHydrated]);
 

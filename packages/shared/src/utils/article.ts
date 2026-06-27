@@ -32,9 +32,7 @@ export function trimSaveArticleRequest(data: ArticleSaveData): ArticleSaveData {
   // Trim title if present
   if (data.title) {
     trimmed.title =
-      data.title.length > MAX_TITLE_LENGTH
-        ? data.title.substring(0, MAX_TITLE_LENGTH)
-        : data.title;
+      data.title.length > MAX_TITLE_LENGTH ? data.title.substring(0, MAX_TITLE_LENGTH) : data.title;
   }
 
   // Trim content if present

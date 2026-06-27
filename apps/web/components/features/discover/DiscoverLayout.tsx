@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils"
+
 interface DiscoverLayoutProps {
     children: React.ReactNode
     centerVertically?: boolean
@@ -11,9 +13,18 @@ export function DiscoverLayout({
     centerVertically = false,
 }: DiscoverLayoutProps) {
     return (
-        <div className="flex flex-col min-h-screen">
+        <div
+            className={cn(
+                "flex flex-col flex-1",
+                centerVertically && "h-full overflow-hidden"
+            )}
+        >
             <main
-                className={`flex-1 px-4 py-4 md:px-6 md:py-6 ${centerVertically ? "flex items-center justify-center" : ""}`}
+                className={cn(
+                    "flex-1 px-4 py-4 md:px-6 md:py-6",
+                    centerVertically &&
+                        "flex items-center justify-center overflow-hidden"
+                )}
             >
                 {children}
             </main>

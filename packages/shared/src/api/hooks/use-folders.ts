@@ -1,15 +1,9 @@
-import {
-  useMutation,
-  useQueryClient,
-  type UseMutationOptions,
-} from "@tanstack/react-query";
-import { ApiClient } from "../client";
-import { RSS_QUERY_KEYS, mutationKeys, queryKeys } from "../query-keys";
-import type { Folder, FeedsResponse } from "../types";
+import { useMutation, useQueryClient, type UseMutationOptions } from '@tanstack/react-query';
+import { ApiClient } from '../client';
+import { RSS_QUERY_KEYS, mutationKeys, queryKeys } from '../query-keys';
+import type { Folder, FeedsResponse } from '../types';
 
-export function useCreateFolder(
-  options?: UseMutationOptions<Folder, unknown, { name: string }>,
-) {
+export function useCreateFolder(options?: UseMutationOptions<Folder, unknown, { name: string }>) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: mutationKeys.createFolder(),
@@ -27,12 +21,7 @@ export function useCreateFolder(
 }
 
 export function useUpdateFolder(
-  options?: UseMutationOptions<
-    Folder,
-    unknown,
-    { folderId: string; name: string },
-    unknown
-  >,
+  options?: UseMutationOptions<Folder, unknown, { folderId: string; name: string }, unknown>
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -51,9 +40,7 @@ export function useUpdateFolder(
   });
 }
 
-export function useDeleteFolder(
-  options?: UseMutationOptions<void, unknown, string, unknown>,
-) {
+export function useDeleteFolder(options?: UseMutationOptions<void, unknown, string, unknown>) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: mutationKeys.deleteFolder(),
@@ -62,35 +49,30 @@ export function useDeleteFolder(
       return response;
     },
     onSuccess: (_, folderId) => {
-      console.log("useDeleteFolder onSuccess TRIGGERED for:", folderId);
+      console.log('useDeleteFolder onSuccess TRIGGERED for:', folderId);
       queryClient.setQueriesData<FeedsResponse>(
-        { queryKey: [RSS_QUERY_KEYS.FEEDS, "list"] },
+        { queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] },
         (old) => {
-          console.log("Updating feeds data, old is:", !!old);
+          console.log('Updating feeds data, old is:', !!old);
           if (!old) return old;
           return {
             ...old,
             folders: (old.folders || []).filter((f) => f.id !== folderId),
-            subscriptions: (old.subscriptions || []).filter(
-              (s) => s.folder?.id !== folderId,
-            ),
+            subscriptions: (old.subscriptions || []).filter((s) => s.folder?.id !== folderId),
           };
-        },
+        }
       );
-      queryClient.setQueriesData<Folder[]>(
-        { queryKey: queryKeys.folders() },
-        (old) => {
-          console.log("Updating folders data, old is:", !!old);
-          if (!old) return old;
-          return (old || []).filter((f) => f.id !== folderId);
-        },
-      );
+      queryClient.setQueriesData<Folder[]>({ queryKey: queryKeys.folders() }, (old) => {
+        console.log('Updating folders data, old is:', !!old);
+        if (!old) return old;
+        return (old || []).filter((f) => f.id !== folderId);
+      });
     },
     onSettled: () => {
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: queryKeys.folders() });
         queryClient.invalidateQueries({
-          queryKey: [RSS_QUERY_KEYS.FEEDS, "list"],
+          queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'],
         });
         queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
         queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
@@ -105,7 +87,7 @@ export function useMarkFolderAllRead(
     { message: string; folder_id: string; updated_subscriptions: number },
     unknown,
     string
-  >,
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({

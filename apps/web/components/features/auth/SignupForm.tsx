@@ -16,7 +16,6 @@ import { MailIcon } from "lucide-react"
 import * as React from "react"
 import { z } from "zod"
 import { signUp } from "@/app/(auth)/signup/actions"
-import { isCloudProd } from "@/lib/is-cloud-prod"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -39,10 +38,16 @@ function VerificationNotice() {
                 <div className="text-xl font-medium mb-2">
                     Verify your email address
                 </div>
-                <div className="text-center text-muted-foreground max-w-xs">
+                <div className="text-center text-muted-foreground max-w-xs mb-6">
                     Please click on the link in the email we just sent you to
                     confirm your email address.
                 </div>
+                <a
+                    href="/login"
+                    className="text-sm font-semibold text-primary hover:text-primary/85 transition-colors underline underline-offset-4"
+                >
+                    Back to login
+                </a>
             </CardContent>
         </Card>
     )
@@ -50,11 +55,11 @@ function VerificationNotice() {
 
 export function SignupForm({
     className,
+    isProd = false,
     ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<"div"> & { isProd?: boolean }) {
     const [isAwaitingVerification, setIsAwaitingVerification] =
         React.useState(false)
-    const isProd = isCloudProd()
     const router = useRouter()
 
     const schema = createSignUpSchema(isProd)

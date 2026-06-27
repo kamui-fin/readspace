@@ -2,6 +2,9 @@ import { Dimensions, Platform } from 'react-native';
 
 export const BOTTOM_TABBAR_BASE_HEIGHT = 64;
 
+export const MAX_TRENDING_ITEMS = 100;
+export const TRENDING_PAGE_SIZE = 20;
+
 // Bottom Sheet constants
 export const DEVICE_CORNER_RADIUS = Platform.select({
   ios: 39, // iPhone X+ corner radius

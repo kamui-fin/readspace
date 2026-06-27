@@ -2,6 +2,7 @@ import { LoginForm } from "@/components/features/auth/LoginForm"
 import { createClient } from "@/lib/supabase/server"
 import Image from "next/image"
 import { redirect } from "next/navigation"
+import { headers } from "next/headers"
 
 export const metadata = {
     title: "Log in | Readspace",
@@ -16,6 +17,10 @@ export default async function LoginPage() {
     } = await supabase.auth.getUser()
 
     if (user) redirect("/")
+
+    const headerList = await headers()
+    const host = headerList.get("host") || ""
+    const isProd = host === "app.readspace.ai"
 
     return (
         <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
@@ -34,7 +39,7 @@ export default async function LoginPage() {
                     </div>
                     readspace
                 </a>
-                <LoginForm />
+                <LoginForm isProd={isProd} />
             </div>
         </div>
     )

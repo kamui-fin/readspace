@@ -1,5 +1,5 @@
-import { useFeeds } from "./use-feeds";
-import type { Subscription } from "../types";
+import { useFeeds } from './use-feeds';
+import type { Subscription } from '../types';
 
 interface UseIsSubscribedResult {
   isSubscribed: boolean;
@@ -24,13 +24,13 @@ export function useIsSubscribed(feed: {
       staleTime: 10 * 60 * 1000, // 10 minutes
       gcTime: 15 * 60 * 1000, // 15 minutes
       refetchInterval: false,
-    },
+    }
   );
 
   // Normalize URL function to handle www/non-www variations
   const normalizeUrl = (url: string | undefined | null) => {
-    if (!url) return "";
-    return url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
+    if (!url) return '';
+    return url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
   };
 
   const subscription = feedsData?.subscriptions?.find((f) => {
@@ -43,9 +43,7 @@ export function useIsSubscribed(feed: {
   });
 
   // If we have feeds data, trust it. Otherwise fall back to initial state.
-  const isSubscribed = feedsData
-    ? !!subscription
-    : (feed.initialIsSubscribed ?? !!subscription);
+  const isSubscribed = feedsData ? !!subscription : (feed.initialIsSubscribed ?? !!subscription);
 
   return {
     isSubscribed,

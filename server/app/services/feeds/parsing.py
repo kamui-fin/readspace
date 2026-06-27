@@ -324,7 +324,14 @@ def _extract_guid(entry: dict, fallback_link: str) -> str:
         guid = guid.get("value")
     if not guid:
         guid = fallback_link
-    return str(guid).strip()[:500]
+
+    guid_str = str(guid).strip()
+    # Strip URL fragments from HTTP(S) GUIDs to prevent duplicate entries
+    # when articles update (e.g., BBC News appending #0, #1, etc.)
+    if guid_str.lower().startswith(("http://", "https://")):
+        guid_str = guid_str.split("#")[0]
+
+    return guid_str[:500]
 
 
 def _extract_published_date(entry: dict) -> datetime:

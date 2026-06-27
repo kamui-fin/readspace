@@ -1,16 +1,21 @@
 import { ArticleFeaturedImage } from '@components/screens/article-reader/ui/article-featured-image';
 import { ArticleHeader } from '@components/screens/article-reader/ui/article-header';
 import { Skeleton } from '@components/ui/skeleton';
+import { ZoomableImage } from '@components/ui/zoomable-image';
 import { useFavicon } from '@hooks/useFavicon';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import type { Article } from '@readspace/shared';
+import { Image as ExpoImage } from 'expo-image';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Linking,
+  Modal,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  Pressable,
   ScrollView,
+  Text,
   View,
 } from 'react-native';
 import Animated, {
@@ -44,6 +49,7 @@ export function ArticleReader({
   const webViewRef = useRef<WebView>(null);
   const [webViewHeight, setWebViewHeight] = useState(1);
   const [isReady, setIsReady] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
   const animatedWebViewStyle = useAnimatedStyle(() => {
     return {
@@ -204,232 +210,239 @@ export function ArticleReader({
       margin: 0;
       padding: 0;
       ${isNewsletter ? '' : "font-family: 'EB Garamond', Georgia, Cambria, 'Times New Roman', Times, serif;"}
-      font-size: 18px;
+      font-size: ${isNewsletter ? '16px' : '18px'};
       line-height: 1.65;
       -webkit-text-size-adjust: 100%;
     }
 
     #readspace-reader-content {
-      padding-left: 24px;
-      padding-right: 24px;
-      padding-bottom: 24px;
-      overflow: hidden;
+      padding-left: ${isNewsletter ? '0' : '24px'};
+      padding-right: ${isNewsletter ? '0' : '24px'};
+      padding-bottom: ${isNewsletter ? '0' : '24px'};
+      overflow-x: ${isNewsletter ? 'auto' : 'hidden'};
+      overflow-y: hidden;
     }
 
     * {
       box-sizing: border-box;
     }
 
-    p {
-      margin-top: 0;
-      margin-bottom: 20px;
-      font-size: 18px;
-      line-height: 1.65;
-      word-wrap: break-word;
-    }
-
-    h1, h2, h3, h4, h5, h6 {
-      ${isNewsletter ? '' : "font-family: 'EB Garamond', Georgia, Cambria, 'Times New Roman', Times, serif;"}
-      color: var(--color-text);
-      font-weight: 700;
-      line-height: 1.25;
-      margin-top: 1.5em;
-      margin-bottom: 0.5em;
-    }
-
-    ${isDark && isNewsletter ? `
-      html {
-        filter: invert(1) hue-rotate(180deg);
-        background-color: ${bgColor} !important;
+    ${
+      isNewsletter
+        ? `
+      /* Newsletter-specific responsive resets */
+      img, video, iframe {
+        max-width: 100% !important;
+        height: auto !important;
       }
-      img, video, svg, .no-invert {
-        filter: invert(1) hue-rotate(180deg) !important;
+      table {
+        max-width: 100% !important;
       }
-    ` : ''}
+    `
+        : `
+      /* Normal article styles */
+      p {
+        margin-top: 0;
+        margin-bottom: 20px;
+        font-size: 18px;
+        line-height: 1.65;
+        word-wrap: break-word;
+      }
 
-    h1 { font-size: 32px; font-weight: 700; }
-    h2 { font-size: 28px; font-weight: 700; }
-    h3 { font-size: 24px; font-weight: 600; }
-    h4 { font-size: 20px; font-weight: 600; }
-    h5 { font-size: 18px; font-weight: 600; }
-    h6 { font-size: 16px; font-weight: 600; }
+      h1, h2, h3, h4, h5, h6 {
+        font-family: 'EB Garamond', Georgia, Cambria, 'Times New Roman', Times, serif;
+        color: var(--color-text);
+        font-weight: 700;
+        line-height: 1.25;
+        margin-top: 1.5em;
+        margin-bottom: 0.5em;
+      }
 
-    strong, b {
-      font-weight: 700;
-    }
+      h1 { font-size: 32px; font-weight: 700; }
+      h2 { font-size: 28px; font-weight: 700; }
+      h3 { font-size: 24px; font-weight: 600; }
+      h4 { font-size: 20px; font-weight: 600; }
+      h5 { font-size: 18px; font-weight: 600; }
+      h6 { font-size: 16px; font-weight: 600; }
 
-    em, i {
-      font-style: italic;
-    }
+      strong, b {
+        font-weight: 700;
+      }
 
-    u {
-      text-decoration: underline;
-    }
+      em, i {
+        font-style: italic;
+      }
 
-    s, del, strike {
-      text-decoration: line-through;
-      color: var(--color-grey);
-    }
+      u {
+        text-decoration: underline;
+      }
 
-    mark {
-      background-color: var(--color-muted-green);
-      color: var(--color-text);
-      padding: 0 4px;
-      border-radius: 2px;
-    }
+      s, del, strike {
+        text-decoration: line-through;
+        color: var(--color-grey);
+      }
 
-    a {
-      color: var(--color-secondary);
-      text-decoration: underline;
-      font-weight: 500;
-    }
+      mark {
+        background-color: var(--color-muted-green);
+        color: var(--color-text);
+        padding: 0 4px;
+        border-radius: 2px;
+      }
 
-    code {
-      font-family: 'Geist Mono', Consolas, "Liberation Mono", Menlo, Courier, monospace;
-      font-size: 15px;
-      background-color: var(--color-grey-mid);
-      color: var(--color-primary);
-      padding: 2px 6px;
-      border-radius: 4px;
-      word-wrap: break-word;
-    }
+      a {
+        color: var(--color-secondary);
+        text-decoration: underline;
+        font-weight: 500;
+      }
 
-    pre {
-      font-family: 'Geist Mono', Consolas, "Liberation Mono", Menlo, Courier, monospace;
-      font-size: 14px;
-      line-height: 1.5;
-      background-color: var(--color-grey-mid);
-      color: var(--color-text);
-      padding: 16px;
-      border-radius: 8px;
-      margin-top: 16px;
-      margin-bottom: 20px;
-      overflow-x: auto;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
+      code {
+        font-family: 'Geist Mono', Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        font-size: 15px;
+        background-color: var(--color-grey-mid);
+        color: var(--color-primary);
+        padding: 2px 6px;
+        border-radius: 4px;
+        word-wrap: break-word;
+      }
 
-    blockquote {
-      font-family: 'EB Garamond', Georgia, Cambria, "Times New Roman", Times, serif;
-      font-size: 18px;
-      line-height: 1.65;
-      color: var(--color-text);
-      font-style: italic;
-      border-left: 4px solid var(--color-secondary);
-      background-color: var(--color-grey-light);
-      padding: 16px;
-      margin-top: 20px;
-      margin-bottom: 20px;
-      margin-left: 0;
-      margin-right: 0;
-    }
+      pre {
+        font-family: 'Geist Mono', Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        background-color: var(--color-grey-mid);
+        color: var(--color-text);
+        padding: 16px;
+        border-radius: 8px;
+        margin-top: 16px;
+        margin-bottom: 20px;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
 
-    hr {
-      background-color: var(--color-grey-light);
-      height: 1px;
-      margin-top: 24px;
-      margin-bottom: 24px;
-      border: 0;
-    }
+      blockquote {
+        font-family: 'EB Garamond', Georgia, Cambria, "Times New Roman", Times, serif;
+        font-size: 18px;
+        line-height: 1.65;
+        color: var(--color-text);
+        font-style: italic;
+        border-left: 4px solid var(--color-secondary);
+        background-color: var(--color-grey-light);
+        padding: 16px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        margin-left: 0;
+        margin-right: 0;
+      }
 
-    ul, ol {
-      margin-top: 12px;
-      margin-bottom: 20px;
-      padding-left: 24px;
-    }
+      hr {
+        background-color: var(--color-grey-light);
+        height: 1px;
+        margin-top: 24px;
+        margin-bottom: 24px;
+        border: 0;
+      }
 
-    li {
-      font-size: 18px;
-      line-height: 1.65;
-      margin-bottom: 8px;
-      padding-left: 4px;
-    }
+      ul, ol {
+        margin-top: 12px;
+        margin-bottom: 20px;
+        padding-left: 24px;
+      }
 
-    img, video, iframe {
-      max-width: 100%;
-      height: auto;
-      border-radius: 8px;
-      margin-top: 16px;
-      margin-bottom: 16px;
-      display: block;
-    }
+      li {
+        font-size: 18px;
+        line-height: 1.65;
+        margin-bottom: 8px;
+        padding-left: 4px;
+      }
 
-    figure {
-      margin-top: 20px;
-      margin-bottom: 20px;
-      margin-left: 0;
-      margin-right: 0;
-      text-align: center;
-    }
+      img, video, iframe {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        margin-top: 16px;
+        margin-bottom: 16px;
+        display: block;
+      }
 
-    figcaption {
-      font-size: 14px;
-      line-height: 1.45;
-      color: var(--color-grey);
-      margin-top: 8px;
-    }
+      figure {
+        margin-top: 20px;
+        margin-bottom: 20px;
+        margin-left: 0;
+        margin-right: 0;
+        text-align: center;
+      }
 
-    table {
-      width: 100%;
-      margin-top: 20px;
-      margin-bottom: 20px;
-      border-collapse: collapse;
-      border: 1px solid var(--color-grey-light);
-      border-radius: 8px;
-      overflow: hidden;
-    }
+      figcaption {
+        font-size: 14px;
+        line-height: 1.45;
+        color: var(--color-grey);
+        margin-top: 8px;
+      }
 
-    thead {
-      background-color: var(--color-grey-mid);
-    }
+      table {
+        width: 100%;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        border-collapse: collapse;
+        border: 1px solid var(--color-grey-light);
+        border-radius: 8px;
+        overflow: hidden;
+      }
 
-    tbody {
-      background-color: var(--color-bg);
-    }
+      thead {
+        background-color: var(--color-grey-mid);
+      }
 
-    tr {
-      border-bottom: 1px solid var(--color-grey-light);
-    }
+      tbody {
+        background-color: var(--color-bg);
+      }
 
-    tr:last-child {
-      border-bottom: 0;
-    }
+      tr {
+        border-bottom: 1px solid var(--color-grey-light);
+      }
 
-    th, td {
-      padding: 12px;
-      text-align: left;
-    }
+      tr:last-child {
+        border-bottom: 0;
+      }
 
-    th {
-      font-weight: 600;
-      font-size: 16px;
-      line-height: 1.5;
-    }
+      th, td {
+        padding: 12px;
+        text-align: left;
+      }
 
-    td {
-      font-size: 16px;
-      line-height: 1.5;
-    }
+      th {
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 1.5;
+      }
 
-    sup, sub {
-      font-size: 14px;
-      line-height: 0;
-      position: relative;
-      vertical-align: baseline;
-    }
+      td {
+        font-size: 16px;
+        line-height: 1.5;
+      }
 
-    sup {
-      top: -0.5em;
-    }
+      sup, sub {
+        font-size: 14px;
+        line-height: 0;
+        position: relative;
+        vertical-align: baseline;
+      }
 
-    sub {
-      bottom: -0.25em;
-    }
+      sup {
+        top: -0.5em;
+      }
 
-    small {
-      font-size: 14px;
-      line-height: 1.5;
-      color: var(--color-grey);
+      sub {
+        bottom: -0.25em;
+      }
+
+      small {
+        font-size: 14px;
+        line-height: 1.5;
+        color: var(--color-grey);
+      }
+    `
     }
   </style>
 </head>
@@ -453,7 +466,17 @@ export function ArticleReader({
 </body>
 </html>
     `;
-  }, [cleanedContent, textColor, greyColor, bgColor, lightGreyColor, midGreyColor, colors, isNewsletter, isDark]);
+  }, [
+    cleanedContent,
+    textColor,
+    greyColor,
+    bgColor,
+    lightGreyColor,
+    midGreyColor,
+    colors,
+    isNewsletter,
+    isDark,
+  ]);
 
   const webViewSource = useMemo(() => {
     return { html: htmlContent, baseUrl: '' };
@@ -496,6 +519,15 @@ export function ArticleReader({
       setTimeout(sendHeight, 100);
       setTimeout(sendHeight, 500);
       setTimeout(sendHeight, 1000);
+
+      // Intercept clicks on images
+      document.addEventListener('click', function(e) {
+        var target = e.target;
+        if (target && target.tagName === 'IMG' && target.src) {
+          e.preventDefault();
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'image', value: target.src }));
+        }
+      });
     })();
     true;
   `;
@@ -516,6 +548,8 @@ export function ArticleReader({
             console.error('Failed to open URL in browser:', err);
           });
         }
+      } else if (data.type === 'image') {
+        setSelectedImageUrl(data.value);
       }
     } catch {
       const height = Number(event.nativeEvent.data);
@@ -527,77 +561,112 @@ export function ArticleReader({
   };
 
   return (
-    <ScrollView
-      className="bg-background flex-1"
-      contentContainerStyle={{
-        paddingBottom: 80,
-      }}
-      onScroll={handleScroll}
-      scrollEventThrottle={16}
-      showsVerticalScrollIndicator={false}>
-      {/* Featured Image with Galeria - Edge-to-edge */}
-      {article.image_url && <ArticleFeaturedImage imageUrl={article.image_url} />}
+    <>
+      <ScrollView
+        className="bg-background flex-1"
+        contentContainerStyle={{
+          paddingBottom: 80,
+        }}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}>
+        {/* Featured Image with Galeria - Edge-to-edge */}
+        {article.image_url && <ArticleFeaturedImage imageUrl={article.image_url} />}
 
-      {/* Article Header */}
-      <ArticleHeader
-        article={article}
-        isClipped={isClipped}
-        feedId={feedId}
-        displayFaviconUrl={iconUrl}
-        fallbackComponent={fallbackComponent}
-        displaySource={displaySource || 'Unknown Source'}
-        displayDate={displayDate}
-        readTime={readTime}
-      />
+        {/* Article Header */}
+        <ArticleHeader
+          article={article}
+          isClipped={isClipped}
+          feedId={feedId}
+          displayFaviconUrl={iconUrl}
+          fallbackComponent={fallbackComponent}
+          displaySource={displaySource || 'Unknown Source'}
+          displayDate={displayDate}
+          readTime={readTime}
+        />
 
-      {/* Article Content - rendered inside auto-height WebView or Skeleton */}
-      <View style={{ position: 'relative', minHeight: isLoadingContent || !isReady ? 240 : 0 }}>
-        {(isLoadingContent || !isReady) && (
-          <Animated.View
-            key="content-skeleton"
-            entering={FadeIn.duration(150)}
-            exiting={FadeOut.duration(300)}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
-            className="px-6">
-            <View className="mb-4">
-              <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-              <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-              <Skeleton variant="text" height={20} width="85%" />
-            </View>
-            <View className="mb-4">
-              <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-              <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-              <Skeleton variant="text" height={20} width="70%" />
-            </View>
-            <View className="mb-4">
-              <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-              <Skeleton variant="text" height={20} width="95%" className="mb-1.5" />
-              <Skeleton variant="text" height={20} width="60%" />
-            </View>
-          </Animated.View>
-        )}
+        {/* Article Content - rendered inside auto-height WebView or Skeleton */}
+        <View style={{ position: 'relative', minHeight: isLoadingContent || !isReady ? 240 : 0 }}>
+          {(isLoadingContent || !isReady) && (
+            <Animated.View
+              key="content-skeleton"
+              entering={FadeIn.duration(150)}
+              exiting={FadeOut.duration(300)}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
+              className="px-6">
+              <View className="mb-4">
+                <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+                <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+                <Skeleton variant="text" height={20} width="85%" />
+              </View>
+              <View className="mb-4">
+                <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+                <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+                <Skeleton variant="text" height={20} width="70%" />
+              </View>
+              <View className="mb-4">
+                <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+                <Skeleton variant="text" height={20} width="95%" className="mb-1.5" />
+                <Skeleton variant="text" height={20} width="60%" />
+              </View>
+            </Animated.View>
+          )}
 
-        {!isLoadingContent && (
-          <Animated.View style={animatedWebViewStyle}>
-            <WebView
-              ref={webViewRef}
-              scrollEnabled={false}
-              style={{
-                height: webViewHeight,
-                width: '100%',
-                backgroundColor: 'transparent',
-              }}
-              containerStyle={{
-                backgroundColor: 'transparent',
-              }}
-              originWhitelist={['*']}
-              source={webViewSource}
-              onMessage={handleMessage}
-              injectedJavaScript={injectedJS}
-            />
-          </Animated.View>
-        )}
-      </View>
-    </ScrollView>
+          {!isLoadingContent && (
+            <Animated.View style={animatedWebViewStyle}>
+              <WebView
+                ref={webViewRef}
+                scrollEnabled={isNewsletter}
+                style={{
+                  height: webViewHeight,
+                  width: '100%',
+                  backgroundColor: 'transparent',
+                }}
+                containerStyle={{
+                  backgroundColor: 'transparent',
+                }}
+                originWhitelist={['*']}
+                source={webViewSource}
+                onMessage={handleMessage}
+                injectedJavaScript={injectedJS}
+              />
+            </Animated.View>
+          )}
+        </View>
+      </ScrollView>
+      <Modal
+        visible={!!selectedImageUrl}
+        transparent={false}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setSelectedImageUrl(null)}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: '#000',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+          {selectedImageUrl && <ZoomableImage uri={selectedImageUrl} />}
+          {/* Floating Close Button */}
+          <Pressable
+            style={{
+              position: 'absolute',
+              top: 54,
+              right: 20,
+              backgroundColor: 'rgba(255, 255, 255, 0.25)',
+              borderRadius: 20,
+              width: 36,
+              height: 36,
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 99,
+            }}
+            onPress={() => setSelectedImageUrl(null)}>
+            <Text style={{ color: '#fff', fontSize: 20, fontWeight: '600', marginTop: -2 }}>×</Text>
+          </Pressable>
+        </View>
+      </Modal>
+    </>
   );
 }

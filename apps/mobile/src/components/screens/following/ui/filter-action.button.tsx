@@ -3,6 +3,7 @@ import EyeClosedBoldIcon from '@components/icons/solar/eye-closed-bold';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import type { ArticleFilter } from '@stores/following';
+import { useFollowingStore } from '@stores/following';
 import { Pressable, View } from 'react-native';
 
 interface FilterActionButtonProps {
@@ -13,8 +14,9 @@ interface FilterActionButtonProps {
 export function FilterActionButton({ filter, onFilterChange }: FilterActionButtonProps) {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+  const isHydrated = useFollowingStore((state) => state._hasHydrated);
 
-  const isUnreadOnly = filter === 'unread';
+  const isUnreadOnly = isHydrated && filter === 'unread';
 
   const handlePress = () => {
     onFilterChange(isUnreadOnly ? 'all' : 'unread');

@@ -1,14 +1,16 @@
+import SparkleIcon from '@components/icons/local/sparkle';
 import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
 import BookmarkBoldIcon from '@components/icons/solar/bookmark-bold';
 import BookmarkLinearIcon from '@components/icons/solar/bookmark-linear';
 import CheckCircleBoldIcon from '@components/icons/solar/check-circle-bold';
+import CopyBoldIcon from '@components/icons/solar/copy-bold';
 import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
 import ShareBoldIcon from '@components/icons/solar/share-bold';
 import { Button } from '@components/ui/button';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { type ReactNode, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 import Animated, {
   Extrapolation,
@@ -25,6 +27,8 @@ interface ArticleActionBarProps {
   onShare: () => void;
   onBookmark: () => void;
   onMenuPress: () => void;
+  onGenerateSummary?: () => void;
+  onCopyLink?: () => void;
   isBookmarked: boolean;
   isClipped: boolean;
   menuTrigger?: ReactNode;
@@ -37,6 +41,8 @@ export function ArticleActionBar({
   onShare,
   onBookmark,
   onMenuPress,
+  onGenerateSummary,
+  onCopyLink,
   isBookmarked,
   isClipped,
   menuTrigger,
@@ -143,6 +149,20 @@ export function ArticleActionBar({
           <ShareBoldIcon width={18} height={18} strokeWidth={2.4} color={greyColor} />
         </Button>
 
+        {/* Generate Summary Button */}
+        {!isClipped && onGenerateSummary && (
+          <Button variant="icon" size="small" fullWidth={false} onPress={onGenerateSummary}>
+            <SparkleIcon width={18} height={18} color={greyColor} fill={greyColor} />
+          </Button>
+        )}
+
+        {/* Copy Link Button */}
+        {onCopyLink && (
+          <Button variant="icon" size="small" fullWidth={false} onPress={onCopyLink}>
+            <CopyBoldIcon width={18} height={18} strokeWidth={2.4} color={greyColor} />
+          </Button>
+        )}
+
         {/* Bookmark Button (or Done button for clipped articles) */}
         <Button
           variant="icon"
@@ -175,9 +195,15 @@ export function ArticleActionBar({
 
         {/* Menu Button */}
         {menuTrigger || (
-          <Button variant="icon" size="small" fullWidth={false} onPress={onMenuPress}>
-            <MenuDotsBoldIcon width={18} height={18} strokeWidth={2.4} color={greyColor} />
-          </Button>
+          <Pressable onPress={onMenuPress} hitSlop={12}>
+            <MenuDotsBoldIcon
+              width={18}
+              height={18}
+              strokeWidth={2.4}
+              color={greyColor}
+              style={{ transform: [{ rotate: '90deg' }] }}
+            />
+          </Pressable>
         )}
       </View>
     </Animated.View>

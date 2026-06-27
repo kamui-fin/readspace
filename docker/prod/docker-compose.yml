@@ -143,6 +143,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - ./templates:/templates:ro
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
@@ -152,6 +154,9 @@ services:
       GOTRUE_SITE_URL: ${SITE_URL}
       GOTRUE_URI_ALLOW_LIST: ${ADDITIONAL_REDIRECT_URLS}
       GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-false}
+      GOTRUE_MAILER_TEMPLATES_CONFIRMATION: /templates/confirm-signup.html
+      GOTRUE_MAILER_TEMPLATES_RECOVERY: /templates/reset-password.html
+      GOTRUE_MAILER_TEMPLATES_PASSWORD_CHANGED: /templates/password-changed.html
       GOTRUE_JWT_EXP: ${JWT_EXPIRY:-3600}
       GOTRUE_JWT_SECRET: ${JWT_SECRET}
       

@@ -83,35 +83,48 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
           </Text>
 
           {/* File Info Card */}
-          <View 
-            className="mb-5 rounded-xl p-4 border" 
-            style={{ 
+          <View
+            className="mb-5 rounded-xl border p-4"
+            style={{
               backgroundColor: colors.grey6,
-              borderColor: cardBorderColor 
+              borderColor: cardBorderColor,
             }}>
             <View className="flex-row items-center gap-3">
-              <View 
-                className="h-10 w-10 rounded-lg items-center justify-center"
-                style={{ backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)' }}>
+              <View
+                className="h-10 w-10 items-center justify-center rounded-lg"
+                style={{
+                  backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)',
+                }}>
                 <DocumentTextBoldIcon width={20} height={20} color={colors.secondary} />
               </View>
               <View className="flex-1">
-                <Text className="font-geist-semibold text-base text-black dark:text-white" numberOfLines={1}>
+                <Text
+                  className="font-geist-semibold text-base text-black dark:text-white"
+                  numberOfLines={1}>
                   {file?.name || 'Unknown file'}
                 </Text>
-                
+
                 {/* Details Badges */}
-                <View className="flex-row gap-2 mt-1.5">
-                  <View 
-                    className="rounded-full px-2.5 py-0.5" 
-                    style={{ backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)' }}>
+                <View className="mt-1.5 flex-row gap-2">
+                  <View
+                    className="rounded-full px-2.5 py-0.5"
+                    style={{
+                      backgroundColor: isDark
+                        ? 'rgba(106, 153, 78, 0.15)'
+                        : 'rgba(106, 153, 78, 0.1)',
+                    }}>
                     <Text size="xs" fontFamily="geist-semibold" style={{ color: colors.secondary }}>
                       {feedCount} {feedCount === 1 ? 'feed' : 'feeds'}
                     </Text>
                   </View>
                   {file?.size && file.size > 0 && (
-                    <View className="rounded-full px-2.5 py-0.5" style={{ backgroundColor: isDark ? colors.grey5 : colors.grey5 }}>
-                      <Text size="xs" fontFamily="geist-medium" className="text-grey dark:text-grey">
+                    <View
+                      className="rounded-full px-2.5 py-0.5"
+                      style={{ backgroundColor: isDark ? colors.grey5 : colors.grey5 }}>
+                      <Text
+                        size="xs"
+                        fontFamily="geist-medium"
+                        className="text-grey dark:text-grey">
                         {(file.size / 1024).toFixed(1)} KB
                       </Text>
                     </View>
@@ -122,13 +135,13 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
           </View>
 
           {/* Import Info */}
-          <View 
-            className="mb-6 rounded-xl p-4 border" 
-            style={{ 
-              backgroundColor: innerCardBg, 
-              borderColor: cardBorderColor 
+          <View
+            className="mb-6 rounded-xl border p-4"
+            style={{
+              backgroundColor: innerCardBg,
+              borderColor: cardBorderColor,
             }}>
-            <View className="flex-row gap-2.5 items-start">
+            <View className="flex-row items-start gap-2.5">
               <View style={{ marginTop: 2 }}>
                 <InfoCircleBoldIcon width={16} height={16} color={colors.grey} />
               </View>

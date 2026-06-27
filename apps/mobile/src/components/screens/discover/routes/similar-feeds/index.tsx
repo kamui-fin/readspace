@@ -5,6 +5,7 @@ import {
 import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
 import DocumentTextLinearIcon from '@components/icons/solar/document-text-linear';
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
+import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
 import { Text } from '@components/ui/text';
@@ -14,15 +15,29 @@ import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import { ApiClient, useCreateFeed } from '@readspace/shared';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { Platform, ScrollView, View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const SIMILAR_PAGE_SIZE = 20;
 
 interface SimilarFeedsScreenProps {
   feedId: string;
 }
+
+type SimilarFeedItem = {
+  id: string;
+  url: string;
+  title: string;
+  link: string | null;
+  image_url: string | undefined;
+  language: string;
+  description: string;
+  is_subscribed: boolean;
+  is_preview: boolean;
+};
 
 export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
   const isDark = useIsDarkMode();
@@ -41,27 +56,38 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
     enabled: !!feedId,
   });
 
-  // Fetch similar feeds data (full list - 20 items)
+  // Fetch similar feeds with infinite pagination (20 per page)
   const {
-    data: similarData,
+    data: similarInfiniteData,
     isLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
     error,
-  } = useQuery({
-    queryKey: ['similar-feeds-full', feedId, 20],
-    queryFn: async () => {
+  } = useInfiniteQuery({
+    queryKey: ['similar-feeds-full', feedId],
+    queryFn: async ({ pageParam = 0 }) => {
       const index = meilisearchClient.index(FEEDS_INDEX_NAME);
       const results = await index.searchSimilarDocuments({
         id: feedId,
-        limit: 20,
+        limit: SIMILAR_PAGE_SIZE,
+        offset: pageParam,
         embedder: 'default',
         showRankingScore: true,
       });
-      return results;
+      return { hits: results.hits, offset: pageParam };
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.hits.length < SIMILAR_PAGE_SIZE) return undefined;
+      return lastPage.offset + SIMILAR_PAGE_SIZE;
     },
     enabled: !!feedId,
   });
 
-  const similarFeeds = (similarData?.hits || []).map((hit: any) => ({
+  const similarFeeds: SimilarFeedItem[] = (
+    similarInfiniteData?.pages.flatMap((p) => p.hits) || []
+  ).map((hit: any) => ({
     id: hit.id,
     url: hit.url,
     title: hit.title,
@@ -72,6 +98,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
     is_subscribed: false,
     is_preview: true,
   }));
+
   const _feedTitle = feedData?.title || 'this feed';
 
   const headerSection = (
@@ -129,29 +156,76 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
     [pendingFeedUrl, createFeed]
   );
 
+  const renderItem = useCallback(
+    (item: SimilarFeedItem) => (
+      <View className="px-6">
+        <FeedListItem
+          feedId={item.id}
+          title={item.title || 'Untitled Feed'}
+          description={item.description || ''}
+          iconUrl={item.image_url || undefined}
+          isFollowing={item.is_subscribed || false}
+          isPreview={item.is_preview}
+          feedUrl={item.url}
+          onFollowRequest={handleFeedFollowRequest}
+        />
+      </View>
+    ),
+    [handleFeedFollowRequest]
+  );
+
+  const renderFooter = useCallback(() => {
+    if (!isFetchingNextPage) return null;
+    return (
+      <View className="gap-4 px-6 pt-4">
+        {Array.from({ length: 3 }, (_, i) => `similar-footer-skeleton-${i}`).map((key) => (
+          <View key={key} className="flex-row gap-3">
+            <Skeleton variant="circle" width={48} height={48} />
+            <View className="flex-1 gap-2">
+              <Skeleton variant="text" width="70%" height={20} />
+              <Skeleton variant="text" width="100%" height={16} />
+              <Skeleton variant="text" width="80%" height={16} />
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  }, [isFetchingNextPage]);
+
+  const renderEmpty = useCallback(
+    () => (
+      <View className="flex-1 items-center justify-center px-6">
+        <DocumentTextLinearIcon width={64} height={64} color={colors.grey5} />
+        <Text
+          size="lg"
+          fontFamily="geist-semibold"
+          className="tracking-heading mt-4 text-center text-black">
+          No similar feeds found
+        </Text>
+        <Text size="base" fontFamily="geist" className="text-grey mt-2 text-center">
+          This feed might be unique, or similar feeds may not have embeddings yet.
+        </Text>
+      </View>
+    ),
+    [colors.grey5]
+  );
+
   if (isLoading) {
     return (
       <View className="bg-background flex-1">
         {headerSection}
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingBottom: BOTTOM_TABBAR_BASE_HEIGHT + 16,
-            paddingTop: 8,
-          }}>
-          <View className="gap-4 px-6">
-            {Array.from({ length: 8 }, (_, i) => `feed-skeleton-${i}`).map((key) => (
-              <View key={key} className="flex-row gap-3">
-                <Skeleton variant="circle" width={48} height={48} />
-                <View className="flex-1 gap-2">
-                  <Skeleton variant="text" width="70%" height={20} />
-                  <Skeleton variant="text" width="100%" height={16} />
-                  <Skeleton variant="text" width="80%" height={16} />
-                </View>
+        <View className="gap-4 px-6 pt-2">
+          {Array.from({ length: 8 }, (_, i) => `feed-skeleton-${i}`).map((key) => (
+            <View key={key} className="flex-row gap-3">
+              <Skeleton variant="circle" width={48} height={48} />
+              <View className="flex-1 gap-2">
+                <Skeleton variant="text" width="70%" height={20} />
+                <Skeleton variant="text" width="100%" height={16} />
+                <Skeleton variant="text" width="80%" height={16} />
               </View>
-            ))}
-          </View>
-        </ScrollView>
+            </View>
+          ))}
+        </View>
       </View>
     );
   }
@@ -173,43 +247,22 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
     <>
       <View className="bg-background flex-1">
         {headerSection}
-        {similarFeeds.length > 0 ? (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingBottom: BOTTOM_TABBAR_BASE_HEIGHT + 16,
-            }}
-            removeClippedSubviews={false}>
-            <View className="gap-5 px-6">
-              {similarFeeds.map((similarFeed: any) => (
-                <FeedListItem
-                  key={similarFeed.id}
-                  feedId={similarFeed.id}
-                  title={similarFeed.title || 'Untitled Feed'}
-                  description={similarFeed.description || ''}
-                  iconUrl={similarFeed.image_url || undefined}
-                  isFollowing={similarFeed.is_subscribed || false}
-                  isPreview={similarFeed.is_preview}
-                  feedUrl={similarFeed.url}
-                  onFollowRequest={handleFeedFollowRequest}
-                />
-              ))}
-            </View>
-          </ScrollView>
-        ) : (
-          <View className="flex-1 items-center justify-center px-6">
-            <DocumentTextLinearIcon width={64} height={64} color={colors.grey5} />
-            <Text
-              size="lg"
-              fontFamily="geist-semibold"
-              className="tracking-heading mt-4 text-center text-black">
-              No similar feeds found
-            </Text>
-            <Text size="base" fontFamily="geist" className="text-grey mt-2 text-center">
-              This feed might be unique, or similar feeds may not have embeddings yet.
-            </Text>
-          </View>
-        )}
+        <InfiniteScrollList
+          data={similarFeeds}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          estimatedItemSize={72}
+          hasMore={hasNextPage ?? false}
+          isLoading={isFetchingNextPage}
+          onEndReached={fetchNextPage}
+          ListEmptyComponent={renderEmpty}
+          ListFooterComponent={renderFooter}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingTop: 8,
+            paddingBottom: BOTTOM_TABBAR_BASE_HEIGHT + 16,
+          }}
+        />
       </View>
 
       <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />

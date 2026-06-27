@@ -30,12 +30,10 @@ export interface HybridSearchConfig {
  * // More semantic for finding similar content
  * const config = createHybridSearchParams(0.8);
  */
-export function createHybridSearchParams(
-  semanticRatio: number = 1.0,
-): HybridSearchConfig {
+export function createHybridSearchParams(semanticRatio: number = 1.0): HybridSearchConfig {
   return {
     semanticRatio: Math.max(0, Math.min(1, semanticRatio)), // Clamp to [0, 1]
-    embedder: "default",
+    embedder: 'default',
   };
 }
 

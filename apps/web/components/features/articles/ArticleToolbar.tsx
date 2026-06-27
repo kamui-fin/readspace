@@ -146,7 +146,7 @@ export function ArticleToolbar({
                                 value={contentView}
                                 onValueChange={(value) => {
                                     const newView = value as ContentView
- 
+
                                     // If switching to extracted and no content exists yet, trigger extraction
                                     // which switches the view to Extracted immediately
                                     if (
@@ -156,7 +156,7 @@ export function ArticleToolbar({
                                         handleExtractContent()
                                         return
                                     }
- 
+
                                     // Otherwise switch immediately
                                     setContentView(newView)
                                 }}
@@ -241,7 +241,7 @@ export function ArticleToolbar({
                                   : "Save for Later"}
                         </TooltipContent>
                     </Tooltip>
- 
+
                     {/* Open Original */}
                     {!article.link?.startsWith("newsletter://") && (
                         <Tooltip>
@@ -263,7 +263,7 @@ export function ArticleToolbar({
                             </TooltipContent>
                         </Tooltip>
                     )}
- 
+
                     {/* Copy URL */}
                     {!article.link?.startsWith("newsletter://") && (
                         <Tooltip>

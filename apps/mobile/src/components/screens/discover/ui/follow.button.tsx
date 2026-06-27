@@ -200,18 +200,24 @@ export function FollowButton({
 
   // Dynamically resolve follow button style to guarantee perfect contrast and visibility
   const buttonStyle = useMemo(() => {
-    if (isStylingFollowing) {
-      return {
-        backgroundColor: colors.grey6, // Solid gray surface for high contrast
-        borderWidth: 0, // Borderless
-      };
+    const baseStyle: any = isStylingFollowing
+      ? {
+          backgroundColor: colors.grey6, // Solid gray surface for high contrast
+          borderWidth: 0, // Borderless
+        }
+      : {
+          backgroundColor: colors.primary, // Notion brand green
+          borderColor: colors.primary,
+          opacity: disabled ? 0.4 : 1,
+        };
+
+    if (isLoading) {
+      baseStyle.minWidth = variant === 'large' ? 110 : 72;
+      baseStyle.justifyContent = 'center';
+      baseStyle.alignItems = 'center';
     }
-    return {
-      backgroundColor: colors.primary, // Notion brand green
-      borderColor: colors.primary,
-      opacity: disabled ? 0.4 : 1,
-    };
-  }, [isStylingFollowing, colors, disabled]);
+    return baseStyle;
+  }, [isStylingFollowing, colors, disabled, isLoading, variant]);
 
   const textStyle = useMemo(() => {
     if (isStylingFollowing) {
@@ -234,36 +240,36 @@ export function FollowButton({
             variant: variant || 'default',
             following: isStylingFollowing,
           }),
-          isLoading && 'opacity-50',
+          isLoading && 'opacity-80',
           className
         )}
         style={buttonStyle}>
         {isLoading ? (
-          <View style={{ transform: [{ scale: 0.75 }] }}>
+          <View style={{ transform: [{ scale: 0.85 }] }}>
             <Spinner
               size="small"
               color={isStylingFollowing ? (isDark ? colors.grey2 : colors.grey) : '#ffffff'}
+              secondaryColor={
+                isStylingFollowing
+                  ? isDark
+                    ? 'rgba(255, 255, 255, 0.12)'
+                    : 'rgba(0, 0, 0, 0.06)'
+                  : 'rgba(255, 255, 255, 0.25)'
+              }
             />
           </View>
-        ) : null}
-        <Text
-          size={variant === 'large' ? 'base' : 'sm'}
-          fontFamily="geist-semibold"
-          className={followButtonTextVariants({
-            variant: variant || 'default',
-            following: isStylingFollowing,
-          })}
-          style={textStyle}>
-          {createFeed.isPending
-            ? 'Following...'
-            : deleteFeed.isPending
-              ? 'Unfollowing...'
-              : displayFollowing
-                ? variant === 'large'
-                  ? 'Unfollow'
-                  : 'Following'
-                : 'Follow'}
-        </Text>
+        ) : (
+          <Text
+            size={variant === 'large' ? 'base' : 'sm'}
+            fontFamily="geist-semibold"
+            className={followButtonTextVariants({
+              variant: variant || 'default',
+              following: isStylingFollowing,
+            })}
+            style={textStyle}>
+            {displayFollowing ? (variant === 'large' ? 'Unfollow' : 'Following') : 'Follow'}
+          </Text>
+        )}
       </Pressable>
       {showFolderPicker && (
         <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />

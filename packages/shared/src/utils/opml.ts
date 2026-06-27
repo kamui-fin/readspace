@@ -1,5 +1,5 @@
-import { generateOpml, parseOpml } from "feedsmith";
-import type { Opml } from "feedsmith/types";
+import { generateOpml, parseOpml } from 'feedsmith';
+import type { Opml } from 'feedsmith/types';
 
 export { generateOpml, parseOpml };
 export type { Opml };
@@ -9,7 +9,7 @@ export type { Opml };
  */
 export function visitAll(
   outlines: Opml.Outline<string>[],
-  cb: (node: Opml.Outline<string>) => boolean,
+  cb: (node: Opml.Outline<string>) => boolean
 ): void {
   const walk = (nodes: Opml.Outline<string>[]): boolean => {
     for (const node of nodes) {
@@ -37,16 +37,16 @@ export async function validateOpml(file: File): Promise<OpmlValidationResult> {
     // Check if this is an RSS/Atom feed instead of OPML
     const contentLower = content.toLowerCase().trim();
     if (
-      contentLower.includes("<rss") ||
-      contentLower.includes("<feed") ||
-      (contentLower.includes("<channel>") && !contentLower.includes("<opml"))
+      contentLower.includes('<rss') ||
+      contentLower.includes('<feed') ||
+      (contentLower.includes('<channel>') && !contentLower.includes('<opml'))
     ) {
       return {
         isValid: false,
         feedCount: 0,
         hasNestedCategories: false,
         error:
-          "This appears to be an RSS/Atom feed file, not an OPML file. OPML files contain lists of feeds, while RSS/Atom files contain actual feed content. Please export your feed list as OPML from your RSS reader.",
+          'This appears to be an RSS/Atom feed file, not an OPML file. OPML files contain lists of feeds, while RSS/Atom files contain actual feed content. Please export your feed list as OPML from your RSS reader.',
       };
     }
 
@@ -69,7 +69,7 @@ export async function validateOpml(file: File): Promise<OpmlValidationResult> {
     const countFeeds = (
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       outlines: Array<{ xmlUrl?: string; outlines?: any[] }>,
-      level = 0,
+      level = 0
     ) => {
       if (level > 1) {
         hasNestedCategories = true;
@@ -93,15 +93,14 @@ export async function validateOpml(file: File): Promise<OpmlValidationResult> {
       isValid: feedCount > 0,
       feedCount,
       hasNestedCategories,
-      error:
-        feedCount === 0 ? "No valid RSS feeds found in OPML file" : undefined,
+      error: feedCount === 0 ? 'No valid RSS feeds found in OPML file' : undefined,
     };
   } catch (error) {
     return {
       isValid: false,
       feedCount: 0,
       hasNestedCategories: false,
-      error: `Failed to parse OPML file: ${error instanceof Error ? error.message : "Unknown error"}`,
+      error: `Failed to parse OPML file: ${error instanceof Error ? error.message : 'Unknown error'}`,
     };
   }
 }

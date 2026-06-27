@@ -191,3 +191,39 @@ def test_parse_feed_content_unescapes_entities():
     
     # assert article.description == "Article <Summary>"
 
+
+def test_guid_normalization():
+    # Test that HTTP(S) URL GUIDs have their fragment parts stripped
+    feed_content = """
+    <rss version="2.0">
+    <channel>
+      <title>BBC News Test</title>
+      <item>
+        <title>Test Article</title>
+        <link>https://www.bbc.co.uk/news/articles/cdjk8zwe7z3o?at_medium=RSS</link>
+        <guid isPermaLink="false">https://www.bbc.co.uk/news/articles/cdjk8zwe7z3o#0</guid>
+      </item>
+      <item>
+        <title>Test Article Updated</title>
+        <link>https://www.bbc.co.uk/news/articles/cdjk8zwe7z3o?at_medium=RSS</link>
+        <guid isPermaLink="false">https://www.bbc.co.uk/news/articles/cdjk8zwe7z3o#1</guid>
+      </item>
+      <item>
+        <title>Non-URL Guid</title>
+        <link>https://example.com/article2</link>
+        <guid>unique-id#123</guid>
+      </item>
+    </channel>
+    </rss>
+    """
+    parsed = parse_feed_content(feed_content, "https://feeds.bbci.co.uk/news/rss.xml")
+    assert len(parsed.articles) == 3
+
+    # URL guid should have fragment stripped
+    assert parsed.articles[0].guid == "https://www.bbc.co.uk/news/articles/cdjk8zwe7z3o"
+    assert parsed.articles[1].guid == "https://www.bbc.co.uk/news/articles/cdjk8zwe7z3o"
+
+    # Non-URL guid should NOT have fragment stripped
+    assert parsed.articles[2].guid == "unique-id#123"
+
+

@@ -210,15 +210,17 @@ export function OPMLStatusCard({
       {status === 'pending' && (
         <View className="py-8">
           <View className="items-center">
-            <View 
-              className="h-14 w-14 rounded-full items-center justify-center mb-4"
-              style={{ backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' }}>
+            <View
+              className="mb-4 h-14 w-14 items-center justify-center rounded-full"
+              style={{
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+              }}>
               <ClockCircleLinearIcon width={32} height={32} color={colors.grey} />
             </View>
             <Text className="font-geist-bold text-xl text-black dark:text-white">
               Import Queued
             </Text>
-            <Text className="font-geist-medium text-grey dark:text-grey mt-1.5 text-center text-sm leading-5 px-6">
+            <Text className="font-geist-medium text-grey dark:text-grey mt-1.5 px-6 text-center text-sm leading-5">
               {message || 'Your import will start processing shortly.'}
             </Text>
           </View>
@@ -243,9 +245,11 @@ export function OPMLStatusCard({
         <View className="py-6">
           {/* File Info Header */}
           <View className="mb-6 flex-row items-center gap-3">
-            <View 
-              className="h-12 w-12 rounded-xl items-center justify-center"
-              style={{ backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)' }}>
+            <View
+              className="h-12 w-12 items-center justify-center rounded-xl"
+              style={{
+                backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)',
+              }}>
               <DocumentTextBoldIcon width={24} height={24} color={colors.secondary} />
             </View>
             <View className="flex-1 flex-row items-center justify-between">
@@ -277,9 +281,7 @@ export function OPMLStatusCard({
                 fontWeight="700"
               />
               <Text className="font-geist-bold text-grey dark:text-grey mx-1 text-xl">/</Text>
-              <Text className="font-geist-bold text-grey dark:text-grey text-xl">
-                {totalFeeds}
-              </Text>
+              <Text className="font-geist-bold text-grey dark:text-grey text-xl">{totalFeeds}</Text>
             </View>
             <Text className="font-geist-medium text-grey dark:text-grey mt-0.5 text-xs">
               feeds processed
@@ -287,17 +289,23 @@ export function OPMLStatusCard({
 
             {/* Live Progress Stats Sub-row */}
             {progressData && (
-              <View className="flex-row justify-center gap-3 mt-4 px-2 py-1.5 rounded-lg" style={{ backgroundColor: statItemBgColor }}>
+              <View
+                className="mt-4 flex-row justify-center gap-3 rounded-lg px-2 py-1.5"
+                style={{ backgroundColor: statItemBgColor }}>
                 <Text size="xs" fontFamily="geist-medium" className="text-secondary">
                   {progressData.successful} imported
                 </Text>
-                <Text size="xs" fontFamily="geist-medium" className="text-grey dark:text-grey">•</Text>
+                <Text size="xs" fontFamily="geist-medium" className="text-grey dark:text-grey">
+                  •
+                </Text>
                 <Text size="xs" fontFamily="geist-medium" style={{ color: '#F59E0B' }}>
                   {progressData.already_existed} existed
                 </Text>
                 {progressData.failed > 0 && (
                   <>
-                    <Text size="xs" fontFamily="geist-medium" className="text-grey dark:text-grey">•</Text>
+                    <Text size="xs" fontFamily="geist-medium" className="text-grey dark:text-grey">
+                      •
+                    </Text>
                     <Text size="xs" fontFamily="geist-medium" style={{ color: colors.red }}>
                       {progressData.failed} failed
                     </Text>
@@ -326,16 +334,18 @@ export function OPMLStatusCard({
       {/* Completed State */}
       {status === 'completed' && (
         <View className="py-6">
-          <View className="items-center mb-6">
-            <View 
-              className="h-14 w-14 rounded-full items-center justify-center mb-3"
-              style={{ backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)' }}>
+          <View className="mb-6 items-center">
+            <View
+              className="mb-3 h-14 w-14 items-center justify-center rounded-full"
+              style={{
+                backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)',
+              }}>
               <CheckCircleLinearIcon width={32} height={32} color={colors.secondary} />
             </View>
             <Text className="font-geist-bold text-xl text-black dark:text-white">
               Import Complete
             </Text>
-            <Text className="font-geist-medium text-grey dark:text-grey mt-1.5 text-center text-sm leading-5 px-6">
+            <Text className="font-geist-medium text-grey dark:text-grey mt-1.5 px-6 text-center text-sm leading-5">
               Your subscriptions have been successfully processed.
             </Text>
           </View>
@@ -365,10 +375,7 @@ export function OPMLStatusCard({
                   className="flex-row items-center justify-between rounded-xl px-4 py-3"
                   style={{ backgroundColor: statItemBgColor }}>
                   <View className="flex-row items-center gap-2.5">
-                    <View
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: '#F59E0B' }}
-                    />
+                    <View className="h-2 w-2 rounded-full" style={{ backgroundColor: '#F59E0B' }} />
                     <Text className="font-geist-medium text-grey dark:text-grey text-sm">
                       Already Existed
                     </Text>
@@ -418,16 +425,19 @@ export function OPMLStatusCard({
       {status === 'failed' && (
         <View className="py-8">
           <View className="items-center">
-            <View 
-              className="h-14 w-14 rounded-full items-center justify-center mb-3"
-              style={{ backgroundColor: isDark ? 'rgba(234, 67, 53, 0.15)' : 'rgba(234, 67, 53, 0.08)' }}>
+            <View
+              className="mb-3 h-14 w-14 items-center justify-center rounded-full"
+              style={{
+                backgroundColor: isDark ? 'rgba(234, 67, 53, 0.15)' : 'rgba(234, 67, 53, 0.08)',
+              }}>
               <CloseCircleLinearIcon width={32} height={32} color={colors.red} />
             </View>
             <Text className="font-geist-bold text-xl text-black dark:text-white">
               Import Failed
             </Text>
-            <Text className="font-geist-medium text-grey dark:text-grey mt-1.5 text-center text-sm leading-5 px-6">
-              We ran into an issue processing your OPML file. Please ensure it is a valid subscription export.
+            <Text className="font-geist-medium text-grey dark:text-grey mt-1.5 px-6 text-center text-sm leading-5">
+              We ran into an issue processing your OPML file. Please ensure it is a valid
+              subscription export.
             </Text>
           </View>
 
@@ -436,25 +446,22 @@ export function OPMLStatusCard({
             <View className="mt-4 w-full">
               <Pressable
                 onPress={() => setShowErrorDetails(!showErrorDetails)}
-                className="py-1.5 flex-row justify-center items-center gap-1">
-                <Text 
-                  size="xs" 
-                  fontFamily="geist-semibold" 
-                  style={{ color: colors.secondary }}>
+                className="flex-row items-center justify-center gap-1 py-1.5">
+                <Text size="xs" fontFamily="geist-semibold" style={{ color: colors.secondary }}>
                   {showErrorDetails ? 'Hide technical details' : 'Show technical details'}
                 </Text>
               </Pressable>
-              
+
               {showErrorDetails && (
-                <View 
-                  className="mt-2 p-3 rounded-lg border" 
-                  style={{ 
-                    backgroundColor: statItemBgColor, 
-                    borderColor: cardBorderColor 
+                <View
+                  className="mt-2 rounded-lg border p-3"
+                  style={{
+                    backgroundColor: statItemBgColor,
+                    borderColor: cardBorderColor,
                   }}>
-                  <Text 
+                  <Text
                     fontFamily="mono"
-                    size="xs" 
+                    size="xs"
                     className="leading-relaxed text-black dark:text-white">
                     {errorMsg}
                   </Text>

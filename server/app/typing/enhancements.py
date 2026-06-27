@@ -91,3 +91,6 @@ class TranslateRequest(BaseModel):
 class TranslateResponse(BaseModel):
     translated_content: str
     target_language: LanguageCode
+    translated_title: str | None = None
+    translated_description: str | None = None
+    translated_tags: list[str] | None = None

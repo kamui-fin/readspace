@@ -9,7 +9,7 @@ export function estimateReadingTime(text: string): number {
   // Check if text contains significant CJK characters
   const cjkPattern =
     /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff\uac00-\ud7af\uff00-\uffef]/g;
-  const nonWhitespace = cleanText.replace(/\s+/g, "");
+  const nonWhitespace = cleanText.replace(/\s+/g, '');
 
   if (nonWhitespace.length > 0) {
     const cjkMatches = cleanText.match(cjkPattern);

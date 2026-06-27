@@ -513,7 +513,7 @@ export function FollowingScreen({
       <InfiniteScrollList
         key={isDark ? 'dark' : 'light'}
         ref={listRef}
-        style={{ backgroundColor: colors.background }}
+        style={{ backgroundColor: 'transparent', zIndex: 2 }}
         data={listItems}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
@@ -533,10 +533,11 @@ export function FollowingScreen({
             tintColor={colors.secondary}
             colors={[colors.secondary]}
             progressBackgroundColor={isDark ? colors.grey6 : '#ffffff'}
+            progressViewOffset={Platform.OS === 'android' ? contentPaddingTop : undefined}
           />
         }
         contentContainerStyle={{
-          backgroundColor: colors.background,
+          backgroundColor: 'transparent',
           flexGrow: 1,
           // Always apply paddingTop to keep header height layout stable and prevent scroll starting offset issues on mount
           paddingTop: contentPaddingTop,

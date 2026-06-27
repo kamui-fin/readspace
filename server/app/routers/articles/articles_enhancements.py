@@ -1,5 +1,6 @@
 """Article enhancement endpoints for AI-powered features."""
 
+import asyncio
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -8,7 +9,7 @@ from fastapi import APIRouter, Body, Depends, Query
 
 from app.core.custom_exceptions import NotFoundError, ValidationError
 from app.db.session import get_db_factory
-from app.services.ai.service import generate_summary, translate_content
+from app.services.ai.service import generate_summary, translate_content, translate_metadata
 from app.services.articles.scrape import extract_full_content
 from app.services.articles.service import get_article_details
 from app.services.feeds.service import SessionFactory
@@ -178,14 +179,26 @@ async def translate_article(
     article = await get_article_or_404(db_factory, article_id, UUID(user.sub), is_clipped=clipped)
     content_to_use = resolve_content(request.content, article)
 
-    # 2. Translate
+    # 2. Translate in parallel
     target_lang_str = (
         request.target_language.value if hasattr(request.target_language, "value") else str(request.target_language)
     )
 
-    translated_content = await translate_content(
+    translated_content_task = translate_content(
         content=content_to_use,
         target_lang_code=target_lang_str,
+    )
+
+    translated_metadata_task = translate_metadata(
+        title=article.title or "",
+        description=article.description or "",
+        tags=article.tags or [],
+        target_lang_code=target_lang_str,
+    )
+
+    translated_content, translated_meta = await asyncio.gather(
+        translated_content_task,
+        translated_metadata_task,
     )
 
     if not translated_content:
@@ -195,4 +208,7 @@ async def translate_article(
     return TranslateResponse(
         translated_content=translated_content,
         target_language=request.target_language,
+        translated_title=translated_meta.get("title"),
+        translated_description=translated_meta.get("description"),
+        translated_tags=translated_meta.get("tags"),
     )
