@@ -5,9 +5,10 @@ import { useFavicon } from '@hooks/useFavicon';
 import type { ListItem } from '@lib/utils/article';
 import type { Article } from '@readspace/shared';
 import { formatRelativeDate } from '@readspace/shared';
+import { usePreferencesStore } from '@stores/preferences';
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Linking, View } from 'react-native';
 
 interface ArticleListItemProps {
   item: ListItem;
@@ -32,6 +33,7 @@ export function ArticleListItem({
 }: ArticleListItemProps) {
   // Optimistically set read state instantly on click while backend handles it.
   const [hasMarkedRead, setHasMarkedRead] = useState(false);
+  const openInBrowser = usePreferencesStore((state) => state.openInBrowser);
 
   if (item.type === 'section') {
     return (
@@ -66,38 +68,53 @@ export function ArticleListItem({
       isClipped: isClipped,
     });
 
-    return (
-      <Link href={`/(protected)/articles/${article.id}`} asChild>
+    const handlePress = () => {
+      if (!article.is_read) {
+        setHasMarkedRead(true);
+      }
+    };
+
+    const sharedCardProps = {
+      article,
+      isRead: hideReadState ? false : article.is_read || hasMarkedRead,
+      imageUrl: displayImageUrl,
+      title: article.title || undefined,
+      description: article.description || undefined,
+      timestamp,
+      faviconUrl: iconUrl,
+      fallbackComponent,
+      feedName: feedTitle,
+      className: 'px-4',
+      showTopDivider: false,
+      showBottomDivider: false,
+      onMarkAsRead: (a: typeof article) => {
+        onToggleRead(a.id, a.is_read || false, a.article_type as any);
+      },
+      onMarkAsUnread: (a: typeof article) => {
+        onToggleRead(a.id, a.is_read || false, a.article_type as any);
+      },
+      onSaveArticle: (a: typeof article) => {
+        onBookmark(a.id, a.is_saved || false, a.article_type as any);
+      },
+    };
+
+    if (openInBrowser) {
+      return (
         <ArticleItemCard
-          article={article}
-          isRead={hideReadState ? false : article.is_read || hasMarkedRead}
-          imageUrl={displayImageUrl}
-          title={article.title || undefined}
-          description={article.description || undefined}
-          timestamp={timestamp}
-          faviconUrl={iconUrl}
-          fallbackComponent={fallbackComponent}
-          feedName={feedTitle}
-          className="px-4"
-          showTopDivider={false}
-          showBottomDivider={false}
+          {...sharedCardProps}
           onPress={() => {
-            // Immediately mark as read locally for instantaneous feedback
-            // when returning to the list (backend syncs separately).
-            if (!article.is_read) {
-              setHasMarkedRead(true);
+            handlePress();
+            if (article.link) {
+              Linking.openURL(article.link).catch(() => {});
             }
           }}
-          onMarkAsRead={(article) => {
-            onToggleRead(article.id, article.is_read || false, article.article_type as any);
-          }}
-          onMarkAsUnread={(article) => {
-            onToggleRead(article.id, article.is_read || false, article.article_type as any);
-          }}
-          onSaveArticle={(article) => {
-            onBookmark(article.id, article.is_saved || false, article.article_type as any);
-          }}
         />
+      );
+    }
+
+    return (
+      <Link href={`/(protected)/articles/${article.id}`} asChild>
+        <ArticleItemCard {...sharedCardProps} onPress={handlePress} />
       </Link>
     );
   }

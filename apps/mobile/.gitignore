@@ -20,6 +20,9 @@ web-build/
 *.claude/
 *.monicon/
 
+# Local icons
+src/components/icons/local/
+
 ios
 android
 

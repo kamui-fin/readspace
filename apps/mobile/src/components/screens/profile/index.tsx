@@ -2,6 +2,7 @@ import DiscordIcon from '@components/icons/local/discord';
 import GitHubIcon from '@components/icons/local/github';
 import ArchiveUpMinimlisticLinearIcon from '@components/icons/solar/archive-up-minimlistic-linear';
 import SolarCloudBoldIcon from '@components/icons/solar/cloud-bold';
+import SettingsLinearIcon from '@components/icons/solar/settings-linear';
 import SolarCrownBoldIcon from '@components/icons/solar/crown-bold';
 import DownloadLinearIcon from '@components/icons/solar/download-linear';
 import HistoryLinearIcon from '@components/icons/solar/history-linear';
@@ -243,6 +244,13 @@ export function ProfileScreen() {
 
           {/* Preferences Section */}
           <SettingsGroup title="Preferences" className="mb-6">
+            <SettingsItem
+              label="General"
+              variant="button"
+              leftIcon={<SettingsLinearIcon width={22} height={22} color={colors.black} />}
+              onPress={() => router.push('/(protected)/settings/general')}
+            />
+
             <DropdownMenuRoot>
               <DropdownMenuTrigger>
                 <SettingsItem
