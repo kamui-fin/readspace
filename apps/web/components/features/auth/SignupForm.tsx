@@ -18,7 +18,6 @@ import { z } from "zod"
 import { signUp } from "@/app/(auth)/signup/actions"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
 import {
     Form,
     FormControl,
@@ -56,17 +55,43 @@ function VerificationNotice() {
 export function SignupForm({
     className,
     isProd = false,
+    isLocal = false,
     ...props
-}: React.ComponentProps<"div"> & { isProd?: boolean }) {
+}: React.ComponentProps<"div"> & { isProd?: boolean; isLocal?: boolean }) {
     const [isAwaitingVerification, setIsAwaitingVerification] =
         React.useState(false)
     const router = useRouter()
 
-    const schema = createSignUpSchema(isProd)
+    const showTerms = isProd || isLocal
+    const schema = React.useMemo(() => createSignUpSchema(showTerms), [showTerms])
     type SignUpFormValues = z.infer<typeof schema>
 
+    const resolver = React.useCallback(
+        async (values: SignUpFormValues) => {
+            const result = await schema.safeParseAsync(values)
+            if (result.success) {
+                return { values: result.data, errors: {} }
+            }
+
+            const errors = result.error.issues.reduce((acc: any, issue) => {
+                const fieldName = issue.path[0]
+                if (fieldName) {
+                    acc[fieldName] = {
+                        type: issue.code,
+                        message: issue.message,
+                    }
+                }
+                return acc
+            }, {})
+
+            return { values: {}, errors }
+        },
+        [schema]
+    )
+
     const form = useForm<SignUpFormValues>({
-        resolver: zodResolver(schema),
+        resolver,
+        mode: "onChange",
         defaultValues: {
             email: "",
             username: "",
@@ -78,7 +103,7 @@ export function SignupForm({
 
     const onSubmit = async (values: SignUpFormValues) => {
         try {
-            const result = await signUp(values, isProd)
+            const result = await signUp(values, showTerms)
 
             if (result?.error) {
                 toast.error(result.error)
@@ -188,41 +213,42 @@ export function SignupForm({
                                 )}
                             />
 
-                            {isProd && (
+                            {showTerms && (
                                 <FormField
                                     control={form.control}
                                     name="acceptTerms"
                                     render={({ field }) => (
-                                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4">
-                                            <FormControl>
-                                                <Checkbox
-                                                    checked={field.value}
-                                                    onCheckedChange={
-                                                        field.onChange
-                                                    }
-                                                />
-                                            </FormControl>
-                                            <div className="space-y-1 leading-none">
-                                                <FormLabel>
+                                        <FormItem className="space-y-2">
+                                            <div className="flex flex-row items-center space-x-2">
+                                                <FormControl>
+                                                    <Checkbox
+                                                        checked={field.value}
+                                                        onCheckedChange={
+                                                            field.onChange
+                                                        }
+                                                        className="cursor-pointer"
+                                                    />
+                                                </FormControl>
+                                                <FormLabel className="text-xs text-muted-foreground font-normal leading-tight cursor-pointer">
                                                     By clicking continue, you
                                                     agree to our{" "}
                                                     <a
                                                         href="https://readspace.ai/terms"
-                                                        className="underline underline-offset-4"
+                                                        className="underline underline-offset-4 hover:text-primary transition-colors"
                                                     >
                                                         Terms of Service
                                                     </a>{" "}
                                                     and{" "}
                                                     <a
                                                         href="https://readspace.ai/privacy"
-                                                        className="underline underline-offset-4"
+                                                        className="underline underline-offset-4 hover:text-primary transition-colors"
                                                     >
                                                         Privacy Policy
                                                     </a>
                                                     .
                                                 </FormLabel>
-                                                <FormMessage />
                                             </div>
+                                            <FormMessage />
                                         </FormItem>
                                     )}
                                 />
@@ -231,7 +257,10 @@ export function SignupForm({
                             <Button
                                 type="submit"
                                 className="w-full"
-                                disabled={form.formState.isSubmitting}
+                                disabled={
+                                    form.formState.isSubmitting ||
+                                    !form.formState.isValid
+                                }
                             >
                                 {form.formState.isSubmitting
                                     ? "Creating account..."

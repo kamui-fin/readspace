@@ -29,7 +29,12 @@ export async function signUp(
 ) {
     try {
         const signUpSchema = createSignUpSchema(isCloudProd)
-        const validatedData = signUpSchema.parse(formData)
+        const parseResult = signUpSchema.safeParse(formData)
+        if (!parseResult.success) {
+            const firstError = parseResult.error.issues[0]
+            return { error: firstError?.message || "Validation error occurred" }
+        }
+        const validatedData = parseResult.data
         const supabase = createClient()
         const { error } = await supabase.auth.signUp({
             email: validatedData.email,
