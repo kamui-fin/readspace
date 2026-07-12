@@ -94,7 +94,7 @@ export function SignupScreen() {
       selfHostSettingsRef={selfHostSettingsRef}
     />,
     <PasswordStep key="password" initialPassword={password} onPasswordChange={setPassword} />,
-    <VerificationStep key="verification" email={email} />,
+    <VerificationStep key="verification" email={email} isActive={currentStep === 2} />,
   ];
 
   const isValid = () => {

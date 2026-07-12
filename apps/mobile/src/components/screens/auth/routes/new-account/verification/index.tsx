@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View,
   Keyboard,
@@ -19,9 +19,10 @@ import { router } from 'expo-router';
 
 interface VerificationStepProps {
   email: string;
+  isActive: boolean;
 }
 
-export function VerificationStep({ email }: VerificationStepProps) {
+export function VerificationStep({ email, isActive }: VerificationStepProps) {
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -30,6 +31,16 @@ export function VerificationStep({ email }: VerificationStepProps) {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const insets = useSafeAreaInsets();
+
+  // Focus input dynamically when step becomes active
+  useEffect(() => {
+    if (isActive) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isActive]);
 
   const handleVerify = async () => {
     if (code.trim().length !== 6) {
@@ -182,7 +193,6 @@ export function VerificationStep({ email }: VerificationStepProps) {
               onChangeText={(val) => setCode(val.replace(/[^0-9]/g, '').slice(0, 6))}
               keyboardType="number-pad"
               maxLength={6}
-              autoFocus
               style={{
                 position: 'absolute',
                 width: 1,

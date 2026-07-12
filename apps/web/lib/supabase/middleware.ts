@@ -60,6 +60,81 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url)
     }
 
+    if (
+        user &&
+        !request.nextUrl.pathname.startsWith("/login") &&
+        !request.nextUrl.pathname.startsWith("/signup") &&
+        !request.nextUrl.pathname.startsWith("/auth") &&
+        !request.nextUrl.pathname.startsWith("/api/webhook")
+    ) {
+        const cookieName = `is_onboarded_${user.id}`
+        const isOnboardedCookie = request.cookies.get(cookieName)?.value
+        const isOnboardingRoute = request.nextUrl.pathname.startsWith("/onboarding")
+
+        if (isOnboardedCookie === "true") {
+            if (isOnboardingRoute) {
+                const url = request.nextUrl.clone()
+                url.pathname = "/today"
+                const redirectResponse = NextResponse.redirect(url)
+                supabaseResponse.cookies.getAll().forEach((cookie) => {
+                    redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+                })
+                return redirectResponse
+            }
+        } else {
+            try {
+                const apiBase = env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8008"
+                const { data: { session } } = await supabase.auth.getSession()
+
+                if (session?.access_token) {
+                    const profileRes = await fetch(
+                        `${apiBase}/api/users/profile`,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${session.access_token}`,
+                            },
+                            cache: "no-store",
+                        }
+                    )
+                    if (profileRes.ok) {
+                        const profile = await profileRes.json()
+                        const isOnboarded = !!profile.is_onboarded
+
+                        if (isOnboarded) {
+                            if (isOnboardingRoute) {
+                                const url = request.nextUrl.clone()
+                                url.pathname = "/today"
+                                const redirectResponse = NextResponse.redirect(url)
+                                supabaseResponse.cookies.getAll().forEach((cookie) => {
+                                    redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+                                })
+                                redirectResponse.cookies.set(cookieName, "true", { path: "/", maxAge: 60 * 60 * 24 * 365 })
+                                return redirectResponse
+                            } else {
+                                supabaseResponse.cookies.set(cookieName, "true", { path: "/", maxAge: 60 * 60 * 24 * 365 })
+                            }
+                        } else {
+                            if (!isOnboardingRoute) {
+                                const url = request.nextUrl.clone()
+                                url.pathname = "/onboarding"
+                                const redirectResponse = NextResponse.redirect(url)
+                                supabaseResponse.cookies.getAll().forEach((cookie) => {
+                                    redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+                                })
+                                redirectResponse.cookies.set(cookieName, "false", { path: "/", maxAge: 60 * 60 * 24 * 365 })
+                                return redirectResponse
+                            } else {
+                                supabaseResponse.cookies.set(cookieName, "false", { path: "/", maxAge: 60 * 60 * 24 * 365 })
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Error checking onboarding status in middleware:", error)
+            }
+        }
+    }
+
     // IMPORTANT: You *must* return the supabaseResponse object as it is.
     // If you're creating a new response object with NextResponse.next() make sure to:
     // 1. Pass the request in it, like so:

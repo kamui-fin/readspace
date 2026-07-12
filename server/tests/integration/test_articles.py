@@ -54,7 +54,7 @@ async def test_article(db_session: AsyncSession, test_feed: Feed, test_user: Pro
         feed_id=test_feed.id,
         content_id=content.id,
         guid_hash="test-guid-1",
-        published_at=datetime.now(UTC),
+        published_at=datetime.now(UTC) - timedelta(hours=3),
     )
     db_session.add(article)
     await db_session.flush()

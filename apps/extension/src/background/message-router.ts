@@ -18,7 +18,7 @@ export async function handleMessage(msg: ExtensionMessage) {
 
     case 'logout':
       await stateStore.clear()
-      return supabase.auth.signOut()
+      return supabase.auth.signOut({ scope: 'local' })
 
     case 'getSession':
       return (await browser.storage.local.get('session')).session

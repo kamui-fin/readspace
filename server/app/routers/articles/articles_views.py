@@ -17,10 +17,12 @@ from app.crud.article.reader import (
     get_read_later_articles as get_read_later_articles_crud,
 )
 from app.db.session import get_db
+from app.models.enums import UserRole
 from app.services.user.auth import get_current_user
 from app.typing.common import CursorPaginatedResponse
 from app.typing.entries import EntryListItem
 from app.typing.user import TokenData
+from app.utils.time import get_sync_cutoff
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -47,12 +49,16 @@ async def get_todays_articles(
     now_utc = datetime.now(UTC)
     twenty_four_hours_ago = now_utc - timedelta(hours=24)
 
+    published_until = now_utc
+    if current_user.role == UserRole.BASIC:
+        published_until = get_sync_cutoff()
+
     result = await get_articles(
         db=db,
         user_id=UUID(current_user.sub),
         params=CursorPaginationParams(limit=limit, cursor=cursor),
         published_since=twenty_four_hours_ago,
-        published_until=now_utc,
+        published_until=published_until,
     )
 
     return CursorPaginatedResponse(

@@ -1,7 +1,7 @@
-import { useQuery, type UseQueryOptions } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions, type UseMutationOptions } from '@tanstack/react-query';
 import { ApiClient } from '../client';
 import { queryKeys } from '../query-keys';
-import type { UserProfile, UserLimits } from '../types/users';
+import type { UserProfile, UserLimits, ProfileUpdate } from '../types/users';
 
 export function useProfile(
   options?: Omit<
@@ -12,6 +12,20 @@ export function useProfile(
   return useQuery({
     queryKey: queryKeys.userProfile(),
     queryFn: () => ApiClient.getProfile(),
+    ...options,
+  });
+}
+
+export function useUpdateProfile(
+  options?: UseMutationOptions<UserProfile, Error, ProfileUpdate>
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: ProfileUpdate) => ApiClient.updateProfile(data),
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKeys.userProfile(), data);
+      queryClient.invalidateQueries({ queryKey: queryKeys.userProfile() });
+    },
     ...options,
   });
 }
@@ -28,3 +42,4 @@ export function useUserLimits(
     ...options,
   });
 }
+

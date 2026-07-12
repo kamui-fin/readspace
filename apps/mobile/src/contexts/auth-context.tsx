@@ -198,7 +198,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
   const signOut = async () => {
     setIsNewSignup(false);
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
   };
 
   const signInWithGoogle = async (idToken: string, accessToken: string) => {

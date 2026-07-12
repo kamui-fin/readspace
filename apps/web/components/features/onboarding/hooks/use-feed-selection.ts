@@ -1,6 +1,6 @@
 import { useCurrentUser } from "@/hooks/use-current-user"
 import { useOnboardingStore } from "@/stores/onboarding"
-import { useFeeds, ApiClient } from "@readspace/shared"
+import { useFeeds, useUpdateProfile } from "@readspace/shared"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useOnboardingFeeds } from "@/components/features/onboarding/hooks/use-onboarding-feeds"
@@ -13,6 +13,7 @@ export function useFeedSelection() {
     )
     const { user } = useCurrentUser()
     const router = useRouter()
+    const updateProfile = useUpdateProfile()
 
     const { displayedFeeds, isLoading, error, fetchSimilarFeeds } =
         useOnboardingFeeds(onboardingData.selectedCategories)
@@ -46,7 +47,9 @@ export function useFeedSelection() {
         if (!user) return
         try {
             // Mark the user as onboarded so future sign-ins don't re-trigger this flow
-            await ApiClient.patch("/api/users/profile", { is_onboarded: true })
+            await updateProfile.mutateAsync({ is_onboarded: true })
+            // Set the cookie on the client side so the middleware immediately sees it
+            document.cookie = `is_onboarded_${user.id}=true; path=/; max-age=31536000; SameSite=Lax`
         } catch (e) {
             console.warn("Failed to mark user as onboarded:", e)
         }
@@ -56,6 +59,7 @@ export function useFeedSelection() {
             console.error("Failed to complete onboarding:", error)
         }
     }
+
 
     const canComplete = followedFeeds.length >= 3
 

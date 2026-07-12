@@ -66,59 +66,55 @@ export default function UpgradeDialog() {
                                 </div>
                                 <div>
                                     <span className="font-semibold text-sm sm:text-base text-foreground">
-                                        Up to 1000 feeds
+                                        Virtually unlimited feeds
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Follow all your favorite creators,
-                                        newsletters, & blogs.
+                                        Organize with unlimited folders, and forward email newsletters to your own @readspace.ai inbox.
                                     </p>
                                 </div>
                             </div>
 
-                            {/* Benefit 2: AI Summaries */}
-                            <div className="flex items-start">
-                                <div className="mr-3 h-5 w-5 flex-shrink-0 text-primary mt-0.5">
-                                    <Sparkles className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <span className="font-semibold text-sm sm:text-base text-foreground">
-                                        100 AI reader tools / day
-                                    </span>
-                                    <p className="text-sm text-muted-foreground mt-0.5">
-                                        Summarize or translate long-form writing
-                                        instantly.
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Benefit 3: Intelligent discovery */}
+                            {/* Benefit 2: AI Labs */}
                             <div className="flex items-start">
                                 <div className="mr-3 h-5 w-5 flex-shrink-0 text-primary mt-0.5">
                                     <Search className="h-5 w-5" />
                                 </div>
                                 <div>
                                     <span className="font-semibold text-sm sm:text-base text-foreground">
-                                        Intelligent discovery
+                                        Experimental AI Labs access
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Search and filter articles using natural
-                                        conversational AI.
+                                        Get early access to game-changing AI features like conversational discovery, daily briefings, and automated feed organization.
                                     </p>
                                 </div>
                             </div>
 
-                            {/* Benefit 4: Reading Library */}
+                            {/* Benefit 3: AI Summaries & Translations */}
+                            <div className="flex items-start">
+                                <div className="mr-3 h-5 w-5 flex-shrink-0 text-primary mt-0.5">
+                                    <Sparkles className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <span className="font-semibold text-sm sm:text-base text-foreground">
+                                        Extended AI reader tools
+                                    </span>
+                                    <p className="text-sm text-muted-foreground mt-0.5">
+                                        Enjoy extended daily use of intelligence tools to condense dense essays, extract core takeaways, or translate foreign writing.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Benefit 4: Priority Speed & Storage */}
                             <div className="flex items-start">
                                 <div className="mr-3 h-5 w-5 flex-shrink-0 text-primary mt-0.5">
                                     <BookOpen className="h-5 w-5" />
                                 </div>
                                 <div>
                                     <span className="font-semibold text-sm sm:text-base text-foreground">
-                                        Personal reading library
+                                        Priority updates & permanent storage
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Keep bookmarks, highlights, and custom
-                                        notes synced forever.
+                                        Enjoy rapid feed updates and save articles permanently (free read-later items automatically expire after 30 days).
                                     </p>
                                 </div>
                             </div>

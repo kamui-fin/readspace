@@ -11,12 +11,14 @@ from app.core.custom_exceptions import NotFoundError
 from app.crud.article.actions import update_article_status
 from app.crud.article.reader import CursorPaginationParams, get_articles
 from app.db.session import get_db, get_db_factory
+from app.models.enums import UserRole
 from app.services.articles.service import get_article_details
 from app.services.feeds.service import SessionFactory, refresh_feed
 from app.services.user.auth import get_current_user
 from app.typing.common import CursorPaginatedResponse
 from app.typing.entries import EntryDetail, EntryListItem, EntryUpdate
 from app.typing.user import TokenData
+from app.utils.time import get_sync_cutoff
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -55,15 +57,21 @@ async def list_articles(
         if v is not None
     }
 
-    # 2. Query
+    # 2. Handle Basic User 2h Sync cutoff
+    published_until = None
+    if current_user.role == UserRole.BASIC:
+        published_until = get_sync_cutoff()
+
+    # 3. Query
     result = await get_articles(
         db=db,
         user_id=UUID(current_user.sub),
         params=CursorPaginationParams(limit=limit, cursor=cursor),
+        published_until=published_until,
         **filters,
     )
 
-    # 3. Auto-Refresh if empty feed (Preview Mode or Stale Feed)
+    # 4. Auto-Refresh if empty feed (Preview Mode or Stale Feed)
     # If we are looking at a specific feed (feed_id provided), and it's the first page (no cursor),
     # and there are no articles, we should try to refresh the feed to see if there is new content.
     if feed_id and not cursor and not result.items:
@@ -77,6 +85,7 @@ async def list_articles(
             db=db,
             user_id=UUID(current_user.sub),
             params=CursorPaginationParams(limit=limit, cursor=cursor),
+            published_until=published_until,
             **filters,
         )
 
