@@ -4,12 +4,12 @@ import { Text } from '@components/ui/text';
 import { MOBILE_CATEGORY_NAMES } from '@readspace/shared';
 import { useOnboardingStore } from '@stores/onboarding';
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CATEGORIES = Object.keys(MOBILE_CATEGORY_NAMES);
 
-export function CategorySelectionStep({ onNext }: { onNext: () => void }) {
+export function CategorySelectionStep({ onNext, onSkip }: { onNext: () => void; onSkip?: () => void }) {
   const insets = useSafeAreaInsets();
   const { onboardingData, updateOnboardingData } = useOnboardingStore();
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
@@ -66,9 +66,20 @@ export function CategorySelectionStep({ onNext }: { onNext: () => void }) {
           variant="primary"
           size="large"
           onPress={handleNext}
-          disabled={selectedCategories.length === 0}>
+          disabled={selectedCategories.length === 0}
+          style={{ borderRadius: 12 }}>
           Continue
         </Button>
+        {onSkip && (
+          <TouchableOpacity
+            onPress={onSkip}
+            style={{ alignSelf: 'center', marginTop: 16, padding: 8 }}
+            activeOpacity={0.7}>
+            <Text size="sm" fontFamily="geist-medium" className="text-grey dark:text-grey text-center">
+              Skip for now
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

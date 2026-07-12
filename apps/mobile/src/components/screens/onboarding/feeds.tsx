@@ -7,9 +7,10 @@ import { useOnboardingStore } from '@stores/onboarding';
 import { useIsMutating, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useOnboardingFeeds } from '@/hooks/useOnboardingFeeds';
+import { useSession } from '@contexts/auth-context';
 
 // Onboarding feed limits configuration:
 // - ONBOARDING_MIN_FEEDS: Minimum number of feeds the user must follow to proceed.
@@ -20,8 +21,9 @@ export const ONBOARDING_MAX_FEEDS = 5;
 // Mutation key must match what useCreateFeed registers
 const CREATE_FEED_MUTATION_KEY = ['create-feed'];
 
-export function FeedSelectionStep({ onNext: _onNext }: { onNext: () => void }) {
+export function FeedSelectionStep({ onNext: _onNext, onSkip }: { onNext: () => void; onSkip?: () => void }) {
   const insets = useSafeAreaInsets();
+  const { setIsOnboarded } = useSession();
   const { onboardingData, updateOnboardingData } = useOnboardingStore();
   const [followedFeeds, setFollowedFeeds] = useState<string[]>(onboardingData.followedFeeds || []);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -87,6 +89,8 @@ export function FeedSelectionStep({ onNext: _onNext }: { onNext: () => void }) {
     } catch (e) {
       console.warn('[Onboarding] Failed to mark user as onboarded:', e);
     }
+
+    setIsOnboarded(true);
 
     // Invalidate caches so the following screen starts with a fresh fetch
     queryClient.invalidateQueries({ queryKey: ['rss-articles'], refetchType: 'all' });
@@ -160,6 +164,16 @@ export function FeedSelectionStep({ onNext: _onNext }: { onNext: () => void }) {
             ? 'Start Reading!'
             : `Add ${ONBOARDING_MIN_FEEDS - followedFeeds.length} More`}
         </Button>
+        {onSkip && (
+          <TouchableOpacity
+            onPress={onSkip}
+            style={{ alignSelf: 'center', marginTop: 16, padding: 8 }}
+            activeOpacity={0.7}>
+            <Text size="sm" fontFamily="geist-medium" className="text-grey dark:text-grey text-center">
+              Skip for now
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

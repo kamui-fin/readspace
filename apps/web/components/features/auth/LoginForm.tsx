@@ -58,8 +58,17 @@ export function LoginForm({
                             "Invalid email or password. Please check your credentials and try again."
                         break
                     case "Email not confirmed":
-                        userFriendlyMessage =
-                            "Please check your email and click the verification link before signing in."
+                        try {
+                            await supabase.auth.resend({
+                                type: "signup",
+                                email: values.email,
+                            })
+                            userFriendlyMessage =
+                                "Email verification required. We've sent a new verification link to your email."
+                        } catch (resendErr) {
+                            userFriendlyMessage =
+                                "Email verification required. Please click the link in your email to sign in."
+                        }
                         break
                     case "Too many requests":
                         userFriendlyMessage =

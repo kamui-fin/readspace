@@ -21,6 +21,7 @@ interface StepperProps {
   onStepChange?: (currentStep: number) => void;
   initialStep?: number;
   onFirstStepBack?: () => void;
+  renderHeaderRight?: () => React.ReactNode;
 }
 
 export interface StepperRef {
@@ -31,7 +32,7 @@ export interface StepperRef {
 }
 
 export const Stepper = forwardRef<StepperRef, StepperProps>(
-  ({ pages, onStepChange, initialStep = 0, onFirstStepBack }, ref) => {
+  ({ pages, onStepChange, initialStep = 0, onFirstStepBack, renderHeaderRight }, ref) => {
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
     const { width, height } = useWindowDimensions();
@@ -139,6 +140,16 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
               count={pages.length}
               current={animatedCurrent}
             />
+            {renderHeaderRight && (
+              <View
+                style={{
+                  position: 'absolute',
+                  right: stepperHorizontalPadding - 4,
+                  zIndex: 10,
+                }}>
+                {renderHeaderRight()}
+              </View>
+            )}
           </View>
 
           {/* Pages Container with Horizontal Slide */}
