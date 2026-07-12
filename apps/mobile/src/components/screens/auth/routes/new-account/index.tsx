@@ -139,6 +139,14 @@ export function SignupScreen() {
       setIsLoading(true);
       try {
         const signUpResult = await signUp({ email: email.trim(), password });
+
+        // Supabase email-enumeration protection returns a fake success with
+        // an empty identities array when the email is already registered.
+        if ((signUpResult?.user?.identities?.length ?? 1) === 0) {
+          toast.error('This email is already registered. Please sign in instead.');
+          return;
+        }
+
         const requiresVerification = !signUpResult?.session;
 
         if (requiresVerification) {
@@ -183,6 +191,7 @@ export function SignupScreen() {
         onStepChange={setCurrentStep}
         initialStep={0}
         onFirstStepBack={handleBack}
+        headerPaddingTop={Math.max(insets.top + 60, 80)}
       />
 
       {/* Fixed Buttons at Bottom - Hide on verification screen - Adjusts for keyboard using native layout constraints */}

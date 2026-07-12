@@ -21,6 +21,7 @@ interface StepperProps {
   onStepChange?: (currentStep: number) => void;
   initialStep?: number;
   onFirstStepBack?: () => void;
+  headerPaddingTop?: number;
 }
 
 export interface StepperRef {
@@ -31,7 +32,7 @@ export interface StepperRef {
 }
 
 export const Stepper = forwardRef<StepperRef, StepperProps>(
-  ({ pages, onStepChange, initialStep = 0, onFirstStepBack }, ref) => {
+  ({ pages, onStepChange, initialStep = 0, onFirstStepBack, headerPaddingTop }, ref) => {
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
     const { width, height } = useWindowDimensions();
@@ -101,7 +102,7 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
           <View
             style={{
               paddingHorizontal: stepperHorizontalPadding,
-              paddingTop: Math.max(1.2 * insets.top, 24),
+              paddingTop: headerPaddingTop ?? Math.max(insets.top + 20, 36),
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',

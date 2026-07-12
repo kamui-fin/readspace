@@ -33,6 +33,8 @@ interface AuthContextType {
     credentials: SignUpCredentials
   ) => Promise<{ user: User | null; session: Session | null }>;
   signInWithGoogle: (idToken: string, accessToken: string) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -45,6 +47,8 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => {},
   signUp: async () => ({ user: null, session: null }),
   signInWithGoogle: async () => {},
+  sendPasswordReset: async () => {},
+  updatePassword: async () => {},
 });
 
 export function useSession() {
@@ -201,6 +205,23 @@ export function SessionProvider({ children }: SessionProviderProps) {
     await supabase.auth.signOut();
   };
 
+  const sendPasswordReset = async (email: string) => {
+    const webUrl = process.env.EXPO_PUBLIC_WEB_URL ?? 'http://localhost:18042';
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${webUrl}/auth/confirm`,
+    });
+    if (error) {
+      throw new Error(error.message);
+    }
+  };
+
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      throw new Error(error.message);
+    }
+  };
+
   const signInWithGoogle = async (idToken: string, accessToken: string) => {
     // Don't set isNewSignup here — we'll determine it from the server profile
     // after onAuthStateChange fires with SIGNED_IN event
@@ -228,6 +249,8 @@ export function SessionProvider({ children }: SessionProviderProps) {
     signIn,
     signUp,
     signInWithGoogle,
+    sendPasswordReset,
+    updatePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

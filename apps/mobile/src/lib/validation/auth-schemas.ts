@@ -32,5 +32,19 @@ export const SignUpSchema = LoginSchema.extend({
   path: ['confirmPassword'],
 });
 
+export const NewPasswordSchema = z
+  .object({
+    password: z
+      .string({ message: 'Please enter a password' })
+      .min(1, 'Password is required')
+      .min(6, 'Password must be at least 6 characters'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
+
 export type LoginFormData = z.infer<typeof LoginSchema>;
 export type SignUpFormData = z.infer<typeof SignUpSchema>;
+export type NewPasswordFormData = z.infer<typeof NewPasswordSchema>;

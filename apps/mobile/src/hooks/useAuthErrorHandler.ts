@@ -53,6 +53,10 @@ const AUTH_ERROR_MESSAGES: Record<string, { signin: string; signup: string }> = 
     signin: 'Access denied. Please check your credentials.',
     signup: 'Access denied.',
   },
+  oauth_user: {
+    signin: 'This account uses Google sign-in. Please use the Sign in with Google option instead.',
+    signup: 'This account uses Google sign-in. Please use the Sign in with Google option instead.',
+  },
 };
 
 /**
@@ -97,6 +101,13 @@ const ERROR_PATTERNS: Record<string, string[]> = {
   ],
   timeout: ['timeout', 'timed out', 'request timeout'],
   unauthorized: ['unauthorized', 'forbidden', '401', '403'],
+  oauth_user: [
+    'oauth',
+    'identity provider',
+    'provider token',
+    'not a password-based account',
+    'email provider is not enabled',
+  ],
 };
 
 /**

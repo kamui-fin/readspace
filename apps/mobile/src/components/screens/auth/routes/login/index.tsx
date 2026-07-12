@@ -1,4 +1,5 @@
 import { SelfHostSettingsBottomSheet } from '@components/bottom-sheets/self-hosted-settings.bottom-sheet';
+import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
 import EyeBoldIcon from '@components/icons/solar/eye-bold';
 import EyeClosedBoldIcon from '@components/icons/solar/eye-closed-bold';
 import { Button } from '@components/ui/button';
@@ -94,6 +95,18 @@ export function LoginScreen() {
 
   return (
     <View className="bg-screen flex-1" style={{ backgroundColor: colors.background }}>
+      <Pressable
+        style={{
+          position: 'absolute',
+          top: insets.top,
+          left: 16,
+          padding: 12,
+          zIndex: 10,
+        }}
+        onPress={() => router.back()}>
+        <ArrowLeftLinearIcon width={24} height={24} color={colors.primary_foreground} />
+      </Pressable>
+
       <Formik
         initialValues={initialValues}
         validationSchema={toFormikValidationSchema(LoginSchema)}
@@ -183,6 +196,20 @@ export function LoginScreen() {
                           </InputPressable>
                         }
                       />
+                    </View>
+
+                    {/* Forgot password */}
+                    <View className="mt-2 items-start">
+                      <Pressable
+                        onPress={() => router.push('/(auth)/forgot-password')}
+                        disabled={isSubmitting}>
+                        <Text
+                          size="base"
+                          fontFamily="geist-medium"
+                          className="text-primary dark:text-primary">
+                          Forgot password?
+                        </Text>
+                      </Pressable>
                     </View>
 
                     {/* Self-hosting option */}
