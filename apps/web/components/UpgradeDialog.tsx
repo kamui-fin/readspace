@@ -213,6 +213,11 @@ export default function UpgradeDialog() {
                         </div>
 
                         <SubscribeButton
+                            checkoutUrl={
+                                selectedPlan === "monthly"
+                                    ? env.NEXT_PUBLIC_POLAR_MONTHLY_CHECKOUT_URL
+                                    : env.NEXT_PUBLIC_POLAR_YEARLY_CHECKOUT_URL
+                            }
                             priceId={
                                 selectedPlan === "monthly"
                                     ? MONTHLY_PRICE_ID

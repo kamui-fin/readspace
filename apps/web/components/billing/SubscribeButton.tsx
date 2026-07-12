@@ -5,7 +5,8 @@ import { useState } from "react"
 import { useUserRole } from "@/hooks/use-user-role"
 
 interface SubscribeButtonProps {
-    priceId: string
+    priceId?: string
+    checkoutUrl?: string
     className?: string
     style?: React.CSSProperties
     disabled?: boolean
@@ -14,6 +15,7 @@ interface SubscribeButtonProps {
 
 export function SubscribeButton({
     priceId,
+    checkoutUrl,
     className,
     style,
     disabled,
@@ -26,22 +28,24 @@ export function SubscribeButton({
         setIsLoading(true)
         try {
             // Direct Polar checkout URL
-            const checkoutUrl = new URL(
+            const targetUrl =
+                checkoutUrl ||
                 "https://buy.polar.sh/polar_cl_2xSvHr4wXvwzLfolIpMv2wPTceXNzDQH4LWgu1vaZWF"
-            )
+
+            const urlObj = new URL(targetUrl)
 
             if (profile?.email) {
-                checkoutUrl.searchParams.append("customer_email", profile.email)
+                urlObj.searchParams.append("customer_email", profile.email)
             }
             if (profile?.id) {
                 // Attach user_id metadata so the webhook can immediately identify and upgrade them
-                checkoutUrl.searchParams.append(
+                urlObj.searchParams.append(
                     "metadata",
                     JSON.stringify({ user_id: profile.id })
                 )
             }
 
-            window.location.href = checkoutUrl.toString()
+            window.location.href = urlObj.toString()
         } catch (err) {
             console.error("Polar billing checkout error:", err)
             alert(

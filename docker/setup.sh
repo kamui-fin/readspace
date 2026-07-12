@@ -175,7 +175,7 @@ fi
 # --- Configuration & Input Validation ---
 
 # Check for required command-line tools.
-for cmd in openssl jq tr; do
+for cmd in openssl jq tr curl docker; do
   if ! command -v "$cmd" &> /dev/null;
   then
     echo "Error: Required command '$cmd' is not installed." >&2
@@ -241,7 +241,7 @@ check_port() {
       return 0  # Port is occupied
     fi
   elif command -v netstat &> /dev/null; then
-    if netstat -ln 2>/dev/null | grep -q ":$port "; then
+    if netstat -ln 2>/dev/null | grep -q -E "[:.]$port[[:space:]]"; then
       return 0  # Port is occupied
     fi
   elif command -v ss &> /dev/null; then
@@ -299,7 +299,7 @@ gen_hex() {
 
 # Encodes a string into URL-safe Base64.
 base64_url_encode() {
-  openssl enc -base64 -A | tr '+/' '-_' | tr -d '='
+  openssl enc -base64 -A | tr '+/' '-_' | tr -d '=\r\n'
 }
 
 # --- JWT Generation ---
@@ -316,7 +316,7 @@ header_base64=$(printf %s "$header" | base64_url_encode)
 # Set common timestamps for both tokens (iat: issued at, exp: expiration).
 iat=$(date +%s)
 # Set expiry to 5 years from now.
-exp=$(("$iat" + 5 * 365 * 24 * 3600))
+exp=$((iat + 5 * 365 * 24 * 3600))
 
 # Generates a complete JWT token.
 # $1: The JSON payload for the token.

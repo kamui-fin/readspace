@@ -55,14 +55,13 @@ function VerificationNotice() {
 export function SignupForm({
     className,
     isProd = false,
-    isLocal = false,
     ...props
-}: React.ComponentProps<"div"> & { isProd?: boolean; isLocal?: boolean }) {
+}: React.ComponentProps<"div"> & { isProd?: boolean }) {
     const [isAwaitingVerification, setIsAwaitingVerification] =
         React.useState(false)
     const router = useRouter()
 
-    const showTerms = isProd || isLocal
+    const showTerms = isProd
     const schema = React.useMemo(() => createSignUpSchema(showTerms), [showTerms])
     type SignUpFormValues = z.infer<typeof schema>
 

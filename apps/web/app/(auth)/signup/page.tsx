@@ -23,10 +23,6 @@ export default async function SignupPage() {
     const headerList = await headers()
     const host = headerList.get("host") || ""
     const isProd = host === "app.readspace.ai"
-    const isLocal =
-        host.includes("localhost") ||
-        host.includes("127.0.0.1") ||
-        host.includes("::1")
 
     return (
         <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
@@ -37,7 +33,7 @@ export default async function SignupPage() {
                 >
                     <Logo />
                 </a>
-                <SignupForm isProd={isProd} isLocal={isLocal} />
+                <SignupForm isProd={isProd} />
             </div>
         </div>
     )
