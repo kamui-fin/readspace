@@ -116,7 +116,7 @@ function RootLayout() {
 }
 
 function RootNavigator() {
-  const { session, isLoading: isAuthLoading, isNewSignup } = useSession();
+  const { session, isLoading: isAuthLoading, isOnboarded } = useSession();
   const segments = useSegments();
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [fontError, setFontError] = useState<Error | null>(null);
@@ -178,6 +178,7 @@ function RootNavigator() {
 
     const inAuthGroup = segments[0] === '(auth)';
     const inProtectedGroup = segments[0] === '(protected)';
+    const inOnboarding = (segments as string[])[1] === 'onboarding';
     const isRoot = !segments.length || segments[0] === 'index';
     const isRedirectRoute = segments[0] === 'oauthredirect' || segments[0] === 'oauth2redirect';
 
@@ -186,25 +187,40 @@ function RootNavigator() {
     if (!session && (inProtectedGroup || isRoot || isRedirectRoute)) {
       // Not logged in but in protected area (or root) - redirect to auth
       router.replace('/(auth)');
-    } else if (session && (inAuthGroup || isRoot || isRedirectRoute)) {
-      // Logged in but in auth area (or root) - redirect to protected area
-      if (isNewSignup) {
+    } else if (session) {
+      if (inAuthGroup || isRoot || isRedirectRoute) {
+        // Logged in but in auth area (or root) - redirect to protected area
+        if (!isOnboarded) {
+          router.replace('/(protected)/onboarding');
+        } else {
+          router.replace('/(protected)/(tabs)');
+        }
+      } else if (inProtectedGroup && !isOnboarded && !inOnboarding) {
+        // Logged in, in protected area, NOT onboarded and NOT currently in onboarding screen - redirect to onboarding
         router.replace('/(protected)/onboarding');
-      } else {
+      } else if (inProtectedGroup && isOnboarded && inOnboarding) {
+        // Logged in, in protected area, onboarded, but somehow in onboarding screen - redirect to tabs
         router.replace('/(protected)/(tabs)');
       }
     }
-  }, [session, segments, isAuthLoading, router, isNewSignup]);
+  }, [session, segments, isAuthLoading, router, isOnboarded]);
 
   // Handle splash screen hiding
   useEffect(() => {
     if ((fontsLoaded || fontError) && !isAuthLoading && isHydrated) {
       const inAuthGroup = segments[0] === '(auth)';
       const inProtectedGroup = segments[0] === '(protected)';
+      const inOnboarding = (segments as string[])[1] === 'onboarding';
 
       // Prevent hiding Splash Screen until the navigation finishes redirecting
       // to the appropriate group based on auth state
-      if (session && !inProtectedGroup) return;
+      if (session) {
+        if (!inProtectedGroup) return;
+        // If not onboarded, wait until onboarding screen is active
+        if (!isOnboarded && !inOnboarding) return;
+        // If onboarded, wait until we've moved away from onboarding
+        if (isOnboarded && inOnboarding) return;
+      }
       if (!session && !inAuthGroup) return;
 
       const timer = setTimeout(() => {
@@ -214,7 +230,7 @@ function RootNavigator() {
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [fontsLoaded, fontError, isAuthLoading, session, segments, isHydrated]);
+  }, [fontsLoaded, fontError, isAuthLoading, session, segments, isHydrated, isOnboarded]);
 
   // Prevent rendering until the fonts have loaded (or errored)
   if (!fontsLoaded && !fontError) {

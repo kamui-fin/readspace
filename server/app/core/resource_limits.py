@@ -3,7 +3,7 @@
 RESOURCE_LIMITS = {
     "basic": {
         "max_subscriptions": 5,
-        "max_daily_ai_calls": 3,
+        "max_daily_ai_calls": 5,
         "semantic_search": False,
         "read_later_retention_days": 30,
     },

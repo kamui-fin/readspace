@@ -78,7 +78,7 @@ export function AppSidebar({
     const { open: openUpgrade } = useUpgradeDialog()
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut()
+        await supabase.auth.signOut({ scope: "local" })
         window.location.href = "/login"
     }
 

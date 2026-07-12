@@ -136,6 +136,14 @@ services:
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
     entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
 
+  templates-server:
+    image: caddy:2-alpine
+    container_name: supabase-templates-server
+    restart: unless-stopped
+    command: ['caddy', 'file-server', '-r', '/templates', '--listen', ':80']
+    volumes:
+      - ./templates:/templates:ro
+
   auth:
     image: supabase/gotrue:v2.172.1
     container_name: supabase-auth
@@ -143,8 +151,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./templates:/templates:ro
+      templates-server:
+        condition: service_started
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
@@ -154,9 +162,10 @@ services:
       GOTRUE_SITE_URL: ${SITE_URL}
       GOTRUE_URI_ALLOW_LIST: ${ADDITIONAL_REDIRECT_URLS}
       GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-false}
-      GOTRUE_MAILER_TEMPLATES_CONFIRMATION: /templates/confirm-signup.html
-      GOTRUE_MAILER_TEMPLATES_RECOVERY: /templates/reset-password.html
-      GOTRUE_MAILER_TEMPLATES_PASSWORD_CHANGED: /templates/password-changed.html
+      GOTRUE_MAILER_TEMPLATES_CONFIRMATION: http://templates-server/confirm-signup.html
+      GOTRUE_MAILER_TEMPLATES_RECOVERY: http://templates-server/reset-password.html
+      GOTRUE_MAILER_NOTIFICATIONS_PASSWORD_CHANGED_ENABLED: "true"
+      GOTRUE_MAILER_TEMPLATES_PASSWORD_CHANGED_NOTIFICATION: http://templates-server/password-changed.html
       GOTRUE_JWT_EXP: ${JWT_EXPIRY:-3600}
       GOTRUE_JWT_SECRET: ${JWT_SECRET}
       

@@ -27,6 +27,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   isNewSignup: boolean;
+  isOnboarded: boolean | null;
+  setIsOnboarded: (value: boolean) => void;
   signOut: () => Promise<void>;
   signIn: (credentials: SignInCredentials) => Promise<void>;
   signUp: (
@@ -41,6 +43,8 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isLoading: true,
   isNewSignup: false,
+  isOnboarded: null,
+  setIsOnboarded: () => {},
   signOut: async () => {},
   signIn: async () => {},
   signUp: async () => ({ user: null, session: null }),
@@ -64,6 +68,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewSignup, setIsNewSignup] = useState(false);
+  const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null);
   const router = useRouter();
   const segments = useSegments();
 
@@ -91,15 +96,18 @@ export function SessionProvider({ children }: SessionProviderProps) {
         if (currentSession) {
           try {
             const profile = await ApiClient.get<{ is_onboarded: boolean }>('/api/users/profile');
-            // if (!profile.is_onboarded) {
-            //   setIsNewSignup(true);
-            // }
+            setIsOnboarded(profile.is_onboarded);
           } catch (e) {
             console.warn('[AuthContext] Could not fetch profile on cold start:', e);
+            // Default to onboarded on error so user isn't stuck in onboarding loop
+            setIsOnboarded(true);
           }
+        } else {
+          setIsOnboarded(true);
         }
       } catch (err) {
         console.error('[AuthContext] Error during getSession init:', err);
+        setIsOnboarded(true);
       } finally {
         setIsLoading(false);
         isInitializing.current = false;
@@ -123,6 +131,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
         useSearchHistory.getState().clearHistory();
         setSession(null);
         setUser(null);
+        setIsOnboarded(true);
         setIsLoading(false);
         return;
       }
@@ -142,12 +151,11 @@ export function SessionProvider({ children }: SessionProviderProps) {
         setIsLoading(true);
         ApiClient.get<{ is_onboarded: boolean }>('/api/users/profile')
           .then((profile) => {
-            if (!profile.is_onboarded) {
-              setIsNewSignup(true);
-            }
+            setIsOnboarded(profile.is_onboarded);
           })
           .catch((e) => {
             console.warn('[AuthContext] Could not fetch profile for onboarding check:', e);
+            setIsOnboarded(true);
           })
           .finally(() => {
             setIsLoading(false);
@@ -183,6 +191,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
   const signUp = async (credentials: SignUpCredentials) => {
     setIsNewSignup(true);
+    setIsOnboarded(false);
     const { data, error } = await supabase.auth.signUp({
       email: credentials.email,
       password: credentials.password,
@@ -190,6 +199,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
     if (error) {
       setIsNewSignup(false);
+      setIsOnboarded(null);
       throw new Error(error.message);
     }
 
@@ -198,7 +208,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
   const signOut = async () => {
     setIsNewSignup(false);
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
   };
 
   const signInWithGoogle = async (idToken: string, accessToken: string) => {
@@ -224,6 +234,8 @@ export function SessionProvider({ children }: SessionProviderProps) {
     isAuthenticated: !!session,
     isLoading,
     isNewSignup,
+    isOnboarded,
+    setIsOnboarded,
     signOut,
     signIn,
     signUp,

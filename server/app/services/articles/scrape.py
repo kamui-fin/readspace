@@ -119,6 +119,61 @@ def _remove_duplicate_image(soup: BeautifulSoup, main_image_url: str | None) -> 
         logger.warning("Error removing duplicate image", error=str(e))
 
 
+def _heal_html_code_tags(soup: BeautifulSoup) -> None:
+    """
+    Trafilatura extracts inline code as block <pre> tags and splits paragraphs.
+    This function traverses the body, detects when a paragraph was split by inline
+    pre/text nodes, converts those <pre> nodes to inline <code>, and merges them
+    back into the preceding <p> tag. Also removes nested <pre> wrappers.
+    """
+    body = soup.body if soup.body else soup
+    if not body:
+        return
+
+    # 1. Fix nested <pre> tags (like <pre><pre>code</pre></pre>)
+    for nested_pre in body.find_all("pre"):
+        inner_pre = nested_pre.find("pre")
+        if inner_pre:
+            nested_pre.string = inner_pre.get_text()
+
+    # 2. Merge split inline elements back into paragraphs
+    children = list(body.children)
+    current_p = None
+    nodes_to_merge = []
+
+    for child in children:
+        if isinstance(child, Tag) and child.name == "p":
+            if current_p and nodes_to_merge:
+                for node in nodes_to_merge:
+                    if isinstance(node, Tag) and node.name == "pre":
+                        code_tag = soup.new_tag("code")
+                        code_tag.string = node.get_text()
+                        current_p.append(code_tag)
+                        node.decompose()
+                    else:
+                        current_p.append(node)
+                nodes_to_merge = []
+            current_p = child
+        elif current_p:
+            is_text = not isinstance(child, Tag)
+            is_inline_pre = isinstance(child, Tag) and child.name == "pre" and "\n" not in child.get_text()
+
+            if is_text or is_inline_pre:
+                nodes_to_merge.append(child)
+            else:
+                if nodes_to_merge:
+                    for node in nodes_to_merge:
+                        if isinstance(node, Tag) and node.name == "pre":
+                            code_tag = soup.new_tag("code")
+                            code_tag.string = node.get_text()
+                            current_p.append(code_tag)
+                            node.decompose()
+                        else:
+                            current_p.append(node)
+                    nodes_to_merge = []
+                current_p = None
+
+
 # ==============================================================================
 # MAIN EXTRACTION LOGIC
 # ==============================================================================
@@ -165,6 +220,9 @@ async def extract_full_content(
         # 2. DOM Manipulation (Cleanup)
         # We use BeautifulSoup for structural changes before sanitizing
         soup = BeautifulSoup(extracted_html, "html.parser")
+
+        # Heal broken inline code tags split by Trafilatura
+        _heal_html_code_tags(soup)
 
         # A. Remove Duplicate Title
         if article_title:

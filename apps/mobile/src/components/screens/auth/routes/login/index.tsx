@@ -9,13 +9,12 @@ import { useSession } from '@contexts/auth-context';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useAuthErrorHandler } from '@hooks/useAuthErrorHandler';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { type LoginFormData, LoginSchema } from '@lib/validation/auth-schemas';
 import { useSettingsStore } from '@stores/settings';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { Formik, type FormikHelpers } from 'formik';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -28,6 +27,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toFormikValidationSchema } from 'zod-formik-adapter';
 
+import { supabase } from '@lib/supabase/client';
+
 export function LoginScreen() {
   const { signIn } = useSession();
   const insets = useSafeAreaInsets();
@@ -37,6 +38,7 @@ export function LoginScreen() {
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const [showPassword, setShowPassword] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { handleAuthError } = useAuthErrorHandler();
 
   const isSelfHosted = settings.instance_type === 'self-hosted';
@@ -50,12 +52,48 @@ export function LoginScreen() {
     values: LoginFormData,
     { setSubmitting }: FormikHelpers<LoginFormData>
   ) => {
+    console.log('[Login] 🚀 Submission started for email:', values.email.trim());
+    setIsLoading(true);
     try {
+      console.log('[Login] 🔑 Calling signIn context method...');
       await signIn({ email: values.email.trim(), password: values.password });
+      console.log('[Login] 🎉 signIn resolved successfully');
       // Auth provider will handle redirect to protected routes automatically
-    } catch (error) {
-      handleAuthError(error, 'signin');
+    } catch (error: unknown) {
+      console.log('[Login] ❌ Caught sign-in error:', error);
+      const err = error as { code?: string; message?: string };
+      const isEmailNotConfirmed =
+        err?.code === 'email_not_confirmed' ||
+        err?.message?.toLowerCase().includes('confirm') ||
+        err?.message?.toLowerCase().includes('verified') ||
+        err?.message?.toLowerCase().includes('verification');
+
+      console.log('[Login] 🔍 isEmailNotConfirmed check:', isEmailNotConfirmed);
+
+      if (isEmailNotConfirmed) {
+        try {
+          console.log('[Login] 📩 Triggering verification resend for:', values.email.trim());
+          // Trigger resending the verification code
+          await supabase.auth.resend({
+            type: 'signup',
+            email: values.email.trim(),
+          });
+          toast.success("Verification required. We've sent a new code!");
+        } catch (resendErr) {
+          console.warn('[Login] Failed to resend code:', resendErr);
+          toast.success('Verification required.');
+        }
+
+        console.log('[Login] 🔀 Redirecting to VerificationStep...');
+        // Navigate to the verification step (step 2) of SignupScreen
+        router.replace(`/(auth)/signup?email=${encodeURIComponent(values.email.trim())}&step=2` as Href);
+      } else {
+        console.log('[Login] 📣 Forwarding error to handleAuthError...');
+        handleAuthError(error, 'signin');
+      }
     } finally {
+      console.log('[Login] 🧼 Finally block running. setIsLoading(false)...');
+      setIsLoading(false);
       setSubmitting(false);
     }
   };
@@ -213,7 +251,7 @@ export function LoginScreen() {
                       variant="primary"
                       size="large"
                       onPress={() => handleSubmit()}
-                      loading={isSubmitting}>
+                      loading={isLoading}>
                       Sign In
                     </Button>
 

@@ -1,17 +1,22 @@
 import { Stepper, type StepperRef } from '@components/navigation/stepper';
 import { CategorySelectionStep } from '@components/screens/onboarding/categories';
 import { FeedSelectionStep } from '@components/screens/onboarding/feeds';
+import { Text } from '@components/ui/text';
+import { useSession } from '@contexts/auth-context';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { useFocusEffect } from 'expo-router';
+import { ApiClient } from '@readspace/shared';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { BackHandler, Platform, View } from 'react-native';
+import { BackHandler, Platform, TouchableOpacity, View } from 'react-native';
 
 export default function OnboardingScreen() {
   const stepperRef = useRef<StepperRef>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+  const { setIsOnboarded } = useSession();
+  const router = useRouter();
 
   // Handle hardware back button on Android
   useFocusEffect(
@@ -31,14 +36,37 @@ export default function OnboardingScreen() {
     }, [currentStep])
   );
 
+  const handleSkip = async () => {
+    try {
+      await ApiClient.patch('/api/users/profile', { is_onboarded: true });
+    } catch (e) {
+      console.warn('[Onboarding] Failed to mark user as onboarded on skip:', e);
+    }
+    setIsOnboarded(true);
+    router.replace('/(protected)/(tabs)');
+  };
+
   const pages = [
-    <CategorySelectionStep key="categories" onNext={() => stepperRef.current?.goToNext()} />,
-    <FeedSelectionStep key="feeds" onNext={() => {}} />,
+    <CategorySelectionStep
+      key="categories"
+      onNext={() => stepperRef.current?.goToNext()}
+      onSkip={handleSkip}
+    />,
+    <FeedSelectionStep
+      key="feeds"
+      onNext={() => {}}
+      onSkip={handleSkip}
+    />,
   ];
 
   return (
     <View className="bg-screen flex-1" style={{ backgroundColor: colors.background }}>
-      <Stepper ref={stepperRef} pages={pages} onStepChange={setCurrentStep} initialStep={0} />
+      <Stepper
+        ref={stepperRef}
+        pages={pages}
+        onStepChange={setCurrentStep}
+        initialStep={0}
+      />
     </View>
   );
 }

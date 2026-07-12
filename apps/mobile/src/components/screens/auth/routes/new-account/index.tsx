@@ -11,7 +11,7 @@ import { BUTTON_BORDER_RADIUS, SPACING } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { EmailSchema, PasswordSchema } from '@lib/validation/auth-schemas';
 import { useSettingsStore } from '@stores/settings';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   BackHandler,
@@ -34,8 +34,11 @@ export function SignupScreen() {
   const insets = useSafeAreaInsets();
   const { handleAuthError } = useAuthErrorHandler();
 
-  const [currentStep, setCurrentStep] = useState(0);
-  const [email, setEmail] = useState('');
+  const params = useLocalSearchParams<{ email?: string; step?: string }>();
+  const initialStepVal = params.step ? parseInt(params.step, 10) : 0;
+
+  const [currentStep, setCurrentStep] = useState(initialStepVal);
+  const [email, setEmail] = useState(params.email || '');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -94,7 +97,7 @@ export function SignupScreen() {
       selfHostSettingsRef={selfHostSettingsRef}
     />,
     <PasswordStep key="password" initialPassword={password} onPasswordChange={setPassword} />,
-    <VerificationStep key="verification" email={email} />,
+    <VerificationStep key="verification" email={email} isActive={currentStep === 2} />,
   ];
 
   const isValid = () => {
@@ -181,7 +184,7 @@ export function SignupScreen() {
         ref={stepperRef}
         pages={pages}
         onStepChange={setCurrentStep}
-        initialStep={0}
+        initialStep={initialStepVal}
         onFirstStepBack={handleBack}
       />
 

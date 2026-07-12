@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button"
+import { WifiOff } from "lucide-react"
 import Link from "next/link"
 import OnboardingLayout from "../OnboardingLayout"
 
@@ -41,23 +42,24 @@ export function OnboardingErrorState({ onBack }: OnboardingErrorStateProps) {
     return (
         <OnboardingLayout
             title="Having trouble finding sources"
-            subtitle="We couldn't load publications for your selected topics. Let's try again."
+            subtitle="We couldn't retrieve publications for your selected topics. Let's try again."
         >
-            <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">
-                    We couldn&apos;t load publications for your selected topics.
-                </p>
-                <div className="flex gap-3">
+            <div className="flex flex-col items-center py-8 max-w-md mx-auto">
+                <div className="w-16 h-16 rounded-2xl bg-red-500/5 dark:bg-red-500/10 flex items-center justify-center mb-6 text-red-500">
+                    <WifiOff size={28} />
+                </div>
+
+                <div className="mt-4 w-full flex justify-center gap-3">
                     <Button
                         onClick={onBack}
                         variant="outline"
-                        className="flex-1"
+                        className="w-32 h-12 rounded-xl cursor-pointer select-none"
                     >
-                        Go Back
+                        Retry
                     </Button>
                     <Button
                         asChild
-                        className="flex-1 bg-primary hover:bg-primary-light"
+                        className="w-48 h-12 bg-primary hover:bg-primary/95 text-white font-semibold rounded-xl cursor-pointer select-none transition-all shadow-xs"
                     >
                         <Link href="/today">Continue Anyway</Link>
                     </Button>

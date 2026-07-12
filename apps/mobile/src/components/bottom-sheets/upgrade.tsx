@@ -161,40 +161,19 @@ export function UpgradePaywallModal() {
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
-                    Up to 1000 feeds
+                    Virtually unlimited feeds
                   </Text>
                   <Text
                     size="xs"
                     fontFamily="geist"
                     className="mt-0.5"
                     style={{ color: colors.grey }}>
-                    Follow all your favorite creators, newsletters, & blogs.
+                    Organize with unlimited folders, and forward email newsletters to your own @readspace.ai inbox.
                   </Text>
                 </View>
               </View>
 
-              {/* Benefit 2: AI Summaries */}
-              <View className="flex-row items-start">
-                <View
-                  className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
-                  style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <SparkleIcon width={18} height={18} color={colors.primary} />
-                </View>
-                <View className="flex-1 justify-center">
-                  <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
-                    100 AI reader tools / day
-                  </Text>
-                  <Text
-                    size="xs"
-                    fontFamily="geist"
-                    className="mt-0.5"
-                    style={{ color: colors.grey }}>
-                    Summarize or translate long-form writing instantly.
-                  </Text>
-                </View>
-              </View>
-
-              {/* Benefit 3: Intelligent discovery */}
+              {/* Benefit 2: AI Labs */}
               <View className="flex-row items-start">
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
@@ -203,19 +182,40 @@ export function UpgradePaywallModal() {
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
-                    Intelligent discovery
+                    Experimental AI Labs access
                   </Text>
                   <Text
                     size="xs"
                     fontFamily="geist"
                     className="mt-0.5"
                     style={{ color: colors.grey }}>
-                    Search and filter articles using natural conversational AI.
+                    Get early access to game-changing AI features like conversational discovery, daily briefings, and automated feed organization.
                   </Text>
                 </View>
               </View>
 
-              {/* Benefit 4: Reading Library */}
+              {/* Benefit 3: AI Summaries */}
+              <View className="flex-row items-start">
+                <View
+                  className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
+                  style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
+                  <SparkleIcon width={18} height={18} color={colors.primary} />
+                </View>
+                <View className="flex-1 justify-center">
+                  <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
+                    Extended AI reader tools
+                  </Text>
+                  <Text
+                    size="xs"
+                    fontFamily="geist"
+                    className="mt-0.5"
+                    style={{ color: colors.grey }}>
+                    Enjoy extended daily use of intelligence tools to condense dense essays, extract core takeaways, or translate foreign writing.
+                  </Text>
+                </View>
+              </View>
+
+              {/* Benefit 4: Priority Speed & Storage */}
               <View className="flex-row items-start">
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
@@ -224,14 +224,14 @@ export function UpgradePaywallModal() {
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
-                    Personal reading library
+                    Priority updates & permanent storage
                   </Text>
                   <Text
                     size="xs"
                     fontFamily="geist"
                     className="mt-0.5"
                     style={{ color: colors.grey }}>
-                    Keep bookmarks, highlights, and custom notes synced forever.
+                    Enjoy rapid feed updates and save articles permanently (free read-later items automatically expire after 30 days).
                   </Text>
                 </View>
               </View>
