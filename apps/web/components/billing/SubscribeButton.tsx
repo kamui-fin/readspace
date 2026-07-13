@@ -5,8 +5,8 @@ import { useState } from "react"
 import { useUserRole } from "@/hooks/use-user-role"
 
 interface SubscribeButtonProps {
-    priceId?: string
     checkoutUrl?: string
+    productId?: string
     className?: string
     style?: React.CSSProperties
     disabled?: boolean
@@ -14,8 +14,8 @@ interface SubscribeButtonProps {
 }
 
 export function SubscribeButton({
-    priceId,
     checkoutUrl,
+    productId,
     className,
     style,
     disabled,
@@ -27,13 +27,15 @@ export function SubscribeButton({
     const handleSubscribe = async () => {
         setIsLoading(true)
         try {
-            // Direct Polar checkout URL
-            const targetUrl =
-                checkoutUrl ||
-                "https://buy.polar.sh/polar_cl_2xSvHr4wXvwzLfolIpMv2wPTceXNzDQH4LWgu1vaZWF"
+            if (!checkoutUrl) {
+                throw new Error("Checkout URL is required")
+            }
 
-            const urlObj = new URL(targetUrl)
+            const urlObj = new URL(checkoutUrl)
 
+            if (productId) {
+                urlObj.searchParams.set("product_id", productId)
+            }
             if (profile?.email) {
                 urlObj.searchParams.append("customer_email", profile.email)
             }

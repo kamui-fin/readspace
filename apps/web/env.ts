@@ -29,10 +29,9 @@ export const env = createEnv({
             .url()
             .default("http://localhost:8008"),
         NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:8042"),
-        NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID: z.string().optional(),
-        NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID: z.string().optional(),
-        NEXT_PUBLIC_POLAR_MONTHLY_CHECKOUT_URL: z.string().url().optional(),
-        NEXT_PUBLIC_POLAR_YEARLY_CHECKOUT_URL: z.string().url().optional(),
+        NEXT_PUBLIC_POLAR_CHECKOUT_URL: z.string().url().optional(),
+        NEXT_PUBLIC_POLAR_MONTHLY_PRODUCT_ID: z.string().optional(),
+        NEXT_PUBLIC_POLAR_YEARLY_PRODUCT_ID: z.string().optional(),
     },
 
     /**
@@ -51,13 +50,11 @@ export const env = createEnv({
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
         NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-        NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID:
-            process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID,
-        NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID:
-            process.env.NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID,
-        NEXT_PUBLIC_POLAR_MONTHLY_CHECKOUT_URL:
-            process.env.NEXT_PUBLIC_POLAR_MONTHLY_CHECKOUT_URL,
-        NEXT_PUBLIC_POLAR_YEARLY_CHECKOUT_URL:
-            process.env.NEXT_PUBLIC_POLAR_YEARLY_CHECKOUT_URL,
+        NEXT_PUBLIC_POLAR_CHECKOUT_URL:
+            process.env.NEXT_PUBLIC_POLAR_CHECKOUT_URL,
+        NEXT_PUBLIC_POLAR_MONTHLY_PRODUCT_ID:
+            process.env.NEXT_PUBLIC_POLAR_MONTHLY_PRODUCT_ID,
+        NEXT_PUBLIC_POLAR_YEARLY_PRODUCT_ID:
+            process.env.NEXT_PUBLIC_POLAR_YEARLY_PRODUCT_ID,
     },
 })

@@ -19,11 +19,6 @@ export default function UpgradeDialog() {
     const [selectedPlan, setSelectedPlan] = useState("yearly")
     const { isOpen, title, description, close } = useUpgradeDialog()
 
-    const MONTHLY_PRICE_ID =
-        env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID || "price_mock_monthly_799"
-    const YEARLY_PRICE_ID =
-        env.NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID || "price_mock_yearly_599"
-
     return (
         <Dialog open={isOpen} onOpenChange={close}>
             <DialogContent className="z-9999 w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-[600px] p-0 overflow-hidden max-h-[85vh] overflow-y-auto bg-background border-border">
@@ -213,15 +208,11 @@ export default function UpgradeDialog() {
                         </div>
 
                         <SubscribeButton
-                            checkoutUrl={
+                            checkoutUrl={env.NEXT_PUBLIC_POLAR_CHECKOUT_URL}
+                            productId={
                                 selectedPlan === "monthly"
-                                    ? env.NEXT_PUBLIC_POLAR_MONTHLY_CHECKOUT_URL
-                                    : env.NEXT_PUBLIC_POLAR_YEARLY_CHECKOUT_URL
-                            }
-                            priceId={
-                                selectedPlan === "monthly"
-                                    ? MONTHLY_PRICE_ID
-                                    : YEARLY_PRICE_ID
+                                    ? env.NEXT_PUBLIC_POLAR_MONTHLY_PRODUCT_ID
+                                    : env.NEXT_PUBLIC_POLAR_YEARLY_PRODUCT_ID
                             }
                             className="w-full flex justify-center items-center py-2.5 h-10 text-sm font-semibold hover:bg-primary/90 transition-colors shadow-xs"
                         >

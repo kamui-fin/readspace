@@ -394,6 +394,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}
 # Meilisearch configuration (search key for read-only access)
 NEXT_PUBLIC_MEILISEARCH_URL=${MEILISEARCH_PUBLIC_URL}
 NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY=${MEILISEARCH_SEARCH_KEY}
+
+# Polar Checkout Configuration (Production)
+# NEXT_PUBLIC_POLAR_CHECKOUT_URL=https://polar.sh/checkout/your_checkout_id_here
+# NEXT_PUBLIC_POLAR_MONTHLY_PRODUCT_ID=your_monthly_product_id_here
+# NEXT_PUBLIC_POLAR_YEARLY_PRODUCT_ID=your_yearly_product_id_here
 EOF
 echo "✅ apps/web/.env created."
 
