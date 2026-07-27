@@ -153,14 +153,6 @@ export function LoginForm({
                                         <FormItem>
                                             <div className="flex items-center">
                                                 <FormLabel>Password</FormLabel>
-                                                {isProd && (
-                                                    <a
-                                                        href="/login/reset"
-                                                        className="ml-auto text-sm underline-offset-4 hover:underline"
-                                                    >
-                                                        Forgot your password?
-                                                    </a>
-                                                )}
                                             </div>
                                             <FormControl>
                                                 <Input
