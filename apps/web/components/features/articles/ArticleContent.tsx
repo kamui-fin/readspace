@@ -427,6 +427,7 @@ export function ArticleContent({
             translatedLanguage={translatedLanguage}
             isSaved={optimisticReadLater}
             isRead={optimisticIsRead}
+            isPreviewMode={shouldShowPreviewBanner}
         />
     )
 

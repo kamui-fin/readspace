@@ -33,7 +33,7 @@ export function AiSummaryCard({
                             <div className="flex items-center gap-2 ">
                                 <Sparkles className="h-4 w-4 text-primary" />
                                 <h3 className="text-sm font-medium text-foreground p-0 m-0!">
-                                    AI Summary
+                                    The Gist
                                 </h3>
                             </div>
                             <Button

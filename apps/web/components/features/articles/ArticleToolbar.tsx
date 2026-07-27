@@ -51,6 +51,7 @@ interface ArticleToolbarProps {
     translatedLanguage: string | null
     isSaved?: boolean
     isRead?: boolean
+    isPreviewMode?: boolean
 }
 
 export function ArticleToolbar({
@@ -71,6 +72,7 @@ export function ArticleToolbar({
     translatedContent,
     translatedLanguage,
     isSaved,
+    isPreviewMode = false,
 }: ArticleToolbarProps) {
     const [showLanguageSelector, setShowLanguageSelector] = useState(false)
     const isMobile = useIsMobile()
@@ -197,50 +199,53 @@ export function ArticleToolbar({
                         </div>
                     )}
                 <TooltipProvider>
-                    {/* Bookmark/Save for Later or Mark as Read */}
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button
-                                type="button"
-                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} flex items-center justify-center p-0 transition-transform duration-200 hover:scale-110 focus:outline-none`}
-                                onClick={
-                                    isReadLaterMode
-                                        ? handleMarkAsRead
-                                        : handleToggleReadLater
-                                }
-                            >
-                                {isReadLaterMode ? (
-                                    <Check
-                                        className="h-4 w-4"
-                                        style={{
-                                            color: effectiveIsSaved
-                                                ? colorTokens.primary.DEFAULT
-                                                : colorTokens.muted.foreground,
-                                        }}
-                                    />
-                                ) : (
-                                    <BookmarkIcon
-                                        className={`h-4 w-4 ${effectiveIsSaved ? "scale-110" : ""}`}
-                                        style={{
-                                            fill: effectiveIsSaved
-                                                ? "#eab308"
-                                                : "transparent",
-                                            color: effectiveIsSaved
-                                                ? "#eab308"
-                                                : colorTokens.foreground,
-                                        }}
-                                    />
-                                )}
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            {isReadLaterMode
-                                ? "Mark as Read & Remove"
-                                : effectiveIsSaved
-                                  ? "Remove from Read Later"
-                                  : "Save for Later"}
-                        </TooltipContent>
-                    </Tooltip>
+                    {!isPreviewMode && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    type="button"
+                                    className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} flex items-center justify-center p-0 transition-transform duration-200 hover:scale-110 focus:outline-none`}
+                                    onClick={
+                                        isReadLaterMode
+                                            ? handleMarkAsRead
+                                            : handleToggleReadLater
+                                    }
+                                >
+                                    {isReadLaterMode ? (
+                                        <Check
+                                            className="h-4 w-4"
+                                            style={{
+                                                color: effectiveIsSaved
+                                                    ? colorTokens.primary
+                                                          .DEFAULT
+                                                    : colorTokens.muted
+                                                          .foreground,
+                                            }}
+                                        />
+                                    ) : (
+                                        <BookmarkIcon
+                                            className={`h-4 w-4 ${effectiveIsSaved ? "scale-110" : ""}`}
+                                            style={{
+                                                fill: effectiveIsSaved
+                                                    ? "#eab308"
+                                                    : "transparent",
+                                                color: effectiveIsSaved
+                                                    ? "#eab308"
+                                                    : colorTokens.foreground,
+                                            }}
+                                        />
+                                    )}
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                {isReadLaterMode
+                                    ? "Mark as Read & Remove"
+                                    : effectiveIsSaved
+                                      ? "Remove from Read Later"
+                                      : "Save for Later"}
+                            </TooltipContent>
+                        </Tooltip>
+                    )}
 
                     {/* Open Original */}
                     {!article.link?.startsWith("newsletter://") && (
@@ -284,62 +289,64 @@ export function ArticleToolbar({
                         </Tooltip>
                     )}
 
-                    {/* AI Summary */}
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
-                                onClick={handleSummarize}
-                                disabled={isSummarizing}
-                            >
-                                {isSummarizing ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Sparkles className="h-4 w-4" />
-                                )}
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            {isSummarizing
-                                ? "Generating Summary..."
-                                : "AI Summary"}
-                        </TooltipContent>
-                    </Tooltip>
-
-                    {/* AI Translation */}
-                    <DropdownMenu
-                        open={showLanguageSelector}
-                        onOpenChange={setShowLanguageSelector}
-                    >
+                    {!isPreviewMode && (
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
-                                        disabled={isTranslating}
-                                    >
-                                        {isTranslating ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Languages className="h-4 w-4" />
-                                        )}
-                                    </Button>
-                                </DropdownMenuTrigger>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
+                                    onClick={handleSummarize}
+                                    disabled={isSummarizing}
+                                >
+                                    {isSummarizing ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Sparkles className="h-4 w-4" />
+                                    )}
+                                </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                {isTranslating
-                                    ? "Translating..."
-                                    : "Translate Article"}
+                                {isSummarizing ? "Generating..." : "The Gist"}
                             </TooltipContent>
                         </Tooltip>
-                        <DropdownMenuContent align="end" className="w-56">
-                            <LanguageSelector onSelect={handleTranslateClick} />
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    )}
+
+                    {!isPreviewMode && (
+                        <DropdownMenu
+                            open={showLanguageSelector}
+                            onOpenChange={setShowLanguageSelector}
+                        >
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
+                                            disabled={isTranslating}
+                                        >
+                                            {isTranslating ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <Languages className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    {isTranslating
+                                        ? "Translating..."
+                                        : "Translate Article"}
+                                </TooltipContent>
+                            </Tooltip>
+                            <DropdownMenuContent align="end" className="w-56">
+                                <LanguageSelector
+                                    onSelect={handleTranslateClick}
+                                />
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                 </TooltipProvider>
             </div>
         </div>

@@ -105,6 +105,7 @@ async def translate_content(content: str, target_lang_code: str) -> str | None:
         # Cleanup potential markdown fences
         result = re.sub(r"^```(?:html)?\n|\n```$", "", result.strip(), flags=re.MULTILINE)
         await redis_cache.set(cache_key, result, ttl_seconds=AI_CACHE_TTL)
+        return result
 
 
 def get_metadata_translation_system_prompt(target_lang: str) -> str:

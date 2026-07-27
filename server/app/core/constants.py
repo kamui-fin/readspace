@@ -75,7 +75,7 @@ MIN_ARTICLES_PER_FEED = 50  # Keep at least 50 newest articles per feed
 # Content Extraction
 MIN_CONTENT_LENGTH = 500  # Minimum character length to consider content complete
 AUTO_EXTRACT_ON_FETCH = True  # Extract content automatically when fetching articles. TODO: This should be user-specific
-CONTENT_EXTRACTION_TIMEOUT = 10  # seconds - timeout for fetching and extracting content
+CONTENT_EXTRACTION_TIMEOUT = 5  # seconds - timeout for fetching and extracting content
 FAVICON_FETCH_TIMEOUT = 10  # seconds - timeout for fetching canonical URL and favicon
 
 # AI Service

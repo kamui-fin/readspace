@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
     useClearRefinements,
     useCurrentRefinements,
@@ -106,10 +106,7 @@ export function useDiscoverController({
         activeLanguage ||
         (persistedLanguage === "all" ? "all" : persistedLanguage)
 
-    const [isPopularSelected, setIsPopularSelected] = usePersistentState<boolean>(
-        "discover-popular-active",
-        false
-    )
+    const [isPopularSelected, setIsPopularSelected] = useState<boolean>(false)
 
     const handleCategoryClick = useCallback(
         (categoryName: string) => {
@@ -168,7 +165,9 @@ export function useDiscoverController({
         (query && !isUrlQuery) || activeCategory || isPopularSelected
     )
 
-    const effectiveCategory = isPopularSelected ? "Popular Feeds" : activeCategory
+    const effectiveCategory = isPopularSelected
+        ? "Popular Feeds"
+        : activeCategory
 
     return {
         // Search State

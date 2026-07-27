@@ -32,22 +32,22 @@ export function Markdown({ content, className }: MarkdownProps) {
                         <p className="mb-2 last:mb-0 !text-sm">{children}</p>
                     ),
                     strong: ({ children }) => (
-                        <strong className="font-semibold text-foreground">
+                        <strong className="font-semibold text-secondary">
                             {children}
                         </strong>
                     ),
                     ul: ({ children }) => (
-                        <ul className="list-disc list-inside space-y-1 my-2">
+                        <ul className="list-disc space-y-1 my-2 pl-4 marker:text-primary">
                             {children}
                         </ul>
                     ),
                     ol: ({ children }) => (
-                        <ol className="list-decimal list-inside space-y-1 my-2">
+                        <ol className="list-decimal space-y-1 my-2 pl-4 marker:text-primary">
                             {children}
                         </ol>
                     ),
                     li: ({ children }) => (
-                        <li className="text-sm">{children}</li>
+                        <li className="!text-sm">{children}</li>
                     ),
                     code: ({ children }) => {
                         // Remove backticks from inline code content

@@ -40,7 +40,7 @@ export const ArticleSummaryBottomSheet = forwardRef<
           fill={isDark ? colors.secondary : colors.primary}
         />
         <Text size="xl" fontFamily="geist-semibold" className="text-primary_foreground">
-          AI Summary
+          The Gist
         </Text>
       </View>
     ),

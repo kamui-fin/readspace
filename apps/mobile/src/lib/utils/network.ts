@@ -45,43 +45,51 @@ export const resolveSupabaseImageUrl = (url: string | null | undefined): string 
   if (!url) return undefined;
 
   try {
+    const settings = getSettings();
+    const clientSupabaseUrl = settings?.supabase_url;
+    if (!clientSupabaseUrl) return resolveHostname(url);
+    const clientOrigin = new URL(clientSupabaseUrl).origin;
+
     // Check if the URL points to Supabase storage
     if (url.includes('/storage/v1/object/public/')) {
-      const settings = getSettings();
-      const clientSupabaseUrl = settings?.supabase_url;
+      // Find where the storage path begins
+      const storageIndex = url.indexOf('/storage/v1/object/public/');
+      if (storageIndex !== -1) {
+        let storagePath = url.substring(storageIndex);
 
-      if (clientSupabaseUrl) {
-        // Parse clientSupabaseUrl to get its origin (e.g., http://192.168.1.100:18000)
-        const clientOrigin = new URL(clientSupabaseUrl).origin;
-
-        // Find where the storage path begins
-        const storageIndex = url.indexOf('/storage/v1/object/public/');
-        if (storageIndex !== -1) {
-          let storagePath = url.substring(storageIndex);
-
-          // Defensive check: if the path has duplicated bucket segments
-          // e.g. /storage/v1/object/public/favicons/storage/v1/object/public/favicons/...
-          const duplicatePattern =
-            '/storage/v1/object/public/favicons/storage/v1/object/public/favicons/';
-          if (storagePath.includes(duplicatePattern)) {
-            storagePath = storagePath.replace(
-              duplicatePattern,
-              '/storage/v1/object/public/favicons/'
-            );
-          } else {
-            // General check: if it contains /storage/v1/object/public/ multiple times
-            const parts = storagePath.split('/storage/v1/object/public/');
-            if (parts.length > 2) {
-              storagePath = '/storage/v1/object/public/' + parts[parts.length - 1];
-            }
+        // Defensive check: if the path has duplicated bucket segments
+        // e.g. /storage/v1/object/public/favicons/storage/v1/object/public/favicons/...
+        const duplicatePattern =
+          '/storage/v1/object/public/favicons/storage/v1/object/public/favicons/';
+        if (storagePath.includes(duplicatePattern)) {
+          storagePath = storagePath.replace(
+            duplicatePattern,
+            '/storage/v1/object/public/favicons/'
+          );
+        } else {
+          // General check: if it contains /storage/v1/object/public/ multiple times
+          const parts = storagePath.split('/storage/v1/object/public/');
+          if (parts.length > 2) {
+            storagePath = '/storage/v1/object/public/' + parts[parts.length - 1];
           }
-
-          // Return the resolved URL combining client supabase origin and storage path, resolving double slashes
-          const resolved = `${clientOrigin}${storagePath}`;
-          // Make sure we resolve any local emulator hostnames if needed
-          return resolveHostname(resolved);
         }
+
+        // Return the resolved URL combining client supabase origin and storage path, resolving double slashes
+        const resolved = `${clientOrigin}${storagePath}`;
+        // Make sure we resolve any local emulator hostnames if needed
+        return resolveHostname(resolved);
       }
+    }
+
+    // Handle raw relative paths from Meilisearch (e.g. UUID/hash filenames)
+    if (
+      !url.startsWith('http://') &&
+      !url.startsWith('https://') &&
+      !url.startsWith('data:') &&
+      !url.startsWith('/')
+    ) {
+      const resolved = `${clientOrigin}/storage/v1/object/public/favicons/${url}`;
+      return resolveHostname(resolved);
     }
   } catch (err) {
     console.error('[Network] Error resolving Supabase image URL:', err);

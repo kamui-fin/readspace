@@ -125,7 +125,7 @@ export function ArticleHeader({
                 </div>
 
                 {/* Desktop Article Toolbar */}
-                {!shouldShowPreviewBanner && !isMobile && toolbar}
+                {!isMobile && toolbar}
             </div>
         </div>
     )
