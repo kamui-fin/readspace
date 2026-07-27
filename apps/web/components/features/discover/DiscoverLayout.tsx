@@ -15,8 +15,8 @@ export function DiscoverLayout({
     return (
         <div
             className={cn(
-                "flex flex-col flex-1",
-                centerVertically && "h-full overflow-hidden"
+                "flex flex-col flex-1 h-svh md:h-[calc(100svh-1rem)]",
+                centerVertically ? "overflow-hidden" : "overflow-y-auto"
             )}
         >
             <main
