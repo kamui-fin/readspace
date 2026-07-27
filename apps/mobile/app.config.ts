@@ -48,7 +48,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
               scheme,
               // This should match your EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
               // Falls back to the default if not set
-              `com.googleusercontent.apps.${process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.replace('.apps.googleusercontent.com', '') || '372373410684-63fg96rrnuuu22nd8qfdpm8tf5sdpfst'}`,
+              `com.googleusercontent.apps.${process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.replace('.apps.googleusercontent.com', '') || '29989057291-ao019ihnv1afmctdg52dj6l3manpk1jm'}`,
             ],
           },
         ],

@@ -20,12 +20,20 @@ export function CategoryGrid({ onCategoryClick }: CategoryGridProps) {
 
     const getCategoryName = (category: FeedCategory) => {
         return isMobile
-            ? MOBILE_CATEGORY_NAMES[category] || category
+            ? MOBILE_CATEGORY_NAMES[category as keyof typeof MOBILE_CATEGORY_NAMES] || category
             : CATEGORY_DISPLAY_NAMES[category] || category
     }
 
     return (
         <div className="flex flex-wrap gap-2.5 md:gap-3 justify-center mx-auto">
+            <CategoryBadge
+                key="popular"
+                category="Popular"
+                iconKey="popular"
+                variant="popular"
+                onClick={() => onCategoryClick("popular")}
+                className={isMobile ? "text-xs px-4 py-2" : ""}
+            />
             {FEED_CATEGORIES.map((category) => (
                 <CategoryBadge
                     key={category}

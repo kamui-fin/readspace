@@ -106,11 +106,25 @@ export function useDiscoverController({
         activeLanguage ||
         (persistedLanguage === "all" ? "all" : persistedLanguage)
 
+    const [isPopularSelected, setIsPopularSelected] = usePersistentState<boolean>(
+        "discover-popular-active",
+        false
+    )
+
     const handleCategoryClick = useCallback(
         (categoryName: string) => {
-            refineCategory(categoryName)
+            if (categoryName === "popular") {
+                refineCategory("popular")
+                setIsPopularSelected((prev) => !prev)
+            } else {
+                if (isPopularSelected) {
+                    setIsPopularSelected(false)
+                    refineCategory("popular")
+                }
+                refineCategory(categoryName)
+            }
         },
-        [refineCategory]
+        [isPopularSelected, refineCategory, setIsPopularSelected]
     )
 
     const handleLanguageChange = useCallback(
@@ -133,11 +147,12 @@ export function useDiscoverController({
     )
 
     const clearSearch = useCallback(() => {
+        setIsPopularSelected(false)
         // Clear the search query
         refineQuery("")
         // Clear all refinements (category and language)
         clearAllRefinements()
-    }, [refineQuery, clearAllRefinements])
+    }, [refineQuery, clearAllRefinements, setIsPopularSelected])
 
     const handleAiToggle = useCallback(
         (enabled: boolean) => {
@@ -148,13 +163,18 @@ export function useDiscoverController({
     )
 
     // Determine if we should show search results or categories
-    // Show search results if there's a query OR active category, but NOT if it's a URL query (show preview instead)
-    const hasActiveSearch = Boolean((query && !isUrlQuery) || activeCategory)
+    // Show search results if there's a query OR active category OR popular is selected, but NOT if it's a URL query (show preview instead)
+    const hasActiveSearch = Boolean(
+        (query && !isUrlQuery) || activeCategory || isPopularSelected
+    )
+
+    const effectiveCategory = isPopularSelected ? "Popular Feeds" : activeCategory
 
     return {
         // Search State
         query,
-        activeCategory,
+        activeCategory: effectiveCategory,
+        isPopularSelected,
         hasActiveSearch,
         isUrlQuery,
 

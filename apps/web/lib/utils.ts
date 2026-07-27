@@ -29,5 +29,16 @@ export function resolveSupabaseImageUrl(
             return `${env.NEXT_PUBLIC_SUPABASE_URL}${storagePath}`
         }
     }
+
+    // Handle raw relative paths from Meilisearch (e.g. UUID/hash filenames)
+    if (
+        !url.startsWith("http://") &&
+        !url.startsWith("https://") &&
+        !url.startsWith("data:") &&
+        !url.startsWith("/")
+    ) {
+        return `${env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/favicons/${url}`
+    }
+
     return url
 }

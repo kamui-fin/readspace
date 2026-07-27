@@ -79,7 +79,7 @@ function hasQuery(params?: SearchParams): boolean {
 }
 
 /**
- * Check if a filter array contains category filters.
+ * Check if a filter array contains category filters (including popular).
  */
 function hasCategoryFilter(filters: Array<string | string[]>): boolean {
     return filters.some((filter) => {
@@ -99,6 +99,43 @@ function hasCategoryFilter(filters: Array<string | string[]>): boolean {
         }
         return false
     })
+}
+
+/**
+ * Strip 'popular' category filter from requests so Meilisearch queries all categories by popularity_score.
+ */
+function stripPopularCategoryFilter(request: SearchRequest): SearchRequest {
+    if (!request.params) return request
+
+    const cleanFilter = (filters: any) => {
+        if (!filters) return filters
+        if (Array.isArray(filters)) {
+            return filters
+                .map((f) => {
+                    if (typeof f === "string") {
+                        return f.includes("popular") ? null : f
+                    }
+                    if (Array.isArray(f)) {
+                        const cleaned = f.filter(
+                            (item) => typeof item === "string" && !item.includes("popular")
+                        )
+                        return cleaned.length > 0 ? cleaned : null
+                    }
+                    return f
+                })
+                .filter(Boolean)
+        }
+        return filters
+    }
+
+    return {
+        ...request,
+        params: {
+            ...request.params,
+            facetFilters: cleanFilter(request.params.facetFilters),
+            filter: cleanFilter(request.params.filter),
+        },
+    }
 }
 
 /**
@@ -226,8 +263,13 @@ export function createSearchClient(
                     })
                 }
 
+                // Strip popular category filter so Meilisearch queries all categories by popularity_score
+                const meiliRequests = processedRequests.map((r) =>
+                    stripPopularCategoryFilter(r)
+                )
+
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                return baseClient.searchClient.search(processedRequests as any)
+                return baseClient.searchClient.search(meiliRequests as any)
             },
         },
     }

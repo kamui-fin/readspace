@@ -51,7 +51,68 @@ export const POST = Webhooks({
             await handleRoleUpgrade(email, userId)
         }
     },
+
+    onSubscriptionRevoked: async (subscription) => {
+        const subData = (subscription as any).data
+        if (!subData) {
+            console.warn("[Polar Webhook] Revocation subscription data missing.")
+            return
+        }
+
+        console.log(`[Polar Webhook] Subscription revoked: ${subData.id}`)
+        const email = subData.customer?.email || subData.customer_email
+        let userId: string | undefined
+
+        if (subData.metadata && typeof subData.metadata === "object") {
+            userId = subData.metadata.user_id
+        }
+
+        if (email || userId) {
+            await handleRoleDowngrade(email, userId)
+        }
+    },
 })
+
+async function handleRoleDowngrade(email?: string, userId?: string) {
+    try {
+        const supabase = getSupabaseAdmin()
+        console.log(
+            `[Polar Webhook] Downgrading user role to BASIC (User ID: ${userId || "None"}, Email: ${email || "None"})`
+        )
+
+        if (userId) {
+            const { data, error } = await supabase
+                .from("profiles")
+                .update({ role: "BASIC" })
+                .eq("id", userId)
+                .select()
+
+            if (!error && data && data.length > 0) {
+                console.log(
+                    `[Polar Webhook] User profile successfully downgraded to BASIC by ID: ${userId}`
+                )
+                return
+            }
+        }
+
+        if (email) {
+            const { data, error } = await supabase
+                .from("profiles")
+                .update({ role: "BASIC" })
+                .eq("email", email)
+                .select()
+
+            if (!error && data && data.length > 0) {
+                console.log(
+                    `[Polar Webhook] User profile successfully downgraded to BASIC by email: ${email}`
+                )
+                return
+            }
+        }
+    } catch (err) {
+        console.error("[Polar Webhook] Failed to process role downgrade:", err)
+    }
+}
 
 async function handleRoleUpgrade(email?: string, userId?: string) {
     try {

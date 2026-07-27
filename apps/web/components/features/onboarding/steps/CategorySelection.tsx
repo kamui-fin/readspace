@@ -52,7 +52,6 @@ const CATEGORY_GROUPS = [
             FeedCategory.HOME_HOBBIES,
             FeedCategory.STYLE_SHOPPING,
             FeedCategory.IDENTITY_COMMUNITY,
-            FeedCategory.MISCELLANEOUS,
         ],
     },
 ]
