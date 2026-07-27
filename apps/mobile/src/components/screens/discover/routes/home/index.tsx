@@ -127,6 +127,7 @@ function DiscoverScreenInner() {
         limit: TRENDING_PAGE_SIZE,
         offset: pageParam,
         filter: [`language=${languageCode}`],
+        sort: ['popularity_score:desc'],
       });
       return { hits: res.hits as unknown as FeedSummary[], offset: pageParam };
     },
