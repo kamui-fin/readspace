@@ -51,17 +51,12 @@ def mock_feed_fetch_duplicate_articles():
     shared_url = "https://example.com/shared-article"
 
     feed_a_response = create_feed_response(
-        "Feed A",
-        ["Shared Article", "Feed A Article 2", "Feed A Article 3"],
-        shared_url
+        "Feed A", ["Shared Article", "Feed A Article 2", "Feed A Article 3"], shared_url
     )
 
     feed_b_response = create_feed_response(
-        "Feed B",
-        ["Shared Article", "Feed B Article 2", "Feed B Article 3"],
-        shared_url
+        "Feed B", ["Shared Article", "Feed B Article 2", "Feed B Article 3"], shared_url
     )
-
 
     async def mock_fetch(url: str, *args, **kwargs):
         """Return different feed content based on URL."""
@@ -166,17 +161,13 @@ class TestDuplicateArticleHandling:
         assert response_a.status_code == 200, f"Feed A refresh failed: {response_a.text}"
 
         # Verify Feed A has articles
-        result = await db_session.execute(
-            select(FeedArticle).where(FeedArticle.feed_id == feed_a.id)
-        )
+        result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed_a.id))
         feed_a_articles = result.scalars().all()
         assert len(feed_a_articles) == 3, "Feed A should have 3 articles"
 
         # Get the shared article content from Feed A
         shared_article_link = "https://example.com/shared-article"
-        result = await db_session.execute(
-            select(ArticleContent).where(ArticleContent.link == shared_article_link)
-        )
+        result = await db_session.execute(select(ArticleContent).where(ArticleContent.link == shared_article_link))
         shared_content_from_a = result.scalar_one()
         assert shared_content_from_a is not None
         assert shared_content_from_a.title == "Shared Article"
@@ -190,33 +181,24 @@ class TestDuplicateArticleHandling:
         assert response_b.status_code == 200, f"Feed B refresh failed: {response_b.text}"
 
         # Verify Feed B has articles
-        result = await db_session.execute(
-            select(FeedArticle).where(FeedArticle.feed_id == feed_b.id)
-        )
+        result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed_b.id))
         feed_b_articles = result.scalars().all()
         assert len(feed_b_articles) == 3, "Feed B should have 3 articles"
 
         # Verify only ONE ArticleContent exists for the shared URL
-        result = await db_session.execute(
-            select(ArticleContent).where(ArticleContent.link == shared_article_link)
-        )
+        result = await db_session.execute(select(ArticleContent).where(ArticleContent.link == shared_article_link))
         all_shared_content = result.scalars().all()
         assert len(all_shared_content) == 1, "Should only have ONE article_content for shared URL"
 
         # Verify both feeds point to the SAME article_content
-        feed_a_shared_article = next(
-            (a for a in feed_a_articles if a.content_id == shared_content_from_a.id),
-            None
-        )
-        feed_b_shared_article = next(
-            (a for a in feed_b_articles if a.content_id == shared_content_from_a.id),
-            None
-        )
+        feed_a_shared_article = next((a for a in feed_a_articles if a.content_id == shared_content_from_a.id), None)
+        feed_b_shared_article = next((a for a in feed_b_articles if a.content_id == shared_content_from_a.id), None)
 
         assert feed_a_shared_article is not None, "Feed A should have link to shared content"
         assert feed_b_shared_article is not None, "Feed B should have link to shared content"
-        assert feed_a_shared_article.content_id == feed_b_shared_article.content_id, \
+        assert feed_a_shared_article.content_id == feed_b_shared_article.content_id, (
             "Both feeds should reference the same article_content"
+        )
 
         # Note: ArticleContent doesn't have updated_at field
         # The important thing is that both feeds reference the same content_id
@@ -264,9 +246,7 @@ class TestDuplicateArticleHandling:
         assert response_1.status_code == 200
 
         # Count articles after first refresh
-        result = await db_session.execute(
-            select(FeedArticle).where(FeedArticle.feed_id == feed_a.id)
-        )
+        result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed_a.id))
         articles_count_1 = len(result.scalars().all())
         assert articles_count_1 == 3
 
@@ -282,9 +262,7 @@ class TestDuplicateArticleHandling:
         assert response_2.status_code == 200
 
         # Count articles after second refresh - should be same
-        result = await db_session.execute(
-            select(FeedArticle).where(FeedArticle.feed_id == feed_a.id)
-        )
+        result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed_a.id))
         articles_count_2 = len(result.scalars().all())
         assert articles_count_2 == articles_count_1, "Article count should not change on re-refresh"
 

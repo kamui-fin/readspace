@@ -20,7 +20,9 @@ export function CategoryGrid({ onCategoryClick }: CategoryGridProps) {
 
     const getCategoryName = (category: FeedCategory) => {
         return isMobile
-            ? MOBILE_CATEGORY_NAMES[category as keyof typeof MOBILE_CATEGORY_NAMES] || category
+            ? MOBILE_CATEGORY_NAMES[
+                  category as keyof typeof MOBILE_CATEGORY_NAMES
+              ] || category
             : CATEGORY_DISPLAY_NAMES[category] || category
     }
 

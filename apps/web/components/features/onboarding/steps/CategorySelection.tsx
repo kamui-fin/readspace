@@ -109,9 +109,8 @@ const CategorySelectionStep: React.FC = () => {
                             {group.categories.map((catKey, index) => {
                                 const category = CATEGORY_CONFIG[catKey]
                                 const IconComponent = category.icon
-                                const isSelected = selectedCategories.includes(
-                                    catKey
-                                )
+                                const isSelected =
+                                    selectedCategories.includes(catKey)
 
                                 return (
                                     <motion.div
@@ -127,9 +126,7 @@ const CategorySelectionStep: React.FC = () => {
                                     >
                                         <button
                                             onClick={() =>
-                                                handleCategoryToggle(
-                                                    catKey
-                                                )
+                                                handleCategoryToggle(catKey)
                                             }
                                             className={`w-full p-4 h-[95px] rounded-xl border transition-all duration-200 text-left group hover:scale-[1.01] hover:shadow-xs cursor-pointer ${
                                                 isSelected

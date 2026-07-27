@@ -21,7 +21,13 @@ export const ONBOARDING_MAX_FEEDS = 5;
 // Mutation key must match what useCreateFeed registers
 const CREATE_FEED_MUTATION_KEY = ['create-feed'];
 
-export function FeedSelectionStep({ onNext: _onNext, onSkip }: { onNext: () => void; onSkip?: () => void }) {
+export function FeedSelectionStep({
+  onNext: _onNext,
+  onSkip,
+}: {
+  onNext: () => void;
+  onSkip?: () => void;
+}) {
   const insets = useSafeAreaInsets();
   const { setIsOnboarded } = useSession();
   const { onboardingData, updateOnboardingData } = useOnboardingStore();
@@ -169,7 +175,10 @@ export function FeedSelectionStep({ onNext: _onNext, onSkip }: { onNext: () => v
             onPress={onSkip}
             style={{ alignSelf: 'center', marginTop: 16, padding: 8 }}
             activeOpacity={0.7}>
-            <Text size="sm" fontFamily="geist-medium" className="text-grey dark:text-grey text-center">
+            <Text
+              size="sm"
+              fontFamily="geist-medium"
+              className="text-grey dark:text-grey text-center">
               Skip for now
             </Text>
           </TouchableOpacity>

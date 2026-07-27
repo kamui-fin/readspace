@@ -30,9 +30,7 @@ async def test_basic_user_feed_refresh_delay(
     db_session.add(folder)
     await db_session.flush()
 
-    subscription = FeedSubscription(
-        user_id=test_user.id, feed_id=test_feed.id, folder_id=folder.id
-    )
+    subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=folder.id)
     db_session.add(subscription)
     await db_session.flush()
 
@@ -89,7 +87,7 @@ async def test_basic_user_feed_refresh_delay(
     assert list_response.status_code == 200
     list_data = list_response.json()
     items = list_data["items"]
-    
+
     # Basic user should only see Article A (older than cutoff)
     item_ids = [item["id"] for item in items]
     assert str(article_a.id) in item_ids
@@ -99,7 +97,7 @@ async def test_basic_user_feed_refresh_delay(
     counts_response = await async_client.get("/api/articles/counts")
     assert counts_response.status_code == 200
     counts_data = counts_response.json()
-    
+
     # Should only count Article A
     assert counts_data["feed_counts"].get(str(test_feed.id)) == 1
 
@@ -108,7 +106,7 @@ async def test_basic_user_feed_refresh_delay(
     assert today_response.status_code == 200
     today_data = today_response.json()
     today_item_ids = [item["id"] for item in today_data["items"]]
-    
+
     # Today view for BASIC should also filter out Article B
     assert str(article_a.id) in today_item_ids
     assert str(article_b.id) not in today_item_ids

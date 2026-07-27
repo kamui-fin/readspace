@@ -55,7 +55,9 @@ export const POST = Webhooks({
     onSubscriptionRevoked: async (subscription) => {
         const subData = (subscription as any).data
         if (!subData) {
-            console.warn("[Polar Webhook] Revocation subscription data missing.")
+            console.warn(
+                "[Polar Webhook] Revocation subscription data missing."
+            )
             return
         }
 

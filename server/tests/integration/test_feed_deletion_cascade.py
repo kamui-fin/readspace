@@ -68,20 +68,14 @@ async def test_admin_delete_feed_cascade(
     assert result.scalar_one_or_none() is None
 
     # Subscription should be gone (cascade)
-    result = await db_session.execute(
-        select(FeedSubscription).where(FeedSubscription.id == subscription.id)
-    )
+    result = await db_session.execute(select(FeedSubscription).where(FeedSubscription.id == subscription.id))
     assert result.scalar_one_or_none() is None
 
     # FeedArticle should be gone (cascade)
-    result = await db_session.execute(
-        select(FeedArticle).where(FeedArticle.id == feed_article.id)
-    )
+    result = await db_session.execute(select(FeedArticle).where(FeedArticle.id == feed_article.id))
     assert result.scalar_one_or_none() is None
 
     # Content should REMAIN (we don't cascade delete content when feed is deleted, usually)
     # Checking this assumption - typically content is shared.
-    result = await db_session.execute(
-        select(ArticleContent).where(ArticleContent.id == content.id)
-    )
+    result = await db_session.execute(select(ArticleContent).where(ArticleContent.id == content.id))
     assert result.scalar_one_or_none() is not None

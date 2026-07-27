@@ -117,9 +117,7 @@ class TestOpmlImportTracker:
         tracker = OpmlImportTracker(task_id)
         await tracker.initialize("user-1", "test.opml", 5)
 
-        error = FeedImportError(
-            url="http://bad.url", error="Connection failed", status="failed"
-        )
+        error = FeedImportError(url="http://bad.url", error="Connection failed", status="failed")
         await tracker.mark_failure(error)
 
         state = await tracker.get_state()

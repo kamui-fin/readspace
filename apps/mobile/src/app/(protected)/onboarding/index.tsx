@@ -52,21 +52,12 @@ export default function OnboardingScreen() {
       onNext={() => stepperRef.current?.goToNext()}
       onSkip={handleSkip}
     />,
-    <FeedSelectionStep
-      key="feeds"
-      onNext={() => {}}
-      onSkip={handleSkip}
-    />,
+    <FeedSelectionStep key="feeds" onNext={() => {}} onSkip={handleSkip} />,
   ];
 
   return (
     <View className="bg-screen flex-1" style={{ backgroundColor: colors.background }}>
-      <Stepper
-        ref={stepperRef}
-        pages={pages}
-        onStepChange={setCurrentStep}
-        initialStep={0}
-      />
+      <Stepper ref={stepperRef} pages={pages} onStepChange={setCurrentStep} initialStep={0} />
     </View>
   );
 }

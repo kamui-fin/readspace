@@ -12,9 +12,7 @@ async def test_normalize_feed_url():
     assert normalize_feed_url("HTTP://EXAMPLE.COM/Feed") == "http://example.com/Feed"
 
     # Test RSSHub preservation
-    assert (
-        normalize_feed_url("rsshub://twitter/user/test") == "rsshub://twitter/user/test"
-    )
+    assert normalize_feed_url("rsshub://twitter/user/test") == "rsshub://twitter/user/test"
 
     # Test url-normalize features (e.g. default port removal)
     assert normalize_feed_url("http://example.com:80/feed") == "http://example.com/feed"
@@ -31,7 +29,7 @@ async def test_resolve_canonical_url_head_success():
         mock_response.status = 200
         mock_response.url = "https://final.com/feed"
         mock_response.headers = {"content-type": "application/rss+xml"}
-        
+
         # session.head returns context manager
         head_ctx = MagicMock()
         head_ctx.__aenter__ = AsyncMock(return_value=mock_response)
@@ -52,7 +50,7 @@ async def test_resolve_canonical_url_head_failure():
         # HEAD returns 405 Method Not Allowed
         mock_response = AsyncMock()
         mock_response.status = 405
-        
+
         head_ctx = MagicMock()
         head_ctx.__aenter__ = AsyncMock(return_value=mock_response)
         head_ctx.__exit__ = AsyncMock(return_value=None)
@@ -87,12 +85,12 @@ async def test_fetch_feed_content_size_limit():
             mock_response = AsyncMock()
             mock_response.headers = {"Content-Length": str(MAX_FEED_SIZE_BYTES + 1)}
             mock_response.status = 200
-            
+
             # session.get returns context manager whose __aenter__ must be async
             get_ctx = MagicMock()
             get_ctx.__aenter__ = AsyncMock(return_value=mock_response)
             get_ctx.__exit__ = AsyncMock(return_value=None)
-            
+
             mock_session.get.return_value = get_ctx
 
             result = await fetch_feed_content("http://example.com/feed")

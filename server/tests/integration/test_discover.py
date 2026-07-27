@@ -13,12 +13,10 @@ class TestPreviewFeed:
     async def test_preview_feed_success(self, async_client: AsyncClient):
         """Test previewing a real RSS feed."""
         # Mock the external feed fetching and parsing
-        with patch(
-            "app.services.feeds.fetching.fetch_feed_content"
-        ) as mock_fetch, patch(
-            "app.services.feeds.parsing.parse_feed_content"
-        ) as mock_parse:
-
+        with (
+            patch("app.services.feeds.fetching.fetch_feed_content") as mock_fetch,
+            patch("app.services.feeds.parsing.parse_feed_content") as mock_parse,
+        ):
             from app.typing.feeds import ParsedFeed
             from app.typing.entries import ArticleCreate
             from datetime import datetime, timezone
@@ -38,9 +36,7 @@ class TestPreviewFeed:
                 ],
             )
 
-            response = await async_client.get(
-                "/api/discover/preview?url=https://hnrss.org/newest"
-            )
+            response = await async_client.get("/api/discover/preview?url=https://hnrss.org/newest")
 
             assert response.status_code == 200
             data = response.json()
@@ -69,9 +65,7 @@ class TestPreviewFeed:
     @pytest.mark.asyncio
     async def test_preview_feed_unreachable(self, async_client: AsyncClient):
         """Test previewing unreachable feed."""
-        response = await async_client.get(
-            "/api/discover/preview?url=https://nonexistent-domain-12345.com/feed.xml"
-        )
+        response = await async_client.get("/api/discover/preview?url=https://nonexistent-domain-12345.com/feed.xml")
 
         # Should fail with either 503 (can't fetch) or 500 (error)
         assert response.status_code in [500, 503]

@@ -27,7 +27,7 @@ class TestLanguageNormalization:
         """Test full language names - unsupported by current normalizer, falls back to default."""
         # langcodes.standardize_tag doesn't parse names like "English"
         assert _normalize_language("English") == "en"
-        assert _normalize_language("French") == "en" # Fallback
+        assert _normalize_language("French") == "en"  # Fallback
 
     def test_invalid_codes(self):
         """Test invalid or unknown codes fallback to 'en'."""

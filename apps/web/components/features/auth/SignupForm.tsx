@@ -62,7 +62,10 @@ export function SignupForm({
     const router = useRouter()
 
     const showTerms = isProd
-    const schema = React.useMemo(() => createSignUpSchema(showTerms), [showTerms])
+    const schema = React.useMemo(
+        () => createSignUpSchema(showTerms),
+        [showTerms]
+    )
     type SignUpFormValues = z.infer<typeof schema>
 
     const resolver = React.useCallback(

@@ -61,10 +61,10 @@ export default function UpgradeDialog() {
                                 </div>
                                 <div>
                                     <span className="font-semibold text-sm sm:text-base text-foreground">
-                                        Virtually unlimited feeds
+                                        Unlimited feeds & newsletters
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Organize with unlimited folders, and forward email newsletters to your own @readspace.ai inbox.
+                                        Infinite folders and a custom @readspace.ai address to receive newsletters directly.
                                     </p>
                                 </div>
                             </div>
@@ -76,10 +76,10 @@ export default function UpgradeDialog() {
                                 </div>
                                 <div>
                                     <span className="font-semibold text-sm sm:text-base text-foreground">
-                                        Experimental AI Labs access
+                                        Early AI features
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Get early access to game-changing AI features like conversational discovery, daily briefings, and automated feed organization.
+                                        Try out new tools in development, including daily briefings and conversational search.
                                     </p>
                                 </div>
                             </div>
@@ -91,10 +91,10 @@ export default function UpgradeDialog() {
                                 </div>
                                 <div>
                                     <span className="font-semibold text-sm sm:text-base text-foreground">
-                                        Extended AI reader tools
+                                        Generous AI limits
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Enjoy extended daily use of intelligence tools to condense dense essays, extract core takeaways, or translate foreign writing.
+                                        More daily usage of our summarize, key takeaway, and translation tools.
                                     </p>
                                 </div>
                             </div>
@@ -106,10 +106,10 @@ export default function UpgradeDialog() {
                                 </div>
                                 <div>
                                     <span className="font-semibold text-sm sm:text-base text-foreground">
-                                        Priority updates & permanent storage
+                                        Save articles forever
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Enjoy rapid feed updates and save articles permanently (free read-later items automatically expire after 30 days).
+                                        Articles in your library never expire, and feeds update faster. (Free items expire in 30 days).
                                     </p>
                                 </div>
                             </div>
@@ -188,7 +188,7 @@ export default function UpgradeDialog() {
                                                 Pro Yearly
                                             </CardTitle>
                                             <CardDescription className="text-xs sm:text-sm text-muted-foreground">
-                                                Billed annually
+                                                Billed annually ($79.99/yr)
                                             </CardDescription>
                                         </div>
                                     </CardHeader>
@@ -196,7 +196,7 @@ export default function UpgradeDialog() {
                                     <CardContent className="px-4 pb-4 sm:px-5 sm:pb-5">
                                         <div className="flex items-baseline">
                                             <span className="text-2xl sm:text-3xl font-extrabold text-foreground">
-                                                $5.99
+                                                $6.66
                                             </span>
                                             <span className="text-muted-foreground text-xs sm:text-sm ml-1">
                                                 /month
@@ -208,11 +208,10 @@ export default function UpgradeDialog() {
                         </div>
 
                         <SubscribeButton
-                            checkoutUrl={env.NEXT_PUBLIC_POLAR_CHECKOUT_URL}
-                            productId={
+                            checkoutUrl={
                                 selectedPlan === "monthly"
-                                    ? env.NEXT_PUBLIC_POLAR_MONTHLY_PRODUCT_ID
-                                    : env.NEXT_PUBLIC_POLAR_YEARLY_PRODUCT_ID
+                                    ? env.NEXT_PUBLIC_POLAR_MONTHLY_CHECKOUT_URL
+                                    : env.NEXT_PUBLIC_POLAR_YEARLY_CHECKOUT_URL
                             }
                             className="w-full flex justify-center items-center py-2.5 h-10 text-sm font-semibold hover:bg-primary/90 transition-colors shadow-xs"
                         >

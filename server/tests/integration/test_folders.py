@@ -13,9 +13,7 @@ class TestFolderCreate:
     """Test folder creation endpoint."""
 
     @pytest.mark.asyncio
-    async def test_create_folder_success(
-        self, async_client: AsyncClient, test_user: Profile
-    ):
+    async def test_create_folder_success(self, async_client: AsyncClient, test_user: Profile):
         """Test creating a folder successfully."""
         response = await async_client.post(
             "/api/folders/",
@@ -31,9 +29,7 @@ class TestFolderCreate:
     @pytest.mark.asyncio
     async def test_create_folder_minimal(self, async_client: AsyncClient):
         """Test creating folder with minimal data."""
-        response = await async_client.post(
-            "/api/folders/", json={"name": "Minimal Folder"}
-        )
+        response = await async_client.post("/api/folders/", json={"name": "Minimal Folder"})
 
         assert response.status_code == 201
         data = response.json()
@@ -60,9 +56,7 @@ class TestFolderCreate:
         self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
     ):
         """Test that created folder is persisted to database."""
-        response = await async_client.post(
-            "/api/folders/", json={"name": "DB Test Folder"}
-        )
+        response = await async_client.post("/api/folders/", json={"name": "DB Test Folder"})
 
         assert response.status_code == 201
         folder_id = response.json()["id"]
@@ -90,9 +84,7 @@ class TestFolderList:
         assert isinstance(data, list)
 
     @pytest.mark.asyncio
-    async def test_list_folders_with_data(
-        self, async_client: AsyncClient, test_folder: Folder
-    ):
+    async def test_list_folders_with_data(self, async_client: AsyncClient, test_folder: Folder):
         """Test listing folders returns user's folders."""
         response = await async_client.get("/api/folders/")
 
@@ -172,13 +164,9 @@ class TestFolderUpdate:
     """Test folder update endpoint."""
 
     @pytest.mark.asyncio
-    async def test_update_folder_name(
-        self, async_client: AsyncClient, test_folder: Folder
-    ):
+    async def test_update_folder_name(self, async_client: AsyncClient, test_folder: Folder):
         """Test updating folder name."""
-        response = await async_client.put(
-            f"/api/folders/{test_folder.id}", json={"name": "Updated Name"}
-        )
+        response = await async_client.put(f"/api/folders/{test_folder.id}", json={"name": "Updated Name"})
 
         assert response.status_code == 200
         data = response.json()
@@ -186,9 +174,7 @@ class TestFolderUpdate:
         assert data["id"] == str(test_folder.id)
 
     @pytest.mark.asyncio
-    async def test_update_folder_name_only(
-        self, async_client: AsyncClient, test_folder: Folder
-    ):
+    async def test_update_folder_name_only(self, async_client: AsyncClient, test_folder: Folder):
         """Test updating folder name only."""
         response = await async_client.put(
             f"/api/folders/{test_folder.id}",
@@ -200,9 +186,7 @@ class TestFolderUpdate:
         assert data["name"] == "Updated Name Only"
 
     @pytest.mark.asyncio
-    async def test_update_folder_empty_body(
-        self, async_client: AsyncClient, test_folder: Folder
-    ):
+    async def test_update_folder_empty_body(self, async_client: AsyncClient, test_folder: Folder):
         """Test updating folder with empty body."""
         response = await async_client.put(
             f"/api/folders/{test_folder.id}",
@@ -221,9 +205,7 @@ class TestFolderUpdate:
         from uuid import uuid4
 
         fake_id = uuid4()
-        response = await async_client.put(
-            f"/api/folders/{fake_id}", json={"name": "New Name"}
-        )
+        response = await async_client.put(f"/api/folders/{fake_id}", json={"name": "New Name"})
 
         assert response.status_code == 404
 
@@ -232,9 +214,7 @@ class TestFolderUpdate:
         self, async_client: AsyncClient, test_folder: Folder, db_session: AsyncSession
     ):
         """Test that folder updates persist to database."""
-        response = await async_client.put(
-            f"/api/folders/{test_folder.id}", json={"name": "Persisted Name"}
-        )
+        response = await async_client.put(f"/api/folders/{test_folder.id}", json={"name": "Persisted Name"})
 
         assert response.status_code == 200
 
@@ -243,9 +223,7 @@ class TestFolderUpdate:
         assert test_folder.name == "Persisted Name"
 
     @pytest.mark.asyncio
-    async def test_update_folder_access_control(
-        self, async_client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_update_folder_access_control(self, async_client: AsyncClient, db_session: AsyncSession):
         """Test that users cannot update other users' folders."""
         from uuid import uuid4
         from sqlalchemy import text
@@ -279,9 +257,7 @@ class TestFolderUpdate:
         db_session.add(other_folder)
         await db_session.flush()
 
-        response = await async_client.put(
-            f"/api/folders/{other_folder.id}", json={"name": "Hacked"}
-        )
+        response = await async_client.put(f"/api/folders/{other_folder.id}", json={"name": "Hacked"})
         assert response.status_code == 404
 
 
@@ -314,9 +290,7 @@ class TestFolderDelete:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_delete_folder_access_control(
-        self, async_client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_delete_folder_access_control(self, async_client: AsyncClient, db_session: AsyncSession):
         """Test that users cannot delete other users' folders."""
         from uuid import uuid4
         from sqlalchemy import text
@@ -354,8 +328,6 @@ class TestFolderDelete:
         assert response.status_code == 404
 
         # Verify folder still exists
-        result = await db_session.execute(
-            select(Folder).where(Folder.id == other_folder.id)
-        )
+        result = await db_session.execute(select(Folder).where(Folder.id == other_folder.id))
         folder = result.scalar_one_or_none()
         assert folder is not None

@@ -28,7 +28,12 @@ const getCategoryIcon = (categoryName: string) => {
     const iconProps = { size: 16 }
 
     if (categoryName === "popular" || categoryName === "Popular") {
-        return <Flame className="text-amber-500 dark:text-amber-400 fill-amber-500/20" {...iconProps} />
+        return (
+            <Flame
+                className="text-amber-500 dark:text-amber-400 fill-amber-500/20"
+                {...iconProps}
+            />
+        )
     }
 
     // Try to find by key (enum value)

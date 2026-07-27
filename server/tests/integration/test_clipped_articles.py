@@ -74,9 +74,7 @@ class TestSaveWebArticle:
         assert "article_id" in data
 
     @pytest.mark.asyncio
-    async def test_save_article_without_content_succeeds(
-        self, async_client: AsyncClient
-    ):
+    async def test_save_article_without_content_succeeds(self, async_client: AsyncClient):
         """Test saving article without content succeeds (content is optional)."""
         response = await async_client.post(
             "/api/articles/",
@@ -159,9 +157,7 @@ class TestCheckArticleSaved:
     """Test checking if an article is already saved."""
 
     @pytest.mark.asyncio
-    async def test_check_saved_article_exists(
-        self, async_client: AsyncClient, test_clipped_article: UserEntry
-    ):
+    async def test_check_saved_article_exists(self, async_client: AsyncClient, test_clipped_article: UserEntry):
         """Test checking a saved article returns the article data."""
         response = await async_client.get(
             "/api/articles/check-saved",
@@ -206,9 +202,7 @@ class TestUpdateClippedArticle:
         assert response.status_code == 204
 
     @pytest.mark.asyncio
-    async def test_update_clipped_article_note(
-        self, async_client: AsyncClient, test_clipped_article: UserEntry
-    ):
+    async def test_update_clipped_article_note(self, async_client: AsyncClient, test_clipped_article: UserEntry):
         """Test updating the note of a clipped article."""
         response = await async_client.put(
             f"/api/articles/{test_clipped_article.id}?article_type=clipped",
@@ -218,9 +212,7 @@ class TestUpdateClippedArticle:
         assert response.status_code == 204
 
     @pytest.mark.asyncio
-    async def test_update_clipped_article_read_status(
-        self, async_client: AsyncClient, test_clipped_article: UserEntry
-    ):
+    async def test_update_clipped_article_read_status(self, async_client: AsyncClient, test_clipped_article: UserEntry):
         """Test marking a clipped article as read."""
         response = await async_client.put(
             f"/api/articles/{test_clipped_article.id}?article_type=clipped",
@@ -230,9 +222,7 @@ class TestUpdateClippedArticle:
         assert response.status_code == 204
 
     @pytest.mark.asyncio
-    async def test_update_clipped_article_read_later(
-        self, async_client: AsyncClient, test_clipped_article: UserEntry
-    ):
+    async def test_update_clipped_article_read_later(self, async_client: AsyncClient, test_clipped_article: UserEntry):
         """Test toggling read_later status on a clipped article."""
         response = await async_client.put(
             f"/api/articles/{test_clipped_article.id}?article_type=clipped",
@@ -285,9 +275,7 @@ class TestReadLaterEndpoint:
         assert data["next_cursor"] is None
 
     @pytest.mark.asyncio
-    async def test_read_later_with_clipped_article(
-        self, async_client: AsyncClient, test_clipped_article: UserEntry
-    ):
+    async def test_read_later_with_clipped_article(self, async_client: AsyncClient, test_clipped_article: UserEntry):
         """Test read-later endpoint includes clipped articles."""
         response = await async_client.get("/api/articles/views/read-later")
 
@@ -297,11 +285,7 @@ class TestReadLaterEndpoint:
 
         # Find our test clipped article
         clipped_item = next(
-            (
-                item
-                for item in data["items"]
-                if item["id"] == str(test_clipped_article.id)
-            ),
+            (item for item in data["items"] if item["id"] == str(test_clipped_article.id)),
             None,
         )
         assert clipped_item is not None
@@ -330,9 +314,7 @@ class TestReadLaterEndpoint:
         assert str(test_clipped_article.id) not in article_ids
 
     @pytest.mark.asyncio
-    async def test_read_later_pagination(
-        self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
-    ):
+    async def test_read_later_pagination(self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile):
         """Test pagination in read-later endpoint."""
         # Create multiple clipped articles
         from app.utils.hashing import get_content_hash
@@ -356,8 +338,7 @@ class TestReadLaterEndpoint:
                 content_id=content.id,
                 feed_article_id=None,
                 is_saved=True,
-                created_at=base_time
-                - timedelta(seconds=i),  # Ensure different timestamps
+                created_at=base_time - timedelta(seconds=i),  # Ensure different timestamps
             )
             db_session.add(clipped)
 
@@ -373,9 +354,7 @@ class TestReadLaterEndpoint:
         assert data["next_cursor"] is not None
 
         # Test fetching next page
-        next_response = await async_client.get(
-            f"/api/articles/views/read-later?limit=3&cursor={data['next_cursor']}"
-        )
+        next_response = await async_client.get(f"/api/articles/views/read-later?limit=3&cursor={data['next_cursor']}")
 
         assert next_response.status_code == 200
         next_data = next_response.json()

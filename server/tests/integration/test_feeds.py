@@ -63,21 +63,15 @@ class TestFeedSubscribe:
         assert data["message"] == "Subscribed to feed successfully"
 
         # Verify in database
-        result = await db_session.execute(
-            select(FeedSubscription).where(FeedSubscription.feed_id == test_feed.id)
-        )
+        result = await db_session.execute(select(FeedSubscription).where(FeedSubscription.feed_id == test_feed.id))
         subscription = result.scalar_one()
         assert subscription.folder_id == test_folder.id
 
     @pytest.mark.asyncio
-    async def test_subscribe_feed_not_found(
-        self, async_client: AsyncClient, test_folder: Folder
-    ):
+    async def test_subscribe_feed_not_found(self, async_client: AsyncClient, test_folder: Folder):
         """Test subscribing to non-existent feed."""
         fake_id = uuid4()
-        response = await async_client.post(
-            f"/api/feeds/{fake_id}/subscribe", json={"folder_id": str(test_folder.id)}
-        )
+        response = await async_client.post(f"/api/feeds/{fake_id}/subscribe", json={"folder_id": str(test_folder.id)})
 
         assert response.status_code == 404
 
@@ -92,9 +86,7 @@ class TestFeedSubscribe:
     ):
         """Test subscribing to already subscribed feed."""
         # Create existing subscription
-        subscription = FeedSubscription(
-            user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id
-        )
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
@@ -123,9 +115,7 @@ class TestFeedAdd:
     """Test add new feed endpoint."""
 
     @pytest.mark.asyncio
-    async def test_add_feed_success(
-        self, async_client: AsyncClient, test_folder: Folder
-    ):
+    async def test_add_feed_success(self, async_client: AsyncClient, test_folder: Folder):
         """Test adding a new feed by URL."""
         response = await async_client.post(
             "/api/feeds/",
@@ -142,9 +132,7 @@ class TestFeedAdd:
         assert data["feed"]["url"] == "https://techcrunch.com/feed"
 
     @pytest.mark.asyncio
-    async def test_add_feed_with_folder(
-        self, async_client: AsyncClient, test_folder: Folder
-    ):
+    async def test_add_feed_with_folder(self, async_client: AsyncClient, test_folder: Folder):
         """Test adding feed with folder assignment."""
         response = await async_client.post(
             "/api/feeds/",
@@ -160,13 +148,9 @@ class TestFeedAdd:
         assert data["folder"]["id"] == str(test_folder.id)
 
     @pytest.mark.asyncio
-    async def test_add_feed_invalid_url(
-        self, async_client: AsyncClient, test_folder: Folder
-    ):
+    async def test_add_feed_invalid_url(self, async_client: AsyncClient, test_folder: Folder):
         """Test adding feed with invalid URL."""
-        response = await async_client.post(
-            "/api/feeds/", json={"url": "not-a-url", "folder_id": str(test_folder.id)}
-        )
+        response = await async_client.post("/api/feeds/", json={"url": "not-a-url", "folder_id": str(test_folder.id)})
 
         assert response.status_code == 422  # 422 is correct for validation errors
 
@@ -178,9 +162,7 @@ class TestFeedAdd:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_add_feed_empty_folder_id(
-        self, async_client: AsyncClient
-    ):
+    async def test_add_feed_empty_folder_id(self, async_client: AsyncClient):
         """Test adding a feed with an empty folder_id string (should fall back to default folder)."""
         response = await async_client.post(
             "/api/feeds/",
@@ -196,9 +178,7 @@ class TestFeedAdd:
         assert "feed" in data
 
     @pytest.mark.asyncio
-    async def test_add_feed_invalid_uuid_folder_id(
-        self, async_client: AsyncClient
-    ):
+    async def test_add_feed_invalid_uuid_folder_id(self, async_client: AsyncClient):
         """Test adding a feed with an invalid UUID folder_id string (should fall back to default folder)."""
         response = await async_client.post(
             "/api/feeds/",
@@ -238,9 +218,7 @@ class TestFeedList:
     ):
         """Test listing feeds returns user's subscriptions."""
         # Create subscription
-        subscription = FeedSubscription(
-            user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id
-        )
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
@@ -264,9 +242,7 @@ class TestFeedList:
     ):
         """Test filtering feeds by folder."""
         # Create subscription with folder
-        subscription = FeedSubscription(
-            user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id
-        )
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
@@ -275,9 +251,7 @@ class TestFeedList:
         assert response.status_code == 200
         data = response.json()
         assert len(data["subscriptions"]) >= 1
-        assert all(
-            sub["folder"]["id"] == str(test_folder.id) for sub in data["subscriptions"]
-        )
+        assert all(sub["folder"]["id"] == str(test_folder.id) for sub in data["subscriptions"])
 
     @pytest.mark.asyncio
     async def test_list_feeds_filter_by_favorite(
@@ -315,9 +289,7 @@ class TestFeedList:
         db_session: AsyncSession,
     ):
         """Test searching feeds by title."""
-        subscription = FeedSubscription(
-            user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id
-        )
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
@@ -355,9 +327,7 @@ class TestFeedGet:
     ):
         """Test getting a feed by ID."""
         # Create subscription
-        subscription = FeedSubscription(
-            user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id
-        )
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
@@ -369,9 +339,7 @@ class TestFeedGet:
         assert data["title"] == test_feed.title
 
     @pytest.mark.asyncio
-    async def test_get_feed_not_subscribed(
-        self, async_client: AsyncClient, test_feed: Feed
-    ):
+    async def test_get_feed_not_subscribed(self, async_client: AsyncClient, test_feed: Feed):
         """Test getting feed user is not subscribed to returns preview mode."""
         response = await async_client.get(f"/api/feeds/{test_feed.id}")
 
@@ -402,15 +370,11 @@ class TestFeedUpdate:
         db_session: AsyncSession,
     ):
         """Test updating feed custom title."""
-        subscription = FeedSubscription(
-            user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id
-        )
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
-        response = await async_client.put(
-            f"/api/feeds/{test_feed.id}", json={"custom_title": "Custom Title"}
-        )
+        response = await async_client.put(f"/api/feeds/{test_feed.id}", json={"custom_title": "Custom Title"})
 
         assert response.status_code == 200
         data = response.json()
@@ -437,15 +401,11 @@ class TestFeedUpdate:
         db_session.add(initial_folder)
         await db_session.flush()
 
-        subscription = FeedSubscription(
-            user_id=test_user.id, feed_id=test_feed.id, folder_id=initial_folder.id
-        )
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=initial_folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
-        response = await async_client.put(
-            f"/api/feeds/{test_feed.id}", json={"folder_id": str(test_folder.id)}
-        )
+        response = await async_client.put(f"/api/feeds/{test_feed.id}", json={"folder_id": str(test_folder.id)})
 
         assert response.status_code == 200
         data = response.json()
@@ -456,13 +416,9 @@ class TestFeedUpdate:
         assert subscription.folder_id == test_folder.id
 
     @pytest.mark.asyncio
-    async def test_update_feed_not_subscribed(
-        self, async_client: AsyncClient, test_feed: Feed
-    ):
+    async def test_update_feed_not_subscribed(self, async_client: AsyncClient, test_feed: Feed):
         """Test updating feed user is not subscribed to."""
-        response = await async_client.put(
-            f"/api/feeds/{test_feed.id}", json={"custom_title": "New Title"}
-        )
+        response = await async_client.put(f"/api/feeds/{test_feed.id}", json={"custom_title": "New Title"})
 
         assert response.status_code == 404
 
@@ -480,9 +436,7 @@ class TestFeedRefresh:
         db_session: AsyncSession,
     ):
         """Test refreshing a feed."""
-        subscription = FeedSubscription(
-            user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id
-        )
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
         await db_session.commit()  # Commit so the API can see it
 
@@ -493,9 +447,7 @@ class TestFeedRefresh:
         assert data == {"message": "Feed refresh completed"}
 
     @pytest.mark.asyncio
-    async def test_refresh_feed_not_subscribed(
-        self, async_client: AsyncClient, test_feed: Feed
-    ):
+    async def test_refresh_feed_not_subscribed(self, async_client: AsyncClient, test_feed: Feed):
         """Test refreshing feed user is not subscribed to."""
         response = await async_client.post(f"/api/feeds/{test_feed.id}/refresh")
 
@@ -510,9 +462,7 @@ class TestFeedRefresh:
         # Ensure feed is committed
         await db_session.commit()
 
-        response = await async_client.post(
-            f"/api/feeds/{test_feed.id}/refresh?preview=true"
-        )
+        response = await async_client.post(f"/api/feeds/{test_feed.id}/refresh?preview=true")
 
         assert response.status_code == 200
         data = response.json()
@@ -532,9 +482,7 @@ class TestFeedDelete:
         db_session: AsyncSession,
     ):
         """Test deleting (unsubscribing from) a feed."""
-        subscription = FeedSubscription(
-            user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id
-        )
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
@@ -553,9 +501,7 @@ class TestFeedDelete:
         assert subscription is None
 
     @pytest.mark.asyncio
-    async def test_delete_feed_not_subscribed(
-        self, async_client: AsyncClient, test_feed: Feed
-    ):
+    async def test_delete_feed_not_subscribed(self, async_client: AsyncClient, test_feed: Feed):
         """Test deleting feed user is not subscribed to."""
         response = await async_client.delete(f"/api/feeds/{test_feed.id}")
 
@@ -590,18 +536,14 @@ class TestFeedBulkOperations:
             db_session.add(feed)
             await db_session.flush()
 
-            subscription = FeedSubscription(
-                user_id=test_user.id, feed_id=feed.id, folder_id=test_folder.id
-            )
+            subscription = FeedSubscription(user_id=test_user.id, feed_id=feed.id, folder_id=test_folder.id)
             db_session.add(subscription)
             feed_ids.append(str(feed.id))
 
         await db_session.flush()
 
         # httpx.AsyncClient.delete() doesn't support json parameter, use request() instead
-        response = await async_client.request(
-            "DELETE", "/api/feeds/", json={"feed_ids": feed_ids}
-        )
+        response = await async_client.request("DELETE", "/api/feeds/", json={"feed_ids": feed_ids})
 
         assert response.status_code == 200
         data = response.json()
@@ -637,9 +579,7 @@ class TestFeedBulkOperations:
             db_session.add(feed)
             await db_session.flush()
 
-            subscription = FeedSubscription(
-                user_id=test_user.id, feed_id=feed.id, folder_id=initial_folder.id
-            )
+            subscription = FeedSubscription(user_id=test_user.id, feed_id=feed.id, folder_id=initial_folder.id)
             db_session.add(subscription)
             feed_ids.append(str(feed.id))
 
@@ -659,9 +599,7 @@ class TestAdminFeedOperations:
     """Test admin-only feed operations."""
 
     @pytest.mark.asyncio
-    async def test_admin_update_feed(
-        self, async_admin_client: AsyncClient, test_feed: Feed, db_session: AsyncSession
-    ):
+    async def test_admin_update_feed(self, async_admin_client: AsyncClient, test_feed: Feed, db_session: AsyncSession):
         """Test admin updating global feed properties."""
         response = await async_admin_client.put(
             f"/api/feeds/{test_feed.id}/admin",
@@ -677,9 +615,7 @@ class TestAdminFeedOperations:
         assert test_feed.title == "Admin Updated Title"
 
     @pytest.mark.asyncio
-    async def test_admin_update_feed_non_admin(
-        self, async_client: AsyncClient, test_feed: Feed
-    ):
+    async def test_admin_update_feed_non_admin(self, async_client: AsyncClient, test_feed: Feed):
         """Test non-admin cannot update global feed."""
         response = await async_client.put(
             f"/api/feeds/{test_feed.id}/admin",
@@ -689,9 +625,7 @@ class TestAdminFeedOperations:
         assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_admin_delete_feed(
-        self, async_admin_client: AsyncClient, test_feed: Feed, db_session: AsyncSession
-    ):
+    async def test_admin_delete_feed(self, async_admin_client: AsyncClient, test_feed: Feed, db_session: AsyncSession):
         """Test admin deleting global feed."""
         feed_id = test_feed.id
         response = await async_admin_client.delete(f"/api/feeds/{feed_id}/admin")
@@ -704,9 +638,7 @@ class TestAdminFeedOperations:
         assert feed is None
 
     @pytest.mark.asyncio
-    async def test_admin_delete_feed_non_admin(
-        self, async_client: AsyncClient, test_feed: Feed
-    ):
+    async def test_admin_delete_feed_non_admin(self, async_client: AsyncClient, test_feed: Feed):
         """Test non-admin cannot delete global feed."""
         response = await async_client.delete(f"/api/feeds/{test_feed.id}/admin")
 

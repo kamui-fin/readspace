@@ -34,13 +34,9 @@ def upgrade() -> None:
     )
 
     # 2. Add new columns
-    op.add_column(
-        "feeds", sa.Column("tags_native", postgresql.ARRAY(sa.Text()), nullable=True)
-    )
+    op.add_column("feeds", sa.Column("tags_native", postgresql.ARRAY(sa.Text()), nullable=True))
     op.add_column("feeds", sa.Column("author", sa.Text(), nullable=True))
-    op.add_column(
-        "feeds", sa.Column("content_type", sa.Enum(name="contenttype"), nullable=True)
-    )
+    op.add_column("feeds", sa.Column("content_type", sa.Enum(name="contenttype"), nullable=True))
 
     # 4. Update FeedCategory Enum
     # Drop default dependency first
@@ -72,9 +68,7 @@ def upgrade() -> None:
     op.execute(
         "ALTER TABLE feeds ALTER COLUMN top_level_category TYPE public.feedcategory USING top_level_category::public.feedcategory"
     )
-    op.execute(
-        "ALTER TABLE feeds ALTER COLUMN top_level_category SET DEFAULT 'miscellaneous'::public.feedcategory"
-    )
+    op.execute("ALTER TABLE feeds ALTER COLUMN top_level_category SET DEFAULT 'miscellaneous'::public.feedcategory")
 
 
 def downgrade() -> None:
@@ -96,9 +90,7 @@ def downgrade() -> None:
     op.execute(
         "ALTER TABLE feeds ALTER COLUMN top_level_category TYPE public.feedcategory USING top_level_category::public.feedcategory"
     )
-    op.execute(
-        "ALTER TABLE feeds ALTER COLUMN top_level_category SET DEFAULT 'MISCELLANEOUS'::public.feedcategory"
-    )
+    op.execute("ALTER TABLE feeds ALTER COLUMN top_level_category SET DEFAULT 'MISCELLANEOUS'::public.feedcategory")
 
     # 3. Remove columns
     op.drop_column("feeds", "content_type")
@@ -196,9 +188,7 @@ def downgrade() -> None:
         ["feed_id", sa.literal_column("published_at DESC")],
         unique=False,
     )
-    op.create_index(
-        op.f("idx_feed_articles_content"), "feed_articles", ["content_id"], unique=False
-    )
+    op.create_index(op.f("idx_feed_articles_content"), "feed_articles", ["content_id"], unique=False)
     op.create_table(
         "feed_subscriptions",
         sa.Column(
@@ -273,18 +263,14 @@ def downgrade() -> None:
             autoincrement=False,
             nullable=False,
         ),
-        sa.Column(
-            "content_hash", sa.CHAR(length=64), autoincrement=False, nullable=False
-        ),
+        sa.Column("content_hash", sa.CHAR(length=64), autoincrement=False, nullable=False),
         sa.Column("title", sa.TEXT(), autoincrement=False, nullable=False),
         sa.Column("link", sa.TEXT(), autoincrement=False, nullable=True),
         sa.Column("description", sa.TEXT(), autoincrement=False, nullable=True),
         sa.Column("content", sa.TEXT(), autoincrement=False, nullable=True),
         sa.Column("author", sa.TEXT(), autoincrement=False, nullable=True),
         sa.Column("image_url", sa.TEXT(), autoincrement=False, nullable=True),
-        sa.Column(
-            "tags", postgresql.ARRAY(sa.TEXT()), autoincrement=False, nullable=True
-        ),
+        sa.Column("tags", postgresql.ARRAY(sa.TEXT()), autoincrement=False, nullable=True),
         sa.Column(
             "created_at",
             postgresql.TIMESTAMP(timezone=True),
@@ -345,15 +331,9 @@ def downgrade() -> None:
         ),
         sa.Column("last_error_message", sa.TEXT(), autoincrement=False, nullable=True),
         sa.Column("etag_header", sa.TEXT(), autoincrement=False, nullable=True),
-        sa.Column(
-            "last_modified_header", sa.TEXT(), autoincrement=False, nullable=True
-        ),
-        sa.Column(
-            "content_hash", sa.VARCHAR(length=64), autoincrement=False, nullable=True
-        ),
-        sa.Column(
-            "tags", postgresql.ARRAY(sa.TEXT()), autoincrement=False, nullable=True
-        ),
+        sa.Column("last_modified_header", sa.TEXT(), autoincrement=False, nullable=True),
+        sa.Column("content_hash", sa.VARCHAR(length=64), autoincrement=False, nullable=True),
+        sa.Column("tags", postgresql.ARRAY(sa.TEXT()), autoincrement=False, nullable=True),
         sa.Column(
             "top_level_category",
             postgresql.ENUM(

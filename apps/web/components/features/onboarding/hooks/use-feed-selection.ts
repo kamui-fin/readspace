@@ -60,7 +60,6 @@ export function useFeedSelection() {
         }
     }
 
-
     const canComplete = followedFeeds.length >= 3
 
     return {

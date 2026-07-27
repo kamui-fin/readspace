@@ -9,7 +9,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CATEGORIES = Object.keys(MOBILE_CATEGORY_NAMES);
 
-export function CategorySelectionStep({ onNext, onSkip }: { onNext: () => void; onSkip?: () => void }) {
+export function CategorySelectionStep({
+  onNext,
+  onSkip,
+}: {
+  onNext: () => void;
+  onSkip?: () => void;
+}) {
   const insets = useSafeAreaInsets();
   const { onboardingData, updateOnboardingData } = useOnboardingStore();
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
@@ -75,7 +81,10 @@ export function CategorySelectionStep({ onNext, onSkip }: { onNext: () => void; 
             onPress={onSkip}
             style={{ alignSelf: 'center', marginTop: 16, padding: 8 }}
             activeOpacity={0.7}>
-            <Text size="sm" fontFamily="geist-medium" className="text-grey dark:text-grey text-center">
+            <Text
+              size="sm"
+              fontFamily="geist-medium"
+              className="text-grey dark:text-grey text-center">
               Skip for now
             </Text>
           </TouchableOpacity>

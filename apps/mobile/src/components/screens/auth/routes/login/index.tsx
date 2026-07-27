@@ -86,7 +86,9 @@ export function LoginScreen() {
 
         console.log('[Login] 🔀 Redirecting to VerificationStep...');
         // Navigate to the verification step (step 2) of SignupScreen
-        router.replace(`/(auth)/signup?email=${encodeURIComponent(values.email.trim())}&step=2` as Href);
+        router.replace(
+          `/(auth)/signup?email=${encodeURIComponent(values.email.trim())}&step=2` as Href
+        );
       } else {
         console.log('[Login] 📣 Forwarding error to handleAuthError...');
         handleAuthError(error, 'signin');

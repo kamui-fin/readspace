@@ -117,7 +117,9 @@ function stripPopularCategoryFilter(request: SearchRequest): SearchRequest {
                     }
                     if (Array.isArray(f)) {
                         const cleaned = f.filter(
-                            (item) => typeof item === "string" && !item.includes("popular")
+                            (item) =>
+                                typeof item === "string" &&
+                                !item.includes("popular")
                         )
                         return cleaned.length > 0 ? cleaned : null
                     }

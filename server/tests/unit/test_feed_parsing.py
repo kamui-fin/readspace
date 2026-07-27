@@ -47,7 +47,6 @@ ATOM_FEED_FULL = """
 """
 
 
-
 def test_parse_rss_feed_with_tags_ttl():
     parsed = parse_feed_content(RSS_FEED_WITH_TAGS_TTL, "https://example.com/rss")
 
@@ -165,7 +164,7 @@ def test_parse_feed_content_unescapes_entities():
     assert len(parsed.articles) == 1
     article = parsed.articles[0]
     assert article.title == 'Article "Title"'
-    
+
     # We expect clean_html_text to strip tags, so "<Summary>" might become "Summary" or empty if interpreted as a tag.
     # But since it is escaped as &lt;Summary&gt;, it enters soup as text "<Summary>".
     # Since it is in <description>, it is passed to clean_html_text.
@@ -177,18 +176,18 @@ def test_parse_feed_content_unescapes_entities():
     # 1. soup = BeautifulSoup(text)
     # 2. texts = soup.findAll(text=True)
     # 3. filter visible
-    
+
     # If input is "Article <Summary>", soup might treat <Summary> as a tag.
     # If so, it won't be in text=True?
     # Actually, verify implementation behavior.
     # Let's adjust expectation to what robust cleaning implies, or accept that strict cleaning removes it.
     # Given the previous test file expected "Article <Summary>", let's verify if that expectation holds
     # with the *new* clean_html_text implementation which uses tag_visible.
-    
+
     # For now, let's assert what we likely want: unescaped text.
     # If logic strips it, we might need to adjust the test or the logic.
     # Let's check against what the previous test expected: assert article.description == "Article <Summary>"
-    
+
     # assert article.description == "Article <Summary>"
 
 
@@ -225,5 +224,3 @@ def test_guid_normalization():
 
     # Non-URL guid should NOT have fragment stripped
     assert parsed.articles[2].guid == "unique-id#123"
-
-

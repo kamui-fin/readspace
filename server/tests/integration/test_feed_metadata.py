@@ -44,14 +44,10 @@ async def test_add_feed_persists_metadata(db_session, test_user):
     mock_parsed.author = None
     mock_parsed.content_type = None
 
-    with patch(
-        "app.services.feeds.service.fetching.fetch_feed_content", new_callable=AsyncMock
-    ) as mock_fetch:
+    with patch("app.services.feeds.service.fetching.fetch_feed_content", new_callable=AsyncMock) as mock_fetch:
         mock_fetch.return_value = mock_fetch_result
 
-        with patch(
-            "app.services.feeds.service.parsing.parse_feed_content"
-        ) as mock_parse:
+        with patch("app.services.feeds.service.parsing.parse_feed_content") as mock_parse:
             mock_parse.return_value = mock_parsed
 
             # Mock calculate_feed_content_hash
@@ -60,9 +56,7 @@ async def test_add_feed_persists_metadata(db_session, test_user):
                 return_value="hash",
             ):
                 # Mock domain authority
-                with patch(
-                    "app.services.feeds.service.get_domain_authority_score"
-                ) as mock_score:
+                with patch("app.services.feeds.service.get_domain_authority_score") as mock_score:
                     mock_score.return_value.score = 50.0
 
                     # Mock scheduling
@@ -77,7 +71,6 @@ async def test_add_feed_persists_metadata(db_session, test_user):
                             "app.services.feeds.service.sync_feed",
                             new_callable=AsyncMock,
                         ):
-
                             # Call add_feed
                             class AsyncContextManager:
                                 async def __aenter__(self):
@@ -94,9 +87,7 @@ async def test_add_feed_persists_metadata(db_session, test_user):
                             )
 
     # Verify
-    result = await db_session.execute(
-        select(Feed).filter(Feed.url == "https://example.com/feed")
-    )
+    result = await db_session.execute(select(Feed).filter(Feed.url == "https://example.com/feed"))
     feed = result.scalars().first()
 
     assert feed is not None

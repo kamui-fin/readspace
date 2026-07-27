@@ -11,7 +11,7 @@ from app.core.config import get_settings
 from app.db.base_class import Base
 
 # Import all models here to ensure they are registered with Base.metadata
-# from app.models import ... 
+# from app.models import ...
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -55,7 +55,7 @@ def include_object(obj, name, type_, reflected, compare_to):
         "vault",
     ]:
         return False
-    
+
     return True
 
 
@@ -73,7 +73,7 @@ def run_migrations_offline() -> None:
     """
     # 1. Check if URL is injected via Config (e.g., from Pytest)
     url = config.get_main_option("sqlalchemy.url")
-    
+
     # 2. Fallback to Environment/Settings
     if not url:
         url = get_url()
@@ -110,19 +110,19 @@ async def run_async_migrations() -> None:
 
     """
     configuration = config.get_section(config.config_ini_section)
-    
+
     # 1. CRITICAL: Check if URL is injected via Config (from Pytest fixture)
     # The fixture uses `alembic_cfg.set_main_option("sqlalchemy.url", ...)`
     url = config.get_main_option("sqlalchemy.url")
-    
+
     # 2. Fallback to Environment/Settings if not injected
     if not url:
         url = get_url()
-        
+
     # 3. Ensure we use the async driver (asyncpg)
     if not url.startswith("postgresql+asyncpg://") and url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://")
-        
+
     configuration["sqlalchemy.url"] = url
 
     connectable = async_engine_from_config(

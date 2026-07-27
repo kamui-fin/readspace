@@ -146,9 +146,7 @@ class TestOrphanPrevention:
         feed_article_count = feed_article_count_result.scalar()
 
         # Should have TWO feed_articles (different GUIDs) pointing to the SAME content
-        assert (
-            feed_article_count == 2
-        ), f"Expected 2 feed_articles sharing content, found {feed_article_count}"
+        assert feed_article_count == 2, f"Expected 2 feed_articles sharing content, found {feed_article_count}"
 
         # Verify no orphans
         orphan_query = text("""
@@ -250,9 +248,7 @@ class TestOrphanPrevention:
         content_count = content_count_result.scalar()
 
         # Should still only have ONE content row
-        assert (
-            content_count == 1
-        ), f"Expected 1 article_content after concurrent ingestion, found {content_count}"
+        assert content_count == 1, f"Expected 1 article_content after concurrent ingestion, found {content_count}"
 
         # Verify no orphans
         orphan_query = text("""

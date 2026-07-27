@@ -39,9 +39,7 @@ async def test_subscriber_count_increment(db_session, test_user):
     await db_session.refresh(feed)
 
     # Action
-    await create_subscription(
-        db_session, user_id=user_id, subscription_in=sub_in, feed_db=feed
-    )
+    await create_subscription(db_session, user_id=user_id, subscription_in=sub_in, feed_db=feed)
 
     # Verify
     await db_session.refresh(feed)
@@ -70,9 +68,7 @@ async def test_last_fetched_at_update(db_session):
     await db_session.flush()
 
     # Simulate fetch failure
-    await update_feed_after_fetch(
-        db_session, feed=feed, success=False, error_msg="Error"
-    )
+    await update_feed_after_fetch(db_session, feed=feed, success=False, error_msg="Error")
 
     assert feed.last_fetched_at is not None
     # Ensure it's recent

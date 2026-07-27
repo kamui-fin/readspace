@@ -4,7 +4,14 @@ import { Redirect } from 'expo-router';
 export default function Index() {
   const { session, isLoading, isOnboarded } = useSession();
 
-  console.log('[Index Route] Rendering. isLoading:', isLoading, 'hasSession:', !!session, 'isOnboarded:', isOnboarded);
+  console.log(
+    '[Index Route] Rendering. isLoading:',
+    isLoading,
+    'hasSession:',
+    !!session,
+    'isOnboarded:',
+    isOnboarded
+  );
 
   // While auth is loading, show nothing (splash screen remains visible)
   // This prevents flashing the wrong screen before auth state is determined

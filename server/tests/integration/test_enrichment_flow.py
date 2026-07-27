@@ -40,7 +40,6 @@ async def test_batch_enrichment_flow(db_session):
 
     # Mock Settings
     with patch("app.workers.feed.enrichment.get_settings") as mock_settings:
-
         mock_settings.return_value.ENABLE_AI = True
 
         # Mock LLM Batch Service
@@ -56,7 +55,6 @@ async def test_batch_enrichment_flow(db_session):
 
             # Mock Meilisearch Sync (to avoid external calls)
             with patch("app.workers.feed.enrichment.sync_feeds_batch") as mock_sync:
-
                 # 3. Run Worker
                 result = await batch_enrich_feeds()
 
@@ -104,12 +102,12 @@ async def test_batch_enrichment_empty_tags(db_session):
 
     # 2. Mock Dependencies
     with patch("app.workers.feed.enrichment.get_settings") as mock_settings:
-
         mock_settings.return_value.ENABLE_AI = True
 
-        with patch("app.workers.feed.enrichment.enrich_feeds_batch") as mock_batch, \
-             patch("app.workers.feed.enrichment.sync_feeds_batch") as mock_sync:
-
+        with (
+            patch("app.workers.feed.enrichment.enrich_feeds_batch") as mock_batch,
+            patch("app.workers.feed.enrichment.sync_feeds_batch") as mock_sync,
+        ):
             # Mock successful enrichment
             mock_result = FeedEnrichmentResponse(
                 category="TECHNOLOGY_PROGRAMMING",

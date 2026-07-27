@@ -59,9 +59,7 @@ class TestNextFetchAtCalculation:
 
         # Should use adaptive (30 min) since it's set
         expected = datetime.now(timezone.utc) + timedelta(minutes=30)
-        print(
-            f"DEBUG: next_fetch={next_fetch}, expected={expected}, diff={(next_fetch - expected).total_seconds()}"
-        )
+        print(f"DEBUG: next_fetch={next_fetch}, expected={expected}, diff={(next_fetch - expected).total_seconds()}")
         assert abs((next_fetch - expected).total_seconds()) < 5
 
         # Test 2: TTL used when no adaptive interval
@@ -152,9 +150,7 @@ class TestNextFetchAtSetOnRefresh:
     """Test that next_fetch_at is set after feed refresh."""
 
     @pytest.mark.asyncio
-    async def test_next_fetch_at_set_on_successful_refresh(
-        self, db_session: AsyncSession, monkeypatch
-    ):
+    async def test_next_fetch_at_set_on_successful_refresh(self, db_session: AsyncSession, monkeypatch):
         """Test next_fetch_at is updated after successful refresh."""
         from contextlib import asynccontextmanager
 
@@ -167,8 +163,7 @@ class TestNextFetchAtSetOnRefresh:
             language="en",
             fetch_error_count=0,
             adaptive_fetch_interval_minutes=60,
-            next_fetch_at=datetime.now(timezone.utc)
-            - timedelta(hours=1),  # Due for refresh
+            next_fetch_at=datetime.now(timezone.utc) - timedelta(hours=1),  # Due for refresh
         )
         db_session.add(feed)
         await db_session.flush()
@@ -203,9 +198,7 @@ class TestNextFetchAtSetOnRefresh:
                 "permanent_redirect": False,
             }
 
-        monkeypatch.setattr(
-            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
-        )
+        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
 
         # Create session factory that uses test session
         @asynccontextmanager
@@ -222,9 +215,7 @@ class TestNextFetchAtSetOnRefresh:
         assert feed.next_fetch_at > datetime.now(timezone.utc)
 
     @pytest.mark.asyncio
-    async def test_next_fetch_at_set_on_304_not_modified(
-        self, db_session: AsyncSession, monkeypatch
-    ):
+    async def test_next_fetch_at_set_on_304_not_modified(self, db_session: AsyncSession, monkeypatch):
         """Test next_fetch_at is updated even when feed returns 304."""
         from contextlib import asynccontextmanager
 
@@ -257,9 +248,7 @@ class TestNextFetchAtSetOnRefresh:
                 "permanent_redirect": False,
             }
 
-        monkeypatch.setattr(
-            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
-        )
+        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
 
         @asynccontextmanager
         async def test_session_factory():
@@ -274,9 +263,7 @@ class TestNextFetchAtSetOnRefresh:
         assert feed.next_fetch_at > datetime.now(timezone.utc)
 
     @pytest.mark.asyncio
-    async def test_next_fetch_at_set_on_fetch_error(
-        self, db_session: AsyncSession, monkeypatch
-    ):
+    async def test_next_fetch_at_set_on_fetch_error(self, db_session: AsyncSession, monkeypatch):
         """Test next_fetch_at uses backoff when fetch fails."""
         from contextlib import asynccontextmanager
 
@@ -307,9 +294,7 @@ class TestNextFetchAtSetOnRefresh:
                 "permanent_redirect": False,
             }
 
-        monkeypatch.setattr(
-            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
-        )
+        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
 
         @asynccontextmanager
         async def test_session_factory():
@@ -327,9 +312,7 @@ class TestNextFetchAtSetOnRefresh:
         assert expected_min <= feed.next_fetch_at <= expected_max
 
     @pytest.mark.asyncio
-    async def test_next_fetch_at_set_on_parse_error(
-        self, db_session: AsyncSession, monkeypatch
-    ):
+    async def test_next_fetch_at_set_on_parse_error(self, db_session: AsyncSession, monkeypatch):
         """Test next_fetch_at uses backoff when parsing fails."""
         from contextlib import asynccontextmanager
 
@@ -364,9 +347,7 @@ class TestNextFetchAtSetOnRefresh:
         def mock_parse(*args, **kwargs):
             raise ValueError("Invalid RSS structure")
 
-        monkeypatch.setattr(
-            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
-        )
+        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
         monkeypatch.setattr("app.services.feeds.parsing.parse_feed_content", mock_parse)
 
         @asynccontextmanager
@@ -385,9 +366,7 @@ class TestNextFetchAtSetOnRefresh:
         assert expected_min <= feed.next_fetch_at <= expected_max
 
     @pytest.mark.asyncio
-    async def test_next_fetch_at_set_on_content_hash_match(
-        self, db_session: AsyncSession, monkeypatch
-    ):
+    async def test_next_fetch_at_set_on_content_hash_match(self, db_session: AsyncSession, monkeypatch):
         """Test next_fetch_at is updated when content hash matches (no new articles)."""
         from contextlib import asynccontextmanager
 
@@ -439,9 +418,7 @@ class TestNextFetchAtSetOnRefresh:
                 "error": None,
             }
 
-        monkeypatch.setattr(
-            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
-        )
+        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
 
         @asynccontextmanager
         async def test_session_factory():
@@ -510,9 +487,7 @@ class TestHTTPCachingHeaders:
                 "permanent_redirect": False,
             }
 
-        monkeypatch.setattr(
-            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
-        )
+        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
 
         @asynccontextmanager
         async def test_session_factory():
@@ -532,9 +507,7 @@ class TestPermanentRedirects:
     """Test permanent redirect handling (301/308)."""
 
     @pytest.mark.asyncio
-    async def test_canonical_url_used_for_fetching(
-        self, db_session: AsyncSession, monkeypatch
-    ):
+    async def test_canonical_url_used_for_fetching(self, db_session: AsyncSession, monkeypatch):
         """Test that canonical_url is used instead of original URL for subsequent fetches."""
         from contextlib import asynccontextmanager
 
@@ -579,9 +552,7 @@ class TestPermanentRedirects:
                 "permanent_redirect": True,
             }
 
-        monkeypatch.setattr(
-            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
-        )
+        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
 
         @asynccontextmanager
         async def test_session_factory():
@@ -617,8 +588,7 @@ class TestGetFeedsForWorker:
             description="Test feed description",
             language="en",
             subscriber_count=1,
-            next_fetch_at=datetime.now(timezone.utc)
-            - timedelta(minutes=5),  # 5 min ago
+            next_fetch_at=datetime.now(timezone.utc) - timedelta(minutes=5),  # 5 min ago
         )
         db_session.add(due_feed)
 
@@ -630,8 +600,7 @@ class TestGetFeedsForWorker:
             description="Test feed description",
             language="en",
             subscriber_count=1,
-            next_fetch_at=datetime.now(timezone.utc)
-            + timedelta(hours=1),  # 1 hour from now
+            next_fetch_at=datetime.now(timezone.utc) + timedelta(hours=1),  # 1 hour from now
         )
         db_session.add(not_due_feed)
 
@@ -849,9 +818,7 @@ class TestFeedMetadataFields:
     """Test that all feed metadata fields are properly set and used."""
 
     @pytest.mark.asyncio
-    async def test_content_hash_prevents_duplicate_processing(
-        self, db_session: AsyncSession, monkeypatch
-    ):
+    async def test_content_hash_prevents_duplicate_processing(self, db_session: AsyncSession, monkeypatch):
         """Test that content_hash prevents reprocessing unchanged feeds."""
         from contextlib import asynccontextmanager
 
@@ -899,9 +866,7 @@ class TestFeedMetadataFields:
                 "error": None,
             }
 
-        monkeypatch.setattr(
-            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
-        )
+        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
 
         @asynccontextmanager
         async def test_session_factory():
@@ -918,9 +883,7 @@ class TestFeedMetadataFields:
         assert feed.content_hash == content_hash
 
     @pytest.mark.asyncio
-    async def test_http_caching_headers_stored(
-        self, db_session: AsyncSession, monkeypatch
-    ):
+    async def test_http_caching_headers_stored(self, db_session: AsyncSession, monkeypatch):
         """Test that ETag and Last-Modified headers are stored."""
         from contextlib import asynccontextmanager
 
@@ -965,9 +928,7 @@ class TestFeedMetadataFields:
                 "error": None,
             }
 
-        monkeypatch.setattr(
-            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
-        )
+        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
 
         @asynccontextmanager
         async def test_session_factory():
@@ -1009,9 +970,7 @@ class TestFeedMetadataFields:
                 "error": "Internal Server Error",
             }
 
-        monkeypatch.setattr(
-            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
-        )
+        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
 
         @asynccontextmanager
         async def test_session_factory():
@@ -1038,9 +997,7 @@ class TestEndToEndScheduling:
     """End-to-end tests of the complete scheduling system."""
 
     @pytest.mark.asyncio
-    async def test_full_refresh_cycle_updates_schedule(
-        self, db_session: AsyncSession, monkeypatch
-    ):
+    async def test_full_refresh_cycle_updates_schedule(self, db_session: AsyncSession, monkeypatch):
         """Test complete refresh cycle: fetch → parse → update → schedule."""
         from contextlib import asynccontextmanager
 
@@ -1098,9 +1055,7 @@ class TestEndToEndScheduling:
                 "permanent_redirect": False,
             }
 
-        monkeypatch.setattr(
-            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
-        )
+        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
 
         @asynccontextmanager
         async def test_session_factory():
@@ -1130,16 +1085,12 @@ class TestEndToEndScheduling:
         assert feed.fetch_error_count == 0
 
         # 5. Articles created
-        result = await db_session.execute(
-            select(FeedArticle).where(FeedArticle.feed_id == feed.id)
-        )
+        result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
         articles = result.scalars().all()
         assert len(articles) == 2
 
     @pytest.mark.asyncio
-    async def test_error_recovery_resets_schedule(
-        self, db_session: AsyncSession, monkeypatch
-    ):
+    async def test_error_recovery_resets_schedule(self, db_session: AsyncSession, monkeypatch):
         """Test that successful refresh after errors resets to normal schedule."""
         from contextlib import asynccontextmanager
 
@@ -1185,9 +1136,7 @@ class TestEndToEndScheduling:
                 "error": None,
             }
 
-        monkeypatch.setattr(
-            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
-        )
+        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
 
         @asynccontextmanager
         async def test_session_factory():

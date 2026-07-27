@@ -30,12 +30,10 @@ class TestMeilisearchSyncOnFeedCreate:
         # Mock external dependencies
         from unittest.mock import patch
 
-        with patch(
-            "app.services.feeds.fetching.fetch_feed_content"
-        ) as mock_fetch, patch(
-            "app.services.feeds.parsing.parse_feed_content"
-        ) as mock_parse:
-
+        with (
+            patch("app.services.feeds.fetching.fetch_feed_content") as mock_fetch,
+            patch("app.services.feeds.parsing.parse_feed_content") as mock_parse,
+        ):
             mock_fetch.return_value = {
                 "content": "dummy",
                 "headers": {},
@@ -235,9 +233,7 @@ class TestMeilisearchSyncOnOPMLImport:
                 "permanent_redirect": False,
             }
 
-        monkeypatch.setattr(
-            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
-        )
+        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
 
         # Upload OPML file
         from io import BytesIO
@@ -264,12 +260,8 @@ class TestMeilisearchSyncOnOPMLImport:
         import asyncio
 
         for _ in range(20):
-            status_response = await async_client.get(
-                f"/api/opml/import/status/{task_id}"
-            )
-            if status_response.status_code == 200 and status_response.json()[
-                "status"
-            ] in ("completed", "failed"):
+            status_response = await async_client.get(f"/api/opml/import/status/{task_id}")
+            if status_response.status_code == 200 and status_response.json()["status"] in ("completed", "failed"):
                 break
             await asyncio.sleep(0.1)
 
@@ -347,9 +339,7 @@ class TestMeilisearchSyncOnFeedRefresh:
                 "permanent_redirect": False,
             }
 
-        monkeypatch.setattr(
-            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
-        )
+        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
 
         # Refresh the feed
         response = await async_client.post(f"/api/feeds/{test_feed.id}/refresh")

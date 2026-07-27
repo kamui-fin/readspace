@@ -47,7 +47,7 @@ export function SubscribeButton({
                 )
             }
 
-            window.location.href = urlObj.toString()
+            window.open(urlObj.toString(), "_blank", "noopener,noreferrer")
         } catch (err) {
             console.error("Polar billing checkout error:", err)
             alert(

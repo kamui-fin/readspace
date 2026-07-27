@@ -48,9 +48,7 @@ async def create_test_article(
 
 
 @pytest.mark.asyncio
-async def test_mark_feed_all_read_e2e(
-    async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
-):
+async def test_mark_feed_all_read_e2e(async_client: AsyncClient, db_session: AsyncSession, test_user: Profile):
     """Test marking all articles in a feed as read via API."""
     # Create a folder
     folder = Folder(
@@ -112,9 +110,7 @@ async def test_mark_feed_all_read_e2e(
 
 
 @pytest.mark.asyncio
-async def test_mark_folder_all_read_e2e(
-    async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
-):
+async def test_mark_folder_all_read_e2e(async_client: AsyncClient, db_session: AsyncSession, test_user: Profile):
     """Test marking all articles in a folder as read via API."""
     # Create a folder
     folder = Folder(
@@ -177,9 +173,7 @@ async def test_mark_folder_all_read_e2e(
     # Verify both subscriptions were updated
     from sqlalchemy import select
 
-    result = await db_session.execute(
-        select(FeedSubscription).where(FeedSubscription.folder_id == folder.id)
-    )
+    result = await db_session.execute(select(FeedSubscription).where(FeedSubscription.folder_id == folder.id))
     subscriptions = result.scalars().all()
 
     assert len(subscriptions) == 2
@@ -367,8 +361,7 @@ async def test_new_subscription_with_many_articles_shows_initial_unread_limit(
 
     # Should have exactly INITIAL_UNREAD_COUNT unread articles (default is 10)
     assert unread_count == INITIAL_UNREAD_COUNT, (
-        f"Expected {INITIAL_UNREAD_COUNT} unread articles on new subscription, "
-        f"but got {unread_count}"
+        f"Expected {INITIAL_UNREAD_COUNT} unread articles on new subscription, but got {unread_count}"
     )
 
 
@@ -497,9 +490,7 @@ async def test_mark_feed_all_read_updates_article_list_is_read_field(
     articles_before = data["items"]
     assert len(articles_before) == 5
     for article in articles_before:
-        assert (
-            article["is_read"] is False
-        ), f"Article {article['id']} should be unread before mark all read"
+        assert article["is_read"] is False, f"Article {article['id']} should be unread before mark all read"
 
     # Mark all as read
     response = await async_client.put(f"/api/feeds/{feed.id}/read-status")
@@ -512,9 +503,7 @@ async def test_mark_feed_all_read_updates_article_list_is_read_field(
     articles_after = data["items"]
     assert len(articles_after) == 5
     for article in articles_after:
-        assert (
-            article["is_read"] is True
-        ), f"Article {article['id']} should be read after mark all read"
+        assert article["is_read"] is True, f"Article {article['id']} should be read after mark all read"
 
 
 @pytest.mark.asyncio
@@ -577,9 +566,7 @@ async def test_mark_folder_all_read_updates_article_list_is_read_field(
     articles_before = data["items"]
     assert len(articles_before) == 6  # 2 feeds × 3 articles
     for article in articles_before:
-        assert (
-            article["is_read"] is False
-        ), f"Article {article['id']} should be unread before mark folder all read"
+        assert article["is_read"] is False, f"Article {article['id']} should be unread before mark folder all read"
 
     # Mark folder all as read
     response = await async_client.put(f"/api/folders/{folder.id}/read-status")
@@ -592,6 +579,4 @@ async def test_mark_folder_all_read_updates_article_list_is_read_field(
     articles_after = data["items"]
     assert len(articles_after) == 6
     for article in articles_after:
-        assert (
-            article["is_read"] is True
-        ), f"Article {article['id']} should be read after mark folder all read"
+        assert article["is_read"] is True, f"Article {article['id']} should be read after mark folder all read"

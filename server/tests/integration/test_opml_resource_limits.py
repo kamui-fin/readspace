@@ -49,7 +49,9 @@ class TestOPMLImportLimits:
 """
         # Add 10 feeds to test unlimited capacity for admin
         for i in range(10):
-            opml_content += f'            <outline type="rss" text="Feed {i}" xmlUrl="https://example.com/feed{i}.xml" />\n'
+            opml_content += (
+                f'            <outline type="rss" text="Feed {i}" xmlUrl="https://example.com/feed{i}.xml" />\n'
+            )
 
         opml_content += """        </outline>
     </body>
@@ -72,9 +74,7 @@ class TestOPMLImportLimits:
 
         # Wait for background task to complete
         for _ in range(50):  # Wait up to 5 seconds
-            status_res = await async_admin_client.get(
-                f"/api/opml/import/status/{task_id}"
-            )
+            status_res = await async_admin_client.get(f"/api/opml/import/status/{task_id}")
             if status_res.status_code == 200 and status_res.json()["status"] in (
                 "completed",
                 "failed",
@@ -334,9 +334,7 @@ class TestOPMLImportLimits:
 
             # Wait for background task to complete
             for _ in range(20):
-                status_res = await async_client.get(
-                    f"/api/opml/import/status/{task_id}"
-                )
+                status_res = await async_client.get(f"/api/opml/import/status/{task_id}")
                 if status_res.status_code == 200 and status_res.json()["status"] in (
                     "completed",
                     "failed",
@@ -358,16 +356,11 @@ class TestOPMLImportLimits:
         # Send invalid OPML (not valid XML)
         invalid_opml = b"not valid xml content"
 
-        files = {
-            "opml_file": ("invalid.opml", io.BytesIO(invalid_opml), "application/xml")
-        }
+        files = {"opml_file": ("invalid.opml", io.BytesIO(invalid_opml), "application/xml")}
         response = await async_client.post("/api/opml/import/", files=files)
 
         # Should fail validation before limit check (400 Bad Request)
         assert response.status_code == 400
         error_data = response.json()
         # The error message could be about invalid XML or no feed entries
-        assert any(
-            keyword in error_data["message"]
-            for keyword in ["Invalid", "XML", "No feed entries", "found"]
-        )
+        assert any(keyword in error_data["message"] for keyword in ["Invalid", "XML", "No feed entries", "found"])

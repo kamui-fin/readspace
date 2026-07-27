@@ -202,9 +202,7 @@ def upgrade() -> None:
     op.execute(
         "CREATE INDEX IF NOT EXISTS idx_feed_articles_feed_published ON public.feed_articles (feed_id, published_at DESC);"
     )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS idx_feed_articles_content ON public.feed_articles (content_id);"
-    )
+    op.execute("CREATE INDEX IF NOT EXISTS idx_feed_articles_content ON public.feed_articles (content_id);")
     op.execute(
         "CREATE INDEX IF NOT EXISTS idx_feed_subscriptions_user_folder ON public.feed_subscriptions (user_id, folder_id);"
     )
@@ -274,9 +272,7 @@ def upgrade() -> None:
     )
 
     # 6. Triggers
-    op.execute(
-        "DROP TRIGGER IF EXISTS feed_subscription_insert_trigger ON public.feed_subscriptions;"
-    )
+    op.execute("DROP TRIGGER IF EXISTS feed_subscription_insert_trigger ON public.feed_subscriptions;")
     op.execute(
         """
         CREATE TRIGGER feed_subscription_insert_trigger
@@ -285,9 +281,7 @@ def upgrade() -> None:
     """
     )
 
-    op.execute(
-        "DROP TRIGGER IF EXISTS feed_subscription_delete_trigger ON public.feed_subscriptions;"
-    )
+    op.execute("DROP TRIGGER IF EXISTS feed_subscription_delete_trigger ON public.feed_subscriptions;")
     op.execute(
         """
         CREATE TRIGGER feed_subscription_delete_trigger
@@ -296,9 +290,7 @@ def upgrade() -> None:
     """
     )
 
-    op.execute(
-        "DROP TRIGGER IF EXISTS trigger_create_default_folder ON public.profiles;"
-    )
+    op.execute("DROP TRIGGER IF EXISTS trigger_create_default_folder ON public.profiles;")
     op.execute(
         """
         CREATE TRIGGER trigger_create_default_folder
@@ -330,15 +322,9 @@ def downgrade() -> None:
     """Downgrade schema."""
     # Reverse order drop
     op.execute("DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;")
-    op.execute(
-        "DROP TRIGGER IF EXISTS trigger_create_default_folder ON public.profiles;"
-    )
-    op.execute(
-        "DROP TRIGGER IF EXISTS feed_subscription_delete_trigger ON public.feed_subscriptions;"
-    )
-    op.execute(
-        "DROP TRIGGER IF EXISTS feed_subscription_insert_trigger ON public.feed_subscriptions;"
-    )
+    op.execute("DROP TRIGGER IF EXISTS trigger_create_default_folder ON public.profiles;")
+    op.execute("DROP TRIGGER IF EXISTS feed_subscription_delete_trigger ON public.feed_subscriptions;")
+    op.execute("DROP TRIGGER IF EXISTS feed_subscription_insert_trigger ON public.feed_subscriptions;")
 
     op.execute("DROP FUNCTION IF EXISTS public.handle_new_user;")
     op.execute("DROP FUNCTION IF EXISTS public.create_default_folder_for_user;")

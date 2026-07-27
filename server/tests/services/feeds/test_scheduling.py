@@ -13,19 +13,14 @@ def test_calculate_interval_insufficient_articles():
     assert calculate_interval_from_pub_times([]) == DEFAULT_REFRESH_INTERVAL_MINUTES
 
     # Case 2: Single article
-    assert (
-        calculate_interval_from_pub_times([datetime.now()])
-        == DEFAULT_REFRESH_INTERVAL_MINUTES
-    )
+    assert calculate_interval_from_pub_times([datetime.now()]) == DEFAULT_REFRESH_INTERVAL_MINUTES
 
 
 def test_calculate_interval_zero_time_span():
     # All posts at the same time
     now = datetime.now()
     pub_times = [now, now, now]
-    assert (
-        calculate_interval_from_pub_times(pub_times) == DEFAULT_REFRESH_INTERVAL_MINUTES
-    )
+    assert calculate_interval_from_pub_times(pub_times) == DEFAULT_REFRESH_INTERVAL_MINUTES
 
 
 def test_calculate_interval_high_frequency():
@@ -90,9 +85,7 @@ def test_calculate_interval_bounds_min():
     pub_times = [now, now - timedelta(minutes=30), now - timedelta(minutes=60)]
     # Internal logic says 10.
     # Final result should be max(MIN, 10).
-    assert calculate_interval_from_pub_times(pub_times) == max(
-        MIN_REFRESH_INTERVAL_MINUTES, 10
-    )
+    assert calculate_interval_from_pub_times(pub_times) == max(MIN_REFRESH_INTERVAL_MINUTES, 10)
 
 
 def test_calculate_interval_bounds_max():

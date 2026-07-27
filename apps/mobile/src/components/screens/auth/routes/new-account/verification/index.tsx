@@ -154,7 +154,6 @@ export function VerificationStep({ email, isActive }: VerificationStepProps) {
             paddingBottom: Math.max(insets.bottom + 16, 24),
           }}
           keyboardShouldPersistTaps="handled">
-          
           {/* Top Content */}
           <View className="pt-4 px-6">
             {/* Icon with Circle Wrapper */}

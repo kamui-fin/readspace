@@ -50,9 +50,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                     )}
                 </div>
 
-                <div className="w-full">
-                    {children}
-                </div>
+                <div className="w-full">{children}</div>
 
                 {currentStep !== totalSteps && (
                     <div className="text-center mt-4">

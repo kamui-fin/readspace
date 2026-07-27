@@ -21,6 +21,7 @@ class TestNewsletterFeature:
         """Test getting/generating the newsletter inbound email token."""
         # Upgrade user to PRO to pass premium check
         from app.models.enums import UserRole
+
         test_user.role = UserRole.PRO
         db_session.add(test_user)
         await db_session.commit()
@@ -50,6 +51,7 @@ class TestNewsletterFeature:
         """Test that inbound webhook correctly parses email and saves it as a feed article."""
         # Upgrade user to PRO to pass premium check
         from app.models.enums import UserRole
+
         test_user.role = UserRole.PRO
         db_session.add(test_user)
 
@@ -65,13 +67,11 @@ class TestNewsletterFeature:
             "token": token,
             "from": "Python Weekly <newsletter@pythonweekly.com>",
             "subject": "Issue 500",
-            "html": "<p>Awesome Python stuff</p>"
+            "html": "<p>Awesome Python stuff</p>",
         }
 
         response = await async_client.post(
-            "/api/intake/webhook",
-            json=payload,
-            headers={"X-Readspace-Secret": settings.INBOUND_WEBHOOK_SECRET}
+            "/api/intake/webhook", json=payload, headers={"X-Readspace-Secret": settings.INBOUND_WEBHOOK_SECRET}
         )
 
         assert response.status_code == 201
@@ -79,9 +79,7 @@ class TestNewsletterFeature:
 
         # Verify feed was created
         virtual_url = f"newsletter://{test_user.id}/newsletter@pythonweekly.com"
-        result_feed = await db_session.execute(
-            select(Feed).where(Feed.url == virtual_url)
-        )
+        result_feed = await db_session.execute(select(Feed).where(Feed.url == virtual_url))
         feed = result_feed.scalar_one_or_none()
         assert feed is not None
         assert feed.title == "Python Weekly"
@@ -90,8 +88,7 @@ class TestNewsletterFeature:
         # Verify subscription was created
         result_sub = await db_session.execute(
             select(FeedSubscription).where(
-                FeedSubscription.feed_id == feed.id,
-                FeedSubscription.user_id == test_user.id
+                FeedSubscription.feed_id == feed.id, FeedSubscription.user_id == test_user.id
             )
         )
         sub = result_sub.scalar_one_or_none()
@@ -99,19 +96,14 @@ class TestNewsletterFeature:
 
         # Verify it went to Newsletters folder
         from app.models.folder import Folder
-        result_folder = await db_session.execute(
-            select(Folder).where(Folder.id == sub.folder_id)
-        )
+
+        result_folder = await db_session.execute(select(Folder).where(Folder.id == sub.folder_id))
         folder = result_folder.scalar_one_or_none()
         assert folder is not None
         assert folder.name == "Newsletters"
 
         # Verify article content was saved
-        result_article = await db_session.execute(
-            select(ArticleContent).where(
-                ArticleContent.title == "Issue 500"
-            )
-        )
+        result_article = await db_session.execute(select(ArticleContent).where(ArticleContent.title == "Issue 500"))
         article_content = result_article.scalar_one_or_none()
         assert article_content is not None
         assert article_content.content == "<p>Awesome Python stuff</p>"
@@ -119,10 +111,7 @@ class TestNewsletterFeature:
 
         # Verify feed article link
         result_link = await db_session.execute(
-            select(FeedArticle).where(
-                FeedArticle.feed_id == feed.id,
-                FeedArticle.content_id == article_content.id
-            )
+            select(FeedArticle).where(FeedArticle.feed_id == feed.id, FeedArticle.content_id == article_content.id)
         )
         link = result_link.scalar_one_or_none()
         assert link is not None
@@ -134,13 +123,11 @@ class TestNewsletterFeature:
             "token": "token",
             "from": "Python Weekly <newsletter@pythonweekly.com>",
             "subject": "Subject",
-            "html": "<p>Content</p>"
+            "html": "<p>Content</p>",
         }
 
         response = await async_client.post(
-            "/api/intake/webhook",
-            json=payload,
-            headers={"X-Readspace-Secret": "wrong-secret"}
+            "/api/intake/webhook", json=payload, headers={"X-Readspace-Secret": "wrong-secret"}
         )
         assert response.status_code == 401
 
@@ -152,13 +139,11 @@ class TestNewsletterFeature:
             "token": "non-existent-token",
             "from": "Python Weekly <newsletter@pythonweekly.com>",
             "subject": "Subject",
-            "html": "<p>Content</p>"
+            "html": "<p>Content</p>",
         }
 
         response = await async_client.post(
-            "/api/intake/webhook",
-            json=payload,
-            headers={"X-Readspace-Secret": settings.INBOUND_WEBHOOK_SECRET}
+            "/api/intake/webhook", json=payload, headers={"X-Readspace-Secret": settings.INBOUND_WEBHOOK_SECRET}
         )
         assert response.status_code == 404
 
@@ -169,14 +154,12 @@ class TestNewsletterFeature:
         """Test manually subscribing to a newsletter before any email is received."""
         # Upgrade user to PRO to pass premium check
         from app.models.enums import UserRole
+
         test_user.role = UserRole.PRO
         db_session.add(test_user)
         await db_session.commit()
 
-        payload = {
-            "name": "Python Weekly",
-            "sender_email": "newsletter@pythonweekly.com"
-        }
+        payload = {"name": "Python Weekly", "sender_email": "newsletter@pythonweekly.com"}
 
         response = await async_client.post("/api/intake/subscribe", json=payload)
         assert response.status_code == 201
@@ -186,17 +169,14 @@ class TestNewsletterFeature:
 
         # Verify DB entries
         virtual_url = f"newsletter://{test_user.id}/newsletter@pythonweekly.com"
-        result_feed = await db_session.execute(
-            select(Feed).where(Feed.url == virtual_url)
-        )
+        result_feed = await db_session.execute(select(Feed).where(Feed.url == virtual_url))
         feed = result_feed.scalar_one_or_none()
         assert feed is not None
         assert feed.title == "Python Weekly"
 
         result_sub = await db_session.execute(
             select(FeedSubscription).where(
-                FeedSubscription.feed_id == feed.id,
-                FeedSubscription.user_id == test_user.id
+                FeedSubscription.feed_id == feed.id, FeedSubscription.user_id == test_user.id
             )
         )
         sub = result_sub.scalar_one_or_none()
@@ -204,9 +184,8 @@ class TestNewsletterFeature:
 
         # Verify it went to Newsletters folder
         from app.models.folder import Folder
-        result_folder = await db_session.execute(
-            select(Folder).where(Folder.id == sub.folder_id)
-        )
+
+        result_folder = await db_session.execute(select(Folder).where(Folder.id == sub.folder_id))
         folder = result_folder.scalar_one_or_none()
         assert folder is not None
         assert folder.name == "Newsletters"
@@ -218,15 +197,13 @@ class TestNewsletterFeature:
         """Test subscribing with an invalid sender email format."""
         # Upgrade user to PRO to pass premium check
         from app.models.enums import UserRole
+
         test_user.role = UserRole.PRO
         db_session.add(test_user)
         await db_session.commit()
 
-        payload = {
-            "name": "Python Weekly",
-            "sender_email": "not-an-email"
-        }
- 
+        payload = {"name": "Python Weekly", "sender_email": "not-an-email"}
+
         response = await async_client.post("/api/intake/subscribe", json=payload)
         assert response.status_code == 400
         assert "sender email" in response.json()["detail"].lower()
@@ -238,6 +215,7 @@ class TestNewsletterFeature:
         """Test that BASIC users are blocked from generating tokens or manually subscribing."""
         # Ensure user is BASIC
         from app.models.enums import UserRole
+
         test_user.role = UserRole.BASIC
         db_session.add(test_user)
         await db_session.commit()
@@ -248,10 +226,7 @@ class TestNewsletterFeature:
         assert "premium subscription required" in response.json()["detail"].lower()
 
         # 2. Test manual subscribe is forbidden
-        payload = {
-            "name": "Python Weekly",
-            "sender_email": "newsletter@pythonweekly.com"
-        }
+        payload = {"name": "Python Weekly", "sender_email": "newsletter@pythonweekly.com"}
         response = await async_client.post("/api/intake/subscribe", json=payload)
         assert response.status_code == 403
         assert "premium subscription required" in response.json()["detail"].lower()
@@ -265,6 +240,7 @@ class TestNewsletterFeature:
         test_user.newsletter_token = token
         # Ensure user is BASIC
         from app.models.enums import UserRole
+
         test_user.role = UserRole.BASIC
         db_session.add(test_user)
         await db_session.commit()
@@ -274,13 +250,11 @@ class TestNewsletterFeature:
             "token": token,
             "from": "Python Weekly <newsletter@pythonweekly.com>",
             "subject": "Issue 500",
-            "html": "<p>Awesome Python stuff</p>"
+            "html": "<p>Awesome Python stuff</p>",
         }
 
         response = await async_client.post(
-            "/api/intake/webhook",
-            json=payload,
-            headers={"X-Readspace-Secret": settings.INBOUND_WEBHOOK_SECRET}
+            "/api/intake/webhook", json=payload, headers={"X-Readspace-Secret": settings.INBOUND_WEBHOOK_SECRET}
         )
         assert response.status_code == 403
         assert "premium subscription required" in response.json()["detail"].lower()

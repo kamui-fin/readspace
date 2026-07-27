@@ -31,9 +31,7 @@ class TestLanguageDetection:
 
     def test_detect_german_text(self):
         """Test detection of German text."""
-        text = (
-            "Dies ist ein Beispieltext auf Deutsch über Technologie und Programmierung."
-        )
+        text = "Dies ist ein Beispieltext auf Deutsch über Technologie und Programmierung."
         result = detect_language(text)
         assert result == "de"
 
@@ -58,9 +56,7 @@ class TestLanguageDetection:
     def test_detect_from_feed_content_with_all_fields(self):
         """Test detection from complete feed content."""
         title = "Technology News and Updates"
-        description = (
-            "The latest news about technology, programming, and software development."
-        )
+        description = "The latest news about technology, programming, and software development."
         articles = [
             "New Python release brings performance improvements",
             "JavaScript framework comparison for 2025",
@@ -137,8 +133,7 @@ class TestLanguageDetectionWithRealFeeds:
 
         # Extract article texts
         article_texts = [
-            f"{article.title or ''} {article.description or ''}".strip()
-            for article in parsed.articles[:5]
+            f"{article.title or ''} {article.description or ''}".strip() for article in parsed.articles[:5]
         ]
 
         # Detect language
@@ -175,8 +170,7 @@ class TestLanguageDetectionWithRealFeeds:
         # If feed doesn't provide language, it should be None or empty
         # Our detection should handle this
         article_texts = [
-            f"{article.title or ''} {article.description or ''}".strip()
-            for article in parsed.articles[:5]
+            f"{article.title or ''} {article.description or ''}".strip() for article in parsed.articles[:5]
         ]
 
         detected_lang = detect_feed_language(

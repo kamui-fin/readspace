@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+
 def get_sync_cutoff() -> datetime:
     """
     Calculate the global 2-hour sync cutoff time for Basic users.

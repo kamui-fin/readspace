@@ -16,9 +16,7 @@ from app.workers.feed.compaction import compact_old_articles
 
 
 @pytest.mark.asyncio
-async def test_compaction_task_deletes_old_articles_e2e(
-    db_session: AsyncSession, test_user: Profile
-):
+async def test_compaction_task_deletes_old_articles_e2e(db_session: AsyncSession, test_user: Profile):
     """Test full article compaction workflow with real database."""
     # Create folder
     folder = Folder(
@@ -80,9 +78,7 @@ async def test_compaction_task_deletes_old_articles_e2e(
     await db_session.commit()
 
     # Verify initial count
-    result = await db_session.execute(
-        select(FeedArticle).where(FeedArticle.feed_id == feed.id)
-    )
+    result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
     articles_before = result.scalars().all()
     assert len(articles_before) == 70
 
@@ -92,9 +88,7 @@ async def test_compaction_task_deletes_old_articles_e2e(
     # Test the CRUD function directly with the test session
     from app.crud.article.actions import delete_old_article_contents
 
-    deleted_count = await delete_old_article_contents(
-        db_session, retention_days=7, min_articles_per_feed=50
-    )
+    deleted_count = await delete_old_article_contents(db_session, retention_days=7, min_articles_per_feed=50)
     await db_session.commit()
 
     # Verify 20 articles were deleted (70 - 50 = 20)
@@ -104,31 +98,21 @@ async def test_compaction_task_deletes_old_articles_e2e(
     from sqlalchemy.orm import selectinload
 
     result = await db_session.execute(
-        select(FeedArticle)
-        .where(FeedArticle.feed_id == feed_id)
-        .options(selectinload(FeedArticle.content))
+        select(FeedArticle).where(FeedArticle.feed_id == feed_id).options(selectinload(FeedArticle.content))
     )
     articles_after = result.scalars().all()
-    assert (
-        len(articles_after) == 50
-    ), f"Expected 50 articles for test feed, got {len(articles_after)}"
+    assert len(articles_after) == 50, f"Expected 50 articles for test feed, got {len(articles_after)}"
 
     # Verify the oldest articles were deleted and newest were kept
     # The remaining articles should be the 50 newest ones (indices 0-49)
-    remaining_titles = {
-        article.content.title for article in articles_after if article.content
-    }
+    remaining_titles = {article.content.title for article in articles_after if article.content}
     for i in range(50):
         expected_title = f"E2E Old Article {i}"
-        assert (
-            expected_title in remaining_titles
-        ), f"Expected {expected_title} to be kept"
+        assert expected_title in remaining_titles, f"Expected {expected_title} to be kept"
 
 
 @pytest.mark.asyncio
-async def test_compaction_preserves_user_saved_articles_e2e(
-    db_session: AsyncSession, test_user: Profile
-):
+async def test_compaction_preserves_user_saved_articles_e2e(db_session: AsyncSession, test_user: Profile):
     """Test that compaction preserves articles saved by users across all feeds."""
     # Create folder
     folder = Folder(
@@ -207,31 +191,23 @@ async def test_compaction_preserves_user_saved_articles_e2e(
     # Test the CRUD function directly
     from app.crud.article.actions import delete_old_article_contents
 
-    deleted_count = await delete_old_article_contents(
-        db_session, retention_days=7, min_articles_per_feed=50
-    )
+    deleted_count = await delete_old_article_contents(db_session, retention_days=7, min_articles_per_feed=50)
     await db_session.commit()
 
     # Verify all saved articles still exist
     for saved_id in saved_article_ids:
-        result = await db_session.execute(
-            select(FeedArticle).where(FeedArticle.id == saved_id)
-        )
+        result = await db_session.execute(select(FeedArticle).where(FeedArticle.id == saved_id))
         article = result.scalar_one_or_none()
         assert article is not None, f"Saved article {saved_id} was deleted"
 
     # Verify we kept at least 50 articles plus the saved ones
-    result = await db_session.execute(
-        select(FeedArticle).where(FeedArticle.feed_id == feed_id)
-    )
+    result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed_id))
     remaining_articles = result.scalars().all()
     assert len(remaining_articles) >= 50 + len(saved_article_ids)
 
 
 @pytest.mark.asyncio
-async def test_compaction_handles_multiple_users_e2e(
-    db_session: AsyncSession, test_user: Profile
-):
+async def test_compaction_handles_multiple_users_e2e(db_session: AsyncSession, test_user: Profile):
     """Test that compaction correctly handles articles with multiple users."""
     # Create second user
     user2_id = uuid4()
@@ -361,27 +337,19 @@ async def test_compaction_handles_multiple_users_e2e(
     # Test the CRUD function directly
     from app.crud.article.actions import delete_old_article_contents
 
-    deleted_count = await delete_old_article_contents(
-        db_session, retention_days=7, min_articles_per_feed=50
-    )
+    deleted_count = await delete_old_article_contents(db_session, retention_days=7, min_articles_per_feed=50)
     await db_session.commit()
 
     # Verify both users' saved articles are preserved
-    result = await db_session.execute(
-        select(FeedArticle).where(FeedArticle.id == user1_saved_id)
-    )
+    result = await db_session.execute(select(FeedArticle).where(FeedArticle.id == user1_saved_id))
     assert result.scalar_one_or_none() is not None, "User 1's saved article was deleted"
 
-    result = await db_session.execute(
-        select(FeedArticle).where(FeedArticle.id == user2_saved_id)
-    )
+    result = await db_session.execute(select(FeedArticle).where(FeedArticle.id == user2_saved_id))
     assert result.scalar_one_or_none() is not None, "User 2's saved article was deleted"
 
 
 @pytest.mark.asyncio
-async def test_compaction_respects_retention_policy(
-    db_session: AsyncSession, test_user: Profile
-):
+async def test_compaction_respects_retention_policy(db_session: AsyncSession, test_user: Profile):
     """Test that compaction respects the retention policy and minimum article count."""
     # Create folder
     folder = Folder(
@@ -440,9 +408,7 @@ async def test_compaction_respects_retention_policy(
     await db_session.commit()
 
     # Count before compaction
-    result = await db_session.execute(
-        select(FeedArticle).where(FeedArticle.feed_id == feed.id)
-    )
+    result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
     articles_before = result.scalars().all()
     initial_count = len(articles_before)
     assert initial_count == 70
@@ -453,24 +419,18 @@ async def test_compaction_respects_retention_policy(
     # Test the CRUD function directly
     from app.crud.article.actions import delete_old_article_contents
 
-    deleted_count = await delete_old_article_contents(
-        db_session, retention_days=7, min_articles_per_feed=50
-    )
+    deleted_count = await delete_old_article_contents(db_session, retention_days=7, min_articles_per_feed=50)
     await db_session.commit()
 
     # Verify compaction deleted articles but kept minimum 50
     assert deleted_count == 20  # 70 - 50 = 20
-    result = await db_session.execute(
-        select(FeedArticle).where(FeedArticle.feed_id == feed_id)
-    )
+    result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed_id))
     articles_after = result.scalars().all()
     assert len(articles_after) == 50  # Should keep exactly 50 newest
 
 
 @pytest.mark.asyncio
-async def test_compaction_task_wrapper_e2e(
-    db_session: AsyncSession, test_user: Profile
-):
+async def test_compaction_task_wrapper_e2e(db_session: AsyncSession, test_user: Profile):
     """Test the async compaction function directly (since Celery task can't run in async context)."""
     # Create folder
     folder = Folder(
@@ -534,20 +494,14 @@ async def test_compaction_task_wrapper_e2e(
     # Test the CRUD function directly
     from app.crud.article.actions import delete_old_article_contents
 
-    deleted_count = await delete_old_article_contents(
-        db_session, retention_days=7, min_articles_per_feed=50
-    )
+    deleted_count = await delete_old_article_contents(db_session, retention_days=7, min_articles_per_feed=50)
     await db_session.commit()
 
     # Verify articles were deleted from THIS FEED - should keep exactly 50
     assert deleted_count == 10  # 60 - 50 = 10
-    result = await db_session.execute(
-        select(FeedArticle).where(FeedArticle.feed_id == feed_id)
-    )
+    result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed_id))
     articles_after = result.scalars().all()
-    assert (
-        len(articles_after) == 50
-    ), f"Expected 50 articles for test feed, got {len(articles_after)}"
+    assert len(articles_after) == 50, f"Expected 50 articles for test feed, got {len(articles_after)}"
 
 
 @pytest.mark.asyncio
@@ -620,23 +574,16 @@ async def test_compaction_expires_basic_read_later_e2e(
 
     # 5. Fetch and assert final states
     # basic_old should be is_saved = False (or deleted if no other state, but here is_read=False, user_note=None so deleted)
-    result = await db_session.execute(
-        select(UserEntry).where(UserEntry.id == basic_old.id)
-    )
+    result = await db_session.execute(select(UserEntry).where(UserEntry.id == basic_old.id))
     basic_old_after = result.scalar_one_or_none()
     assert basic_old_after is None or not basic_old_after.is_saved
 
     # pro_old should remain is_saved = True
-    result = await db_session.execute(
-        select(UserEntry).where(UserEntry.id == pro_old.id)
-    )
+    result = await db_session.execute(select(UserEntry).where(UserEntry.id == pro_old.id))
     pro_old_after = result.scalar_one()
     assert pro_old_after.is_saved is True
 
     # basic_new should remain is_saved = True
-    result = await db_session.execute(
-        select(UserEntry).where(UserEntry.id == basic_new.id)
-    )
+    result = await db_session.execute(select(UserEntry).where(UserEntry.id == basic_new.id))
     basic_new_after = result.scalar_one()
     assert basic_new_after.is_saved is True
-

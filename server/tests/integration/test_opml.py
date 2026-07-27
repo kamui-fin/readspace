@@ -228,9 +228,7 @@ class TestOpmlImportEagerMode:
         # Verify folders were created
         from sqlalchemy import select
 
-        db_result = await db_session.execute(
-            select(Folder).where(Folder.user_id == test_user.id)
-        )
+        db_result = await db_session.execute(select(Folder).where(Folder.user_id == test_user.id))
         folders = db_result.scalars().all()
         folder_names = {f.name for f in folders}
 
@@ -321,9 +319,7 @@ class TestOpmlImportValidation:
         assert "Invalid" in response.json()["message"]
 
     @pytest.mark.asyncio
-    async def test_import_opml_rss_feed_instead_of_opml(
-        self, async_client: AsyncClient
-    ):
+    async def test_import_opml_rss_feed_instead_of_opml(self, async_client: AsyncClient):
         """Test uploading RSS feed instead of OPML."""
         rss_content = """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
@@ -364,9 +360,7 @@ class TestOpmlImportStatus:
         assert response.status_code >= 400
 
     @pytest.mark.asyncio
-    async def test_get_import_status_unauthorized(
-        self, async_client: AsyncClient, test_user: Profile
-    ):
+    async def test_get_import_status_unauthorized(self, async_client: AsyncClient, test_user: Profile):
         """Test accessing another user's import task."""
         # Create a task for a different user
         from app.services.opml.tasks import (
@@ -389,7 +383,6 @@ class TestOpmlImportStatus:
 
 class TestOpmlTaskManagement:
     """Test OPML task listing and cancellation."""
-
 
     @pytest.mark.asyncio
     async def test_get_active_import_task_none(self, async_client: AsyncClient):

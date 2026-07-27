@@ -31,9 +31,7 @@ async def test_article(db_session: AsyncSession, test_feed: Feed, test_user: Pro
     await db_session.flush()
 
     # Create subscription with folder
-    subscription = FeedSubscription(
-        user_id=test_user.id, feed_id=test_feed.id, folder_id=folder.id
-    )
+    subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=folder.id)
     db_session.add(subscription)
     await db_session.flush()
 
@@ -130,9 +128,7 @@ class TestListArticles:
         assert data["next_cursor"] is None
 
     @pytest.mark.asyncio
-    async def test_list_articles_with_data(
-        self, async_client: AsyncClient, test_article: FeedArticle
-    ):
+    async def test_list_articles_with_data(self, async_client: AsyncClient, test_article: FeedArticle):
         """Test listing articles returns user's articles."""
         response = await async_client.get("/api/articles/")
 
@@ -143,9 +139,7 @@ class TestListArticles:
         assert "next_cursor" in data
 
     @pytest.mark.asyncio
-    async def test_list_articles_filter_by_feed(
-        self, async_client: AsyncClient, test_feed: Feed
-    ):
+    async def test_list_articles_filter_by_feed(self, async_client: AsyncClient, test_feed: Feed):
         """Test filtering articles by feed."""
         response = await async_client.get(f"/api/articles/?feed_ids={test_feed.id}")
 
@@ -195,9 +189,7 @@ class TestListArticles:
     @pytest.mark.asyncio
     async def test_list_articles_sort_by_published(self, async_client: AsyncClient):
         """Test sorting articles by published date."""
-        response = await async_client.get(
-            "/api/articles/?sort_by=published_at&sort_order=desc"
-        )
+        response = await async_client.get("/api/articles/?sort_by=published_at&sort_order=desc")
 
         assert response.status_code == 200
         data = response.json()
@@ -258,9 +250,7 @@ class TestListArticles:
         await db_session.flush()
 
         # Create subscription with folder
-        subscription = FeedSubscription(
-            user_id=test_user.id, feed_id=test_feed.id, folder_id=folder.id
-        )
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
@@ -276,9 +266,7 @@ class TestListArticles:
             # Random number of minutes (0-59)
             minutes_ago = random.randint(0, 59)
 
-            published_date = base_date - timedelta(
-                days=days_ago, hours=hours_ago, minutes=minutes_ago
-            )
+            published_date = base_date - timedelta(days=days_ago, hours=hours_ago, minutes=minutes_ago)
             published_dates.append(published_date)
 
         # Shuffle the dates to ensure they're in random order when created
@@ -342,12 +330,8 @@ class TestListArticles:
 
         # Verify articles are sorted by published_at in descending order (newest first)
         for i in range(len(our_articles) - 1):
-            current_published = datetime.fromisoformat(
-                our_articles[i]["published_at"].replace("Z", "+00:00")
-            )
-            next_published = datetime.fromisoformat(
-                our_articles[i + 1]["published_at"].replace("Z", "+00:00")
-            )
+            current_published = datetime.fromisoformat(our_articles[i]["published_at"].replace("Z", "+00:00"))
+            next_published = datetime.fromisoformat(our_articles[i + 1]["published_at"].replace("Z", "+00:00"))
 
             # Current article should be published after (newer than) the next article
             assert current_published >= next_published, (
@@ -359,28 +343,23 @@ class TestListArticles:
         # Additional verification: check that the sorted order matches expected descending order
         expected_sorted_dates = sorted(published_dates, reverse=True)
         actual_dates = [
-            datetime.fromisoformat(article["published_at"].replace("Z", "+00:00"))
-            for article in our_articles
+            datetime.fromisoformat(article["published_at"].replace("Z", "+00:00")) for article in our_articles
         ]
 
         # Convert to comparable format (remove microseconds for comparison)
-        expected_dates_normalized = [
-            d.replace(microsecond=0) for d in expected_sorted_dates
-        ]
+        expected_dates_normalized = [d.replace(microsecond=0) for d in expected_sorted_dates]
         actual_dates_normalized = [d.replace(microsecond=0) for d in actual_dates]
 
-        assert (
-            actual_dates_normalized == expected_dates_normalized
-        ), "Articles are not returned in the expected sorted order by published date"
+        assert actual_dates_normalized == expected_dates_normalized, (
+            "Articles are not returned in the expected sorted order by published date"
+        )
 
 
 class TestGetArticle:
     """Test get single article endpoint."""
 
     @pytest.mark.asyncio
-    async def test_get_article_success(
-        self, async_client: AsyncClient, test_article: FeedArticle
-    ):
+    async def test_get_article_success(self, async_client: AsyncClient, test_article: FeedArticle):
         """Test getting an article by ID."""
         response = await async_client.get(f"/api/articles/{test_article.id}")
 
@@ -563,9 +542,7 @@ class TestCheckArticleSaved:
     @pytest.mark.asyncio
     async def test_check_article_saved_not_found(self, async_client: AsyncClient):
         """Test checking if article is saved when it's not."""
-        response = await async_client.get(
-            "/api/articles/check-saved?url=https://example.com/not-saved"
-        )
+        response = await async_client.get("/api/articles/check-saved?url=https://example.com/not-saved")
 
         assert response.status_code == 200
         # Should return None or empty response

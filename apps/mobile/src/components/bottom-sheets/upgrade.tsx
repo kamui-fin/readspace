@@ -42,15 +42,15 @@ export function UpgradePaywallModal() {
 
   // Pricing display strings (with RevenueCat live price strings as source of truth, fallbacks for local dev)
   const monthlyPriceStr = monthlyPackage?.product.priceString ?? '$7.99';
-  const yearlyPriceStr = yearlyPackage?.product.priceString ?? '$59.99';
+  const yearlyPriceStr = yearlyPackage?.product.priceString ?? '$79.99';
 
-  // Calculate yearly monthly-equivalent price ($59.99 / 12 = $4.99)
+  // Calculate yearly monthly-equivalent price ($79.99 / 12 = $6.66)
   const yearlyMonthlyEquivalentStr = useMemo(() => {
     if (yearlyPackage?.product.price) {
       const perMonth = yearlyPackage.product.price / 12;
       return `${yearlyPackage.product.currencyCode === 'USD' ? '$' : ''}${perMonth.toFixed(2)}`;
     }
-    return '$4.99';
+    return '$6.66';
   }, [yearlyPackage]);
 
   // Make description text concise
@@ -161,14 +161,14 @@ export function UpgradePaywallModal() {
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
-                    Virtually unlimited feeds
+                    Unlimited feeds & newsletters
                   </Text>
                   <Text
                     size="xs"
                     fontFamily="geist"
                     className="mt-0.5"
                     style={{ color: colors.grey }}>
-                    Organize with unlimited folders, and forward email newsletters to your own @readspace.ai inbox.
+                    Infinite folders and a custom @readspace.ai address to receive newsletters directly.
                   </Text>
                 </View>
               </View>
@@ -182,14 +182,14 @@ export function UpgradePaywallModal() {
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
-                    Experimental AI Labs access
+                    Early AI features
                   </Text>
                   <Text
                     size="xs"
                     fontFamily="geist"
                     className="mt-0.5"
                     style={{ color: colors.grey }}>
-                    Get early access to game-changing AI features like conversational discovery, daily briefings, and automated feed organization.
+                    Try out new tools in development, including daily briefings and conversational search.
                   </Text>
                 </View>
               </View>
@@ -203,14 +203,14 @@ export function UpgradePaywallModal() {
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
-                    Extended AI reader tools
+                    Generous AI limits
                   </Text>
                   <Text
                     size="xs"
                     fontFamily="geist"
                     className="mt-0.5"
                     style={{ color: colors.grey }}>
-                    Enjoy extended daily use of intelligence tools to condense dense essays, extract core takeaways, or translate foreign writing.
+                    More daily usage of our summarize, key takeaway, and translation tools.
                   </Text>
                 </View>
               </View>
@@ -224,14 +224,14 @@ export function UpgradePaywallModal() {
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
-                    Priority updates & permanent storage
+                    Save articles forever
                   </Text>
                   <Text
                     size="xs"
                     fontFamily="geist"
                     className="mt-0.5"
                     style={{ color: colors.grey }}>
-                    Enjoy rapid feed updates and save articles permanently (free read-later items automatically expire after 30 days).
+                    Articles in your library never expire, and feeds update faster. (Free items expire in 30 days).
                   </Text>
                 </View>
               </View>
