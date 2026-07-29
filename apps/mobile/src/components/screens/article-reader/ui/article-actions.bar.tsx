@@ -26,7 +26,8 @@ interface ArticleActionBarProps {
   onClose: () => void;
   onShare: () => void;
   onBookmark: () => void;
-  onMenuPress: () => void;
+  onMenuPress?: () => void;
+  hideMenu?: boolean;
   onGenerateSummary?: () => void;
   onCopyLink?: () => void;
   isBookmarked: boolean;
@@ -41,6 +42,7 @@ export function ArticleActionBar({
   onShare,
   onBookmark,
   onMenuPress,
+  hideMenu = false,
   onGenerateSummary,
   onCopyLink,
   isBookmarked,
@@ -194,17 +196,18 @@ export function ArticleActionBar({
         </Button>
 
         {/* Menu Button */}
-        {menuTrigger || (
-          <Pressable onPress={onMenuPress} hitSlop={12}>
-            <MenuDotsBoldIcon
-              width={18}
-              height={18}
-              strokeWidth={2.4}
-              color={greyColor}
-              style={{ transform: [{ rotate: '90deg' }] }}
-            />
-          </Pressable>
-        )}
+        {!hideMenu &&
+          (menuTrigger || (
+            <Pressable onPress={onMenuPress} hitSlop={12}>
+              <MenuDotsBoldIcon
+                width={18}
+                height={18}
+                strokeWidth={2.4}
+                color={greyColor}
+                style={{ transform: [{ rotate: '90deg' }] }}
+              />
+            </Pressable>
+          ))}
       </View>
     </Animated.View>
   );

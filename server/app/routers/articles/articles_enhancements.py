@@ -177,6 +177,8 @@ async def translate_article(
 
     # 1. Fetch & Resolve Content
     article = await get_article_or_404(db_factory, article_id, UUID(user.sub), is_clipped=clipped)
+    if article.link and str(article.link).startswith("newsletter://"):
+        raise ValidationError(message="Translation is not available for newsletter emails")
     content_to_use = resolve_content(request.content, article)
 
     # 2. Translate in parallel

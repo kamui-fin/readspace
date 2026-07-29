@@ -115,6 +115,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
           </Text>
           <View className="mb-4">
             {!isClipped &&
+              !isNewsletter &&
               renderOption(
                 <EarthBoldIcon width={22} height={22} color={greyColor} />,
                 hasTranslatedContent ? 'Translate to a different language' : 'Translate Article',

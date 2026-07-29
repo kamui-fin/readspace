@@ -7,6 +7,7 @@ import SolarCheckCircleLinearIcon from '@components/icons/solar/check-circle-lin
 import UserCircleLinearIcon from '@components/icons/solar/user-circle-linear';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
+import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
 import { BottomSheetInput } from '@components/ui/input';
 import { Skeleton } from '@components/ui/skeleton';
 import { Text } from '@components/ui/text';
@@ -175,9 +176,8 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
       },
     }));
 
-    // Generate fallback avatar for RSS preview
+    // Generate fallback icon for RSS preview
     const fallbackTitle = feedPreview?.title || url;
-    const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fallbackTitle)}&size=128&background=random&length=2&bold=true&format=png`;
 
     // Toggle pill colors
     const pillBg = isDark ? colors.grey6 : colors.grey6;
@@ -320,12 +320,16 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
                   <View
                     className="mt-0.5 h-14 w-14 items-center justify-center overflow-hidden rounded-xl"
                     style={{ backgroundColor: colors.grey5 }}>
-                    <Image
-                      source={{ uri: feedPreview.image_url || fallbackAvatarUrl }}
-                      className="h-full w-full"
-                      resizeMode="cover"
-                      style={{ borderRadius: 12 }}
-                    />
+                    {feedPreview.image_url ? (
+                      <Image
+                        source={{ uri: feedPreview.image_url }}
+                        className="h-full w-full"
+                        resizeMode="cover"
+                        style={{ borderRadius: 12 }}
+                      />
+                    ) : (
+                      <FeedFallbackIcon feedName={fallbackTitle} size={56} borderRadius={12} />
+                    )}
                   </View>
 
                   <View className="flex-1">

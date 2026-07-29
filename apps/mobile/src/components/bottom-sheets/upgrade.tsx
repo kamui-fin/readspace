@@ -1,4 +1,3 @@
-import ReadspaceLogoIcon from '@components/icons/local/readspace-logo';
 import RssIcon from '@components/icons/local/rss';
 import SparkleIcon from '@components/icons/local/sparkle';
 import RocketBoldIcon from '@components/icons/solar/rocket-bold';
@@ -41,7 +40,7 @@ export function UpgradePaywallModal() {
   }, [currentOffering]);
 
   // Pricing display strings (with RevenueCat live price strings as source of truth, fallbacks for local dev)
-  const monthlyPriceStr = monthlyPackage?.product.priceString ?? '$7.99';
+  const monthlyPriceStr = monthlyPackage?.product.priceString ?? '$9.99';
   const yearlyPriceStr = yearlyPackage?.product.priceString ?? '$79.99';
 
   // Calculate yearly monthly-equivalent price ($79.99 / 12 = $6.66)
@@ -53,15 +52,7 @@ export function UpgradePaywallModal() {
     return '$6.66';
   }, [yearlyPackage]);
 
-  // Make description text concise
-  const displayDescription = useMemo(() => {
-    const defaultDesc =
-      'Unlock unlimited access to all features, including AI summaries and unlimited feed subscriptions.';
-    if (description === defaultDesc) {
-      return 'Get unlimited feeds & daily AI summaries.';
-    }
-    return description;
-  }, [description]);
+  const displayDescription = description !== 'Unlock unlimited access to all features, including AI summaries and unlimited feed subscriptions.' ? description : null;
 
   const handlePurchase = async () => {
     const pkgToBuy = selectedPlan === 'monthly' ? monthlyPackage : yearlyPackage;
@@ -116,29 +107,14 @@ export function UpgradePaywallModal() {
             paddingBottom: insets.bottom + 40,
           }}
           showsVerticalScrollIndicator={false}>
-          {/* Header section with Readspace logo */}
-          <View className="mb-6 mt-4 items-center">
-            <View
-              className="mb-4 h-14 w-14 items-center justify-center rounded-xl"
-              style={{ backgroundColor: '#1A1A1A' }}>
-              <ReadspaceLogoIcon width={34} height={34} />
-            </View>
+          {/* Header section */}
+          <View className="mb-6 mt-4">
             <Text
-              size="2xl"
+              size="3xl"
               fontFamily="geist-bold"
-              className="text-center"
               style={{ color: colors.black }}>
               {title}
             </Text>
-            {displayDescription ? (
-              <Text
-                size="base"
-                fontFamily="geist"
-                className="mt-2 px-4 text-center"
-                style={{ color: colors.grey }}>
-                {displayDescription}
-              </Text>
-            ) : null}
           </View>
 
           {/* Features / Benefits list matching Web dialog - Standard spacious layout */}
@@ -148,7 +124,7 @@ export function UpgradePaywallModal() {
               fontFamily="geist-semibold"
               className="mb-5 uppercase tracking-wider"
               style={{ color: colors.grey }}>
-              Readspace Pro benefits
+              Benefits
             </Text>
 
             <View className="gap-6">

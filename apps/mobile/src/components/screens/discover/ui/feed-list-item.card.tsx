@@ -1,3 +1,4 @@
+import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
 import { FeedIcon } from '@components/ui/feed-icon';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
@@ -5,7 +6,7 @@ import { COLORS } from '@lib/constants/colors';
 import { stripHtml } from '@lib/utils/html';
 import clsx from 'clsx';
 import { Link } from 'expo-router';
-import { Image, Pressable, type PressableProps, View } from 'react-native';
+import { Pressable, type PressableProps, View } from 'react-native';
 import { FollowButton } from './follow.button';
 
 export interface FeedListItemProps extends PressableProps {
@@ -43,11 +44,8 @@ export const FeedListItem = ({
   const isDark = useIsDarkMode();
   const _colors = COLORS[isDark ? 'dark' : 'light'];
 
-  // Generate UI Avatars fallback URL
-  const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(title)}&size=128&background=random&length=2&bold=true&format=png`;
-
-  const Fallback = () => (
-    <Image source={{ uri: fallbackAvatarUrl }} className="h-full w-full" resizeMode="cover" />
+  const Fallback = ({ size = 48, className }: { size?: number; className?: string }) => (
+    <FeedFallbackIcon feedName={title} size={size} borderRadius={8} className={className} />
   );
 
   const innerPressable = (

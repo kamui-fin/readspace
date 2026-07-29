@@ -151,7 +151,7 @@ export default function UpgradeDialog() {
                                     <CardContent className="px-4 pb-4 sm:px-5 sm:pb-5">
                                         <div className="flex items-baseline">
                                             <span className="text-2xl sm:text-3xl font-extrabold text-foreground">
-                                                $7.99
+                                                $9.99
                                             </span>
                                             <span className="text-muted-foreground text-xs sm:text-sm ml-1">
                                                 /month

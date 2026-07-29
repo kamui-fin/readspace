@@ -1,4 +1,5 @@
 import { Text } from '@components/ui/text';
+import type { ViewStyle } from 'react-native';
 import { View } from 'react-native';
 
 const PINNED_YELLOW = '#EAB308';
@@ -7,6 +8,7 @@ export interface SectionLabelProps {
   label: string;
   icon?: React.ReactNode;
   className?: string;
+  style?: ViewStyle;
   /** Use yellow for icon and text (Pinned section) */
   accentYellow?: boolean;
 }
@@ -19,10 +21,13 @@ export function SectionLabel({
   label,
   icon,
   className = '',
+  style,
   accentYellow = false,
 }: SectionLabelProps) {
   return (
-    <View className={`mb-3 flex-row items-center gap-2 px-1 ${className}`.trim()}>
+    <View
+      className={`mb-3 flex-row items-center gap-2 px-1 ${className}`.trim()}
+      style={style}>
       {icon}
       <Text
         className={

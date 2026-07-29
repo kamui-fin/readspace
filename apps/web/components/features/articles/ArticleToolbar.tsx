@@ -312,7 +312,7 @@ export function ArticleToolbar({
                         </Tooltip>
                     )}
 
-                    {!isPreviewMode && (
+                    {!isPreviewMode && !article.link?.startsWith("newsletter://") && (
                         <DropdownMenu
                             open={showLanguageSelector}
                             onOpenChange={setShowLanguageSelector}

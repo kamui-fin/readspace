@@ -5,6 +5,7 @@ import TrashBinTrashBoldIcon from '@components/icons/solar/trash-bin-trash-bold'
 import UserCircleLinearIcon from '@components/icons/solar/user-circle-linear';
 import { Button } from '@components/ui/button';
 import { Chip } from '@components/ui/chip';
+import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
 import { FeedIcon } from '@components/ui/feed-icon';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
@@ -82,19 +83,13 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
         <View className="relative">
           <FeedIcon
             url={feed.image_url}
-            fallbackComponent={() => (
-              <View
-                className="h-20 w-20 items-center justify-center overflow-hidden rounded-2xl"
-                style={{
-                  backgroundColor: colors.grey5,
-                }}>
-                <Text
-                  size="lg"
-                  fontFamily="geist-bold"
-                  style={{ color: colors.grey, fontSize: 28 }}>
-                  {(feed.title || 'F').charAt(0).toUpperCase()}
-                </Text>
-              </View>
+            fallbackComponent={({ size = 80, className }: { size?: number; className?: string }) => (
+              <FeedFallbackIcon
+                feedName={feed.title}
+                size={size}
+                borderRadius={16}
+                className={className}
+              />
             )}
             size={80}
             borderRadius={16}

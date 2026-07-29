@@ -1,5 +1,6 @@
 import EyeLinearIcon from '@components/icons/solar/eye-linear';
 import { Divider } from '@components/ui/divider';
+import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
 import { FeedIcon } from '@components/ui/feed-icon';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
@@ -98,11 +99,6 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
       return baseStyle;
     }, [variant, colors, isDark]);
 
-    // Generate UI Avatars fallback URL for feed icons
-    const fallbackAvatarUrl = title
-      ? `https://ui-avatars.com/api/?name=${encodeURIComponent(title)}&size=128&background=random&length=2&bold=true&format=png`
-      : undefined;
-
     if (variant === 'feed') {
       return (
         <Pressable
@@ -121,15 +117,9 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                 transition={150}
                 onError={() => setImageError(true)}
               />
-            ) : fallbackAvatarUrl ? (
-              <ExpoImage
-                source={{ uri: fallbackAvatarUrl }}
-                style={{ width: 48, height: 48 }}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                transition={150}
-              />
-            ) : null}
+            ) : (
+              <FeedFallbackIcon feedName={title} size={48} borderRadius={8} />
+            )}
           </View>
 
           {/* Content */}

@@ -41,6 +41,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const PINNED_YELLOW = '#EAB308';
@@ -112,8 +113,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
     const bulkDeleteFeeds = useBulkDeleteFeeds();
     const bulkUpdateFeedsFolder = useBulkUpdateFeedsFolder();
 
-    const lastPressTime = useRef<number>(0);
-    const PRESS_THRESHOLD = 300;
+
 
     const feeds = useMemo(() => (feedsData?.subscriptions as Subscription[]) || [], [feedsData]);
     const folders = useMemo(() => (feedsData?.folders as Folder[]) || [], [feedsData]);
@@ -132,7 +132,6 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
 
     useImperativeHandle(ref, () => ({
       present: () => {
-        lastPressTime.current = 0;
         bottomSheetRef.current?.present();
         queryClient.invalidateQueries({ queryKey: ['rss-feeds', 'list'] });
         queryClient.invalidateQueries({ queryKey: ['rss-unread-counts'] });
@@ -166,13 +165,10 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
       });
     }, [folders, feeds, expandedFolders, unreadCounts]);
 
-    const handlePressIn = useCallback(() => {
-      lastPressTime.current = Date.now();
-    }, []);
+
 
     const handleFeedPress = useCallback(
       (feedId: string) => {
-        if (Date.now() - lastPressTime.current > PRESS_THRESHOLD) return;
 
         if (isSelectionMode) {
           setSelectedFeedIds((prev: Set<string>) => {
@@ -198,6 +194,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
 
         const sub = feeds.find((f) => f.feed.id === feedId);
         if (sub) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           selectFeed(feedId, sub.custom_title || sub.feed.title);
           bottomSheetRef.current?.dismiss();
           router.navigate('/(protected)/(tabs)');
@@ -208,7 +205,6 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
 
     const handleFolderPress = useCallback(
       (folderId: string) => {
-        if (Date.now() - lastPressTime.current > PRESS_THRESHOLD) return;
 
         if (isSelectionMode) {
           const folderFeeds = listData.find((f) => f.id === folderId)?.folderFeeds || [];
@@ -247,6 +243,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
 
         const folder = folders.find((f) => f.id === folderId);
         if (folder) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           selectFolder(folderId, folder.name);
           bottomSheetRef.current?.dismiss();
           router.navigate('/(protected)/(tabs)');
@@ -555,7 +552,8 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
           headerLeft={headerLeftActions}
           headerRight={headerRightActions}
           snapPoints={['50%', '90%', '100%']}
-          index={1}>
+          index={1}
+          contentPaddingHorizontal={0}>
           {listData.length === 0 && favoriteFeeds.length === 0 ? (
             <View className="items-center justify-center py-12">
               <InboxBrokenIcon width={64} height={64} color={colors.grey} />
@@ -570,7 +568,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
             <>
               {/* Pinned Section */}
               {favoriteFeeds.length > 0 && !isSelectionMode && (
-                <View className="mb-2">
+                <View className="mb-2" style={{ paddingHorizontal: 24 }}>
                   <SectionLabel
                     label="Pinned"
                     icon={<StarBoldIcon width={14} height={14} color={PINNED_YELLOW} />}
@@ -584,7 +582,6 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
                           isActive={selectedFeedId === sub.feed.id}
                           unreadCount={unreadCounts[sub.feed.id] || 0}
                           onPress={() => handleFeedPress(sub.feed.id)}
-                          onPressIn={handlePressIn}
                           onToggleFavorite={handleToggleFavorite}
                           onRename={handleRenameFeed}
                           onUnfollow={handleUnfollow}
@@ -597,13 +594,17 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
                 </View>
               )}
 
-              {/* Feeds Section */}
+              {/* Feeds Section label - left-padded to align with header */}
               {listData.length > 0 && !isSelectionMode && (
-                <SectionLabel label="Feeds" className={favoriteFeeds.length > 0 ? 'mt-4' : ''} />
+                <SectionLabel
+                  label="Feeds"
+                  className={favoriteFeeds.length > 0 ? 'mt-4' : ''}
+                  style={{ paddingLeft: 24 }}
+                />
               )}
-              <View>
+              <View style={{ paddingBottom: 48 }}>
                 {listData.map((item) => (
-                  <View key={item.id} className="mb-4">
+                  <View key={item.id}>
                     <FolderGroup
                       folder={item.folder}
                       folderFeeds={item.folderFeeds}
@@ -618,7 +619,6 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
                       selectedFolderIds={selectedFolderIds}
                       onFolderPress={handleFolderPress}
                       onFeedPress={handleFeedPress}
-                      onPressIn={handlePressIn}
                       onToggleExpand={toggleFolderInStore}
                       onRenameFolder={handleRenameFolder}
                       onDeleteFolder={handleDeleteFolder}

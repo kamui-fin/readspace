@@ -378,6 +378,11 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
       (extractMutation.isPending || extractMutation.status === 'idle')
     : false;
 
+  const isNewsletter =
+    !!article?.link?.startsWith('newsletter://') ||
+    (article as any)?.feed_type === 'newsletter' ||
+    (article as any)?.article_type === 'newsletter';
+
   return (
     <View className="bg-background flex-1">
       <ArticleActionBar
@@ -389,6 +394,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
           isArticleLoading ? handleBookmark : isClipped ? handleMarkAsDone : handleBookmark
         }
         onMenuPress={isArticleLoading ? () => {} : handleMenuPress}
+        hideMenu={isNewsletter}
         onGenerateSummary={isArticleLoading ? undefined : handleGenerateSummary}
         onCopyLink={isArticleLoading ? undefined : handleCopyLink}
         isBookmarked={article?.is_saved || false}
@@ -459,7 +465,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         hasTranslatedContent={!!translateData?.translated_content}
         canExtractContent={true}
         isClipped={isClipped}
-        isNewsletter={!!article?.link?.startsWith('newsletter://')}
+        isNewsletter={isNewsletter}
       />
     </View>
   );

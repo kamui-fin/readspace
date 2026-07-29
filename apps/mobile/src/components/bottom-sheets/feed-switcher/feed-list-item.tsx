@@ -9,6 +9,7 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
+import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
 import { FeedIcon } from '@components/ui/feed-icon';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
@@ -16,7 +17,7 @@ import { COLORS } from '@lib/constants/colors';
 import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import type { Subscription } from '@readspace/shared';
 import { memo } from 'react';
-import { View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 
 function getFaviconUrl(feed: { link?: string | null; image_url?: string | null }): string | null {
   if (feed.image_url) return resolveSupabaseImageUrl(feed.image_url) ?? null;
@@ -35,7 +36,7 @@ export interface FeedListItemProps {
   isActive: boolean;
   unreadCount: number;
   onPress: () => void;
-  onPressIn: () => void;
+  onPressIn?: () => void;
   onToggleFavorite: (sub: Subscription) => void;
   onRename: (sub: Subscription) => void;
   onUnfollow: (sub: Subscription) => void;
@@ -45,6 +46,7 @@ export interface FeedListItemProps {
   variant?: 'pinned' | 'folder';
   isSelectionMode?: boolean;
   isSelected?: boolean;
+  style?: any;
 }
 
 const FeedListItemComponent = ({
@@ -60,6 +62,7 @@ const FeedListItemComponent = ({
   variant = 'folder',
   isSelectionMode = false,
   isSelected = false,
+  style,
 }: FeedListItemProps) => {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
@@ -68,12 +71,15 @@ const FeedListItemComponent = ({
   const faviconUrl = getFaviconUrl(feed);
   const title = sub.custom_title || feed.title;
 
-  const Fallback = () => (
-    <View className="bg-grey4 h-10 w-10 items-center justify-center overflow-hidden rounded-lg">
-      <Text className="font-geist-medium text-grey text-base">
-        {feed.title.charAt(0).toUpperCase()}
-      </Text>
-    </View>
+  const activeRowBg =
+    isActive && !isSelectionMode
+      ? isDark
+        ? 'rgba(255,255,255,0.04)'
+        : 'rgba(0,0,0,0.03)'
+      : 'transparent';
+
+  const Fallback = ({ size = 40, className }: { size?: number; className?: string }) => (
+    <FeedFallbackIcon feedName={feed.title} size={size} borderRadius={8} className={className} />
   );
 
   const content = (
@@ -161,17 +167,28 @@ const FeedListItemComponent = ({
   );
 
   return (
-    <Button
-      variant="secondary"
-      size="large"
-      fullWidth
-      onPressIn={onPressIn}
+    <TouchableOpacity
+      activeOpacity={0.7}
       onPress={onPress}
-      className={`h-auto flex-row items-center gap-3 overflow-visible px-4 ${
-        isSelectionMode ? 'min-h-12 py-2' : 'min-h-14 py-3'
-      } ${variant === 'pinned' && !isSelectionMode ? 'rounded-xl' : 'rounded-none'}`}>
+      style={[
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+          paddingRight: 16,
+          paddingTop: 10,
+          paddingBottom: 10,
+          backgroundColor: isActive
+            ? activeRowBg
+            : variant === 'pinned' && !isSelectionMode
+              ? colors.grey6
+              : 'transparent',
+          borderRadius: variant === 'pinned' && !isSelectionMode ? 12 : 0,
+        },
+        style,
+      ]}>
       {content}
-    </Button>
+    </TouchableOpacity>
   );
 };
 

@@ -1,5 +1,6 @@
 import AddCircleBoldDuotoneIcon from '@components/icons/solar/add-circle-bold-duotone';
 import CheckCircleBoldDuotoneIcon from '@components/icons/solar/check-circle-bold-duotone';
+import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
 import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
@@ -73,9 +74,6 @@ export const OnboardingFeedItem = ({
     }
   };
 
-  const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    title
-  )}&size=128&background=random&length=2&bold=true&format=png`;
 
   return (
     <View className="flex-row items-center gap-4 bg-transparent py-3">
@@ -93,7 +91,7 @@ export const OnboardingFeedItem = ({
             onError={() => setImageError(true)}
           />
         ) : (
-          <Image source={{ uri: fallbackAvatarUrl }} className="h-full w-full" resizeMode="cover" />
+          <FeedFallbackIcon feedName={title} size={48} borderRadius={8} />
         )}
       </View>
 

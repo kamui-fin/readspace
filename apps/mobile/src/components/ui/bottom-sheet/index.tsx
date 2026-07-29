@@ -29,6 +29,8 @@ export interface BottomSheetProps extends Omit<BottomSheetModalProps, 'children'
   secondaryAction?: ReactNode; // Positioned at the right
   footerActions?: ReactNode; // Fixed footer buttons outside scroll view
   footerClassName?: string;
+  /** Override the horizontal padding on the scroll content (default 24). Pass 0 for full-bleed content. */
+  contentPaddingHorizontal?: number;
 }
 
 export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
@@ -45,6 +47,7 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
       secondaryAction,
       footerActions,
       footerClassName,
+      contentPaddingHorizontal = 24,
       snapPoints = ['90%'],
       enablePanDownToClose = true,
       backdropComponent,
@@ -180,7 +183,7 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
         <BottomSheetScrollView
           style={{ backgroundColor: colors.background }}
           contentContainerStyle={{
-            paddingHorizontal: 24,
+            paddingHorizontal: contentPaddingHorizontal,
             paddingTop: headerTitle || headerLeft || headerRight || secondaryAction ? 64 : 16,
             paddingBottom: footerActions ? 12 : 18 + insets.bottom,
           }}

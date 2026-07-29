@@ -1,8 +1,6 @@
-import LocalRssIcon from '@components/icons/local/rss';
-import { COLORS } from '@lib/constants/colors';
+import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
 import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import { useMemo } from 'react';
-import { View } from 'react-native';
 
 interface useFaviconProps {
   url?: string;
@@ -16,26 +14,6 @@ interface useFaviconResult {
   fallbackComponent: React.FC<{ size?: number; className?: string }>;
   backgroundColor: string;
 }
-
-/**
- * Generate a consistent color from a string
- */
-const stringToColor = (str: string): string => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  // Use HSL for better looking colors
-  // Hue: 0-360 based on hash
-  const h = Math.abs(hash % 360);
-  // Saturation: 60-80% for vibrancy but not too neon
-  const s = 70;
-  // Lightness: 85-95% for light mode backgrounds (pastel)
-  const l = 90;
-
-  return `hsl(${h}, ${s}%, ${l}%)`;
-};
 
 /**
  * Get Google Favicon URL
@@ -74,31 +52,16 @@ export function useFavicon({
     return undefined;
   }, [isClipped, url, feedImage]);
 
-  const backgroundColor = useMemo(() => {
-    if (feedTitle) {
-      return stringToColor(feedTitle);
-    }
-    return COLORS.light.grey6; // Default grey background
-  }, [feedTitle]);
+  // Static placeholder for backgroundColor — kept for API compatibility
+  const backgroundColor = 'transparent';
 
   const FallbackComponent = useMemo(() => {
-    return ({ size = 16, className }: { size?: number; className?: string }) => (
-      <View
-        className={`items-center justify-center rounded-sm ${className}`}
-        style={{
-          width: size,
-          height: size,
-          backgroundColor,
-        }}>
-        <LocalRssIcon
-          width={size * 0.6}
-          height={size * 0.6}
-          color={COLORS.light.grey}
-          fill={COLORS.light.grey}
-        />
-      </View>
+    const Fallback = ({ size = 16, className }: { size?: number; className?: string }) => (
+      <FeedFallbackIcon feedName={feedTitle} size={size} borderRadius={4} className={className} />
     );
-  }, [backgroundColor]);
+    Fallback.displayName = 'FeedFallback';
+    return Fallback;
+  }, [feedTitle]);
 
   return {
     iconUrl,
