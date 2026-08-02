@@ -137,12 +137,11 @@ services:
     entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
 
   templates-server:
-    image: caddy:2-alpine
+    build:
+      context: ./templates
+      dockerfile: Dockerfile
     container_name: supabase-templates-server
     restart: unless-stopped
-    command: ['caddy', 'file-server', '-r', '/templates', '--listen', ':80']
-    volumes:
-      - ./templates:/templates:ro
 
   auth:
     image: supabase/gotrue:v2.172.1
