@@ -21,9 +21,11 @@ import {
 } from '@expo-google-fonts/figtree';
 import {
   Geist_400Regular,
+  Geist_400Regular_Italic,
   Geist_500Medium,
   Geist_600SemiBold,
   Geist_700Bold,
+  Geist_700Bold_Italic,
 } from '@expo-google-fonts/geist';
 import {
   GeistMono_400Regular,
@@ -129,9 +131,11 @@ function RootNavigator() {
         // Load critical fonts first (Geist - primary UI font)
         await Font.loadAsync({
           Geist_400Regular,
+          Geist_400Regular_Italic,
           Geist_500Medium,
           Geist_600SemiBold,
           Geist_700Bold,
+          Geist_700Bold_Italic,
         });
 
         // Load remaining fonts in parallel after critical fonts are loaded

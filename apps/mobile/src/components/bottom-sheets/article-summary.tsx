@@ -77,8 +77,14 @@ export const ArticleSummaryBottomSheet = forwardRef<
           marginBottom: 6,
           color: colors.primary_foreground,
         },
-        strong: { fontFamily: 'Geist_600SemiBold' },
-        em: { fontFamily: 'Geist_400Regular', fontStyle: 'italic' },
+        strong: {
+          fontFamily: 'Geist_700Bold',
+          fontWeight: 'normal',
+        },
+        em: {
+          fontFamily: 'Geist_400Regular_Italic',
+          fontStyle: 'normal',
+        },
         list_item: { marginTop: 4, marginBottom: 4 },
         bullet_list: { marginTop: 4, marginBottom: 12 },
         ordered_list: { marginTop: 4, marginBottom: 12 },

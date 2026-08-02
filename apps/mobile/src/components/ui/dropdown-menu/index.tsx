@@ -191,9 +191,14 @@ const DropdownMenuSubTrigger = DropdownMenu.create(
 const DropdownMenuItemIcon = DropdownMenu.create(
   ({
     className,
+    androidIconName,
     ...props
-  }: { className?: string } & ComponentProps<typeof DropdownMenu.ItemIcon>) => (
-    <DropdownMenu.ItemIcon {...props} className={className} />
+  }: { className?: string; androidIconName?: string } & ComponentProps<typeof DropdownMenu.ItemIcon>) => (
+    <DropdownMenu.ItemIcon
+      {...props}
+      {...(Platform.OS === 'android' ? {} : { androidIconName })}
+      className={className}
+    />
   ),
   'ItemIcon'
 );

@@ -8,7 +8,8 @@ import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { ApiClient, type Article, formatRelativeDate } from '@readspace/shared';
+import { resolveSupabaseImageUrl } from '@lib/utils/network';
+import { ApiClient, type Article, formatRelativeDate, useFeed } from '@readspace/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSegments } from 'expo-router';
 import { useCallback, useRef } from 'react';
@@ -28,12 +29,8 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const insets = useSafeAreaInsets();
 
-  // Fetch feed details to get the title
-  const { data: feedData } = useQuery({
-    queryKey: ['feed', feedId],
-    queryFn: () => ApiClient.getFeed(feedId),
-    enabled: !!feedId,
-  });
+  // Fetch feed details to get the title and image_url
+  const { data: feedData } = useFeed(feedId || '');
 
   // Fetch all articles for the feed
   const {
@@ -88,6 +85,8 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
                 ? formatRelativeDate(new Date(article.published_at))
                 : 'Unknown date'
             }
+            faviconUrl={feedData?.image_url ? resolveSupabaseImageUrl(feedData.image_url) : undefined}
+            feedName={feedTitle}
             onPress={() => handleArticlePress(article.id)}
             showTopDivider={index > 0}
             showBottomDivider={false}
@@ -96,7 +95,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
         </View>
       );
     },
-    [handleArticlePress]
+    [handleArticlePress, feedData, feedTitle]
   );
 
   const headerSection = (

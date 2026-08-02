@@ -6,9 +6,11 @@
   /* Font Families - Single font per variant (no fallbacks for React Native) */
   --font-geist: "Geist_400Regular";
   --font-geist-regular: "Geist_400Regular";
+  --font-geist-italic: "Geist_400Regular_Italic";
   --font-geist-medium: "Geist_500Medium";
   --font-geist-semibold: "Geist_600SemiBold";
   --font-geist-bold: "Geist_700Bold";
+  --font-geist-bold-italic: "Geist_700Bold_Italic";
   --font-geist-mono: "GeistMono_400Regular";
   --font-geist-mono-medium: "GeistMono_500Medium";
   --font-geist-mono-semibold: "GeistMono_600SemiBold";

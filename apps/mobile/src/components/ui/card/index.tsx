@@ -303,8 +303,28 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
 
             {/* Bottom Meta Row */}
             <View className="mt-auto flex-row items-center justify-between pt-1">
+              <View className="flex-row items-center gap-1.5 flex-1 mr-2">
+                {(faviconUrl || feedName) && (
+                  <FeedIcon
+                    url={faviconUrl}
+                    fallbackComponent={FallbackComponent}
+                    size={14}
+                    borderRadius={3}
+                  />
+                )}
+                {feedName && (
+                  <Text
+                    size="xs"
+                    fontFamily="geist"
+                    className="text-grey dark:text-grey flex-1"
+                    numberOfLines={1}
+                    ellipsizeMode="tail">
+                    {feedName}
+                  </Text>
+                )}
+              </View>
               {timestamp && (
-                <View className="flex-row items-center gap-1.5">
+                <View className="flex-row items-center gap-1">
                   <EyeLinearIcon width={12} height={12} color="#90988b" />
                   <Text
                     size="xs"

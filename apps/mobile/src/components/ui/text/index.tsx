@@ -103,9 +103,11 @@ const textVariants = cva('text-primary-foreground', {
     fontFamily: {
       geist: 'font-geist-regular',
       'geist-regular': 'font-geist-regular',
+      'geist-italic': 'font-geist-italic',
       'geist-medium': 'font-geist-medium',
       'geist-semibold': 'font-geist-semibold',
       'geist-bold': 'font-geist-bold',
+      'geist-bold-italic': 'font-geist-bold-italic',
       figtree: 'font-figtree-regular',
       'figtree-medium': 'font-figtree-medium',
       'figtree-semibold': 'font-figtree-semibold',

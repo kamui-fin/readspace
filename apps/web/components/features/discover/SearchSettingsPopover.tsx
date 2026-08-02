@@ -48,27 +48,6 @@ export function SearchSettingsPopover({
             </PopoverTrigger>
             <PopoverContent className="w-80" align="end">
                 <div className="space-y-4">
-                    {/* Language Selection */}
-                    <div className="space-y-2">
-                        <Label className="text-sm">Language</Label>
-                        <Select
-                            value={language || "en"}
-                            onValueChange={onLanguageChange}
-                        >
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">
-                                    All Languages
-                                </SelectItem>
-                                <SelectItem value="en">English</SelectItem>
-                                <SelectItem value="zh">中文</SelectItem>
-                                <SelectItem value="ja">日本語</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
                     {/* AI Search Toggle */}
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
