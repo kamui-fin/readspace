@@ -1,6 +1,6 @@
 """E2E tests for feed discovery preview route."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
@@ -17,9 +17,10 @@ class TestPreviewFeed:
             patch("app.services.feeds.fetching.fetch_feed_content") as mock_fetch,
             patch("app.services.feeds.parsing.parse_feed_content") as mock_parse,
         ):
-            from app.typing.feeds import ParsedFeed
-            from app.typing.entries import ArticleCreate
             from datetime import datetime, timezone
+
+            from app.typing.entries import ArticleCreate
+            from app.typing.feeds import ParsedFeed
 
             mock_fetch.return_value = {"content": b"dummy content", "error": None}
             mock_parse.return_value = ParsedFeed(

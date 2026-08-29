@@ -1,6 +1,8 @@
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from bs4 import BeautifulSoup
+
 from app.services.articles import scrape
 
 

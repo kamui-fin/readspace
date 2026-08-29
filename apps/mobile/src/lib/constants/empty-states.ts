@@ -16,28 +16,28 @@ export interface EmptyStateConfig {
 export const EMPTY_STATE_CONFIGS: Record<number, EmptyStateConfig> = {
   0: {
     icon: InboxBrokenIcon,
-    title: 'Your Feed is Empty',
+    title: 'Nothing to read here',
     description: 'Explore trending topics or import your subscriptions to get started.',
   },
   1: {
     icon: InboxBrokenIcon,
-    title: 'All Caught Up',
+    title: 'All caught up',
     description: 'No new articles published today. Check back later for fresh updates!',
   },
   2: {
     icon: BookmarkBrokenIcon,
-    title: 'No Saved Articles',
+    title: 'No saved articles',
     description: 'Swipe right on articles in your feed to bookmark them for later reading.',
   },
   3: {
     icon: HistoryBrokenIcon,
-    title: 'No Reading History',
+    title: 'No reading history',
     description: 'Articles you read will show up here so you can easily find them again.',
   },
 };
 
 export const DEFAULT_EMPTY_STATE_CONFIG: EmptyStateConfig = {
   icon: InboxBrokenIcon,
-  title: 'No Articles Available',
+  title: 'No articles available',
   description: 'There are no articles to display in this section.',
 };

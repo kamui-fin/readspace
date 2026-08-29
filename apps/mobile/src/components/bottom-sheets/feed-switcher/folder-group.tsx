@@ -53,8 +53,7 @@ const MAX_AVATARS = 3;
 
 function FaviconStack({ feeds }: { feeds: Subscription[] }) {
   const visible = feeds.slice(0, MAX_AVATARS);
-  const totalWidth =
-    visible.length * FAVICON_SIZE - (visible.length - 1) * FAVICON_OVERLAP;
+  const totalWidth = visible.length * FAVICON_SIZE - (visible.length - 1) * FAVICON_OVERLAP;
 
   return (
     <View style={{ width: totalWidth, height: FAVICON_SIZE, position: 'relative' }}>
@@ -72,12 +71,7 @@ function FaviconStack({ feeds }: { feeds: Subscription[] }) {
               top: 0,
               zIndex: MAX_AVATARS - i,
             }}>
-            <FeedIcon
-              url={url}
-              fallbackComponent={Fallback}
-              size={FAVICON_SIZE}
-              borderRadius={4}
-            />
+            <FeedIcon url={url} fallbackComponent={Fallback} size={FAVICON_SIZE} borderRadius={4} />
           </View>
         );
       })}
@@ -109,6 +103,7 @@ export interface FolderGroupProps {
   onToggleFavorite: (sub: Subscription) => void;
   onRenameFeed: (sub: Subscription) => void;
   onUnfollow: (sub: Subscription) => void;
+  onMoveToFolder?: (sub: Subscription) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -133,6 +128,7 @@ const FolderGroupComponent = ({
   onToggleFavorite,
   onRenameFeed,
   onUnfollow,
+  onMoveToFolder,
   selectedFeedId,
   isSelectionMode,
   selectedFeedIds,
@@ -228,9 +224,7 @@ const FolderGroupComponent = ({
           {/* Right: favicon stack + unread count + menu + expand toggle */}
           <View className="flex-row items-center gap-1.5">
             {/* Collapsed favicon preview */}
-            {showFaviconStack && folderFeeds.length > 0 && (
-              <FaviconStack feeds={folderFeeds} />
-            )}
+            {showFaviconStack && folderFeeds.length > 0 && <FaviconStack feeds={folderFeeds} />}
 
             {/* Unread badge */}
             {!isSelectionMode && unreadCount > 0 && (
@@ -256,14 +250,14 @@ const FolderGroupComponent = ({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem key="rename" onSelect={() => onRenameFolder(folder)}>
-                    <DropdownMenuItemIcon ios={{ name: 'pencil' }} androidIconName="edit" />
+                    <DropdownMenuItemIcon ios={{ name: 'pencil' }} />
                     <DropdownMenuItemTitle>Rename</DropdownMenuItemTitle>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     key="delete"
                     destructive
                     onSelect={() => onDeleteFolder(folder)}>
-                    <DropdownMenuItemIcon ios={{ name: 'trash' }} androidIconName="delete" />
+                    <DropdownMenuItemIcon ios={{ name: 'trash' }} />
                     <DropdownMenuItemTitle>Delete</DropdownMenuItemTitle>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -320,6 +314,7 @@ const FolderGroupComponent = ({
                   onToggleFavorite={onToggleFavorite}
                   onRename={onRenameFeed}
                   onUnfollow={onUnfollow}
+                  onMoveToFolder={onMoveToFolder}
                   isSelectionMode={isSelectionMode}
                   isSelected={selectedFeedIds.has(sub.feed.id)}
                   variant="folder"

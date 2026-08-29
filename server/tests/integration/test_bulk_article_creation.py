@@ -21,9 +21,8 @@ from app.models.article import ArticleContent, FeedArticle
 from app.models.feed import Feed, FeedSubscription
 from app.models.folder import Folder
 from app.models.user import Profile
-from app.typing.entries import ArticleCreate
 from app.services.feeds.service import refresh_feed
-from app.services.feeds.fetching import FetchResult
+from app.typing.entries import ArticleCreate
 
 
 @pytest_asyncio.fixture

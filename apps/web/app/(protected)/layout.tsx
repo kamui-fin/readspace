@@ -25,7 +25,11 @@ export default function ProtectedLayout({
     if (isLoading) {
         return (
             <div className="flex h-screen w-screen items-center justify-center bg-background">
-                <Loader variant="classic" size="lg" />
+                <Loader
+                    variant="circular"
+                    size="lg"
+                    className="size-5 border-[3px] border-secondary border-t-transparent [animation:spin_0.45s_linear_infinite]"
+                />
             </div>
         )
     }

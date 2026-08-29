@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
-import pytest
-from app.services.feeds.scheduling import calculate_interval_from_pub_times
+
 from app.core.constants import (
     DEFAULT_REFRESH_INTERVAL_MINUTES,
     MAX_REFRESH_INTERVAL_MINUTES,
     MIN_REFRESH_INTERVAL_MINUTES,
 )
+from app.services.feeds.scheduling import calculate_interval_from_pub_times
 
 
 def test_calculate_interval_insufficient_articles():

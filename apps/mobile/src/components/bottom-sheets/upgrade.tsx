@@ -52,7 +52,11 @@ export function UpgradePaywallModal() {
     return '$6.66';
   }, [yearlyPackage]);
 
-  const displayDescription = description !== 'Unlock unlimited access to all features, including AI summaries and unlimited feed subscriptions.' ? description : null;
+  const displayDescription =
+    description !==
+    'Unlock unlimited access to all features, including AI summaries and unlimited feed subscriptions.'
+      ? description
+      : null;
 
   const handlePurchase = async () => {
     const pkgToBuy = selectedPlan === 'monthly' ? monthlyPackage : yearlyPackage;
@@ -109,10 +113,7 @@ export function UpgradePaywallModal() {
           showsVerticalScrollIndicator={false}>
           {/* Header section */}
           <View className="mb-6 mt-4">
-            <Text
-              size="3xl"
-              fontFamily="geist-bold"
-              style={{ color: colors.black }}>
+            <Text size="3xl" fontFamily="geist-bold" style={{ color: colors.black }}>
               {title}
             </Text>
           </View>
@@ -144,7 +145,8 @@ export function UpgradePaywallModal() {
                     fontFamily="geist"
                     className="mt-0.5"
                     style={{ color: colors.grey }}>
-                    Infinite folders and a custom @readspace.ai address to receive newsletters directly.
+                    Infinite folders and a custom @readspace.ai address to receive newsletters
+                    directly.
                   </Text>
                 </View>
               </View>
@@ -165,7 +167,8 @@ export function UpgradePaywallModal() {
                     fontFamily="geist"
                     className="mt-0.5"
                     style={{ color: colors.grey }}>
-                    Try out new tools in development, including daily briefings and conversational search.
+                    Try out new tools in development, including daily briefings and conversational
+                    search.
                   </Text>
                 </View>
               </View>
@@ -207,7 +210,8 @@ export function UpgradePaywallModal() {
                     fontFamily="geist"
                     className="mt-0.5"
                     style={{ color: colors.grey }}>
-                    Articles in your library never expire, and feeds update faster. (Free items expire in 30 days).
+                    Articles in your library never expire, and feeds update faster. (Free items
+                    expire in 30 days).
                   </Text>
                 </View>
               </View>

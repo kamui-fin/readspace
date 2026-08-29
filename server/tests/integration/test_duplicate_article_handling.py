@@ -1,7 +1,6 @@
 """Integration tests for duplicate article handling across feeds."""
 
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -13,7 +12,6 @@ from app.models.article import ArticleContent, FeedArticle
 from app.models.feed import Feed, FeedSubscription
 from app.models.folder import Folder
 from app.models.user import Profile
-from app.services.feeds.fetching import FetchResult
 
 
 @pytest.fixture

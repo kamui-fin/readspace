@@ -1,12 +1,13 @@
+from uuid import uuid4
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
-from uuid import uuid4
 
-from app.models.feed import Feed, FeedSubscription
 from app.models.article import ArticleContent, FeedArticle
+from app.models.feed import Feed, FeedSubscription
 from app.models.folder import Folder
 from app.models.user import Profile
 

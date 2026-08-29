@@ -11,7 +11,6 @@ from app.crud.feed.core import calculate_next_fetch, get_feeds_for_worker
 from app.models.article import ArticleContent, FeedArticle
 from app.models.feed import Feed
 from app.services.feeds.service import refresh_feed
-from app.workers.common import worker_db_factory
 
 
 class TestNextFetchAtCalculation:
@@ -439,9 +438,9 @@ class TestHTTPCachingHeaders:
     @pytest.mark.asyncio
     async def test_expires_header_parsed(self, db_session: AsyncSession, monkeypatch):
         """Test that Expires header is parsed and stored as TTL."""
+        import time
         from contextlib import asynccontextmanager
         from email.utils import formatdate
-        import time
 
         feed = Feed(
             id=uuid4(),

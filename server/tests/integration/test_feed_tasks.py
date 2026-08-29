@@ -28,6 +28,7 @@ class TestFeedRefreshTask:
     async def test_refresh_single_feed_task_success(self, test_feed: Feed, db_session: AsyncSession):
         """Test refreshing a single feed via async function."""
         from sqlalchemy import select
+
         from app.workers.feed.refresh import refresh_single_feed
 
         # Record initial state
@@ -49,6 +50,7 @@ class TestFeedRefreshTask:
     async def test_refresh_single_feed_task_with_string_uuid(self, test_feed: Feed, db_session: AsyncSession):
         """Test task handles UUID (no string conversion needed in async function)."""
         from sqlalchemy import select
+
         from app.workers.feed.refresh import refresh_single_feed
 
         feed_id = test_feed.id
@@ -123,7 +125,6 @@ class TestFeedSchedulingTask:
     @pytest.mark.asyncio
     async def test_schedule_feeds_respects_limit(self, db_session: AsyncSession):
         """Test that scheduling respects MAX_FEEDS_BATCH_SIZE limit."""
-        from app.core.constants import MAX_FEEDS_BATCH_SIZE
         from app.crud.feed.core import get_feeds_for_worker
 
         # Create a small number of feeds (we just need to test the LIMIT works)
@@ -298,10 +299,9 @@ class TestUnreadCompactionTask:
         await db_session.commit()
 
         # Store subscription ID for later retrieval
-        subscription_id = subscription.id
 
         # Run compaction task - service manages its own sessions
-        result = await compact_unread_articles()
+        await compact_unread_articles()
 
         # The worker commits in a separate transaction. Expire the test session to see changes.
         db_session.expire_all()
@@ -322,7 +322,6 @@ class TestUnreadCompactionTask:
         """Test that compaction doesn't move cutoff backwards for recent subscriptions."""
         from datetime import datetime, timedelta, timezone
 
-        from app.core.constants import UNREAD_RETENTION_DAYS
         from app.workers.feed.compaction import compact_unread_articles
 
         # Create a feed with subscription
@@ -350,10 +349,9 @@ class TestUnreadCompactionTask:
 
         # Store the original cutoff and subscription ID
         original_cutoff = subscription.last_read_cutoff
-        subscription_id = subscription.id
 
         # Run compaction
-        result = await compact_unread_articles()
+        await compact_unread_articles()
 
         # Expire the test session to see worker's committed changes
         db_session.expire_all()
@@ -395,10 +393,9 @@ class TestUnreadCompactionTask:
         await db_session.commit()
 
         # Store subscription ID
-        subscription_id = subscription.id
 
         # Run compaction
-        result = await compact_unread_articles()
+        await compact_unread_articles()
 
         # Expire the test session to see worker's committed changes
         db_session.expire_all()

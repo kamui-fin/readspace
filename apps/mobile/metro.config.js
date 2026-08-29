@@ -1,6 +1,6 @@
 const { withUniwindConfig } = require('uniwind/metro');
 const { withMonicon } = require('@monicon/metro');
-const path = require('path');
+const path = require('node:path');
 const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 
 const projectRoot = __dirname;

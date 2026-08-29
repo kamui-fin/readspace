@@ -6,6 +6,7 @@ import { Card } from '@components/ui/card';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { useNetworkConnectivity } from '@hooks/useNetworkConnectivity';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { resolveSupabaseImageUrl } from '@lib/utils/network';
@@ -28,6 +29,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const insets = useSafeAreaInsets();
+  const { isOnline } = useNetworkConnectivity();
 
   // Fetch feed details to get the title and image_url
   const { data: feedData } = useFeed(feedId || '');
@@ -85,7 +87,9 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
                 ? formatRelativeDate(new Date(article.published_at))
                 : 'Unknown date'
             }
-            faviconUrl={feedData?.image_url ? resolveSupabaseImageUrl(feedData.image_url) : undefined}
+            faviconUrl={
+              feedData?.image_url ? resolveSupabaseImageUrl(feedData.image_url) : undefined
+            }
             feedName={feedTitle}
             onPress={() => handleArticlePress(article.id)}
             showTopDivider={index > 0}
@@ -122,12 +126,16 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
   );
 
   if (isError) {
+    const errorMessage = !isOnline
+      ? 'No internet connection'
+      : "Couldn't load articles";
+
     return (
       <View className="bg-background flex-1">
         {headerSection}
         <View className="flex-1 items-center justify-center px-6">
           <Text size="base" fontFamily="geist" className="text-grey mb-4 text-center">
-            Failed to load articles
+            {errorMessage}
           </Text>
           <Button variant="primary" size="medium" fullWidth={false} onPress={handleBack}>
             Go Back

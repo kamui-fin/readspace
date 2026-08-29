@@ -3,15 +3,16 @@
 Tests that feed operations (create, update, delete, OPML import) properly sync to Meilisearch.
 """
 
+from uuid import uuid4
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from uuid import uuid4
 
+from app.core.config import get_settings
 from app.models.feed import Feed
 from app.models.folder import Folder
 from app.models.user import Profile
-from app.core.config import get_settings
 
 
 class TestMeilisearchSyncOnFeedCreate:

@@ -6,17 +6,15 @@ Create Date: 2025-11-26 20:17:20.429466+00:00
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
-import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
 revision: str = "64b313103aa5"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -29,8 +27,8 @@ def upgrade() -> None:
     op.execute(
         """
         CREATE TYPE public.feedcategory AS ENUM (
-            'TECHNOLOGY_PROGRAMMING', 'CULTURE_ARTS', 'LIFESTYLE_PERSONAL', 'MISCELLANEOUS', 
-            'DESIGN_CREATIVITY', 'SCIENCE_RESEARCH', 'NEWS_POLITICS', 'GAMING_ENTERTAINMENT', 
+            'TECHNOLOGY_PROGRAMMING', 'CULTURE_ARTS', 'LIFESTYLE_PERSONAL', 'MISCELLANEOUS',
+            'DESIGN_CREATIVITY', 'SCIENCE_RESEARCH', 'NEWS_POLITICS', 'GAMING_ENTERTAINMENT',
             'BUSINESS_FINANCE', 'ARTIFICIAL_INTELLIGENCE', 'SECURITY_PRIVACY', 'EDUCATION_LEARNING'
         );
     """
@@ -61,7 +59,7 @@ def upgrade() -> None:
             name text NOT NULL,
             user_id uuid NOT NULL,
             created_at timestamp with time zone NOT NULL DEFAULT now(),
-            
+
             CONSTRAINT folders_pkey PRIMARY KEY (id),
             CONSTRAINT uq_folder_user_name UNIQUE (user_id, name),
             CONSTRAINT folders_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -81,25 +79,25 @@ def upgrade() -> None:
             link text,
             language text NOT NULL,
             image_url text,
-            
+
             last_fetched_at timestamp with time zone NOT NULL DEFAULT now(),
             next_fetch_at timestamp with time zone NOT NULL DEFAULT now(),
             adaptive_fetch_interval_minutes integer,
             fetch_error_count integer NOT NULL DEFAULT 0,
             last_error_message text,
-            
+
             etag_header text,
             last_modified_header text,
             content_hash varchar(64),
-            
+
             tags text[],
             top_level_category public.feedcategory NOT NULL DEFAULT 'MISCELLANEOUS'::public.feedcategory,
             popularity_score double precision NOT NULL DEFAULT 0,
             subscriber_count integer NOT NULL DEFAULT 0,
-            
+
             created_at timestamp with time zone NOT NULL DEFAULT now(),
             last_updated_at timestamp with time zone,
-            
+
             CONSTRAINT feeds_pkey PRIMARY KEY (id),
             CONSTRAINT feeds_url_key UNIQUE (url),
             CONSTRAINT chk_url_not_empty CHECK (length(trim(url)) > 0)
@@ -121,7 +119,7 @@ def upgrade() -> None:
             image_url text,
             tags text[],
             created_at timestamp with time zone NOT NULL DEFAULT now(),
-            
+
             CONSTRAINT article_contents_pkey PRIMARY KEY (id),
             CONSTRAINT uq_article_contents_hash UNIQUE (content_hash)
         ) TABLESPACE pg_default;
@@ -138,7 +136,7 @@ def upgrade() -> None:
             guid_hash char(64) NOT NULL,
             published_at timestamp with time zone NOT NULL,
             created_at timestamp with time zone NOT NULL DEFAULT now(),
-            
+
             CONSTRAINT feed_articles_pkey PRIMARY KEY (id),
             CONSTRAINT uq_feed_articles_feed_guid_hash UNIQUE (feed_id, guid_hash),
             CONSTRAINT feed_articles_feed_id_fkey FOREIGN KEY (feed_id) REFERENCES public.feeds(id) ON DELETE CASCADE,
@@ -159,7 +157,7 @@ def upgrade() -> None:
             custom_title text,
             last_read_cutoff timestamp with time zone,
             created_at timestamp with time zone NOT NULL DEFAULT now(),
-            
+
             CONSTRAINT feed_subscriptions_pkey PRIMARY KEY (id),
             CONSTRAINT feed_subscriptions_feed_id_fkey FOREIGN KEY (feed_id) REFERENCES public.feeds(id) ON DELETE CASCADE,
             CONSTRAINT feed_subscriptions_folder_id_fkey FOREIGN KEY (folder_id) REFERENCES public.folders(id) ON DELETE CASCADE,
@@ -176,16 +174,16 @@ def upgrade() -> None:
             user_id uuid NOT NULL,
             content_id uuid,
             feed_article_id uuid,
-            
+
             is_read boolean NOT NULL DEFAULT false,
             is_saved boolean NOT NULL DEFAULT false,
             priority public.articlepriority NOT NULL DEFAULT 'LOW'::public.articlepriority,
             user_note text,
             read_at timestamp with time zone,
-            
+
             created_at timestamp with time zone NOT NULL DEFAULT now(),
             updated_at timestamp with time zone NOT NULL DEFAULT now(),
-            
+
             CONSTRAINT user_entries_pkey PRIMARY KEY (id),
             CONSTRAINT uq_user_entry_content UNIQUE (user_id, content_id),
             CONSTRAINT user_entries_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -211,15 +209,15 @@ def upgrade() -> None:
     )
     op.execute(
         """
-        CREATE INDEX IF NOT EXISTS idx_user_entries_read_later 
-        ON public.user_entries (user_id, created_at DESC) 
+        CREATE INDEX IF NOT EXISTS idx_user_entries_read_later
+        ON public.user_entries (user_id, created_at DESC)
         WHERE is_saved = true;
     """
     )
     op.execute(
         """
-        CREATE INDEX IF NOT EXISTS idx_user_entries_read_history 
-        ON public.user_entries (user_id, read_at DESC) 
+        CREATE INDEX IF NOT EXISTS idx_user_entries_read_history
+        ON public.user_entries (user_id, read_at DESC)
         WHERE is_read = true;
     """
     )
@@ -231,11 +229,11 @@ def upgrade() -> None:
         RETURNS trigger AS $$
         BEGIN
             IF TG_OP = 'INSERT' THEN
-                UPDATE public.feeds SET subscriber_count = subscriber_count + 1 
+                UPDATE public.feeds SET subscriber_count = subscriber_count + 1
                 WHERE id = NEW.feed_id;
                 RETURN NEW;
             ELSIF TG_OP = 'DELETE' THEN
-                UPDATE public.feeds SET subscriber_count = subscriber_count - 1 
+                UPDATE public.feeds SET subscriber_count = subscriber_count - 1
                 WHERE id = OLD.feed_id;
                 RETURN OLD;
             END IF;

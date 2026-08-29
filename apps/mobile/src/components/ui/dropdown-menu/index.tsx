@@ -188,12 +188,24 @@ const DropdownMenuSubTrigger = DropdownMenu.create(
   'SubTrigger'
 );
 
+// NOTE: zeego's Android menu implementation never actually renders this component.
+// It statically reads `androidIconName` off the JSX props of whatever element matches
+// this component's displayName inside <DropdownMenuItem> — see
+// zeego/src/menu/create-android-menu/index.android.tsx (`getItemFromChild`). Any logic
+// written in this render body (color, hiding, etc.) is therefore dead code on Android;
+// the only way to control whether an icon shows there is to omit the `androidIconName`
+// prop at the call site. We intentionally never pass `androidIconName` at any call site
+// in this app because @react-native-menu/menu renders Android menu icons with a fixed
+// black tint that ignores our theme (its `themeVariant` prop is iOS-only), so they'd be
+// invisible in dark mode. Icons are iOS-only (`ios` prop) until that's fixed upstream.
 const DropdownMenuItemIcon = DropdownMenu.create(
   ({
     className,
     androidIconName,
     ...props
-  }: { className?: string; androidIconName?: string } & ComponentProps<typeof DropdownMenu.ItemIcon>) => (
+  }: { className?: string; androidIconName?: string } & ComponentProps<
+    typeof DropdownMenu.ItemIcon
+  >) => (
     <DropdownMenu.ItemIcon
       {...props}
       {...(Platform.OS === 'android' ? {} : { androidIconName })}

@@ -14,19 +14,33 @@ export interface CreateFolderModalRef {
   dismiss: () => void;
 }
 
+interface Folder {
+  id: string;
+  name: string;
+}
+
 export interface CreateFolderModalProps {
-  onSuccess?: (folder: any) => void;
+  onSuccess?: (folder: Folder) => void;
 }
 
 export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderModalProps>(
   ({ onSuccess }, ref) => {
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const createFolder = useCreateFolder();
-    const [folderName, setFolderName] = useState('');
+    // Uncontrolled input — see rename-feed.tsx for why (BottomSheetTextInput cursor
+    // jump on Android when fed a `value` prop from state on every keystroke).
+    const folderNameRef = useRef('');
+    const [hasText, setHasText] = useState(false);
+    const [inputKey, setInputKey] = useState(0);
+
+    const handleChangeText = useCallback((text: string) => {
+      folderNameRef.current = text;
+      setHasText(text.trim().length > 0);
+    }, []);
 
     const handleCreateFolder = useCallback(
       (name?: string) => {
-        const trimmed = name?.trim() ?? folderName.trim();
+        const trimmed = name?.trim() ?? folderNameRef.current.trim();
         if (trimmed) {
           createFolder.mutate(
             { name: trimmed },
@@ -42,19 +56,20 @@ export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderMo
           );
         }
       },
-      [createFolder, onSuccess, folderName]
+      [createFolder, onSuccess]
     );
 
     const handleConfirm = useCallback(() => {
-      if (!folderName.trim()) return;
-      handleCreateFolder(folderName);
+      if (!folderNameRef.current.trim()) return;
+      handleCreateFolder();
       bottomSheetRef.current?.dismiss();
-      setFolderName('');
-    }, [folderName, handleCreateFolder]);
+    }, [handleCreateFolder]);
 
     useImperativeHandle(ref, () => ({
       present: () => {
-        setFolderName('');
+        folderNameRef.current = '';
+        setHasText(false);
+        setInputKey((prev) => prev + 1);
         bottomSheetRef.current?.present();
       },
       dismiss: () => {
@@ -81,8 +96,9 @@ export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderMo
 
         {/* Input */}
         <BottomSheetInput
-          value={folderName}
-          onChangeText={setFolderName}
+          key={inputKey}
+          defaultValue={folderNameRef.current}
+          onChangeText={handleChangeText}
           placeholder="e.g. Technology"
           autoFocus
           autoCapitalize="words"
@@ -98,7 +114,7 @@ export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderMo
             size="large"
             fullWidth
             onPress={handleConfirm}
-            disabled={!folderName.trim()}
+            disabled={!hasText}
             style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
             Create
           </Button>

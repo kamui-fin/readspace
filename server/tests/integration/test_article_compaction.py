@@ -12,7 +12,6 @@ from app.models.article import ArticleContent, FeedArticle
 from app.models.feed import Feed, FeedSubscription
 from app.models.folder import Folder
 from app.models.user import Profile
-from app.workers.feed.compaction import compact_old_articles
 
 
 @pytest.mark.asyncio
@@ -191,7 +190,7 @@ async def test_compaction_preserves_user_saved_articles_e2e(db_session: AsyncSes
     # Test the CRUD function directly
     from app.crud.article.actions import delete_old_article_contents
 
-    deleted_count = await delete_old_article_contents(db_session, retention_days=7, min_articles_per_feed=50)
+    await delete_old_article_contents(db_session, retention_days=7, min_articles_per_feed=50)
     await db_session.commit()
 
     # Verify all saved articles still exist
@@ -337,7 +336,7 @@ async def test_compaction_handles_multiple_users_e2e(db_session: AsyncSession, t
     # Test the CRUD function directly
     from app.crud.article.actions import delete_old_article_contents
 
-    deleted_count = await delete_old_article_contents(db_session, retention_days=7, min_articles_per_feed=50)
+    await delete_old_article_contents(db_session, retention_days=7, min_articles_per_feed=50)
     await db_session.commit()
 
     # Verify both users' saved articles are preserved
@@ -510,10 +509,11 @@ async def test_compaction_expires_basic_read_later_e2e(
 ) -> None:
     """Test that compaction expires old read-later entries (>30 days) for BASIC users only."""
     from uuid import uuid4
-    from app.models.user import Profile
+
+    from app.crud.article.actions import expire_basic_read_later_entries
     from app.models.article import ArticleContent, UserEntry
     from app.models.enums import UserRole
-    from app.crud.article.actions import expire_basic_read_later_entries
+    from app.models.user import Profile
 
     # 1. Create a BASIC user and a PRO user
     basic_user = Profile(

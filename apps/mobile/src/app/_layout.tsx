@@ -33,7 +33,7 @@ import {
   GeistMono_600SemiBold,
   GeistMono_700Bold,
 } from '@expo-google-fonts/geist-mono';
-import { BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { ApiError } from '@readspace/shared';
@@ -45,11 +45,12 @@ import * as Font from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import '@lib/api-client';
 import { UpgradePaywallModal } from '@components/bottom-sheets/upgrade';
+import { OfflineBanner } from '@components/ui/offline-banner';
 import { configureApiClient } from '@lib/api-client';
 import { useUpgradeDialog } from '@stores/upgrade-dialog';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
@@ -92,6 +93,8 @@ const queryClient = new QueryClient({
     queries: {
       retry: 2,
       staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes — keep data in cache longer for offline access
+      networkMode: 'always', // Serve cached data when offline instead of failing immediately
     },
   },
 });
@@ -249,6 +252,7 @@ function RootNavigator() {
         <BottomSheetModalProvider>
           <ToastProvider>
             <StatusBar style={isDark ? 'light' : 'dark'} />
+            <OfflineBanner />
             <Stack
               key={isDark ? 'dark' : 'light'}
               screenOptions={{ headerShown: false, contentStyle: { backgroundColor } }}>

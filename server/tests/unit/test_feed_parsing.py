@@ -1,5 +1,5 @@
-import pytest
-from datetime import datetime, timezone
+from datetime import timezone
+
 from app.services.feeds.parsing import parse_feed_content
 
 RSS_FEED_WITH_TAGS_TTL = """
@@ -103,7 +103,7 @@ def test_parse_feed_broken_ttl():
     </channel>
     </rss>
     """
-    parsed = parse_feed_content(rss_broken_ttl, "https://example.com/feed")
+    parse_feed_content(rss_broken_ttl, "https://example.com/feed")
     # Just ensure it doesn't crash
 
 

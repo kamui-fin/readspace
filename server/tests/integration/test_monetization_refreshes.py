@@ -1,15 +1,15 @@
-import pytest
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
 from uuid import uuid4
+
+import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.article import ArticleContent, FeedArticle, UserEntry
+from app.models.article import ArticleContent, FeedArticle
+from app.models.enums import UserRole
 from app.models.feed import Feed, FeedSubscription
 from app.models.folder import Folder
 from app.models.user import Profile
-from app.models.enums import UserRole
 from app.utils.hashing import get_content_hash
 from app.utils.time import get_sync_cutoff
 

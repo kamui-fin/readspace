@@ -317,9 +317,9 @@ class TestReadLaterEndpoint:
     async def test_read_later_pagination(self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile):
         """Test pagination in read-later endpoint."""
         # Create multiple clipped articles
-        from app.utils.hashing import get_content_hash
-
         from datetime import timedelta
+
+        from app.utils.hashing import get_content_hash
 
         base_time = datetime.now(UTC)
         for i in range(5):

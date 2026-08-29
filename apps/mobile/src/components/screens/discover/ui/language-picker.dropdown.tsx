@@ -14,7 +14,7 @@ import { forwardRef, useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export type Language = 'english' | 'chinese' | 'japanese';
+export type Language = 'all' | 'english' | 'chinese' | 'japanese';
 
 export interface LanguageOption {
   value: string;
@@ -30,6 +30,7 @@ export interface LanguagePickerProps {
 }
 
 const DEFAULT_LANGUAGES: LanguageOption[] = [
+  { value: 'all', label: 'All languages' },
   { value: 'english', label: 'English' },
   { value: 'chinese', label: '中文' },
   { value: 'japanese', label: '日本語' },

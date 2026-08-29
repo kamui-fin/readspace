@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 import {
     useClearRefinements,
     useCurrentRefinements,
@@ -8,14 +8,7 @@ import {
 import { usePersistentState } from "@/hooks/use-persistent-state"
 import { useFeedPreview } from "@/components/features/discover/hooks/use-feed-preview"
 
-export interface UseDiscoverControllerProps {
-    initialLanguage?: string
-    onAiSettingsChange?: (enabled: boolean) => void
-}
-
-export function useDiscoverController({
-    onAiSettingsChange,
-}: UseDiscoverControllerProps) {
+export function useDiscoverController() {
     const { query, refine: refineQuery } = useSearchBox()
 
     // Feed preview hook for URL detection
@@ -33,78 +26,37 @@ export function useDiscoverController({
         limit: 100,
     })
 
-    // Use InstantSearch's menu widget for language filtering
-    const { items: languageItems, refine: refineLanguage } = useMenu({
-        attribute: "language",
-        limit: 10,
-    })
-
-    // Use a single clear refinements hook
+    // Use a single clear refinements hook (clears category; language is applied
+    // via <Configure>, not as a menu refinement)
     const { refine: clearRefinementsBase } = useClearRefinements()
 
     // Use current refinements to reliably detect active filters
     const { items: currentRefinements } = useCurrentRefinements()
 
-    // Get active language from current refinements
-    const activeLanguageRefinement = currentRefinements.find(
-        (item) => item.attribute === "language"
-    )
-    const activeLanguage =
-        (activeLanguageRefinement?.refinements[0]?.value as string) || ""
-
-    // Wrapper functions to clear specific refinements
-    const clearLanguageRefinement = useCallback(() => {
-        if (activeLanguage) {
-            refineLanguage(activeLanguage) // Toggle off the current language
-        }
-    }, [activeLanguage, refineLanguage])
-
     const clearAllRefinements = useCallback(() => {
         clearRefinementsBase()
     }, [clearRefinementsBase])
 
-    // Persistent language preference - defaults to "en"
+    // Persistent language preference — defaults to "en". Applied downstream as a
+    // raw Meilisearch `filters` string on <Configure> (see DiscoverContent),
+    // NOT as an InstantSearch menu refinement: the menu approach raced against
+    // its own "restore persisted default" effect and silently dropped the
+    // filter, so switching away from English appeared to do nothing.
     const [persistedLanguage, setPersistedLanguage] = usePersistentState(
         "discover-language",
         "en"
     )
-
-    // AI search state
-    const [aiSearchEnabled, setAiSearchEnabled] = usePersistentState(
-        "discover-ai-search",
-        "false"
-    )
-    const isAiEnabled = aiSearchEnabled === "true"
+    const displayLanguage = persistedLanguage || "en"
+    const languageFilter =
+        displayLanguage && displayLanguage !== "all"
+            ? `language = ${displayLanguage}`
+            : undefined
 
     // Get active category from current refinements
     const activeCategoryRefinement = currentRefinements.find(
         (item) => item.attribute === "top_level_category"
     )
     const activeCategory = activeCategoryRefinement?.refinements[0]?.value || ""
-
-    // Apply persisted language filter when no language is active
-    // This runs on mount and whenever the filter gets cleared
-    useEffect(() => {
-        if (
-            !activeLanguage &&
-            languageItems.length > 0 &&
-            persistedLanguage !== "all"
-        ) {
-            const targetLang = persistedLanguage || "en"
-            // Apply the filter
-            refineLanguage(targetLang)
-        }
-    }, [
-        activeLanguage,
-        languageItems.length,
-        persistedLanguage,
-        refineLanguage,
-    ])
-
-    // Determine display language (show "all" if no language filter is active)
-    const displayLanguage =
-        activeLanguage ||
-        (persistedLanguage === "all" ? "all" : persistedLanguage)
 
     const [isPopularSelected, setIsPopularSelected] = useState<boolean>(false)
 
@@ -127,37 +79,17 @@ export function useDiscoverController({
     const handleLanguageChange = useCallback(
         (newLanguage: string) => {
             setPersistedLanguage(newLanguage)
-
-            if (newLanguage === "all") {
-                // Clear language filter completely
-                clearLanguageRefinement()
-            } else {
-                // First clear any language filter, then apply the new one
-                clearLanguageRefinement()
-                // Use setTimeout to ensure the clear completes first
-                setTimeout(() => {
-                    refineLanguage(newLanguage)
-                }, 0)
-            }
         },
-        [setPersistedLanguage, clearLanguageRefinement, refineLanguage]
+        [setPersistedLanguage]
     )
 
     const clearSearch = useCallback(() => {
         setIsPopularSelected(false)
         // Clear the search query
         refineQuery("")
-        // Clear all refinements (category and language)
+        // Clear category refinements (language preference is intentionally kept)
         clearAllRefinements()
     }, [refineQuery, clearAllRefinements, setIsPopularSelected])
-
-    const handleAiToggle = useCallback(
-        (enabled: boolean) => {
-            setAiSearchEnabled(enabled ? "true" : "false")
-            onAiSettingsChange?.(enabled)
-        },
-        [setAiSearchEnabled, onAiSettingsChange]
-    )
 
     // Determine if we should show search results or categories
     // Show search results if there's a query OR active category OR popular is selected, but NOT if it's a URL query (show preview instead)
@@ -185,12 +117,11 @@ export function useDiscoverController({
 
         // Settings State
         displayLanguage,
-        isAiEnabled,
+        languageFilter,
 
         // Actions
         handleCategoryClick,
         handleLanguageChange,
-        handleAiToggle,
         clearSearch,
     }
 }

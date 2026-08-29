@@ -4,14 +4,12 @@ import { useSearchBox } from "react-instantsearch"
 
 import { Input } from "@/components/ui/input"
 
-import { SearchSettingsPopover } from "./SearchSettingsPopover"
+import { LanguageMenu } from "./LanguageMenu"
 
 interface CustomSearchBoxProps {
     placeholder: string
     language: string
     onLanguageChange: (lang: string) => void
-    aiEnabled: boolean
-    onAiToggle: (enabled: boolean) => void
 }
 
 /**
@@ -21,8 +19,6 @@ export function CustomSearchBox({
     placeholder,
     language,
     onLanguageChange,
-    aiEnabled,
-    onAiToggle,
 }: CustomSearchBoxProps) {
     const { query, refine } = useSearchBox()
     const [inputValue, setInputValue] = useState(query)
@@ -62,11 +58,9 @@ export function CustomSearchBox({
                 }}
             />
             <div className="absolute right-1 top-1/2 transform -translate-y-1/2">
-                <SearchSettingsPopover
+                <LanguageMenu
                     language={language}
                     onLanguageChange={onLanguageChange}
-                    aiEnabled={aiEnabled}
-                    onAiToggle={onAiToggle}
                 />
             </div>
         </form>

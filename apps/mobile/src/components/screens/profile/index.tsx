@@ -19,7 +19,6 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItemIcon,
-  DropdownMenuItemIndicator,
   DropdownMenuItemTitle,
   DropdownMenuRoot,
   DropdownMenuTrigger,
@@ -262,12 +261,10 @@ export function ProfileScreen() {
                     ios={{
                       name: 'paintbrush.pointed',
                     }}
-                    androidIconName="palette"
                   />
                   <DropdownMenuItemTitle size="lg" fontFamily="geist">
                     System
                   </DropdownMenuItemTitle>
-                  <DropdownMenuItemIndicator />
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                   key="light"
@@ -278,12 +275,10 @@ export function ProfileScreen() {
                     ios={{
                       name: 'sun.max',
                     }}
-                    androidIconName="light_mode"
                   />
                   <DropdownMenuItemTitle size="lg" fontFamily="geist">
                     Light
                   </DropdownMenuItemTitle>
-                  <DropdownMenuItemIndicator />
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                   key="dark"
@@ -294,12 +289,10 @@ export function ProfileScreen() {
                     ios={{
                       name: 'moon',
                     }}
-                    androidIconName="dark_mode"
                   />
                   <DropdownMenuItemTitle size="lg" fontFamily="geist">
                     Dark
                   </DropdownMenuItemTitle>
-                  <DropdownMenuItemIndicator />
                 </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
             </DropdownMenuRoot>

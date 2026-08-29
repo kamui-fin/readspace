@@ -1,4 +1,3 @@
-import { Sparkles } from "lucide-react"
 import NextImage from "next/image"
 import { Configure } from "react-instantsearch"
 
@@ -11,22 +10,14 @@ import { useDiscoverController } from "@/components/features/discover/hooks/use-
 import { CATEGORY_CONFIG } from "@/lib/categories"
 import { FeedCategory } from "@readspace/shared"
 
-interface DiscoverContentProps {
-    /** Initial language preference (not currently used) */
-    initialLanguage?: string
-    /** Callback when AI search is toggled */
-    onAiSettingsChange?: (enabled: boolean) => void
-}
-
 /**
  * Main discover content component with InstantSearch integration.
  *
- * Manages search state, category filtering, language filtering, and AI search toggle.
+ * Manages search state, category filtering, and language filtering.
  * Uses InstantSearch hooks for all search functionality.
  */
-export function DiscoverContent({ onAiSettingsChange }: DiscoverContentProps) {
+export function DiscoverContent() {
     const {
-        query,
         activeCategory,
         hasActiveSearch,
         isUrlQuery,
@@ -35,19 +26,20 @@ export function DiscoverContent({ onAiSettingsChange }: DiscoverContentProps) {
         previewError,
         isPreviewError,
         displayLanguage,
-        isAiEnabled,
+        languageFilter,
         handleCategoryClick,
         handleLanguageChange,
-        handleAiToggle,
         clearSearch,
-    } = useDiscoverController({ onAiSettingsChange })
+    } = useDiscoverController()
 
     return (
         <>
-            {/* Configure search parameters */}
+            {/* Configure search parameters. `filters` applies the language
+                preference as a raw Meilisearch filter (defaults to English). */}
             <Configure
                 hitsPerPage={20}
                 attributesToHighlight={["title", "description"]}
+                filters={languageFilter}
             />
 
             <DiscoverLayout centerVertically={!hasActiveSearch}>
@@ -91,15 +83,7 @@ export function DiscoverContent({ onAiSettingsChange }: DiscoverContentProps) {
                             placeholder="Search for a website or paste RSS link"
                             language={displayLanguage}
                             onLanguageChange={handleLanguageChange}
-                            aiEnabled={isAiEnabled}
-                            onAiToggle={handleAiToggle}
                         />
-                        {isAiEnabled && query && (
-                            <div className="flex items-center gap-1.5 mt-2 text-xs text-[#6A994E] dark:text-primary">
-                                <Sparkles className="w-3.5 h-3.5" />
-                                <span>AI-powered search active</span>
-                            </div>
-                        )}
                     </div>
 
                     {/* Content Section */}

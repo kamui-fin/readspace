@@ -22,11 +22,28 @@ export const RenameFeedModal = forwardRef<RenameFeedModalRef, RenameFeedModalPro
   ({ onSuccess }, ref) => {
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const updateFeed = useUpdateFeed();
-    const [feedName, setFeedName] = useState('');
+    // The current value lives in a ref, not state — BottomSheetInput renders as an
+    // *uncontrolled* input (defaultValue, not value). Feeding onChangeText back into a
+    // `value` prop causes the cursor to jump/reset on Android: BottomSheetTextInput
+    // wraps react-native-gesture-handler's TextInput, and re-rendering it with a new
+    // `value` prop on every keystroke races the native widget's own cursor tracking
+    // (move the cursor manually, then backspace, and it jumps again). Reading the
+    // latest text from a ref on submit avoids that entirely.
+    const feedNameRef = useRef('');
+    const [hasText, setHasText] = useState(false);
     const [targetFeedId, setTargetFeedId] = useState<string | null>(null);
+    // Bumped on every present() so <BottomSheetInput key={inputKey} .../> remounts and
+    // picks up the new defaultValue — an uncontrolled input otherwise ignores prop
+    // changes to defaultValue after the first mount.
+    const [inputKey, setInputKey] = useState(0);
+
+    const handleChangeText = useCallback((text: string) => {
+      feedNameRef.current = text;
+      setHasText(text.trim().length > 0);
+    }, []);
 
     const handleUpdateFeed = useCallback(() => {
-      const trimmed = feedName.trim();
+      const trimmed = feedNameRef.current.trim();
       if (trimmed && targetFeedId) {
         updateFeed.mutate(
           {
@@ -44,18 +61,20 @@ export const RenameFeedModal = forwardRef<RenameFeedModalRef, RenameFeedModalPro
           }
         );
       }
-    }, [updateFeed, onSuccess, feedName, targetFeedId]);
+    }, [updateFeed, onSuccess, targetFeedId]);
 
     const handleConfirm = useCallback(() => {
-      if (!feedName.trim()) return;
+      if (!feedNameRef.current.trim()) return;
       handleUpdateFeed();
       bottomSheetRef.current?.dismiss();
-    }, [feedName, handleUpdateFeed]);
+    }, [handleUpdateFeed]);
 
     useImperativeHandle(ref, () => ({
       present: (feedId: string, currentName: string) => {
         setTargetFeedId(feedId);
-        setFeedName(currentName);
+        feedNameRef.current = currentName;
+        setHasText(currentName.trim().length > 0);
+        setInputKey((prev) => prev + 1);
         bottomSheetRef.current?.present();
       },
       dismiss: () => {
@@ -82,8 +101,9 @@ export const RenameFeedModal = forwardRef<RenameFeedModalRef, RenameFeedModalPro
 
         {/* Input */}
         <BottomSheetInput
-          value={feedName}
-          onChangeText={setFeedName}
+          key={inputKey}
+          defaultValue={feedNameRef.current}
+          onChangeText={handleChangeText}
           placeholder="Feed title"
           autoFocus
           autoCapitalize="words"
@@ -99,7 +119,7 @@ export const RenameFeedModal = forwardRef<RenameFeedModalRef, RenameFeedModalPro
             size="large"
             fullWidth
             onPress={handleConfirm}
-            disabled={!feedName.trim() || updateFeed.isPending}
+            disabled={!hasText || updateFeed.isPending}
             style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
             {updateFeed.isPending ? 'Updating...' : 'Rename'}
           </Button>

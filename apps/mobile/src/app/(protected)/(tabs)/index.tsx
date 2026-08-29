@@ -17,6 +17,7 @@ import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '@/lib/constants/colors';
 
+
 export default function FollowingRoute() {
   const scrollY = useSharedValue(0);
   const isDark = useIsDarkMode();
@@ -105,7 +106,7 @@ export default function FollowingRoute() {
     // 4. If viewing a specific folder
     if (viewType === 'folder' && selectedId && feedsData?.subscriptions) {
       // Sum unread counts for all feeds in this folder
-      const folderFeeds = (feedsData.subscriptions as any[]).filter(
+      const folderFeeds = (feedsData.subscriptions as unknown as { id: string; folder_id: string }[]).filter(
         (sub) => sub.folder_id === selectedId
       );
       return folderFeeds.reduce(
@@ -143,21 +144,18 @@ export default function FollowingRoute() {
   };
 
   // Reset scrollY when tab changes - do this synchronously before render
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scrollY is a stable SharedValue reference
   useEffect(() => {
     // Reset immediately and synchronously to prevent any race conditions
     scrollY.value = 0;
   }, [activeTab]);
 
   // Reset scrollY when filter changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scrollY is a stable SharedValue reference
   useEffect(() => {
     // Reset scroll position when filter changes since list content changes
     scrollY.value = 0;
   }, [filter]);
 
   // Reset scrollY when feed/folder selection changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scrollY is a stable SharedValue reference
   useEffect(() => {
     // Reset scroll position when switching between feeds/folders or back to default view
     scrollY.value = 0;

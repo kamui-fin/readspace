@@ -2,12 +2,9 @@ import { OPMLImportBottomSheet } from '@components/bottom-sheets/opml-import';
 import DocumentTextBoldIcon from '@components/icons/solar/document-text-bold';
 import { Header } from '@components/navigation/header';
 import { OPMLStatusCard } from '@components/screens/profile/ui/opml-status-card';
-import { SettingsGroup } from '@components/screens/profile/ui/settings-group';
-import { SettingsItem } from '@components/screens/profile/ui/settings-item';
 import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import { Button } from '@components/ui/button';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
@@ -21,8 +18,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, View, Pressable } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -45,7 +42,7 @@ export default function ImportOPMLScreen() {
   const [isCancelling, setIsCancelling] = useState(false);
 
   // Get active task if one exists in the background
-  const { data: activeTask, isLoading: isCheckingTask } = useActiveImportTask();
+  const { data: activeTask } = useActiveImportTask();
 
   // Use either the task we just started, or the one we found in the background
   const currentTaskId = localTaskId || activeTask?.task_id || null;

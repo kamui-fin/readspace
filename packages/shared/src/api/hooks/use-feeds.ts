@@ -184,53 +184,19 @@ export function useUpdateFeed(
         custom_title?: string;
       };
     }) => ApiClient.updateFeed(feedId, data),
-    onSuccess: (updatedSubscription, { feedId, data }) => {
-      // Update feeds list cache instantly
-      queryClient.setQueriesData<FeedsResponse>(
-        { queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] },
-        (old) => {
-          if (!old) return old;
-
-          const updatedSubscriptions = (old.subscriptions || []).map((sub) => {
-            if (sub.feed.id === feedId) {
-              return {
-                ...sub,
-                is_favorite: data.is_favorite !== undefined ? data.is_favorite : sub.is_favorite,
-                custom_title:
-                  data.custom_title !== undefined ? data.custom_title : sub.custom_title,
-                folder: updatedSubscription.folder || sub.folder,
-              };
-            }
-            return sub;
-          });
-
-          return {
-            ...old,
-            subscriptions: updatedSubscriptions,
-          };
-        }
-      );
-
-      // Update the individual feed detail cache instantly if it exists
-      queryClient.setQueriesData<FeedDetail>(
-        { queryKey: [RSS_QUERY_KEYS.FEEDS, 'detail', feedId] },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            is_favorite:
-              data.is_favorite !== undefined ? data.is_favorite : (old as any).is_favorite,
-            title: data.custom_title !== undefined ? data.custom_title : old.title,
-          } as any;
-        }
-      );
-    },
+    // No manual cache surgery here on purpose: hand-reshaping the feeds-list cache to
+    // match what the server did is exactly the kind of thing that silently drifts out
+    // of sync (wrong field, stale closure, a request that resolves out of order) and
+    // then looks like "invalidation is randomly broken." Instead we just await a real
+    // refetch — returning the promise here means the mutation (and anything awaiting
+    // mutateAsync, like toast.promise) doesn't resolve until the UI is guaranteed to
+    // reflect the server's actual state.
     onSettled: (_data, _error, { feedId }) => {
-      queryClient.invalidateQueries({
-        queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'],
-      });
-      queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FOLDERS] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.feed(feedId) });
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] }),
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FOLDERS] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.feed(feedId) }),
+      ]);
     },
     ...options,
   });
@@ -300,36 +266,14 @@ export function useDeleteFeed(
     mutationFn: async ({ feedId }: { feedId: string; silent?: boolean }) => {
       await ApiClient.deleteFeed(feedId);
     },
-    onSuccess: (_, { feedId }) => {
-      queryClient.setQueriesData<FeedsResponse>(
-        { queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            subscriptions: (old.subscriptions || []).filter((s) => s.feed.id !== feedId),
-          };
-        }
-      );
-
-      // Update the individual feed detail cache instantly if it exists
-      queryClient.setQueriesData<FeedDetail>({ queryKey: queryKeys.feed(feedId) }, (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          is_subscribed: false,
-        };
-      });
-    },
+    // No manual cache surgery — see useUpdateFeed above for why.
     onSettled: (_data, _error, { feedId }) => {
-      setTimeout(() => {
-        queryClient.invalidateQueries({
-          queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'],
-        });
-        queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
-        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
-        queryClient.invalidateQueries({ queryKey: queryKeys.feed(feedId) });
-      }, 300);
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() }),
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.feed(feedId) }),
+      ]);
     },
     ...options,
   });
@@ -407,30 +351,14 @@ export function useBulkDeleteFeeds(
   return useMutation({
     mutationKey: mutationKeys.bulkDeleteFeeds(),
     mutationFn: ({ feedIds }: { feedIds: string[] }) => ApiClient.bulkDeleteFeeds(feedIds),
-    onSuccess: (_, { feedIds }) => {
-      queryClient.setQueriesData<FeedsResponse>(
-        { queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] },
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            subscriptions: (old.subscriptions || []).filter((s) => !feedIds.includes(s.feed.id)),
-          };
-        }
-      );
-    },
+    // See useUpdateFeed above for why this is a plain awaited invalidate rather than
+    // manual setQueriesData surgery.
     onSettled: () => {
-      setTimeout(() => {
-        Promise.all([
-          queryClient.invalidateQueries({
-            queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'],
-          }),
-          queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() }),
-          queryClient.invalidateQueries({
-            queryKey: [RSS_QUERY_KEYS.ARTICLES],
-          }),
-        ]);
-      }, 300);
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() }),
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] }),
+      ]);
     },
     ...options,
   });
@@ -453,12 +381,10 @@ export function useBulkUpdateFeedsFolder(
     mutationKey: mutationKeys.bulkUpdateFeedsFolder(),
     mutationFn: ({ feedIds, folderId }: { feedIds: string[]; folderId: string }) =>
       ApiClient.bulkUpdateFeedsFolder(feedIds, folderId),
+    // See useUpdateFeed above for why this is a plain awaited invalidate rather than
+    // manual setQueriesData surgery.
     onSettled: () => {
-      return Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'],
-        }),
-      ]);
+      return queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] });
     },
     ...options,
   });

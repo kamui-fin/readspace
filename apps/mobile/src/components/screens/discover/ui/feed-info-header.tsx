@@ -83,7 +83,13 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
         <View className="relative">
           <FeedIcon
             url={feed.image_url}
-            fallbackComponent={({ size = 80, className }: { size?: number; className?: string }) => (
+            fallbackComponent={({
+              size = 80,
+              className,
+            }: {
+              size?: number;
+              className?: string;
+            }) => (
               <FeedFallbackIcon
                 feedName={feed.title}
                 size={size}

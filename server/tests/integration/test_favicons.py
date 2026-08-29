@@ -1,9 +1,9 @@
-import pytest
-from aiohttp import web
-from app.services.feeds.favicon import extract_favicon_and_canonical_url
-from app.services.feeds.favicon import _get_async_supabase
-import structlog
 import httpx  # for verifying download
+import pytest
+import structlog
+from aiohttp import web
+
+from app.services.feeds.favicon import _get_async_supabase, extract_favicon_and_canonical_url
 
 logger = structlog.get_logger(__name__)
 
@@ -133,8 +133,8 @@ async def test_background_favicon_fetch_success(favicon_server, db_session, test
     3. Assert the feed's image_url is populated with the Supabase storage path.
     """
     from app.models.feed import Feed
-    from app.workers.feed.favicon import fetch_feed_favicon
     from app.services.feeds.favicon import _get_async_supabase
+    from app.workers.feed.favicon import fetch_feed_favicon
 
     # 1. Setup: Ensure bucket exists (using real client)
     supabase = await _get_async_supabase()
@@ -184,10 +184,10 @@ async def test_background_favicon_fetch_newsletter(db_session, test_user, monkey
     Test that background favicon extraction for newsletter:// feeds correctly extracts
     the domain from the sender email and calls extract_favicon_and_canonical_url.
     """
-    from app.models.feed import Feed
-    from app.workers.feed.favicon import fetch_feed_favicon
-    from app.typing.feeds import FaviconResult
     import app.workers.feed.favicon
+    from app.models.feed import Feed
+    from app.typing.feeds import FaviconResult
+    from app.workers.feed.favicon import fetch_feed_favicon
 
     # Mock extract_favicon_and_canonical_url to assert it receives the domain URL
     called_with_url = None

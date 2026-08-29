@@ -10,9 +10,7 @@ Testing Strategy:
 """
 
 import io
-from datetime import datetime, timezone
 from uuid import uuid4
-from unittest.mock import patch
 
 import orjson
 import pytest
@@ -20,7 +18,7 @@ from httpx import AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.feed import Feed, FeedSubscription
+from app.models.feed import FeedSubscription
 from app.models.folder import Folder
 from app.models.user import Profile
 
@@ -32,16 +30,16 @@ VALID_OPML = """<?xml version="1.0" encoding="UTF-8"?>
     </head>
     <body>
         <outline text="Technology" title="Technology">
-            <outline type="rss" text="Hacker News" title="Hacker News" 
-                     xmlUrl="https://hnrss.org/newest" 
+            <outline type="rss" text="Hacker News" title="Hacker News"
+                     xmlUrl="https://hnrss.org/newest"
                      htmlUrl="https://news.ycombinator.com"/>
-            <outline type="rss" text="TechCrunch" title="TechCrunch" 
-                     xmlUrl="https://techcrunch.com/feed/" 
+            <outline type="rss" text="TechCrunch" title="TechCrunch"
+                     xmlUrl="https://techcrunch.com/feed/"
                      htmlUrl="https://techcrunch.com"/>
         </outline>
         <outline text="News" title="News">
-            <outline type="rss" text="BBC News" title="BBC News" 
-                     xmlUrl="https://feeds.bbci.co.uk/news/rss.xml" 
+            <outline type="rss" text="BBC News" title="BBC News"
+                     xmlUrl="https://feeds.bbci.co.uk/news/rss.xml"
                      htmlUrl="https://www.bbc.com/news"/>
         </outline>
     </body>
@@ -169,9 +167,10 @@ class TestOpmlImportEagerMode:
         self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession, monkeypatch
     ):
         """Test complete OPML import workflow by calling async functions directly."""
+        from types import SimpleNamespace
+
         from app.workers.opml.import_opml import import_opml
         from app.workers.opml_tasks import import_single_feed_task
-        from types import SimpleNamespace
 
         # Patch .kiq to run synchronously
         async def sync_kiq(**kwargs):
@@ -207,9 +206,10 @@ class TestOpmlImportEagerMode:
         self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession, monkeypatch
     ):
         """Test OPML import creates folders correctly."""
+        from types import SimpleNamespace
+
         from app.workers.opml.import_opml import import_opml
         from app.workers.opml_tasks import import_single_feed_task
-        from types import SimpleNamespace
 
         # Patch .kiq to run synchronously
         async def sync_kiq(**kwargs):
@@ -219,7 +219,7 @@ class TestOpmlImportEagerMode:
         monkeypatch.setattr(import_single_feed_task, "kiq", sync_kiq)
 
         # Call the async function directly in test mode (no Celery)
-        result = await import_opml(
+        await import_opml(
             user_id=test_user.id,
             opml_content=VALID_OPML,
             default_folder_name="Imported Feeds",

@@ -58,10 +58,9 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   // Check if this is a clipped article
   const isClipped = article?.article_type === 'clipped';
 
-  // Content source state - prefer extracted content when available
-  const [contentSource, setContentSource] = useState<ArticleViewMode>(
-    article?.extracted_content ? 'extracted' : 'original'
-  );
+  // Content source state - start with original, will update when content is available
+  const [contentSource, setContentSource] = useState<ArticleViewMode>('original');
+  const [userSelectedView, setUserSelectedView] = useState<ArticleViewMode | null>(null);
 
   const [targetLanguage, setTargetLanguage] = useState<string | null>(null);
 
@@ -109,10 +108,20 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     });
   }, [articleId, currentContent, contentSource, summarizeMutation, checkAndTriggerUpgrade]);
 
-  // Sync contentSource with article.extracted_content
-  useLayoutEffect(() => {
+  // Reset user selection when article changes (e.g., navigating to a different article)
+  useEffect(() => {
+    setUserSelectedView(null);
+    // If article has extracted content when it loads, prefer extracted view
     setContentSource(article?.extracted_content ? 'extracted' : 'original');
-  }, [article?.extracted_content]);
+  }, [articleId]);
+
+  // Auto-switch to extracted when extraction completes (only if user hasn't manually selected a view)
+  // This is safe now because we've removed the invalidation race conditions
+  useEffect(() => {
+    if (userSelectedView === null && article?.extracted_content && contentSource !== 'extracted') {
+      setContentSource('extracted');
+    }
+  }, [article?.extracted_content, userSelectedView]);
 
   const sortedLanguages = useMemo(() => {
     // Put recent languages at the top, followed by the rest
@@ -134,7 +143,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
       !article.link.startsWith('newsletter://') &&
       extractMutation.status === 'idle'
     ) {
-      // Trigger extraction automatically
+      // Trigger extraction automatically, but don't auto-switch view (let user decide)
       extractFullText().catch((error) => {
         console.warn('Failed to auto-extract article content:', error);
       });
@@ -332,6 +341,9 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
 
   const handleSelectView = useCallback(
     (view: ArticleViewMode) => {
+      // Mark that user explicitly selected a view to prevent sync effect from overriding
+      setUserSelectedView(view);
+
       if (view === 'extracted' && !(article?.extracted_content || extractedData?.content)) {
         toast.info('Extracting full text...');
         extractFullText()
@@ -375,7 +387,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     ? article.article_type === 'feed' &&
       !article.extracted_content &&
       !article.link?.startsWith('newsletter://') &&
-      (extractMutation.isPending || extractMutation.status === 'idle')
+      extractMutation.isPending
     : false;
 
   const isNewsletter =

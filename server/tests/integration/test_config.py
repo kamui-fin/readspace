@@ -1,8 +1,10 @@
 """E2E/Integration tests for client config endpoint."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from httpx import AsyncClient
+
 from app.core.config import get_settings
 
 

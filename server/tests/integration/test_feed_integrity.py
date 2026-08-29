@@ -1,16 +1,11 @@
-import asyncio
-import pytest
 from datetime import datetime, timezone
-from uuid import uuid4
-from unittest.mock import MagicMock, patch
 
-from app.models.feed import Feed, FeedSubscription
+import pytest
+
+from app.crud.feed.core import update_feed_after_fetch
 from app.crud.feed.subscription import create_subscription
-from app.services.feeds.fetching import fetch_feed_content
-from app.services.feeds.service import add_feed, refresh_feed
-from app.crud.feed.core import create_feed, update_feed_after_fetch
+from app.models.feed import Feed
 from app.typing.subscriptions import SubscriptionCreate
-from app.typing.feeds import FeedBase
 
 
 @pytest.mark.asyncio
@@ -49,7 +44,6 @@ async def test_subscriber_count_increment(db_session, test_user):
 @pytest.mark.asyncio
 async def test_header_normalization():
     # Mock response with mixed case headers
-    headers = {"ETag": "123", "Last-Modified": "Mon, 01 Jan 2024 00:00:00 GMT"}
 
     # This logic is inside fetch_feed_content, but we can test the result of the function if we mock the network call
     # Or we can test the service logic that consumes it.

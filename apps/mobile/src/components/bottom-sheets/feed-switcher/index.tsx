@@ -7,7 +7,6 @@ import {
   RenameFolderModal,
   type RenameFolderModalRef,
 } from '@components/bottom-sheets/rename-folder';
-import LocalRefreshLinearIcon from '@components/icons/local/refresh-linear';
 import AddFolderBoldIcon from '@components/icons/solar/add-folder-bold';
 import ChecklistMinimalisticLinearIcon from '@components/icons/solar/checklist-minimalistic-linear';
 import FolderWithFilesBoldIcon from '@components/icons/solar/folder-with-files-bold';
@@ -25,8 +24,10 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import {
+  RSS_QUERY_KEYS,
   type Folder,
   type Subscription,
+  queryKeys,
   useBulkDeleteFeeds,
   useBulkUpdateFeedsFolder,
   useDeleteFeed,
@@ -38,10 +39,10 @@ import {
 import { type FeedSwitcherStore, useFeedSwitcherStore } from '@stores/feed-switcher';
 import { useFeedViewStore } from '@stores/feed-view';
 import { useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { Alert, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const PINNED_YELLOW = '#EAB308';
@@ -73,30 +74,15 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
     const renameFolderModalRef = useRef<RenameFolderModalRef>(null);
     const renameFeedModalRef = useRef<RenameFeedModalRef>(null);
     const folderPickerModalRef = useRef<FolderPickerBottomSheetRef>(null);
+    const currentMoveFeedRef = useRef<string | null>(null);
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
 
     const queryClient = useQueryClient();
-    const [isRefreshing, setIsRefreshing] = useState(false);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedFeedIds, setSelectedFeedIds] = useState<Set<string>>(new Set());
     const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
     const insets = useSafeAreaInsets();
-
-    const handleRefreshFeeds = useCallback(async () => {
-      setIsRefreshing(true);
-      try {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['rss-feeds', 'list'] }),
-          queryClient.invalidateQueries({ queryKey: ['rss-unread-counts'] }),
-        ]);
-        toast.success('Feeds refreshed');
-      } catch (err) {
-        toast.error('Failed to refresh feeds');
-      } finally {
-        setIsRefreshing(false);
-      }
-    }, [queryClient]);
 
     const { data: feedsData } = useFeeds(undefined, { staleTime: 0 });
     const { data: unreadCountsData } = useUnreadCounts();
@@ -112,8 +98,6 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
     const deleteFolder = useDeleteFolder();
     const bulkDeleteFeeds = useBulkDeleteFeeds();
     const bulkUpdateFeedsFolder = useBulkUpdateFeedsFolder();
-
-
 
     const feeds = useMemo(() => (feedsData?.subscriptions as Subscription[]) || [], [feedsData]);
     const folders = useMemo(() => (feedsData?.folders as Folder[]) || [], [feedsData]);
@@ -133,8 +117,8 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
     useImperativeHandle(ref, () => ({
       present: () => {
         bottomSheetRef.current?.present();
-        queryClient.invalidateQueries({ queryKey: ['rss-feeds', 'list'] });
-        queryClient.invalidateQueries({ queryKey: ['rss-unread-counts'] });
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
       },
       dismiss: () => {
         setIsSelectionMode(false);
@@ -165,11 +149,8 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
       });
     }, [folders, feeds, expandedFolders, unreadCounts]);
 
-
-
     const handleFeedPress = useCallback(
       (feedId: string) => {
-
         if (isSelectionMode) {
           setSelectedFeedIds((prev: Set<string>) => {
             const next = new Set(prev);
@@ -205,7 +186,6 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
 
     const handleFolderPress = useCallback(
       (folderId: string) => {
-
         if (isSelectionMode) {
           const folderFeeds = listData.find((f) => f.id === folderId)?.folderFeeds || [];
 
@@ -254,14 +234,15 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
 
     const handleToggleFavorite = useCallback(
       (sub: Subscription) => {
+        const wasFavorite = sub.is_favorite;
         updateFeed.mutate(
           {
             feedId: sub.feed.id,
-            data: { is_favorite: !sub.is_favorite },
+            data: { is_favorite: !wasFavorite },
           },
           {
             onSuccess: () => {
-              toast.success(sub.is_favorite ? 'Removed from favorites' : 'Added to favorites');
+              toast.success(wasFavorite ? 'Removed from favorites' : 'Added to favorites');
             },
             onError: () => toast.error('Failed to update favorite'),
           }
@@ -336,34 +317,32 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
               const feedIds = Array.from(selectedFeedIds);
               const folderIds = Array.from(selectedFolderIds);
 
-              const finishDeletion = () => {
-                let folderPromises: Promise<unknown>[] = [];
-                if (folderIds.length > 0) {
-                  folderPromises = folderIds.map((id) => deleteFolder.mutateAsync(id));
+              // Exit selection mode right away — deleting can take a moment, and the
+              // loading toast below is the feedback while it's in flight.
+              setIsSelectionMode(false);
+              setSelectedFeedIds(new Set());
+              setSelectedFolderIds(new Set());
+              bottomSheetRef.current?.snapToIndex(1);
+
+              const deletePromise = (async () => {
+                if (feedIds.length > 0) {
+                  await bulkDeleteFeeds.mutateAsync({ feedIds });
                 }
+                if (folderIds.length > 0) {
+                  await Promise.all(folderIds.map((id) => deleteFolder.mutateAsync(id)));
+                }
+              })();
 
-                Promise.allSettled(folderPromises).then(() => {
-                  toast.success('Successfully deleted selected items');
-                  setIsSelectionMode(false);
-                  setSelectedFeedIds(new Set());
-                  setSelectedFolderIds(new Set());
-                  bottomSheetRef.current?.snapToIndex(1);
-                });
-              };
-
-              if (feedIds.length > 0) {
-                bulkDeleteFeeds
-                  .mutateAsync({ feedIds })
-                  .then(() => finishDeletion())
-                  .catch(() => toast.error('Failed to delete some feeds'));
-              } else {
-                finishDeletion();
-              }
+              toast.promise(deletePromise, {
+                loading: 'Deleting...',
+                success: 'Successfully deleted selected items',
+                error: 'Failed to delete some items',
+              });
             },
           },
         ]
       );
-    }, [selectedFeedIds, selectedFolderIds, deleteFeed, deleteFolder]);
+    }, [selectedFeedIds, selectedFolderIds, bulkDeleteFeeds, deleteFolder]);
 
     const handleBulkMove = useCallback(() => {
       if (selectedFeedIds.size === 0) {
@@ -372,53 +351,91 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
         }
         return;
       }
+      // Guard against a stale single-feed move: if a previous "Move to folder" from a
+      // feed's dropdown was dismissed (swipe-to-close) without confirming a folder,
+      // currentMoveFeedRef is never cleared. Without this reset, handleConfirmBulkMove
+      // would see it still set and silently treat this bulk move as a single-feed move
+      // for that leftover feed — no bulk mutation runs, no bulk toast fires, and the
+      // selected feeds never move.
+      currentMoveFeedRef.current = null;
       folderPickerModalRef.current?.present();
     }, [selectedFeedIds, selectedFolderIds]);
 
+    const handleSingleFeedMoveComplete = useCallback(
+      (feedId: string, folderId: string | null) => {
+        updateFeed
+          .mutateAsync({
+            feedId,
+            data: { folder_id: folderId ?? undefined },
+          })
+          .then(() => {
+            toast.success('Feed moved');
+          })
+          .catch(() => {
+            toast.error('Failed to move feed');
+          });
+      },
+      [updateFeed]
+    );
+
     const handleConfirmBulkMove = useCallback(
       (folderId: string | null) => {
+        // Check if this is a single feed move (from dropdown)
+        if (currentMoveFeedRef.current) {
+          const feedId = currentMoveFeedRef.current;
+          currentMoveFeedRef.current = null;
+          handleSingleFeedMoveComplete(feedId, folderId);
+          return;
+        }
+
         if (selectedFeedIds.size === 0) return;
 
         const feedIds = Array.from(selectedFeedIds);
+        const feedLabel = `${feedIds.length} feed${feedIds.length === 1 ? '' : 's'}`;
+
+        // Exit selection mode right away — the move can take a moment, and the loading
+        // toast below is the feedback while it's in flight.
+        setIsSelectionMode(false);
+        setSelectedFeedIds(new Set());
+        setSelectedFolderIds(new Set());
+        bottomSheetRef.current?.snapToIndex(1);
 
         if (folderId === null) {
           // If moving to "No folder", we have to map over them
-          const promises = feedIds.map((feedId) =>
-            updateFeed.mutateAsync({
-              feedId,
-              data: { folder_id: undefined },
-            })
+          const movePromise = Promise.all(
+            feedIds.map((feedId) =>
+              updateFeed.mutateAsync({
+                feedId,
+                data: { folder_id: undefined },
+              })
+            )
           );
-          Promise.allSettled(promises).then(() => {
-            toast.success(
-              `Moved ${selectedFeedIds.size} feed${selectedFeedIds.size === 1 ? '' : 's'}`
-            );
-            setIsSelectionMode(false);
-            setSelectedFeedIds(new Set());
-            setSelectedFolderIds(new Set());
-            bottomSheetRef.current?.snapToIndex(1);
+
+          toast.promise(movePromise, {
+            loading: 'Moving...',
+            success: `Moved ${feedLabel}`,
+            error: 'Failed to move feeds',
           });
           return;
         }
 
-        bulkUpdateFeedsFolder
-          .mutateAsync({ feedIds, folderId })
-          .then(() => {
-            toast.success(
-              `Moved ${selectedFeedIds.size} feed${selectedFeedIds.size === 1 ? '' : 's'}`
-            );
-            setIsSelectionMode(false);
-            setSelectedFeedIds(new Set());
-            setSelectedFolderIds(new Set());
-            bottomSheetRef.current?.snapToIndex(1);
-          })
-          .catch(() => toast.error('Failed to move feeds'));
+        toast.promise(bulkUpdateFeedsFolder.mutateAsync({ feedIds, folderId }), {
+          loading: 'Moving...',
+          success: `Moved ${feedLabel}`,
+          error: 'Failed to move feeds',
+        });
       },
-      [selectedFeedIds, updateFeed, bulkUpdateFeedsFolder]
+      [selectedFeedIds, updateFeed, bulkUpdateFeedsFolder, handleSingleFeedMoveComplete]
     );
 
     const handleRenameFeed = useCallback((sub: Subscription) => {
       renameFeedModalRef.current?.present(sub.feed.id, sub.custom_title || sub.feed.title);
+    }, []);
+
+    const handleMoveToFolder = useCallback((sub: Subscription) => {
+      currentMoveFeedRef.current = sub.feed.id;
+      setSelectedFeedIds(new Set([sub.feed.id]));
+      folderPickerModalRef.current?.present();
     }, []);
 
     const handleCreateFolderPress = useCallback(() => {
@@ -484,24 +501,6 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
             size="small"
             className="h-8 w-8"
             fullWidth={false}
-            disabled={isRefreshing}
-            onPress={handleRefreshFeeds}>
-            {isRefreshing ? (
-              <ActivityIndicator size="small" color={colors.grey} />
-            ) : (
-              <LocalRefreshLinearIcon
-                width={16}
-                height={16}
-                color={colors.grey}
-                strokeWidth={2.4}
-              />
-            )}
-          </Button>
-          <Button
-            variant="icon"
-            size="small"
-            className="h-8 w-8"
-            fullWidth={false}
             onPress={handleCreateFolderPress}>
             <AddFolderBoldIcon width={16} height={16} color={colors.grey} />
           </Button>
@@ -526,7 +525,6 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
       selectedFolderIds.size,
       handleBulkDelete,
       handleBulkMove,
-      isRefreshing,
     ]);
 
     const selectedFeedId = viewType === 'feed' ? selectedId : null;
@@ -568,15 +566,17 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
             <>
               {/* Pinned Section */}
               {favoriteFeeds.length > 0 && !isSelectionMode && (
-                <View className="mb-2" style={{ paddingHorizontal: 24 }}>
-                  <SectionLabel
-                    label="Pinned"
-                    icon={<StarBoldIcon width={14} height={14} color={PINNED_YELLOW} />}
-                    accentYellow
-                  />
+                <View className="mb-2">
+                  <View style={{ paddingLeft: 24, paddingRight: 0 }}>
+                    <SectionLabel
+                      label="Pinned"
+                      icon={<StarBoldIcon width={14} height={14} color={PINNED_YELLOW} />}
+                      accentYellow
+                    />
+                  </View>
                   <View>
                     {favoriteFeeds.map((sub) => (
-                      <View key={sub.id} className="mb-3">
+                      <View key={sub.id}>
                         <FeedListItem
                           sub={sub}
                           isActive={selectedFeedId === sub.feed.id}
@@ -585,8 +585,10 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
                           onToggleFavorite={handleToggleFavorite}
                           onRename={handleRenameFeed}
                           onUnfollow={handleUnfollow}
+                          onMoveToFolder={handleMoveToFolder}
                           showFolder
                           variant="pinned"
+                          style={{ paddingLeft: 24 }}
                         />
                       </View>
                     ))}
@@ -625,6 +627,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
                       onToggleFavorite={handleToggleFavorite}
                       onRenameFeed={handleRenameFeed}
                       onUnfollow={handleUnfollow}
+                      onMoveToFolder={handleMoveToFolder}
                     />
                   </View>
                 ))}

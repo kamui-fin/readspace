@@ -1,6 +1,5 @@
 """Unit tests for domain authority scoring."""
 
-import pytest
 
 from app.services.feeds.domain_authority import (
     get_domain_authority_score,

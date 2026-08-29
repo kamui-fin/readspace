@@ -121,6 +121,7 @@ class TestFolderList:
         """Test that users only see their own folders."""
         # Create another user with profile first
         from uuid import uuid4
+
         from sqlalchemy import text
 
         other_user_id = str(uuid4())
@@ -131,13 +132,13 @@ class TestFolderList:
             text(
                 """
                 INSERT INTO auth.users (
-                    id, aud, role, email, encrypted_password, 
-                    email_confirmed_at, confirmation_sent_at, 
+                    id, aud, role, email, encrypted_password,
+                    email_confirmed_at, confirmation_sent_at,
                     recovery_sent_at, created_at, updated_at,
                     raw_app_meta_data, raw_user_meta_data,
                     is_super_admin, is_sso_user, is_anonymous
                 ) VALUES (
-                    :user_id, 'authenticated', 'authenticated', :email, '', 
+                    :user_id, 'authenticated', 'authenticated', :email, '',
                     NOW(), NOW(), NOW(), NOW(), NOW(),
                     '{}', '{}', FALSE, FALSE, FALSE
                 ) ON CONFLICT (id) DO NOTHING
@@ -226,6 +227,7 @@ class TestFolderUpdate:
     async def test_update_folder_access_control(self, async_client: AsyncClient, db_session: AsyncSession):
         """Test that users cannot update other users' folders."""
         from uuid import uuid4
+
         from sqlalchemy import text
 
         # Create another user with profile first
@@ -237,13 +239,13 @@ class TestFolderUpdate:
             text(
                 """
                 INSERT INTO auth.users (
-                    id, aud, role, email, encrypted_password, 
-                    email_confirmed_at, confirmation_sent_at, 
+                    id, aud, role, email, encrypted_password,
+                    email_confirmed_at, confirmation_sent_at,
                     recovery_sent_at, created_at, updated_at,
                     raw_app_meta_data, raw_user_meta_data,
                     is_super_admin, is_sso_user, is_anonymous
                 ) VALUES (
-                    :user_id, 'authenticated', 'authenticated', :email, '', 
+                    :user_id, 'authenticated', 'authenticated', :email, '',
                     NOW(), NOW(), NOW(), NOW(), NOW(),
                     '{}', '{}', FALSE, FALSE, FALSE
                 ) ON CONFLICT (id) DO NOTHING
@@ -293,6 +295,7 @@ class TestFolderDelete:
     async def test_delete_folder_access_control(self, async_client: AsyncClient, db_session: AsyncSession):
         """Test that users cannot delete other users' folders."""
         from uuid import uuid4
+
         from sqlalchemy import text
 
         # Create another user with profile first
@@ -304,13 +307,13 @@ class TestFolderDelete:
             text(
                 """
                 INSERT INTO auth.users (
-                    id, aud, role, email, encrypted_password, 
-                    email_confirmed_at, confirmation_sent_at, 
+                    id, aud, role, email, encrypted_password,
+                    email_confirmed_at, confirmation_sent_at,
                     recovery_sent_at, created_at, updated_at,
                     raw_app_meta_data, raw_user_meta_data,
                     is_super_admin, is_sso_user, is_anonymous
                 ) VALUES (
-                    :user_id, 'authenticated', 'authenticated', :email, '', 
+                    :user_id, 'authenticated', 'authenticated', :email, '',
                     NOW(), NOW(), NOW(), NOW(), NOW(),
                     '{}', '{}', FALSE, FALSE, FALSE
                 ) ON CONFLICT (id) DO NOTHING

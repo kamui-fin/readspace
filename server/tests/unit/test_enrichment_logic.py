@@ -1,12 +1,11 @@
-import pytest
-from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
 
-from app.services.feeds import enrichment, scoring, favicon
-from app.models.feed import Feed
-from app.typing.feeds import FeedEnrichmentResponse, FeedScoringData, ArticleStats, FeedEnrichmentSnapshot
+import pytest
+
 from app.models.enums import FeedCategory
-from app.services.feeds.language_detection import detect_feed_language
+from app.services.feeds import enrichment, favicon, scoring
+from app.typing.feeds import ArticleStats, FeedEnrichmentResponse, FeedEnrichmentSnapshot, FeedScoringData
 
 # ==============================================================================
 # SCORING TESTS

@@ -2,6 +2,14 @@ import { Dimensions, Platform } from 'react-native';
 
 export const BOTTOM_TABBAR_BASE_HEIGHT = 64;
 
+// Pull-to-refresh: how far (px) the Android refresh spinner is pulled up behind
+// the header's tab row. Without this, `progressViewOffset` sits at the full
+// header height and the spinner rests a visible gap below the tabs; overlapping
+// it makes the spinner appear to slide out from under the "All / Today / Saved"
+// tabs instead. iOS anchors the spinner to the scroll frame natively and needs
+// no offset.
+export const REFRESH_SPINNER_HEADER_OVERLAP = 44;
+
 export const MAX_TRENDING_ITEMS = 100;
 export const TRENDING_PAGE_SIZE = 20;
 

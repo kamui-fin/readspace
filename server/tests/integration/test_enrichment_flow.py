@@ -1,19 +1,11 @@
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from uuid import uuid4
-from datetime import datetime, timezone
 
-from sqlalchemy import select
+import pytest
 
+from app.models.enums import ContentType, FeedCategory
 from app.models.feed import Feed
-from app.models.enums import FeedCategory
-from app.models.enums import FeedCategory, ContentType
 from app.typing.feeds import FeedEnrichmentResponse
-from app.models.feed import Feed
-from app.models.enums import FeedCategory
-from app.typing.feeds import FeedEnrichmentResponse
-from unittest.mock import MagicMock, patch
-import sys
 
 
 @pytest.mark.asyncio
@@ -81,8 +73,8 @@ async def test_batch_enrichment_flow(db_session):
 @pytest.mark.asyncio
 async def test_batch_enrichment_empty_tags(db_session):
     """Verify that feeds with empty tags [] are also picked up for enrichment."""
-    from app.workers.feed.enrichment import batch_enrich_feeds
     from app.models.feed import Feed
+    from app.workers.feed.enrichment import batch_enrich_feeds
 
     # 1. Setup Data with EMPTY tags list (not None)
     feed = Feed(
@@ -106,7 +98,7 @@ async def test_batch_enrichment_empty_tags(db_session):
 
         with (
             patch("app.workers.feed.enrichment.enrich_feeds_batch") as mock_batch,
-            patch("app.workers.feed.enrichment.sync_feeds_batch") as mock_sync,
+            patch("app.workers.feed.enrichment.sync_feeds_batch"),
         ):
             # Mock successful enrichment
             mock_result = FeedEnrichmentResponse(

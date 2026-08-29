@@ -2,7 +2,6 @@ import DocumentTextBoldIcon from '@components/icons/solar/document-text-bold';
 import InfoCircleBoldIcon from '@components/icons/solar/info-circle-bold';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
-import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
@@ -11,8 +10,7 @@ import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { useImportOPML } from '@readspace/shared';
 import type * as DocumentPicker from 'expo-document-picker';
-import { useRouter } from 'expo-router';
-import { forwardRef, useCallback, useState } from 'react';
+import { forwardRef, useCallback } from 'react';
 import { View } from 'react-native';
 
 export interface OPMLImportBottomSheetProps {
@@ -24,7 +22,6 @@ export interface OPMLImportBottomSheetProps {
 
 export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBottomSheetProps>(
   ({ file, feedCount, onCancel, onImportStarted }, ref) => {
-    const router = useRouter();
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
 

@@ -25,9 +25,7 @@ export function SectionLabel({
   accentYellow = false,
 }: SectionLabelProps) {
   return (
-    <View
-      className={`mb-3 flex-row items-center gap-2 px-1 ${className}`.trim()}
-      style={style}>
+    <View className={`mb-3 flex-row items-center gap-2 px-1 ${className}`.trim()} style={style}>
       {icon}
       <Text
         className={

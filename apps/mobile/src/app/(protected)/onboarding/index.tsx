@@ -1,14 +1,13 @@
 import { Stepper, type StepperRef } from '@components/navigation/stepper';
 import { CategorySelectionStep } from '@components/screens/onboarding/categories';
 import { FeedSelectionStep } from '@components/screens/onboarding/feeds';
-import { Text } from '@components/ui/text';
 import { useSession } from '@contexts/auth-context';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { ApiClient } from '@readspace/shared';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { BackHandler, Platform, TouchableOpacity, View } from 'react-native';
+import { BackHandler, Platform, View } from 'react-native';
 
 export default function OnboardingScreen() {
   const stepperRef = useRef<StepperRef>(null);

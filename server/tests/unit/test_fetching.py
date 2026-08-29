@@ -1,9 +1,9 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-import aiohttp
-from app.utils.urls import resolve_canonical_url, normalize_feed_url
-from app.services.feeds.fetching import fetch_feed_content, MAX_FEED_SIZE_BYTES
-from app.core import redis_cache
+
+import pytest
+
+from app.services.feeds.fetching import MAX_FEED_SIZE_BYTES, fetch_feed_content
+from app.utils.urls import normalize_feed_url, resolve_canonical_url
 
 
 @pytest.mark.asyncio

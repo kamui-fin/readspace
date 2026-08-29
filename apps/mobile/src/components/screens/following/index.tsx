@@ -12,7 +12,7 @@ import { toast } from '@components/ui/toast';
 import { useArticleQueries } from '@hooks/useArticleQueries';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useScrollReset } from '@hooks/useScrollReset';
-import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
+import { BOTTOM_TABBAR_BASE_HEIGHT, REFRESH_SPINNER_HEADER_OVERLAP } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { createListItems, type ListItem, processArticles } from '@lib/utils/article';
 import {
@@ -502,11 +502,21 @@ export function FollowingScreen({
         refreshing={refreshing}
         onRefresh={handleRefresh}
         refreshColor={colors.secondary}
-        contentPaddingTop={0} // Padding is already handled by contentContainerStyle
+        // Spacing is applied by the list's contentContainerStyle; these values
+        // only let EmptyStateView size itself to the visible area.
+        contentPaddingTop={contentPaddingTop}
         contentPaddingBottom={contentPaddingBottom}
       />
     );
-  }, [isLoading, activeTab, refreshing, handleRefresh, colors.secondary, contentPaddingBottom]);
+  }, [
+    isLoading,
+    activeTab,
+    refreshing,
+    handleRefresh,
+    colors.secondary,
+    contentPaddingTop,
+    contentPaddingBottom,
+  ]);
 
   return (
     <>
@@ -533,7 +543,11 @@ export function FollowingScreen({
             tintColor={colors.secondary}
             colors={[colors.secondary]}
             progressBackgroundColor={isDark ? colors.grey6 : '#ffffff'}
-            progressViewOffset={Platform.OS === 'android' ? contentPaddingTop : undefined}
+            progressViewOffset={
+              Platform.OS === 'android'
+                ? Math.max(contentPaddingTop - REFRESH_SPINNER_HEADER_OVERLAP, 0)
+                : undefined
+            }
           />
         }
         contentContainerStyle={{

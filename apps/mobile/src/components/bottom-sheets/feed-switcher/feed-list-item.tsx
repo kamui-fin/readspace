@@ -17,7 +17,7 @@ import { COLORS } from '@lib/constants/colors';
 import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import type { Subscription } from '@readspace/shared';
 import { memo } from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View, type ViewStyle } from 'react-native';
 
 function getFaviconUrl(feed: { link?: string | null; image_url?: string | null }): string | null {
   if (feed.image_url) return resolveSupabaseImageUrl(feed.image_url) ?? null;
@@ -40,13 +40,12 @@ export interface FeedListItemProps {
   onToggleFavorite: (sub: Subscription) => void;
   onRename: (sub: Subscription) => void;
   onUnfollow: (sub: Subscription) => void;
-  /** Show folder name (for pinned items) */
+  onMoveToFolder?: (sub: Subscription) => void;
   showFolder?: boolean;
-  /** Layout variant: 'pinned' has more padding and spacing */
   variant?: 'pinned' | 'folder';
   isSelectionMode?: boolean;
   isSelected?: boolean;
-  style?: any;
+  style?: ViewStyle;
 }
 
 const FeedListItemComponent = ({
@@ -58,8 +57,9 @@ const FeedListItemComponent = ({
   onToggleFavorite,
   onRename,
   onUnfollow,
+  onMoveToFolder,
   showFolder = false,
-  variant = 'folder',
+  variant,
   isSelectionMode = false,
   isSelected = false,
   style,
@@ -153,11 +153,17 @@ const FeedListItemComponent = ({
               </DropdownMenuItemTitle>
             </DropdownMenuItem>
             <DropdownMenuItem key="rename" onSelect={() => onRename(sub)}>
-              <DropdownMenuItemIcon ios={{ name: 'pencil' }} androidIconName="edit" />
+              <DropdownMenuItemIcon ios={{ name: 'pencil' }} />
               <DropdownMenuItemTitle>Rename</DropdownMenuItemTitle>
             </DropdownMenuItem>
+            {onMoveToFolder && (
+              <DropdownMenuItem key="move" onSelect={() => onMoveToFolder(sub)}>
+                <DropdownMenuItemIcon ios={{ name: 'folder' }} />
+                <DropdownMenuItemTitle>Move to folder</DropdownMenuItemTitle>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem key="unfollow" destructive onSelect={() => onUnfollow(sub)}>
-              <DropdownMenuItemIcon ios={{ name: 'person.badge.minus' }} androidIconName="delete" />
+              <DropdownMenuItemIcon ios={{ name: 'person.badge.minus' }} />
               <DropdownMenuItemTitle>Unfollow</DropdownMenuItemTitle>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -178,12 +184,8 @@ const FeedListItemComponent = ({
           paddingRight: 16,
           paddingTop: 10,
           paddingBottom: 10,
-          backgroundColor: isActive
-            ? activeRowBg
-            : variant === 'pinned' && !isSelectionMode
-              ? colors.grey6
-              : 'transparent',
-          borderRadius: variant === 'pinned' && !isSelectionMode ? 12 : 0,
+          backgroundColor: activeRowBg,
+          borderRadius: 0,
         },
         style,
       ]}>

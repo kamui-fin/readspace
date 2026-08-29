@@ -86,7 +86,14 @@ export const FolderPickerBottomSheet = forwardRef<
         ref={bottomSheetRef}
         headerTitle="Select Folder"
         headerTitleAlign="left"
-        enablePanDownToClose={true}>
+        enablePanDownToClose={true}
+        // This picker is presented from inside FeedSwitcherBottomSheet, which is
+        // already open. @gorhom/bottom-sheet's default stackBehavior ('switch')
+        // minimizes/closes whatever sheet is currently open when a new one presents —
+        // which fires the Feed Switcher's own onDismiss and wipes selectedFeedIds
+        // before "Confirm" can ever read it. 'push' lets both sheets coexist so the
+        // sheet underneath is untouched.
+        stackBehavior="push">
         {typedFolders.length > 0 ? (
           <View className="gap-3">
             {typedFolders.map((folder) => (

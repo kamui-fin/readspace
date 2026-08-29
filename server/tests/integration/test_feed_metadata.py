@@ -1,9 +1,11 @@
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime, timezone
-from app.services.feeds.service import add_feed
-from app.models.feed import Feed
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from sqlalchemy import select
+
+from app.models.feed import Feed
+from app.services.feeds.service import add_feed
 
 
 @pytest.mark.asyncio

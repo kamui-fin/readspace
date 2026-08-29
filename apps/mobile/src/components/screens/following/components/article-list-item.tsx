@@ -17,9 +17,7 @@ interface ArticleListItemProps {
     articleType: 'feed' | 'clipped'
   ) => void;
   onBookmark: (articleId: string, currentlySaved: boolean, articleType: 'feed' | 'clipped') => void;
-  /** When true, articles won't be greyed out even if is_read=true */
   hideReadState?: boolean;
-  /** Force re-render on list refresh or screen focus */
   lastRefreshedAt?: number;
 }
 
@@ -30,8 +28,21 @@ export function ArticleListItem({
   hideReadState = false,
   lastRefreshedAt,
 }: ArticleListItemProps) {
-  // Optimistically set read state instantly on click while backend handles it.
   const [hasMarkedRead, setHasMarkedRead] = useState(false);
+
+  const article = item.type === 'article' && item.data ? item.data : null;
+  const isClipped = article?.article_type === 'clipped' || false;
+
+  const { feedTitle, feedImageUrl } = article
+    ? extractFeedInfo(article)
+    : { feedTitle: undefined, feedImageUrl: undefined };
+
+  const { iconUrl, fallbackComponent } = useFavicon({
+    url: article?.link || '',
+    feedTitle: feedTitle,
+    feedImage: feedImageUrl,
+    isClipped: isClipped,
+  });
 
   if (item.type === 'section') {
     return (
@@ -47,24 +58,12 @@ export function ArticleListItem({
     return <Divider className="mx-4" />;
   }
 
-  if (item.type === 'article' && item.data) {
-    const article = item.data;
-    const isClipped = article.article_type === 'clipped';
-
+  if (item.type === 'article' && article) {
     const timestamp = article.published_at
       ? formatRelativeDate(new Date(article.published_at))
       : 'Unknown';
 
     const displayImageUrl = article.image_url || undefined;
-
-    const { feedTitle, feedImageUrl } = extractFeedInfo(article);
-
-    const { iconUrl, fallbackComponent } = useFavicon({
-      url: article.link,
-      feedTitle: feedTitle,
-      feedImage: feedImageUrl,
-      isClipped: isClipped,
-    });
 
     return (
       <Link href={`/(protected)/articles/${article.id}`} asChild>
@@ -82,8 +81,6 @@ export function ArticleListItem({
           showTopDivider={false}
           showBottomDivider={false}
           onPress={() => {
-            // Immediately mark as read locally for instantaneous feedback
-            // when returning to the list (backend syncs separately).
             if (!article.is_read) {
               setHasMarkedRead(true);
             }
@@ -104,6 +101,7 @@ export function ArticleListItem({
 
   return <View />;
 }
+
 function extractFeedInfo(article: any): { feedTitle: any; feedImageUrl: any } {
   return {
     feedTitle:

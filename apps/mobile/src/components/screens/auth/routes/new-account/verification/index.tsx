@@ -1,23 +1,23 @@
-import { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Keyboard,
-  TouchableWithoutFeedback,
-  TextInput,
-  Pressable,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  ScrollView,
-  Platform,
-} from 'react-native';
-import { Text } from '@components/ui/text';
+import SolarShieldKeyholeMinimalisticLinearIcon from '@components/icons/solar/shield-keyhole-minimalistic-linear';
 import { Button } from '@components/ui/button';
+import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import SolarShieldKeyholeMinimalisticLinearIcon from '@components/icons/solar/shield-keyhole-minimalistic-linear';
 import { supabase } from '@lib/supabase/client';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface VerificationStepProps {
   email: string;

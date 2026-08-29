@@ -5,8 +5,8 @@ import {
 import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
 import DocumentTextLinearIcon from '@components/icons/solar/document-text-linear';
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
-import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { Button } from '@components/ui/button';
+import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { Skeleton } from '@components/ui/skeleton';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';

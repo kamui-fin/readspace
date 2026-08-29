@@ -1,4 +1,4 @@
-import LanguageIcon from '@components/icons/local/language';
+import LanguagesIcon from '@components/icons/local/languages';
 import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
 import CloseCircleBoldIcon from '@components/icons/solar/close-circle-bold';
 import MagniferLinearIcon from '@components/icons/solar/magnifer-linear';
@@ -16,7 +16,7 @@ import {
   View,
 } from 'react-native';
 
-export type Language = 'english' | 'chinese' | 'japanese';
+export type Language = 'all' | 'english' | 'chinese' | 'japanese';
 
 export interface SearchBarProps extends Omit<TextInputProps, 'onSubmitEditing' | 'ref'> {
   onLanguageChange?: (language: Language) => void;
@@ -136,28 +136,41 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
           {...props}
         />
 
-        {/* Right icon: clear X when typing */}
-        {hasText && (
-          <View
-            style={{
-              width: 44,
-              height: 44,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginRight: 4,
-            }}>
-            <MotiView
-              animate={{
-                opacity: 1,
-                scale: 1,
+        {/* Right icon: clear X when typing, language switcher when idle */}
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: 4,
+          }}>
+          <MotiView
+            animate={{ opacity: hasText ? 1 : 0, scale: hasText ? 1 : 0.9 }}
+            transition={{ type: 'timing', duration: 180 }}
+            style={{ position: 'absolute' }}
+            pointerEvents={hasText ? 'auto' : 'none'}>
+            <TouchableOpacity onPress={handleClear} activeOpacity={0.6} style={{ padding: 8 }}>
+              <CloseCircleBoldIcon width={20} height={20} color={colors.grey} />
+            </TouchableOpacity>
+          </MotiView>
+
+          <MotiView
+            animate={{ opacity: hasText ? 0 : 1, scale: hasText ? 0.9 : 1 }}
+            transition={{ type: 'timing', duration: 180 }}
+            style={{ position: 'absolute' }}
+            pointerEvents={hasText ? 'none' : 'auto'}>
+            <TouchableOpacity
+              onPress={() => {
+                Keyboard.dismiss();
+                languagePickerRef?.current?.present();
               }}
-              transition={{ type: 'timing', duration: 180 }}>
-              <TouchableOpacity onPress={handleClear} activeOpacity={0.6} style={{ padding: 8 }}>
-                <CloseCircleBoldIcon width={20} height={20} color={colors.grey} />
-              </TouchableOpacity>
-            </MotiView>
-          </View>
-        )}
+              activeOpacity={0.6}
+              style={{ padding: 8 }}>
+              <LanguagesIcon width={20} height={20} color={colors.grey} />
+            </TouchableOpacity>
+          </MotiView>
+        </View>
       </View>
     );
   }

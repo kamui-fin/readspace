@@ -10,9 +10,10 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useAuthErrorHandler } from '@hooks/useAuthErrorHandler';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { supabase } from '@lib/supabase/client';
 import { type LoginFormData, LoginSchema } from '@lib/validation/auth-schemas';
 import { useSettingsStore } from '@stores/settings';
-import { router, type Href } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { Formik, type FormikHelpers } from 'formik';
 import { useRef, useState } from 'react';
 import {
@@ -26,8 +27,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toFormikValidationSchema } from 'zod-formik-adapter';
-
-import { supabase } from '@lib/supabase/client';
 
 export function LoginScreen() {
   const { signIn } = useSession();

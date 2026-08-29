@@ -2,7 +2,8 @@ import { FeedListSkeleton } from '@components/screens/discover/ui/feed-list.skel
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
-import { useCreateFeed, useDeleteFeed, ApiClient } from '@readspace/shared';
+import { useSession } from '@contexts/auth-context';
+import { ApiClient, useCreateFeed, useDeleteFeed } from '@readspace/shared';
 import { useOnboardingStore } from '@stores/onboarding';
 import { useIsMutating, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -10,7 +11,6 @@ import { useState } from 'react';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useOnboardingFeeds } from '@/hooks/useOnboardingFeeds';
-import { useSession } from '@contexts/auth-context';
 
 // Onboarding feed limits configuration:
 // - ONBOARDING_MIN_FEEDS: Minimum number of feeds the user must follow to proceed.

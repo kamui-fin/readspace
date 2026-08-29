@@ -1,4 +1,3 @@
-import pytest
 from app.services.feeds.parsing import _normalize_language
 
 

@@ -74,7 +74,6 @@ export const OnboardingFeedItem = ({
     }
   };
 
-
   return (
     <View className="flex-row items-center gap-4 bg-transparent py-3">
       {/* Icon */}

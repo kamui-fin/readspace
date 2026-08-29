@@ -22,11 +22,20 @@ export const RenameFolderModal = forwardRef<RenameFolderModalRef, RenameFolderMo
   ({ onSuccess }, ref) => {
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const updateFolder = useUpdateFolder();
-    const [folderName, setFolderName] = useState('');
+    // Uncontrolled input — see rename-feed.tsx for why (BottomSheetTextInput cursor
+    // jump on Android when fed a `value` prop from state on every keystroke).
+    const folderNameRef = useRef('');
+    const [hasText, setHasText] = useState(false);
     const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
+    const [inputKey, setInputKey] = useState(0);
+
+    const handleChangeText = useCallback((text: string) => {
+      folderNameRef.current = text;
+      setHasText(text.trim().length > 0);
+    }, []);
 
     const handleUpdateFolder = useCallback(() => {
-      const trimmed = folderName.trim();
+      const trimmed = folderNameRef.current.trim();
       if (trimmed && targetFolderId) {
         updateFolder.mutate(
           { folderId: targetFolderId, name: trimmed },
@@ -41,18 +50,20 @@ export const RenameFolderModal = forwardRef<RenameFolderModalRef, RenameFolderMo
           }
         );
       }
-    }, [updateFolder, onSuccess, folderName, targetFolderId]);
+    }, [updateFolder, onSuccess, targetFolderId]);
 
     const handleConfirm = useCallback(() => {
-      if (!folderName.trim()) return;
+      if (!folderNameRef.current.trim()) return;
       handleUpdateFolder();
       bottomSheetRef.current?.dismiss();
-    }, [folderName, handleUpdateFolder]);
+    }, [handleUpdateFolder]);
 
     useImperativeHandle(ref, () => ({
       present: (folderId: string, currentName: string) => {
         setTargetFolderId(folderId);
-        setFolderName(currentName);
+        folderNameRef.current = currentName;
+        setHasText(currentName.trim().length > 0);
+        setInputKey((prev) => prev + 1);
         bottomSheetRef.current?.present();
       },
       dismiss: () => {
@@ -79,8 +90,9 @@ export const RenameFolderModal = forwardRef<RenameFolderModalRef, RenameFolderMo
 
         {/* Input */}
         <BottomSheetInput
-          value={folderName}
-          onChangeText={setFolderName}
+          key={inputKey}
+          defaultValue={folderNameRef.current}
+          onChangeText={handleChangeText}
           placeholder="Folder name"
           autoFocus
           autoCapitalize="words"
@@ -96,7 +108,7 @@ export const RenameFolderModal = forwardRef<RenameFolderModalRef, RenameFolderMo
             size="large"
             fullWidth
             onPress={handleConfirm}
-            disabled={!folderName.trim() || updateFolder.isPending}
+            disabled={!hasText || updateFolder.isPending}
             style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
             {updateFolder.isPending ? 'Updating...' : 'Rename'}
           </Button>

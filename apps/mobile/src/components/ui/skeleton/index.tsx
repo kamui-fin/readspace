@@ -5,8 +5,8 @@ import clsx from 'clsx';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import Animated, {
-  Easing,
   cancelAnimation,
+  Easing,
   makeMutable,
   useAnimatedStyle,
   withRepeat,

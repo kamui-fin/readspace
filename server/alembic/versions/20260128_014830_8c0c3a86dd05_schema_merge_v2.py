@@ -6,17 +6,18 @@ Create Date: 2026-01-28 01:48:30.087685+00:00
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
+
 # revision identifiers, used by Alembic.
 revision: str = "8c0c3a86dd05"
-down_revision: Union[str, None] = "64b313103aa5"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "64b313103aa5"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -25,9 +26,9 @@ def upgrade() -> None:
     op.execute(
         """
         CREATE TYPE public.contenttype AS ENUM (
-            'aggregator', 'corporate_blog', 'documentation_wiki', 'education_research', 
-            'forum_community', 'government_institutional', 'indie_blog', 'magazine_editorial', 
-            'marketplace_listings', 'newsletter', 'news_outlet', 'open_source_activity', 
+            'aggregator', 'corporate_blog', 'documentation_wiki', 'education_research',
+            'forum_community', 'government_institutional', 'indie_blog', 'magazine_editorial',
+            'marketplace_listings', 'newsletter', 'news_outlet', 'open_source_activity',
             'podcast_feed', 'status_changelog', 'video_channel'
         );
     """
@@ -52,10 +53,10 @@ def upgrade() -> None:
     op.execute(
         """
         CREATE TYPE public.feedcategory AS ENUM (
-            'arts_culture', 'automotive_transport', 'business_finance', 'consumer_tech_digital', 
-            'entertainment', 'family_relationships', 'food_drink', 'gaming', 'health_wellness', 
-            'home_hobbies', 'identity_community', 'industry_professions', 'news_current_events', 
-            'regional_local', 'science_nature', 'society_law_history', 'software_engineering', 
+            'arts_culture', 'automotive_transport', 'business_finance', 'consumer_tech_digital',
+            'entertainment', 'family_relationships', 'food_drink', 'gaming', 'health_wellness',
+            'home_hobbies', 'identity_community', 'industry_professions', 'news_current_events',
+            'regional_local', 'science_nature', 'society_law_history', 'software_engineering',
             'sports', 'style_shopping', 'travel_geography', 'miscellaneous'
         );
     """
@@ -80,8 +81,8 @@ def downgrade() -> None:
     op.execute(
         """
         CREATE TYPE public.feedcategory AS ENUM (
-            'TECHNOLOGY_PROGRAMMING', 'CULTURE_ARTS', 'LIFESTYLE_PERSONAL', 'MISCELLANEOUS', 
-            'DESIGN_CREATIVITY', 'SCIENCE_RESEARCH', 'NEWS_POLITICS', 'GAMING_ENTERTAINMENT', 
+            'TECHNOLOGY_PROGRAMMING', 'CULTURE_ARTS', 'LIFESTYLE_PERSONAL', 'MISCELLANEOUS',
+            'DESIGN_CREATIVITY', 'SCIENCE_RESEARCH', 'NEWS_POLITICS', 'GAMING_ENTERTAINMENT',
             'BUSINESS_FINANCE', 'ARTIFICIAL_INTELLIGENCE', 'SECURITY_PRIVACY', 'EDUCATION_LEARNING'
         );
     """

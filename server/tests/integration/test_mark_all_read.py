@@ -268,7 +268,6 @@ async def test_new_articles_after_mark_all_read_show_as_unread(
 
     # Refresh subscription to get updated cutoff
     await db_session.refresh(subscription)
-    cutoff_before_new_article = subscription.last_read_cutoff
 
     # Add a brand new article (published today)
     await create_test_article(

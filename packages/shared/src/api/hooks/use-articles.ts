@@ -264,11 +264,10 @@ export function useUpdateArticle(
         queryKey: queryKeys.infiniteReadLater(),
       });
     },
-    onSettled: (_data, _error, { articleId }) => {
-      // Invalidate article
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.article(articleId),
-      });
+    onSettled: (_data, _error, { articleId: _articleId }) => {
+      // Don't invalidate the article detail query — we've already optimistically updated it
+      // Invalidating causes race conditions with extraction/translation that complete shortly after
+      // The optimistic update is sufficient and will be invalidated when data actually changes
 
       // Explicitly invalidate read later list
       queryClient.invalidateQueries({
@@ -632,17 +631,14 @@ export function useExtractFullTextMutation(
     },
     onSuccess: (data, variables) => {
       // Optimistically update the article with the extracted content
+      // Don't invalidate — the optimistic update is sufficient and prevents race conditions
+      // where a background refetch might complete before the server has persisted the data
       queryClient.setQueryData<Article>(queryKeys.article(variables.articleId), (oldArticle) => {
         if (!oldArticle) return oldArticle;
         return {
           ...oldArticle,
           extracted_content: data.content,
         };
-      });
-
-      // Invalidate the article to pick up extracted_content field
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.article(variables.articleId),
       });
     },
     ...options,

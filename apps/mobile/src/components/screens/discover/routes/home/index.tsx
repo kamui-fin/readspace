@@ -27,6 +27,7 @@ import type { FeedSummary } from '@readspace/shared';
 import { MOBILE_CATEGORY_NAMES, useCreateFeed } from '@readspace/shared';
 import { useSearchHistory } from '@stores/search-history';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { MotiView } from 'moti';
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
   Configure,
@@ -36,8 +37,6 @@ import {
   useMenu,
   useSearchBox,
 } from 'react-instantsearch';
-import { MotiView } from 'moti';
-import { Easing } from 'react-native-reanimated';
 import type { TextInput as RNTextInput } from 'react-native';
 import {
   DeviceEventEmitter,
@@ -49,6 +48,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { Easing } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CategoriesList } from '@/components/screens/discover/ui/categories.list';
 import { SearchResults } from '@/components/screens/discover/ui/search-results.list';
@@ -66,7 +66,6 @@ export function DiscoverScreen() {
       searchClient={searchClient as any}
       indexName={FEEDS_INDEX_NAME}
       future={{ preserveSharedStateOnUnmount: true }}>
-      <Configure hitsPerPage={20} attributesToHighlight={['title', 'description']} />
       <DiscoverScreenInner />
     </InstantSearch>
   );
@@ -109,8 +108,16 @@ function DiscoverScreenInner() {
   const contentPaddingBottom = BOTTOM_TABBAR_BASE_HEIGHT + 24;
   const trendingScrollRef = useRef<ScrollView>(null);
 
+  // Language filter for both trending + live search. Default is always English;
+  // 'all' means no language filter at all.
   const languageCode =
-    selectedLanguage === 'english' ? 'en' : selectedLanguage === 'chinese' ? 'zh' : 'ja';
+    selectedLanguage === 'all'
+      ? null
+      : selectedLanguage === 'chinese'
+        ? 'zh'
+        : selectedLanguage === 'japanese'
+          ? 'ja'
+          : 'en';
 
   // Fetch trending feeds using Meilisearch directly — infinite paginated, capped at MAX_TRENDING_ITEMS
   const {
@@ -126,6 +133,7 @@ function DiscoverScreenInner() {
       const res = await meilisearchClient.index(FEEDS_INDEX_NAME).search('', {
         limit: TRENDING_PAGE_SIZE,
         offset: pageParam,
+        filter: languageCode ? [`language=${languageCode}`] : undefined,
         sort: ['popularity_score:desc'],
       });
       return { hits: res.hits as unknown as FeedSummary[], offset: pageParam };
@@ -165,7 +173,6 @@ function DiscoverScreenInner() {
 
   const { refine: refineQuery } = useSearchBox();
   const { refine: refineCategory } = useMenu({ attribute: 'top_level_category', limit: 100 });
-  const { refine: refineLanguage } = useMenu({ attribute: 'language', limit: 10 });
   const { items: hits, isLastPage, showMore } = useInfiniteHits();
   const { status } = useInstantSearch();
 
@@ -302,13 +309,9 @@ function DiscoverScreenInner() {
     });
   }, [refineQuery]);
 
-  const handleLanguageChange = useCallback(
-    (language: Language) => {
-      setSelectedLanguage(language);
-      refineLanguage(language === 'english' ? 'en' : language === 'chinese' ? 'zh' : 'ja');
-    },
-    [refineLanguage]
-  );
+  const handleLanguageChange = useCallback((language: Language) => {
+    setSelectedLanguage(language);
+  }, []);
 
   const handleRecentSearchPress = useCallback(
     (query: string) => {
@@ -359,6 +362,12 @@ function DiscoverScreenInner() {
     <View
       className="bg-background flex-1"
       style={{ paddingTop: insets.top, backgroundColor: colors.background }}>
+      <Configure
+        hitsPerPage={20}
+        attributesToHighlight={['title', 'description']}
+        sortBy="popularity_score:desc"
+        filters={languageCode ? `language = ${languageCode}` : undefined}
+      />
       <TouchableWithoutFeedback onPress={handleOutsidePress}>
         <View className="flex-1">
           {/* Fixed Header & SearchBar Wrapper */}

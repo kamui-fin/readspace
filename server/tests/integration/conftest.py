@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import os
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncGenerator
 from urllib.parse import urlparse, urlunparse
 from uuid import uuid4
 
@@ -520,6 +520,7 @@ async def wait_for_taskiq_task(task_id: str, timeout: int = 30, poll_interval: f
 
 async def cleanup_redis_keys(pattern: str):
     import redis.asyncio as redis
+
     from app.core.redis_cache import get_pool
 
     pool = get_pool()
