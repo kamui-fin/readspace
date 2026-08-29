@@ -35,7 +35,7 @@ const formSchema = z.object({
     url: z.string().url("Invalid URL").optional(),
     link: z.string().url("Invalid URL").optional().or(z.literal("")),
     image_url: z.string().url("Invalid URL").optional().or(z.literal("")),
-    popularity_score: z.coerce.number().min(0).max(100).optional(),
+    popularity_score: z.coerce.number().min(0).optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -298,7 +298,7 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
                                 />
                             </FormControl>
                             <p className="text-xs text-muted-foreground">
-                                Popularity estimate (0-100) for feed ranking
+                                Popularity score used for ranking (typically 0-1000)
                             </p>
                             <FormMessage />
                         </FormItem>

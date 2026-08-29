@@ -7,6 +7,16 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useUserRole } from "@/hooks/use-user-role"
 import {
     useAdminDeleteFeed,
@@ -33,13 +43,11 @@ export function FeedCard({
     showPreviewButton = true,
 }: FeedCardProps) {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
     const adminDeleteFeed = useAdminDeleteFeed()
     const { isAdmin } = useUserRole()
 
-    console.log(isAdmin)
-
     const handleAdminDelete = () => {
-        // Delete immediately without confirmation
         if (feed.id) {
             adminDeleteFeed.mutate({ feedId: feed.id })
         }
@@ -97,7 +105,10 @@ export function FeedCard({
                                     Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                    onSelect={handleAdminDelete}
+                                    onSelect={(e) => {
+                                        e.preventDefault()
+                                        setIsDeleteConfirmOpen(true)
+                                    }}
                                     className="text-destructive focus:text-destructive"
                                 >
                                     <Trash2 className="mr-2 h-4 w-4" />
@@ -148,6 +159,27 @@ export function FeedCard({
                 isOpen={isEditDialogOpen}
                 onClose={() => setIsEditDialogOpen(false)}
             />
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Feed</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete "{feed.title}"? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleAdminDelete}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     )
 }

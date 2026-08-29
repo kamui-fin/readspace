@@ -13,14 +13,12 @@ from app.crud.article.counts import (
     get_unread_counts_per_feed,
 )
 from app.db.session import get_db
+from app.models.enums import UserRole
 from app.services.user.auth import get_current_user
 from app.typing.user import TokenData
+from app.utils.time import get_sync_cutoff
 
 router = APIRouter()
-
-
-from app.models.enums import UserRole
-from app.utils.time import get_sync_cutoff
 
 
 # --- Response Model ---

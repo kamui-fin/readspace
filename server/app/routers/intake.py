@@ -125,7 +125,7 @@ class TokenResponse(BaseModel):
     "/webhook",
     status_code=status.HTTP_201_CREATED,
     summary="Inbound email webhook from Cloudflare Worker",
-    description="Intakes parsed emails from Cloudflare Worker, maps to a user via token, and saves the content as a virtual feed article.",
+    description="Intakes parsed emails, maps to user via token, and saves as virtual feed article.",
 )
 async def webhook_intake(
     payload: WebhookPayload,
@@ -135,7 +135,8 @@ async def webhook_intake(
 ) -> dict:
     # 1. Security Check
     settings = get_settings()
-    expected = settings.INBOUND_WEBHOOK_SECRET.strip().strip('"').strip("'") if settings.INBOUND_WEBHOOK_SECRET else ""
+    secret = settings.INBOUND_WEBHOOK_SECRET
+    expected = secret.get_secret_value().strip().strip('"').strip("'") if secret else ""
     received = x_readspace_secret.strip().strip('"').strip("'") if x_readspace_secret else ""
 
     if not received or received != expected:
@@ -356,6 +357,6 @@ async def subscribe_newsletter(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
 
     return sub

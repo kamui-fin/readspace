@@ -151,8 +151,8 @@ def extract_favicon_url_for_newsletter(feed_url: str, feed_link: str | None) -> 
             if parsed.scheme in ("http", "https") and parsed.netloc:
                 domain = normalize_newsletter_domain(parsed.netloc)
                 return f"{parsed.scheme}://{domain}"
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to extract domain from feed_link", feed_link=feed_link, error=str(e))
 
     # Secondary: parse sender domain from newsletter://<uuid>/<sender_email>
     try:
@@ -162,8 +162,8 @@ def extract_favicon_url_for_newsletter(feed_url: str, feed_link: str | None) -> 
             raw_domain = parts[1].split("@")[1]
             domain = normalize_newsletter_domain(raw_domain)
             return f"https://{domain}"
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Failed to extract domain from newsletter URL", feed_url=feed_url, error=str(e))
 
     return None
 

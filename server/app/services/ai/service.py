@@ -110,7 +110,8 @@ async def translate_content(content: str, target_lang_code: str) -> str | None:
 
 def get_metadata_translation_system_prompt(target_lang: str) -> str:
     return (
-        f"You are a professional translator. Translate the given article metadata (title, description, and tags) to {target_lang}.\n"
+        f"You are a professional translator. Translate article metadata (title, description, "
+        f"and tags) to {target_lang}.\n"
         "Return ONLY a JSON object matching this schema:\n"
         "{\n"
         '  "title": "translated title",\n'
@@ -150,8 +151,8 @@ async def translate_metadata(
     if cached := await redis_cache.get(cache_key):
         try:
             return json.loads(cached)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to deserialize cached translation metadata", error=str(e))
 
     system_prompt = get_metadata_translation_system_prompt(target_lang)
     result = await _call_gemini(

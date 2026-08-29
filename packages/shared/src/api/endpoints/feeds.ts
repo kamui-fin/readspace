@@ -66,7 +66,7 @@ export const feeds = {
       image_url?: string;
       popularity_score?: number;
     }
-  ) => ApiClient.patch<FeedDetail>(`/api/feeds/${id}/admin`, data),
+  ) => ApiClient.put<FeedDetail>(`/api/feeds/${id}/admin`, data),
 
   markFeedAllRead: (feed_id: string) =>
     ApiClient.put<{
