@@ -177,26 +177,32 @@ export function FeedDropdownMenu({
 
     return (
         <div className="relative flex items-center justify-end h-6 w-6">
-            {/* Count Badge - fades out in place when hovered to make room for three dots */}
+            {/* Count Badge - fades out in place only while the row is hovered, to
+                make room for the three-dots menu. It must NOT hide on
+                `group-focus-within`: clicking a row (feed or folder) leaves that
+                row's link/button focused for as long as it stays selected, which
+                would keep the unread count hidden the whole time. */}
             {hasCount && (
                 <span
                     className={cn(
                         "text-xs font-semibold text-muted-foreground/80 px-1.5 py-0.5 rounded-full bg-muted/40 backdrop-blur-xs select-none",
                         "transition-opacity duration-150 absolute right-0",
-                        "group-hover/item:opacity-0 group-hover/item:pointer-events-none",
-                        "group-focus-within/item:opacity-0 group-focus-within/item:pointer-events-none"
+                        "group-hover/item:opacity-0 group-hover/item:pointer-events-none"
                     )}
                 >
                     {count}
                 </span>
             )}
 
-            {/* Context Menu Button - fades/scales in on hover */}
+            {/* Context Menu Button - reveals on row hover, or on keyboard focus
+                landing on the trigger itself (`focus-within` scoped to this
+                wrapper, not the whole row). */}
             <div
                 className={cn(
                     "transition-all duration-200 absolute right-0",
                     "opacity-0 pointer-events-none scale-90 group-hover/item:opacity-100 group-hover/item:pointer-events-auto group-hover/item:scale-100",
-                    "group-focus-within/item:opacity-100 group-focus-within/item:pointer-events-auto group-focus-within/item:scale-100"
+                    "focus-within:opacity-100 focus-within:pointer-events-auto focus-within:scale-100",
+                    "has-[[data-state=open]]:opacity-100 has-[[data-state=open]]:pointer-events-auto has-[[data-state=open]]:scale-100"
                 )}
             >
                 <FeedContextMenu

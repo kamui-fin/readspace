@@ -15,19 +15,17 @@ export function useFeedSelection() {
     const router = useRouter()
     const updateProfile = useUpdateProfile()
 
-    const { displayedFeeds, isLoading, error, fetchSimilarFeeds } =
+    const { displayedFeeds, isLoading, isError, fetchSimilarFeeds } =
         useOnboardingFeeds(onboardingData.selectedCategories)
 
-    // Get user's subscribed feeds to check which ones are already followed
-    const { data: feedsResponse } = useFeeds(
-        {},
-        {
-            refetchOnMount: false,
-            refetchOnWindowFocus: false,
-            refetchOnReconnect: false,
-            staleTime: 10 * 60 * 1000,
-        }
-    )
+    // Get user's subscribed feeds to check which ones are already followed.
+    // Pass no params so this shares the cache key with the sidebar's useFeeds().
+    const { data: feedsResponse } = useFeeds(undefined, {
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        staleTime: 10 * 60 * 1000,
+    })
     const subscribedFeeds = feedsResponse?.subscriptions
 
     const handleFeedSubscribed = async (feedId: string) => {
@@ -65,7 +63,7 @@ export function useFeedSelection() {
     return {
         displayedFeeds,
         isLoading,
-        error,
+        isError,
         followedFeeds,
         subscribedFeeds,
         handleFeedSubscribed,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { Article, ArticleFilterMode } from "@readspace/shared"
 import { CalendarIcon } from "lucide-react"
 import { ArticleItem } from "./ArticleItem"
@@ -63,13 +63,21 @@ export function ArticlesList({
             isTodayMode,
         })
 
-    // Scroll selected article into view
+    // Scroll selected article into view — only when the *selection* changes,
+    // not when `allRows` grows. `useArticleGrouping` returns a brand-new array
+    // on every `fetchNextPage()` append; without this guard the effect re-fires
+    // on each page load and yanks the scroll position back up to the selected
+    // (usually first) article. The ref records the last id we scrolled to so
+    // pagination is a no-op while clicks / keyboard nav still scroll.
+    const lastScrolledIdRef = useRef<string | null>(null)
     useEffect(() => {
         if (!selectedArticleId) return
+        if (selectedArticleId === lastScrolledIdRef.current) return
         const index = allRows.findIndex(
             (row) => row && !("type" in row) && row.id === selectedArticleId
         )
         if (index !== -1) {
+            lastScrolledIdRef.current = selectedArticleId
             rowVirtualizer.scrollToIndex(index, { align: "auto" })
         }
     }, [selectedArticleId, allRows, rowVirtualizer])

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { WifiOff } from "lucide-react"
+import { SearchX, WifiOff } from "lucide-react"
 import Link from "next/link"
 import OnboardingLayout from "../OnboardingLayout"
 
@@ -34,11 +34,42 @@ export function OnboardingLoadingState() {
     )
 }
 
-interface OnboardingErrorStateProps {
+interface OnboardingStateActionProps {
     onBack: () => void
 }
 
-export function OnboardingErrorState({ onBack }: OnboardingErrorStateProps) {
+export function OnboardingEmptyState({ onBack }: OnboardingStateActionProps) {
+    return (
+        <OnboardingLayout
+            title="No sources for these topics yet"
+            subtitle="We couldn't find publications matching your picks. Try choosing a few different topics."
+        >
+            <div className="flex flex-col items-center py-8 max-w-md mx-auto">
+                <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-6 text-muted-foreground">
+                    <SearchX size={28} />
+                </div>
+
+                <div className="mt-4 w-full flex justify-center gap-3">
+                    <Button
+                        onClick={onBack}
+                        variant="outline"
+                        className="w-40 h-12 rounded-xl cursor-pointer select-none"
+                    >
+                        Change topics
+                    </Button>
+                    <Button
+                        asChild
+                        className="w-48 h-12 bg-primary hover:bg-primary/95 text-white font-semibold rounded-xl cursor-pointer select-none transition-all shadow-xs"
+                    >
+                        <Link href="/today">Continue Anyway</Link>
+                    </Button>
+                </div>
+            </div>
+        </OnboardingLayout>
+    )
+}
+
+export function OnboardingErrorState({ onBack }: OnboardingStateActionProps) {
     return (
         <OnboardingLayout
             title="Having trouble finding sources"

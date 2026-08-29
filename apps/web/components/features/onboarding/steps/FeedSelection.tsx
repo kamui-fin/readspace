@@ -7,6 +7,7 @@ import { type OnboardingFeed } from "@/components/features/onboarding/hooks/use-
 import {
     OnboardingLoadingState,
     OnboardingErrorState,
+    OnboardingEmptyState,
 } from "./OnboardingStates"
 import { useFeedSelection } from "@/components/features/onboarding/hooks/use-feed-selection"
 
@@ -14,7 +15,7 @@ const FeedSelectionStep: React.FC = () => {
     const {
         displayedFeeds,
         isLoading,
-        error,
+        isError,
         followedFeeds,
         subscribedFeeds,
         handleFeedSubscribed,
@@ -27,8 +28,14 @@ const FeedSelectionStep: React.FC = () => {
         return <OnboardingLoadingState />
     }
 
-    if (error || !displayedFeeds?.length) {
+    // Only a genuine query failure shows the error state. An empty-but-successful
+    // result gets its own copy instead of masquerading as "couldn't connect".
+    if (isError) {
         return <OnboardingErrorState onBack={handleBack} />
+    }
+
+    if (!displayedFeeds?.length) {
+        return <OnboardingEmptyState onBack={handleBack} />
     }
 
     return (

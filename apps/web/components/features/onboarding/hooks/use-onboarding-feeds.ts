@@ -1,6 +1,6 @@
 import { meilisearchClient, FEEDS_INDEX_NAME } from "@/lib/meilisearch-client"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 export type OnboardingFeed = {
     id: string
@@ -13,13 +13,45 @@ export type OnboardingFeed = {
     popularity_score?: number
 }
 
+type SimilarInsertion = {
+    anchorId: string
+    feeds: OnboardingFeed[]
+}
+
+/**
+ * Merge the query's base feed list with any "similar feed" groups the user has
+ * pulled in by subscribing. Each group is spliced in right after its anchor,
+ * skipping feeds already present. Derived synchronously so there is never a
+ * render where the query has resolved but the list is still empty (which is
+ * what briefly flashed the error state).
+ */
+function mergeSimilarFeeds(
+    base: OnboardingFeed[],
+    insertions: SimilarInsertion[]
+): OnboardingFeed[] {
+    const merged = [...base]
+
+    for (const { anchorId, feeds } of insertions) {
+        const anchorIndex = merged.findIndex((f) => f.id === anchorId)
+        if (anchorIndex === -1) continue
+
+        const seen = new Set(merged.map((f) => f.id))
+        const unique = feeds.filter((f) => !seen.has(f.id))
+        merged.splice(anchorIndex + 1, 0, ...unique)
+    }
+
+    return merged
+}
+
 export function useOnboardingFeeds(selectedCategories: string[]) {
-    const [displayedFeeds, setDisplayedFeeds] = useState<OnboardingFeed[]>([])
+    const [similarInsertions, setSimilarInsertions] = useState<
+        SimilarInsertion[]
+    >([])
 
     const {
         data: feedsData,
         isLoading,
-        error,
+        isError,
     } = useQuery({
         queryKey: ["onboarding-feeds", selectedCategories],
         queryFn: async () => {
@@ -82,13 +114,12 @@ export function useOnboardingFeeds(selectedCategories: string[]) {
         enabled: selectedCategories.length > 0,
     })
 
-    useEffect(() => {
-        if (feedsData) {
-            setDisplayedFeeds(feedsData)
-        }
-    }, [feedsData])
+    const displayedFeeds = useMemo(
+        () => mergeSimilarFeeds(feedsData ?? [], similarInsertions),
+        [feedsData, similarInsertions]
+    )
 
-    const fetchSimilarFeeds = async (feedId: string) => {
+    const fetchSimilarFeeds = useCallback(async (feedId: string) => {
         try {
             const index = meilisearchClient.index(FEEDS_INDEX_NAME)
             const results = await index.searchSimilarDocuments({
@@ -99,39 +130,37 @@ export function useOnboardingFeeds(selectedCategories: string[]) {
                 filter: 'language = "en"',
             })
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const similarFeeds = results.hits.map((hit: any) => ({
-                id: hit.id,
-                title: hit.title,
-                description: hit.description,
-                url: hit.url,
-                link: hit.link,
-                image_url: hit.image_url,
-                category: hit.top_level_category,
-                popularity_score: hit.popularity_score,
-            }))
+            const similarFeeds: OnboardingFeed[] = results.hits.map(
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (hit: any) => ({
+                    id: hit.id,
+                    title: hit.title,
+                    description: hit.description,
+                    url: hit.url,
+                    link: hit.link,
+                    image_url: hit.image_url,
+                    category: hit.top_level_category,
+                    popularity_score: hit.popularity_score,
+                })
+            )
 
-            setDisplayedFeeds((prev) => {
-                const feedIndex = prev.findIndex((f) => f.id === feedId)
-                if (feedIndex === -1) return prev
+            if (similarFeeds.length === 0) return
 
-                const newFeeds = [...prev]
-                const uniqueSimilar = similarFeeds.filter(
-                    (sf: OnboardingFeed) =>
-                        !newFeeds.some((f) => f.id === sf.id)
-                )
-                newFeeds.splice(feedIndex + 1, 0, ...uniqueSimilar)
-                return newFeeds
+            setSimilarInsertions((prev) => {
+                if (prev.some((insertion) => insertion.anchorId === feedId)) {
+                    return prev
+                }
+                return [...prev, { anchorId: feedId, feeds: similarFeeds }]
             })
         } catch (error) {
             console.error("Failed to fetch similar feeds:", error)
         }
-    }
+    }, [])
 
     return {
         displayedFeeds,
         isLoading,
-        error,
+        isError,
         fetchSimilarFeeds,
     }
 }
