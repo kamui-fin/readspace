@@ -1,5 +1,3 @@
-import AddCircleBoldDuotoneIcon from '@components/icons/solar/add-circle-bold-duotone';
-import CheckCircleBoldDuotoneIcon from '@components/icons/solar/check-circle-bold-duotone';
 import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
 import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
@@ -8,6 +6,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { stripHtml } from '@lib/utils/html';
 import { useCreateFeed, useDeleteFeed } from '@readspace/shared';
+import { AddCircleIcon, CheckCircleIcon } from '@solar-icons/react-native/bold-duotone';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
@@ -114,9 +113,9 @@ export const OnboardingFeedItem = ({
         disabled={isLoading}
         className="p-2 transition-opacity active:opacity-60">
         {isFollowing ? (
-          <CheckCircleBoldDuotoneIcon width={32} height={32} color={colors.secondary} />
+          <CheckCircleIcon size={32} color={colors.secondary} />
         ) : (
-          <AddCircleBoldDuotoneIcon width={32} height={32} color={colors.grey3} />
+          <AddCircleIcon size={32} color={colors.grey3} />
         )}
       </Pressable>
     </View>

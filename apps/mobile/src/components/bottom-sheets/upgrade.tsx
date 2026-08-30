@@ -1,11 +1,11 @@
 import RssIcon from '@components/icons/local/rss';
 import SparkleIcon from '@components/icons/local/sparkle';
-import RocketBoldIcon from '@components/icons/solar/rocket-bold';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { useRevenueCat } from '@contexts/revenuecat-context';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { RocketIcon } from '@solar-icons/react-native/bold';
 import { useUpgradeDialog } from '@stores/upgrade-dialog';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
@@ -100,7 +100,7 @@ export function UpgradePaywallModal() {
             style={{ backgroundColor: colors.grey6, borderWidth: 1, borderColor: colors.grey5 }}
             accessibilityLabel="Close Upgrade Screen"
             accessibilityRole="button">
-            <SvgXml xml={CLOSE_XML} width={20} height={20} color={colors.black} />
+            <SvgXml xml={CLOSE_XML} width={20} height={20} />
           </Pressable>
         </View>
 
@@ -134,7 +134,7 @@ export function UpgradePaywallModal() {
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <RssIcon width={18} height={18} color={colors.primary} />
+                  <RssIcon />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
@@ -156,7 +156,7 @@ export function UpgradePaywallModal() {
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <SvgXml xml={SEARCH_XML} width={18} height={18} color={colors.primary} />
+                  <SvgXml xml={SEARCH_XML} width={18} height={18} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
@@ -178,7 +178,7 @@ export function UpgradePaywallModal() {
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <SparkleIcon width={18} height={18} color={colors.primary} />
+                  <SparkleIcon />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
@@ -199,7 +199,7 @@ export function UpgradePaywallModal() {
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <SvgXml xml={BOOK_XML} width={18} height={18} color={colors.primary} />
+                  <SvgXml xml={BOOK_XML} width={18} height={18} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
@@ -320,7 +320,7 @@ export function UpgradePaywallModal() {
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
                 <View className="flex-row items-center justify-center gap-2">
-                  <RocketBoldIcon width={18} height={18} color="#ffffff" />
+                  <RocketIcon size={18} color="#ffffff" />
                   <Text className="font-geist-semibold text-white">Upgrade to Pro</Text>
                 </View>
               )}

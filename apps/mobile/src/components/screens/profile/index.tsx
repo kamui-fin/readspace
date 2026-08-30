@@ -1,14 +1,5 @@
 import DiscordIcon from '@components/icons/local/discord';
 import GitHubIcon from '@components/icons/local/github';
-import ArchiveUpMinimlisticLinearIcon from '@components/icons/solar/archive-up-minimlistic-linear';
-import SolarCloudBoldIcon from '@components/icons/solar/cloud-bold';
-import SolarCrownBoldIcon from '@components/icons/solar/crown-bold';
-import DownloadLinearIcon from '@components/icons/solar/download-linear';
-import HistoryLinearIcon from '@components/icons/solar/history-linear';
-import Logout2LinearIcon from '@components/icons/solar/logout-2-linear';
-import PaletteLinearIcon from '@components/icons/solar/palette-linear';
-import SolarServerBoldIcon from '@components/icons/solar/server-bold';
-import SolarShieldCheckBoldIcon from '@components/icons/solar/shield-check-bold';
 import { Header } from '@components/navigation/header';
 import { SettingsGroup } from '@components/screens/profile/ui/settings-group';
 import { SettingsItem } from '@components/screens/profile/ui/settings-item';
@@ -33,6 +24,14 @@ import { COLORS } from '@lib/constants/colors';
 import { CLOUD_CONFIG } from '@lib/constants/config';
 import { exportFeedsToOPML } from '@lib/utils/opml';
 import { useFeeds } from '@readspace/shared';
+import { CloudIcon, CrownIcon, ServerIcon, ShieldCheckIcon } from '@solar-icons/react-native/bold';
+import {
+  ArchiveUpMinimalisticIcon,
+  DownloadIcon,
+  HistoryIcon,
+  Logout2Icon,
+  PaletteIcon,
+} from '@solar-icons/react-native/linear';
 import { useSettingsStore } from '@stores/settings';
 import { type Theme, useThemeStore } from '@stores/theme';
 import { useUpgradeDialog } from '@stores/upgrade-dialog';
@@ -151,17 +150,9 @@ export function ProfileScreen() {
               selected={false}
               icon={
                 settings.instance_type === 'cloud' ? (
-                  <SolarCloudBoldIcon
-                    width={14}
-                    height={14}
-                    color={isDark ? colors.grey2 : colors.grey}
-                  />
+                  <CloudIcon size={14} color={isDark ? colors.grey2 : colors.grey} />
                 ) : (
-                  <SolarServerBoldIcon
-                    width={14}
-                    height={14}
-                    color={isDark ? colors.grey2 : colors.grey}
-                  />
+                  <ServerIcon size={14} color={isDark ? colors.grey2 : colors.grey} />
                 )
               }
             />
@@ -181,7 +172,7 @@ export function ProfileScreen() {
                 <View
                   className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
                   style={{ backgroundColor: '#F59E0B' }}>
-                  <SolarCrownBoldIcon width={14} height={14} color="#FFFFFF" />
+                  <CrownIcon size={14} color="#FFFFFF" />
                   <Text size="sm" fontFamily="geist-bold" className="text-white">
                     Pro
                   </Text>
@@ -207,7 +198,7 @@ export function ProfileScreen() {
               <SettingsItem
                 label="Upgrade to Pro"
                 variant="button"
-                leftIcon={<SolarCrownBoldIcon width={22} height={22} color="#D4AF37" />}
+                leftIcon={<CrownIcon size={22} color="#D4AF37" />}
                 onPress={() => openUpgrade()}
                 isLast={true}
               />
@@ -215,9 +206,7 @@ export function ProfileScreen() {
               <SettingsItem
                 label="Manage Subscription"
                 variant="button"
-                leftIcon={
-                  <SolarShieldCheckBoldIcon width={22} height={22} color={colors.secondary} />
-                }
+                leftIcon={<ShieldCheckIcon size={22} color={colors.secondary} />}
                 onPress={() => {
                   if (isRcPro) {
                     presentCustomerCenter();
@@ -248,7 +237,7 @@ export function ProfileScreen() {
                   label="Theme"
                   variant="select"
                   value={theme.charAt(0).toUpperCase() + theme.slice(1)}
-                  leftIcon={<PaletteLinearIcon width={22} height={22} color={colors.black} />}
+                  leftIcon={<PaletteIcon size={22} color={colors.black} />}
                 />
               </DropdownMenuTrigger>
               <DropdownMenuContent>
@@ -300,23 +289,21 @@ export function ProfileScreen() {
             <SettingsItem
               label="Reading History"
               variant="button"
-              leftIcon={<HistoryLinearIcon width={22} height={22} color={colors.black} />}
+              leftIcon={<HistoryIcon size={22} color={colors.black} />}
               onPress={() => router.push('/(protected)/(tabs)/recents')}
             />
 
             <SettingsItem
               label="Import Subscriptions"
               variant="button"
-              leftIcon={<DownloadLinearIcon width={22} height={22} color={colors.black} />}
+              leftIcon={<DownloadIcon size={22} color={colors.black} />}
               onPress={() => router.push('/(protected)/settings/import-opml')}
             />
 
             <SettingsItem
               label="Export OPML"
               variant="button"
-              leftIcon={
-                <ArchiveUpMinimlisticLinearIcon width={22} height={22} color={colors.black} />
-              }
+              leftIcon={<ArchiveUpMinimalisticIcon size={22} color={colors.black} />}
               onPress={handleOPMLExport}
               isLast={true}
             />
@@ -327,18 +314,14 @@ export function ProfileScreen() {
             <SettingsItem
               label="GitHub"
               variant="link"
-              leftIcon={
-                <GitHubIcon width={22} height={22} color={githubColor} fill={githubColor} />
-              }
+              leftIcon={<GitHubIcon size={20} />}
               onPress={handleGithubPress}
             />
 
             <SettingsItem
               label="Join the Discord"
               variant="link"
-              leftIcon={
-                <DiscordIcon width={22} height={22} color={discordColor} fill={discordColor} />
-              }
+              leftIcon={<DiscordIcon size={20} />}
               onPress={handleDiscordPress}
               isLast={true}
             />
@@ -352,7 +335,7 @@ export function ProfileScreen() {
             <SettingsItem
               label={isLoggingOut ? 'Logging out...' : 'Logout'}
               variant="link"
-              leftIcon={<Logout2LinearIcon width={22} height={22} color={colors.red} />}
+              leftIcon={<Logout2Icon size={22} color={colors.red} />}
               onPress={handleLogout}
               disabled={isLoggingOut}
               danger={true}

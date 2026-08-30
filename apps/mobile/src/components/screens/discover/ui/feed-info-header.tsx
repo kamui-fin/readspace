@@ -1,8 +1,3 @@
-import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
-import LayersMinimalisticLinearIcon from '@components/icons/solar/layers-minimalistic-linear';
-import LinkMinimalistic2BoldIcon from '@components/icons/solar/link-minimalistic-2-bold';
-import TrashBinTrashBoldIcon from '@components/icons/solar/trash-bin-trash-bold';
-import UserCircleLinearIcon from '@components/icons/solar/user-circle-linear';
 import { Button } from '@components/ui/button';
 import { Chip } from '@components/ui/chip';
 import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
@@ -12,6 +7,12 @@ import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { Feed, FeedDiscoveryResult } from '@readspace/shared';
+import { LinkMinimalistic2Icon, TrashBinTrashIcon } from '@solar-icons/react-native/bold';
+import {
+  ArrowLeftIcon,
+  LayersMinimalisticIcon,
+  UserCircleIcon,
+} from '@solar-icons/react-native/linear';
 import { memo, useCallback, useState } from 'react';
 import { Linking, View } from 'react-native';
 
@@ -73,7 +74,7 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
       {/* Back button row */}
       <View className="mb-6 flex-row items-center">
         <Button variant="icon" size="small" fullWidth={false} onPress={onBack}>
-          <ArrowLeftLinearIcon width={18} height={18} strokeWidth={2.4} color={greyColor} />
+          <ArrowLeftIcon size={18} strokeWidth={2.4} color={greyColor} />
         </Button>
       </View>
 
@@ -124,7 +125,7 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
           {/* Author */}
           {author ? (
             <View className="mb-1 flex-row items-center gap-1.5">
-              <UserCircleLinearIcon width={13} height={13} color={greyColor} strokeWidth={1.8} />
+              <UserCircleIcon size={13} color={greyColor} strokeWidth={1.8} />
               <Text
                 size="sm"
                 fontFamily="geist"
@@ -138,12 +139,7 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
           {/* Content Type */}
           {contentType ? (
             <View className="flex-row items-center gap-1.5">
-              <LayersMinimalisticLinearIcon
-                width={13}
-                height={13}
-                color={greyColor}
-                strokeWidth={1.8}
-              />
+              <LayersMinimalisticIcon size={13} color={greyColor} strokeWidth={1.8} />
               <Text size="sm" fontFamily="geist" style={{ color: colors.grey, fontSize: 12 }}>
                 {formatContentType(contentType)}
               </Text>
@@ -183,7 +179,7 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
           size="small"
           onPress={handleUrlPress}
           className="mb-4 h-auto flex-row items-center justify-start gap-2 px-0">
-          <LinkMinimalistic2BoldIcon width={14} height={14} strokeWidth={2.4} color={linkColor} />
+          <LinkMinimalistic2Icon size={14} strokeWidth={2.4} color={linkColor} />
           <Text
             size="sm"
             fontFamily="geist"
@@ -257,11 +253,7 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
         loading={isFollowLoading}
         leftIcon={
           isFollowing && !isFollowLoading ? (
-            <TrashBinTrashBoldIcon
-              width={16}
-              height={16}
-              color={colors === COLORS.dark ? '#fe4336' : '#EA4335'}
-            />
+            <TrashBinTrashIcon size={16} color={colors === COLORS.dark ? '#fe4336' : '#EA4335'} />
           ) : undefined
         }
         style={

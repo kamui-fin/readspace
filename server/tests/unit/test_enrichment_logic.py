@@ -12,6 +12,7 @@ from app.typing.feeds import ArticleStats, FeedEnrichmentResponse, FeedEnrichmen
 # ==============================================================================
 
 
+@pytest.mark.unit
 def test_calculate_quality_score_basic():
     feed_data = FeedScoringData(
         title="My Tech Blog",
@@ -27,6 +28,7 @@ def test_calculate_quality_score_basic():
     assert score == pytest.approx(0.5)
 
 
+@pytest.mark.unit
 def test_calculate_quality_score_with_stats():
     feed_data = FeedScoringData(title="My Tech Blog")
     article_stats = ArticleStats(count=10, image_ratio=0.6, avg_content_length=1200, days_since_last_article=2)
@@ -37,6 +39,7 @@ def test_calculate_quality_score_with_stats():
     assert score == pytest.approx(0.65)
 
 
+@pytest.mark.unit
 def test_calculate_hybrid_popularity_score():
     feed_data = FeedScoringData(title="Test")
     llm_estimate = 80  # 0.8
@@ -61,6 +64,7 @@ def test_calculate_hybrid_popularity_score():
 # ==============================================================================
 
 
+@pytest.mark.unit
 def test_calculate_article_stats():
     now = datetime.now(timezone.utc)
     articles = [
@@ -76,6 +80,7 @@ def test_calculate_article_stats():
     assert stats.days_since_last_article == 0
 
 
+@pytest.mark.unit
 def test_build_feed_update_mapping():
     feed_snapshot = FeedEnrichmentSnapshot(
         id="123",

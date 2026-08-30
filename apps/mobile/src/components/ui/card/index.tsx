@@ -1,4 +1,3 @@
-import EyeLinearIcon from '@components/icons/solar/eye-linear';
 import { Divider } from '@components/ui/divider';
 import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
 import { FeedIcon } from '@components/ui/feed-icon';
@@ -6,6 +5,7 @@ import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { stripHtml } from '@lib/utils/html';
+import { EyeIcon } from '@solar-icons/react-native/linear';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import { Image as ExpoImage } from 'expo-image';
@@ -189,7 +189,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                   {/* Read time icon */}
                   {timestamp && (
                     <>
-                      <EyeLinearIcon width={12} height={12} color="#90988B" />
+                      <EyeIcon size={12} color="#90988B" />
                       <Text
                         size="xs"
                         fontFamily="geist"
@@ -325,7 +325,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
               </View>
               {timestamp && (
                 <View className="flex-row items-center gap-1">
-                  <EyeLinearIcon width={12} height={12} color="#90988b" />
+                  <EyeIcon size={12} color="#90988b" />
                   <Text
                     size="xs"
                     fontFamily="geist"

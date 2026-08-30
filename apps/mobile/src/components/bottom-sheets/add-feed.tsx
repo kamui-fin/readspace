@@ -1,10 +1,3 @@
-import SolarCheckCircleLinearIcon from '@components/icons/solar/check-circle-linear';
-import SolarCopyLinearIcon from '@components/icons/solar/copy-linear';
-import FeedLinearIcon from '@components/icons/solar/feed-linear';
-import LayersMinimalisticLinearIcon from '@components/icons/solar/layers-minimalistic-linear';
-import LetterOpenedLinearIcon from '@components/icons/solar/letter-opened-linear';
-import LinkMinimalistic2BoldIcon from '@components/icons/solar/link-minimalistic-2-bold';
-import UserCircleLinearIcon from '@components/icons/solar/user-circle-linear';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
@@ -18,6 +11,15 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { ApiClient, type FeedDiscoveryResult } from '@readspace/shared';
+import { LinkMinimalistic2Icon } from '@solar-icons/react-native/bold';
+import {
+  CheckCircleIcon,
+  CopyIcon,
+  FeedIcon,
+  LayersMinimalisticIcon,
+  LetterOpenedIcon,
+  UserCircleIcon,
+} from '@solar-icons/react-native/linear';
 import { useUpgradeDialog } from '@stores/upgrade-dialog';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
@@ -250,16 +252,14 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
             return (
               <Pressable key={m} onPress={() => handleModeSwitch(m)} style={styles.togglePill}>
                 {m === 'rss' ? (
-                  <FeedLinearIcon
-                    width={13}
-                    height={13}
+                  <FeedIcon
+                    size={13}
                     color={isActive ? activeTextColor : inactiveTextColor}
                     strokeWidth={1.8}
                   />
                 ) : (
-                  <LetterOpenedLinearIcon
-                    width={13}
-                    height={13}
+                  <LetterOpenedIcon
+                    size={13}
                     color={isActive ? activeTextColor : inactiveTextColor}
                     strokeWidth={1.8}
                   />
@@ -314,7 +314,7 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
 
             {!isPreviewing && feedPreview && (
               <View
-                className="border-divider mt-4 flex-col gap-3 rounded-xl border p-4"
+                className="mt-4 flex-col gap-3 rounded-xl p-4"
                 style={{ backgroundColor: colors.grey6 }}>
                 <View className="flex-row items-start gap-3">
                   <View
@@ -336,19 +336,14 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
                     <Text
                       size="base"
                       fontFamily="geist-semibold"
-                      className="mb-1.5 tracking-tight text-black"
+                      className="mb-1.5 tracking-tight text-black dark:text-white"
                       numberOfLines={2}>
                       {feedPreview.title || 'Untitled Feed'}
                     </Text>
                     <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1.5">
                       {feedPreview.author ? (
                         <View className="flex-row items-center gap-1">
-                          <UserCircleLinearIcon
-                            width={12}
-                            height={12}
-                            color={colors.grey}
-                            strokeWidth={1.8}
-                          />
+                          <UserCircleIcon size={12} color={colors.grey} strokeWidth={1.8} />
                           <Text
                             size="sm"
                             fontFamily="geist"
@@ -360,12 +355,7 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
                       ) : null}
                       {feedPreview.content_type ? (
                         <View className="flex-row items-center gap-1">
-                          <LayersMinimalisticLinearIcon
-                            width={12}
-                            height={12}
-                            color={colors.grey}
-                            strokeWidth={1.8}
-                          />
+                          <LayersMinimalisticIcon size={12} color={colors.grey} strokeWidth={1.8} />
                           <Text
                             size="sm"
                             fontFamily="geist"
@@ -404,12 +394,7 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
                   <Pressable
                     onPress={handleUrlPress}
                     className="flex-row items-center gap-1.5 self-start py-0.5">
-                    <LinkMinimalistic2BoldIcon
-                      width={12}
-                      height={12}
-                      strokeWidth={2.4}
-                      color={colors.primary}
-                    />
+                    <LinkMinimalistic2Icon size={12} strokeWidth={2.4} color={colors.primary} />
                     <Text
                       size="sm"
                       fontFamily="geist"
@@ -482,17 +467,9 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
                           { backgroundColor: isDark ? colors.grey4 : '#fff' },
                         ]}>
                         {copied ? (
-                          <SolarCheckCircleLinearIcon
-                            width={16}
-                            height={16}
-                            color={colors.secondary}
-                          />
+                          <CheckCircleIcon size={16} color={colors.secondary} />
                         ) : (
-                          <SolarCopyLinearIcon
-                            width={16}
-                            height={16}
-                            color={isDark ? colors.grey2 : colors.grey}
-                          />
+                          <CopyIcon size={16} color={isDark ? colors.grey2 : colors.grey} />
                         )}
                       </View>
                     </Pressable>

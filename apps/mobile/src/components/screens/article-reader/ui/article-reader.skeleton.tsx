@@ -13,17 +13,11 @@ export function ArticleReaderSkeleton({ article }: ArticleReaderSkeletonProps) {
 
   return (
     <View className="bg-background flex-1">
-      {/* Featured Image placeholder - Edge-to-edge */}
-      {(article?.image_url || !article) && (
-        <View style={{ marginTop: insets.top }}>
-          <Skeleton variant="rectangle" height={200} width="100%" className="rounded-none" />
-        </View>
-      )}
+      {/* Featured Image placeholder */}
+      <Skeleton variant="rectangle" height={200} width="100%" className="rounded-none" />
 
       {/* Article Header */}
-      <View
-        className="mb-6 px-6 pb-6"
-        style={{ marginTop: article?.image_url || !article ? 24 : insets.top + 56 }}>
+      <View className="mb-6 px-6 pb-6 pt-6">
         {/* Source */}
         <View className="mb-2 flex-row items-center gap-2">
           <Skeleton variant="rectangle" height={16} width={16} className="rounded-sm" />

@@ -1,6 +1,5 @@
 import GoogleIcon from '@components/icons/local/google';
 import ReadspaceLogo from '@components/icons/local/readspace-logo';
-import LetterBoldIcon from '@components/icons/solar/letter-bold';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { ThreeDotsAnimation } from '@components/ui/three-dots';
@@ -10,6 +9,7 @@ import { useGoogleAuth } from '@hooks/useGoogleAuth';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { SPACING } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { LetterIcon } from '@solar-icons/react-native/bold';
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -109,7 +109,7 @@ export function WelcomeScreen() {
           <View
             className="items-center justify-center rounded-xl bg-black dark:bg-black"
             style={{ width: logoSize, height: logoSize }}>
-            <ReadspaceLogo width={logoSize} height={logoSize} />
+            <ReadspaceLogo />
           </View>
           <Text className="text-primary-foreground font-figtree-semibold ml-4 text-4xl">
             readspace
@@ -139,7 +139,7 @@ export function WelcomeScreen() {
           variant="primary"
           size="large"
           onPress={() => router.push('/(auth)/login')}
-          leftIcon={<LetterBoldIcon width={20} height={20} color={COLORS.white} />}>
+          leftIcon={<LetterIcon size={20} color={COLORS.white} />}>
           Continue with Email
         </Button>
 
@@ -150,7 +150,7 @@ export function WelcomeScreen() {
           disabled={isLoading}
           leftIcon={
             !isLoading ? (
-              <GoogleIcon width={20} height={20} color={isDark ? '#ffffff' : COLORS.light.black} />
+              <GoogleIcon size={20} color={isDark ? '#ffffff' : COLORS.light.black} />
             ) : undefined
           }>
           {isLoading ? (

@@ -1,6 +1,4 @@
 import { SelfHostSettingsBottomSheet } from '@components/bottom-sheets/self-hosted-settings.bottom-sheet';
-import EyeBoldIcon from '@components/icons/solar/eye-bold';
-import EyeClosedBoldIcon from '@components/icons/solar/eye-closed-bold';
 import { Button } from '@components/ui/button';
 import { Input, InputPressable } from '@components/ui/input';
 import { Text } from '@components/ui/text';
@@ -12,6 +10,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { supabase } from '@lib/supabase/client';
 import { type LoginFormData, LoginSchema } from '@lib/validation/auth-schemas';
+import { EyeClosedIcon, EyeIcon } from '@solar-icons/react-native/bold';
 import { useSettingsStore } from '@stores/settings';
 import { type Href, router } from 'expo-router';
 import { Formik, type FormikHelpers } from 'formik';
@@ -216,8 +215,8 @@ export function LoginScreen() {
                         rightElement={
                           <InputPressable onPress={() => setShowPassword(!showPassword)}>
                             {(() => {
-                              const IconObj = showPassword ? EyeBoldIcon : EyeClosedBoldIcon;
-                              return <IconObj width={20} height={20} color={colors.grey} />;
+                              const IconObj = showPassword ? EyeIcon : EyeClosedIcon;
+                              return <IconObj size={20} color={colors.grey} />;
                             })()}
                           </InputPressable>
                         }

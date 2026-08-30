@@ -39,6 +39,7 @@ async def test_extract_full_content_failure():
         assert error == "Could not extract readable content"
 
 
+@pytest.mark.unit
 def test_remove_duplicate_title():
     html = "<h1>My Title</h1><p>Content</p>"
     soup = BeautifulSoup(html, "html.parser")
@@ -46,6 +47,7 @@ def test_remove_duplicate_title():
     assert str(soup) == "<p>Content</p>"
 
 
+@pytest.mark.unit
 def test_remove_duplicate_title_mismatch():
     html = "<h1>Other Title</h1><p>Content</p>"
     soup = BeautifulSoup(html, "html.parser")
@@ -53,6 +55,7 @@ def test_remove_duplicate_title_mismatch():
     assert "<h1>Other Title</h1>" in str(soup)
 
 
+@pytest.mark.unit
 def test_remove_duplicate_image():
     html = '<img src="http://example.com/img.jpg"><p>Content</p>'
     soup = BeautifulSoup(html, "html.parser")
@@ -60,6 +63,7 @@ def test_remove_duplicate_image():
     assert str(soup) == "<p>Content</p>"
 
 
+@pytest.mark.unit
 def test_remove_duplicate_image_mismatch():
     html = '<img src="http://example.com/other.jpg"><p>Content</p>'
     soup = BeautifulSoup(html, "html.parser")

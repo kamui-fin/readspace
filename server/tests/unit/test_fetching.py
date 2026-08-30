@@ -6,6 +6,7 @@ from app.services.feeds.fetching import MAX_FEED_SIZE_BYTES, fetch_feed_content
 from app.utils.urls import normalize_feed_url, resolve_canonical_url
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_normalize_feed_url():
     # Test basic normalization
@@ -18,6 +19,7 @@ async def test_normalize_feed_url():
     assert normalize_feed_url("http://example.com:80/feed") == "http://example.com/feed"
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_resolve_canonical_url_head_success():
     with patch("aiohttp.ClientSession") as mock_session_cls:
@@ -41,6 +43,7 @@ async def test_resolve_canonical_url_head_success():
         mock_session.head.assert_called_once()
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_resolve_canonical_url_head_failure():
     with patch("aiohttp.ClientSession") as mock_session_cls:
@@ -62,6 +65,7 @@ async def test_resolve_canonical_url_head_failure():
         mock_session.head.assert_called_once()
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_fetch_feed_content_cache_hit():
     with patch("app.core.redis_cache.get", new_callable=AsyncMock) as mock_get:
@@ -72,6 +76,7 @@ async def test_fetch_feed_content_cache_hit():
         mock_get.assert_called_once()
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_fetch_feed_content_size_limit():
     with patch("app.core.redis_cache.get", new_callable=AsyncMock) as mock_get:

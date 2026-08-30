@@ -1,8 +1,8 @@
-import EyeBoldIcon from '@components/icons/solar/eye-bold';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { EyeIcon } from '@solar-icons/react-native/bold';
 import { View } from 'react-native';
 
 interface FeedPreviewBannerProps {
@@ -33,7 +33,7 @@ export function FeedPreviewBanner({ feedTitle: _feedTitle, onFollow }: FeedPrevi
       }}>
       {/* Solar Eye Icon */}
       <View className="flex-row items-center gap-2">
-        <EyeBoldIcon width={20} height={20} color={iconColor} />
+        <EyeIcon size={20} color={iconColor} />
         <Text
           size="lg"
           fontFamily="geist-semibold"

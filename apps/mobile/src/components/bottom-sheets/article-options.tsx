@@ -1,11 +1,10 @@
-import DocumentTextBoldIcon from '@components/icons/solar/document-text-bold';
-import EarthBoldIcon from '@components/icons/solar/earth-bold';
-import GlobalBoldIcon from '@components/icons/solar/global-bold';
+import LanguageIcon from '@components/icons/local/language';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Text } from '@components/ui/text';
 import { type BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { DocumentTextIcon, GlobalIcon } from '@solar-icons/react-native/bold';
 import clsx from 'clsx';
 import { forwardRef, useMemo } from 'react';
 import { Pressable, View } from 'react-native';
@@ -117,7 +116,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
             {!isClipped &&
               !isNewsletter &&
               renderOption(
-                <EarthBoldIcon width={22} height={22} color={greyColor} />,
+                <LanguageIcon width={20} height={20} />,
                 hasTranslatedContent ? 'Translate to a different language' : 'Translate Article',
                 hasTranslatedContent ? 'Change current language' : 'Pick a language',
                 onTranslate
@@ -126,7 +125,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
             {!isNewsletter &&
               onOpenInBrowser &&
               renderOption(
-                <GlobalBoldIcon width={22} height={22} color={greyColor} />,
+                <GlobalIcon size={22} color={greyColor} />,
                 'Open in Browser',
                 undefined,
                 onOpenInBrowser
@@ -144,9 +143,8 @@ export const ArticleOptionsBottomSheet = forwardRef<
               </Text>
               <View className="mb-4">
                 {renderOption(
-                  <DocumentTextBoldIcon
-                    width={22}
-                    height={22}
+                  <DocumentTextIcon
+                    size={22}
                     color={currentView === 'original' ? activeColor : greyColor}
                   />,
                   'Original RSS',
@@ -157,9 +155,8 @@ export const ArticleOptionsBottomSheet = forwardRef<
 
                 {!isClipped &&
                   renderOption(
-                    <GlobalBoldIcon
-                      width={22}
-                      height={22}
+                    <GlobalIcon
+                      size={22}
                       color={currentView === 'extracted' ? activeColor : greyColor}
                     />,
                     canExtractContent && !hasExtractedContent ? 'Extract Full Text' : 'Full Text',
@@ -169,9 +166,9 @@ export const ArticleOptionsBottomSheet = forwardRef<
                   )}
 
                 {renderOption(
-                  <EarthBoldIcon
-                    width={22}
-                    height={22}
+                  <LanguageIcon
+                    width={20}
+                    height={20}
                     color={currentView === 'translated' ? activeColor : greyColor}
                   />,
                   'Translated',

@@ -1,14 +1,15 @@
 import SparkleIcon from '@components/icons/local/sparkle';
-import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
-import BookmarkBoldIcon from '@components/icons/solar/bookmark-bold';
-import BookmarkLinearIcon from '@components/icons/solar/bookmark-linear';
-import CheckCircleBoldIcon from '@components/icons/solar/check-circle-bold';
-import CopyBoldIcon from '@components/icons/solar/copy-bold';
-import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
-import ShareBoldIcon from '@components/icons/solar/share-bold';
 import { Button } from '@components/ui/button';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import {
+  BookmarkIcon,
+  CheckCircleIcon,
+  CopyIcon,
+  MenuDotsIcon,
+  ShareIcon,
+} from '@solar-icons/react-native/bold';
+import { ArrowLeftIcon } from '@solar-icons/react-native/linear';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
@@ -141,27 +142,27 @@ export function ArticleActionBar({
       onLayout={(e) => setActionBarHeight(e.nativeEvent.layout.height)}>
       {/* Close Button */}
       <Button variant="icon" size="small" fullWidth={false} onPress={onClose}>
-        <ArrowLeftLinearIcon width={18} height={18} strokeWidth={2.4} color={greyColor} />
+        <ArrowLeftIcon size={18} strokeWidth={2.4} color={greyColor} />
       </Button>
 
       {/* Right Actions */}
       <View className="flex-row items-center gap-3">
         {/* Share Button */}
         <Button variant="icon" size="small" fullWidth={false} onPress={onShare}>
-          <ShareBoldIcon width={18} height={18} strokeWidth={2.4} color={greyColor} />
+          <ShareIcon size={18} strokeWidth={2.4} color={greyColor} />
         </Button>
 
         {/* Generate Summary Button */}
         {!isClipped && onGenerateSummary && (
           <Button variant="icon" size="small" fullWidth={false} onPress={onGenerateSummary}>
-            <SparkleIcon width={18} height={18} color={greyColor} fill={greyColor} />
+            <SparkleIcon width={18} height={18} color={greyColor} />
           </Button>
         )}
 
         {/* Copy Link Button */}
         {onCopyLink && (
           <Button variant="icon" size="small" fullWidth={false} onPress={onCopyLink}>
-            <CopyBoldIcon width={18} height={18} strokeWidth={2.4} color={greyColor} />
+            <CopyIcon size={18} strokeWidth={2.4} color={greyColor} />
           </Button>
         )}
 
@@ -179,15 +180,10 @@ export function ArticleActionBar({
               : undefined
           }>
           {(() => {
-            const Icon = isClipped
-              ? CheckCircleBoldIcon
-              : isBookmarked
-                ? BookmarkBoldIcon
-                : BookmarkLinearIcon;
+            const Icon = isClipped ? CheckCircleIcon : isBookmarked ? BookmarkIcon : BookmarkIcon;
             return (
               <Icon
-                width={18}
-                height={18}
+                size={18}
                 color={isClipped ? colors.secondary : isBookmarked ? '#FBBC04' : greyColor}
                 strokeWidth={2.4}
               />
@@ -199,9 +195,8 @@ export function ArticleActionBar({
         {!hideMenu &&
           (menuTrigger || (
             <Pressable onPress={onMenuPress} hitSlop={12}>
-              <MenuDotsBoldIcon
-                width={18}
-                height={18}
+              <MenuDotsIcon
+                size={18}
                 strokeWidth={2.4}
                 color={greyColor}
                 style={{ transform: [{ rotate: '90deg' }] }}

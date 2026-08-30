@@ -1,7 +1,7 @@
-import LibraryBoldDuotoneIcon from '@components/icons/solar/library-bold-duotone';
 import { styles } from '@components/navigation/bottom-tabs/ui/expand-tab/expand-tab.styles';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { LibraryIcon } from '@solar-icons/react-native/bold-duotone';
 import * as Haptics from 'expo-haptics';
 import { TouchableOpacity } from 'react-native';
 import Animated, {
@@ -55,7 +55,7 @@ export const ExpandTab: React.FC<ExpandTabProps> = ({
   return (
     <TouchableOpacity activeOpacity={0.7} onPress={onPress} style={styles.tab}>
       <Animated.View style={[styles.expandTabIcon, animatedIconStyle]}>
-        <LibraryBoldDuotoneIcon width={24} height={24} color={tabBarColors.grey} />
+        <LibraryIcon size={24} color={tabBarColors.grey} />
       </Animated.View>
     </TouchableOpacity>
   );

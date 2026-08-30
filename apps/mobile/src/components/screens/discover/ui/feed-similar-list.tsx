@@ -1,10 +1,10 @@
-import FeedLinearIcon from '@components/icons/solar/feed-linear';
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { Button } from '@components/ui/button';
 import { EmptyState } from '@components/ui/empty-state';
 import { SectionHeader } from '@components/ui/section-header';
 import { Text } from '@components/ui/text';
 import { COLORS } from '@lib/constants/colors';
+import { FeedIcon } from '@solar-icons/react-native/linear';
 import { View } from 'react-native';
 
 interface FeedSimilarListProps {
@@ -74,7 +74,7 @@ export function FeedSimilarList({
           ))}
         </View>
       ) : (
-        <EmptyState icon={FeedLinearIcon} message="No similar feeds found" className="py-8" />
+        <EmptyState icon={FeedIcon} message="No similar feeds found" className="py-8" />
       )}
     </View>
   );

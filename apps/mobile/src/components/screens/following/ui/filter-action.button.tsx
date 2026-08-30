@@ -1,7 +1,6 @@
-import EyeBoldIcon from '@components/icons/solar/eye-bold';
-import EyeClosedBoldIcon from '@components/icons/solar/eye-closed-bold';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { EyeClosedIcon, EyeIcon } from '@solar-icons/react-native/bold';
 import type { ArticleFilter } from '@stores/following';
 import { useFollowingStore } from '@stores/following';
 import { Pressable, View } from 'react-native';
@@ -41,9 +40,9 @@ export function FilterActionButton({ filter, onFilterChange }: FilterActionButto
       })}>
       <View style={{ width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}>
         {isUnreadOnly ? (
-          <EyeBoldIcon width={18} height={18} color={colors.secondary} />
+          <EyeIcon size={18} color={colors.secondary} />
         ) : (
-          <EyeClosedBoldIcon width={18} height={18} color={colors.grey2} />
+          <EyeClosedIcon size={18} color={colors.grey2} />
         )}
       </View>
     </Pressable>

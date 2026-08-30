@@ -127,29 +127,32 @@ export function useCreateFeed(
       }
     },
     onSettled: (data) => {
-      queryClient.invalidateQueries({
-        queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'],
-        refetchType: 'all',
-      });
-      queryClient.invalidateQueries({
-        queryKey: [RSS_QUERY_KEYS.ARTICLES],
-        refetchType: 'all',
-      });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.unreadCounts(),
-        refetchType: 'all',
-      });
-      queryClient.invalidateQueries({
-        queryKey: [RSS_QUERY_KEYS.FOLDERS],
-        refetchType: 'all',
-      });
-
-      // Invalidate specific feed cache
-      if (data?.feed?.id) {
+      return Promise.all([
         queryClient.invalidateQueries({
-          queryKey: queryKeys.feed(data.feed.id),
-        });
-      }
+          queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'],
+          refetchType: 'all',
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.ARTICLES],
+          refetchType: 'all',
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.unreadCounts(),
+          refetchType: 'all',
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.FOLDERS],
+          refetchType: 'all',
+        }),
+        // Invalidate specific feed cache
+        ...(data?.feed?.id
+          ? [
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.feed(data.feed.id),
+              }),
+            ]
+          : []),
+      ]);
     },
     ...options,
   });
@@ -196,6 +199,7 @@ export function useUpdateFeed(
         queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] }),
         queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FOLDERS] }),
         queryClient.invalidateQueries({ queryKey: queryKeys.feed(feedId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() }),
       ]);
     },
     ...options,

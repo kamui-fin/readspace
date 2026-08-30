@@ -1,5 +1,4 @@
 const { withUniwindConfig } = require('uniwind/metro');
-const { withMonicon } = require('@monicon/metro');
 const path = require('node:path');
 const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 
@@ -17,8 +16,26 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
-const configWithMonicon = withMonicon(config);
+// Configure SVG transformer for icon imports
+const { transformer, resolver } = config;
+config.transformer = {
+  ...transformer,
+  babelTransformerPath: require.resolve('react-native-svg-transformer'),
+};
+config.resolver = {
+  ...resolver,
+  assetExts: (resolver.assetExts || []).filter((ext) => ext !== 'svg'),
+  sourceExts: [...(resolver.sourceExts || []), 'svg'],
+};
 
-module.exports = withUniwindConfig(configWithMonicon, {
+// Link custom icon font
+if (!config.project) {
+  config.project = {};
+}
+config.project.ios = {
+  project: path.join(projectRoot, 'ios'),
+};
+
+module.exports = withUniwindConfig(config, {
   cssEntryFile: './global.css',
 });

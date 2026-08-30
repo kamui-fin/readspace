@@ -1,12 +1,9 @@
-import BookmarkBoldIcon from '@components/icons/solar/bookmark-bold';
-import CalendarBoldIcon from '@components/icons/solar/calendar-bold';
-import InboxBoldIcon from '@components/icons/solar/inbox-bold';
-import SortBoldIcon from '@components/icons/solar/sort-bold';
 import { Tab } from '@components/navigation/tab';
 import { Button } from '@components/ui/button';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { DEVICE_CORNER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { BookmarkIcon, CalendarIcon, InboxIcon, SortIcon } from '@solar-icons/react-native/bold';
 import clsx from 'clsx';
 import { View } from 'react-native';
 import {
@@ -16,9 +13,9 @@ import {
 } from '@/components/navigation/header/constants/header-variants';
 
 export const buttonConfigs = [
-  { label: 'All', icon: InboxBoldIcon },
-  { label: 'Today', icon: CalendarBoldIcon },
-  { label: 'Saved', icon: BookmarkBoldIcon },
+  { label: 'All', icon: InboxIcon },
+  { label: 'Today', icon: CalendarIcon },
+  { label: 'Saved', icon: BookmarkIcon },
 ];
 
 interface HeaderTabsProps {
@@ -75,7 +72,7 @@ export function HeaderTabs({
                 backgroundColor: colors.grey5,
                 borderRadius: DEVICE_CORNER_RADIUS - 2,
               }}>
-              <SortBoldIcon width={16} height={16} color={colors.grey2} />
+              <SortIcon size={16} color={colors.grey2} />
             </Button>
           )}
         </View>

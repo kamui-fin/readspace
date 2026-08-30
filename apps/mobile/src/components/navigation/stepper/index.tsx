@@ -1,7 +1,7 @@
-import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { PAGE_INDICATOR, SPACING } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { ArrowLeftIcon } from '@solar-icons/react-native/linear';
 import type React from 'react';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
@@ -123,12 +123,7 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
                   zIndex: 10,
                 }}
                 activeOpacity={0.7}>
-                <ArrowLeftLinearIcon
-                  width={24}
-                  height={24}
-                  strokeWidth={2.4}
-                  color={colors.primary_foreground}
-                />
+                <ArrowLeftIcon size={24} strokeWidth={2.4} color={colors.primary_foreground} />
               </TouchableOpacity>
             )}
             <PageIndicator

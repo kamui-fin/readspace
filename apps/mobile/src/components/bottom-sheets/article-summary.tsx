@@ -1,5 +1,4 @@
 import SparkleIcon from '@components/icons/local/sparkle';
-import DangerTriangleBoldIcon from '@components/icons/solar/danger-triangle-bold';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
@@ -8,6 +7,7 @@ import { type BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-she
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import type { SummarizeResponse } from '@readspace/shared';
+import { DangerTriangleIcon } from '@solar-icons/react-native/bold';
 import { forwardRef, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Markdown from 'react-native-markdown-display';
@@ -32,13 +32,8 @@ export const ArticleSummaryBottomSheet = forwardRef<
   // Header left with icon and title
   const headerLeft = useMemo(
     () => (
-      <View className="flex-row items-center gap-1">
-        <SparkleIcon
-          width={20}
-          height={20}
-          color={isDark ? colors.secondary : colors.primary}
-          fill={isDark ? colors.secondary : colors.primary}
-        />
+      <View className="flex-row items-center gap-3">
+        <SparkleIcon color={colors.secondary} width={20} height={20} />
         <Text size="xl" fontFamily="geist-semibold" className="text-primary_foreground">
           The Gist
         </Text>
@@ -126,7 +121,7 @@ export const ArticleSummaryBottomSheet = forwardRef<
               width: 56,
               height: 56,
             }}>
-            <DangerTriangleBoldIcon width={28} height={28} color={colors.destructive} />
+            <DangerTriangleIcon size={28} color={colors.destructive} />
           </View>
           <Text
             size="lg"

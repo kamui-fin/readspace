@@ -1,12 +1,12 @@
 import { FeedSwitcherBottomSheet } from '@components/bottom-sheets/feed-switcher';
 import RssIcon from '@components/icons/local/rss';
-import FolderBoldDuotoneIcon from '@components/icons/solar/folder-bold-duotone';
 import { Header } from '@components/navigation/header';
 import { FollowingScreen } from '@components/screens/following';
 import { FilterActionButton } from '@components/screens/following/ui/filter-action.button';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useFeeds, useUnreadCounts } from '@readspace/shared';
+import { FolderIcon } from '@solar-icons/react-native/bold-duotone';
 import { useFeedViewStore } from '@stores/feed-view';
 import { useFollowingStore } from '@stores/following';
 import Constants from 'expo-constants';
@@ -16,7 +16,6 @@ import { BackHandler, Platform, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '@/lib/constants/colors';
-
 
 export default function FollowingRoute() {
   const scrollY = useSharedValue(0);
@@ -54,16 +53,10 @@ export default function FollowingRoute() {
 
   const headerTitleIcon = useMemo(() => {
     if (viewType === 'folder') {
-      return (
-        <FolderBoldDuotoneIcon
-          width={24}
-          height={24}
-          color={COLORS[isDark ? 'dark' : 'light'].primary_foreground}
-        />
-      );
+      return <FolderIcon size={24} color={COLORS[isDark ? 'dark' : 'light'].primary_foreground} />;
     }
     if (viewType === 'feed' || viewType === 'feedPreview') {
-      return <RssIcon width={24} height={24} color={COLORS[isDark ? 'dark' : 'light'].orange} />;
+      return <RssIcon size={24} color={COLORS[isDark ? 'dark' : 'light'].orange} />;
     }
     return undefined;
   }, [viewType, isDark]);
@@ -106,9 +99,9 @@ export default function FollowingRoute() {
     // 4. If viewing a specific folder
     if (viewType === 'folder' && selectedId && feedsData?.subscriptions) {
       // Sum unread counts for all feeds in this folder
-      const folderFeeds = (feedsData.subscriptions as unknown as { id: string; folder_id: string }[]).filter(
-        (sub) => sub.folder_id === selectedId
-      );
+      const folderFeeds = (
+        feedsData.subscriptions as unknown as { id: string; folder_id: string }[]
+      ).filter((sub) => sub.folder_id === selectedId);
       return folderFeeds.reduce(
         (sum, sub) => sum + (unreadCountsData.feed_counts?.[sub.id] || 0),
         0

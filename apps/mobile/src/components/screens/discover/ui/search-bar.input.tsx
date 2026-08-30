@@ -1,10 +1,9 @@
 import LanguagesIcon from '@components/icons/local/languages';
-import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
-import CloseCircleBoldIcon from '@components/icons/solar/close-circle-bold';
-import MagniferLinearIcon from '@components/icons/solar/magnifer-linear';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { CloseCircleIcon } from '@solar-icons/react-native/bold';
+import { ArrowLeftIcon, MagnifierIcon } from '@solar-icons/react-native/linear';
 import { MotiView } from 'moti';
 import { forwardRef, useCallback } from 'react';
 import {
@@ -93,7 +92,7 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
             }}
             transition={{ type: 'timing', duration: 180 }}
             style={{ position: 'absolute' }}>
-            <MagniferLinearIcon width={20} height={20} color={colors.grey} strokeWidth={2.4} />
+            <MagnifierIcon size={20} color={colors.grey} strokeWidth={2.4} />
           </MotiView>
 
           <MotiView
@@ -104,7 +103,7 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
             }}
             transition={{ type: 'timing', duration: 180 }}
             style={{ position: 'absolute' }}>
-            <ArrowLeftLinearIcon width={20} height={20} color={colors.grey} strokeWidth={2.4} />
+            <ArrowLeftIcon size={20} color={colors.grey} strokeWidth={2.4} />
           </MotiView>
         </TouchableOpacity>
 
@@ -151,7 +150,7 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
             style={{ position: 'absolute' }}
             pointerEvents={hasText ? 'auto' : 'none'}>
             <TouchableOpacity onPress={handleClear} activeOpacity={0.6} style={{ padding: 8 }}>
-              <CloseCircleBoldIcon width={20} height={20} color={colors.grey} />
+              <CloseCircleIcon size={20} color={colors.grey} />
             </TouchableOpacity>
           </MotiView>
 

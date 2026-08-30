@@ -1,10 +1,9 @@
-import EyeBoldIcon from '@components/icons/solar/eye-bold';
-import EyeClosedBoldIcon from '@components/icons/solar/eye-closed-bold';
 import { Input, InputPressable } from '@components/ui/input';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { PasswordSchema } from '@lib/validation/auth-schemas';
+import { EyeClosedIcon, EyeIcon } from '@solar-icons/react-native/bold';
 import { Formik, type FormikProps } from 'formik';
 import { useEffect, useState } from 'react';
 import { Keyboard, TouchableWithoutFeedback, View } from 'react-native';
@@ -73,8 +72,8 @@ function PasswordFormContent({
           rightElement={
             <InputPressable onPress={() => setShowPassword(!showPassword)}>
               {(() => {
-                const IconObj = showPassword ? EyeBoldIcon : EyeClosedBoldIcon;
-                return <IconObj width={20} height={20} color={colors.grey} />;
+                const IconObj = showPassword ? EyeIcon : EyeClosedIcon;
+                return <IconObj size={20} color={colors.grey} />;
               })()}
             </InputPressable>
           }

@@ -398,7 +398,7 @@ function DiscoverScreenInner() {
                   className="bg-grey6"
                   fullWidth={false}
                   onPress={() => addFeedModalRef.current?.present()}>
-                  <PlusIcon width={34} height={34} color={colors.black} strokeWidth={2} />
+                  <PlusIcon width={20} height={20} color={colors.grey} />
                 </Button>
               </View>
             </MotiView>

@@ -1,5 +1,4 @@
 import { OPMLImportBottomSheet } from '@components/bottom-sheets/opml-import';
-import DocumentTextBoldIcon from '@components/icons/solar/document-text-bold';
 import { Header } from '@components/navigation/header';
 import { OPMLStatusCard } from '@components/screens/profile/ui/opml-status-card';
 import { Spinner } from '@components/ui/spinner';
@@ -15,6 +14,7 @@ import {
   useActiveImportTask,
   useImportTaskStatus,
 } from '@readspace/shared';
+import { DocumentTextIcon } from '@solar-icons/react-native/bold';
 import { useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
@@ -244,7 +244,7 @@ export default function ImportOPMLScreen() {
                       ? 'rgba(106, 153, 78, 0.15)'
                       : 'rgba(106, 153, 78, 0.1)',
                   }}>
-                  <DocumentTextBoldIcon width={32} height={32} color={colors.secondary} />
+                  <DocumentTextIcon size={32} color={colors.secondary} />
                 </View>
 
                 <Text

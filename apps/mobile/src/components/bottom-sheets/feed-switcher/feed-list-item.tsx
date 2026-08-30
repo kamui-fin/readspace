@@ -1,5 +1,3 @@
-import CheckCircleBoldIcon from '@components/icons/solar/check-circle-bold';
-import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
 import { Button } from '@components/ui/button';
 import {
   DropdownMenuContent,
@@ -16,6 +14,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import type { Subscription } from '@readspace/shared';
+import { CheckCircleIcon, MenuDotsIcon } from '@solar-icons/react-native/bold';
 import { memo } from 'react';
 import { TouchableOpacity, View, type ViewStyle } from 'react-native';
 
@@ -88,7 +87,7 @@ const FeedListItemComponent = ({
         {isSelectionMode ? (
           <View className="h-10 w-10 items-center justify-center">
             {isSelected ? (
-              <CheckCircleBoldIcon width={28} height={28} color={colors.secondary} />
+              <CheckCircleIcon size={28} color={colors.secondary} />
             ) : (
               <View
                 className="h-6 w-6 rounded-full border-[1.5px]"
@@ -98,7 +97,7 @@ const FeedListItemComponent = ({
           </View>
         ) : isActive ? (
           <View className="h-10 w-10 items-center justify-center">
-            <CheckCircleBoldIcon width={32} height={32} color={colors.secondary} />
+            <CheckCircleIcon size={32} color={colors.secondary} />
           </View>
         ) : (
           <FeedIcon url={faviconUrl} fallbackComponent={Fallback} size={40} borderRadius={8} />
@@ -137,9 +136,8 @@ const FeedListItemComponent = ({
               size="small"
               fullWidth={false}
               className="h-10 w-10 items-center justify-center bg-transparent dark:bg-transparent">
-              <MenuDotsBoldIcon
-                width={20}
-                height={20}
+              <MenuDotsIcon
+                size={20}
                 color={colors.grey2}
                 style={{ transform: [{ rotate: '90deg' }] }}
               />

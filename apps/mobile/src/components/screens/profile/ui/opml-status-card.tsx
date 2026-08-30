@@ -1,11 +1,13 @@
-import CheckCircleLinearIcon from '@components/icons/solar/check-circle-linear';
-import ClockCircleLinearIcon from '@components/icons/solar/clock-circle-linear';
-import CloseCircleLinearIcon from '@components/icons/solar/close-circle-linear';
-import DocumentTextBoldIcon from '@components/icons/solar/document-text-bold';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { DocumentTextIcon } from '@solar-icons/react-native/bold';
+import {
+  CheckCircleIcon,
+  ClockCircleIcon,
+  CloseCircleIcon,
+} from '@solar-icons/react-native/linear';
 import { useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
@@ -215,7 +217,7 @@ export function OPMLStatusCard({
               style={{
                 backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
               }}>
-              <ClockCircleLinearIcon width={32} height={32} color={colors.grey} />
+              <ClockCircleIcon size={32} color={colors.grey} />
             </View>
             <Text className="font-geist-bold text-xl text-black dark:text-white">
               Import Queued
@@ -250,7 +252,7 @@ export function OPMLStatusCard({
               style={{
                 backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)',
               }}>
-              <DocumentTextBoldIcon width={24} height={24} color={colors.secondary} />
+              <DocumentTextIcon size={24} color={colors.secondary} />
             </View>
             <View className="flex-1 flex-row items-center justify-between">
               <View className="flex-1">
@@ -340,7 +342,7 @@ export function OPMLStatusCard({
               style={{
                 backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)',
               }}>
-              <CheckCircleLinearIcon width={32} height={32} color={colors.secondary} />
+              <CheckCircleIcon size={32} color={colors.secondary} />
             </View>
             <Text className="font-geist-bold text-xl text-black dark:text-white">
               Import Complete
@@ -430,7 +432,7 @@ export function OPMLStatusCard({
               style={{
                 backgroundColor: isDark ? 'rgba(234, 67, 53, 0.15)' : 'rgba(234, 67, 53, 0.08)',
               }}>
-              <CloseCircleLinearIcon width={32} height={32} color={colors.red} />
+              <CloseCircleIcon size={32} color={colors.red} />
             </View>
             <Text className="font-geist-bold text-xl text-black dark:text-white">
               Import Failed

@@ -77,39 +77,44 @@
     --color-icon-yellow: rgb(255, 245, 230);
     --color-icon-purple: rgb(240, 230, 255);
     --color-icon-grey: rgb(230, 230, 230);
+  }
 
-    @variant dark {
-      --color-primary-light: rgba(56, 102, 65, 0.2);
-      --color-primary-foreground: #ffffff;
-      --color-secondary-foreground: rgb(228, 236, 223);
-      --color-grey6: rgb(32, 32, 32);
-      --color-grey5: rgb(46, 46, 46);
-      --color-grey4: rgb(60, 60, 60);
-      --color-grey3: rgb(130, 130, 130);
-      --color-grey2: rgb(165, 165, 165);
-      --color-grey: rgb(200, 200, 200);
-      --color-background: rgb(25, 25, 25);
-      --color-screen: rgb(25, 25, 25);
-      --color-root: rgb(25, 25, 25);
-      --color-card: rgb(32, 32, 32);
-      --color-card-foreground: rgb(32, 32, 32);
-      --color-muted: rgb(228, 236, 223);
-      --color-muted-foreground: rgb(72, 96, 57);
-      --color-destructive: rgb(254, 67, 54);
-      --color-white: rgb(25, 25, 25);
-      --color-black: #ffffff;
-      --color-unified: rgb(32, 32, 32);
-      --color-tab-border: rgb(46, 46, 46);
-      --color-divider: rgb(46, 46, 46);
-      --color-tint-active: #e5e5e5;
-      --color-tint-inactive: #888888;
-      --color-icon-blue: rgb(25, 35, 45);
-      --color-icon-green: rgb(25, 45, 35);
-      --color-icon-red: rgb(45, 25, 25);
-      --color-icon-yellow: rgb(45, 40, 25);
-      --color-icon-purple: rgb(35, 25, 45);
-      --color-icon-grey: rgb(45, 45, 45);
-    }
+  .dark {
+    --color-primary: #386641;
+    --color-primary-light: rgba(56, 102, 65, 0.2);
+    --color-primary-foreground: #ffffff;
+    --color-secondary: #6a994e;
+    --color-secondary-foreground: rgb(228, 236, 223);
+    --color-grey6: rgb(32, 32, 32);
+    --color-grey5: rgb(46, 46, 46);
+    --color-grey4: rgb(60, 60, 60);
+    --color-grey3: rgb(130, 130, 130);
+    --color-grey2: rgb(165, 165, 165);
+    --color-grey: rgb(200, 200, 200);
+    --color-background: rgb(25, 25, 25);
+    --color-screen: rgb(25, 25, 25);
+    --color-root: rgb(25, 25, 25);
+    --color-card: rgb(32, 32, 32);
+    --color-card-foreground: rgb(32, 32, 32);
+    --color-muted: rgb(228, 236, 223);
+    --color-muted-green: #d1dbcd;
+    --color-muted-foreground: rgb(72, 96, 57);
+    --color-destructive: rgb(254, 67, 54);
+    --color-red: #ea4335;
+    --color-blue: #236bef;
+    --color-white: rgb(25, 25, 25);
+    --color-black: #ffffff;
+    --color-unified: rgb(32, 32, 32);
+    --color-tab-border: rgb(46, 46, 46);
+    --color-divider: rgb(46, 46, 46);
+    --color-tint-active: #e5e5e5;
+    --color-tint-inactive: #888888;
+    --color-icon-blue: rgb(25, 35, 45);
+    --color-icon-green: rgb(25, 45, 35);
+    --color-icon-red: rgb(45, 25, 25);
+    --color-icon-yellow: rgb(45, 40, 25);
+    --color-icon-purple: rgb(35, 25, 45);
+    --color-icon-grey: rgb(45, 45, 45);
   }
 }
 

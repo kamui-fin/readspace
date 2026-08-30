@@ -183,10 +183,9 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
                       fullWidth={false}
                       onPress={onClose}>
                       <CloseCircleIcon
-                        width={16}
-                        height={16}
+                        size={16}
                         strokeWidth={2.8}
-                        fill={isDark ? COLORS.dark.grey : COLORS.light.grey}
+                        color={isDark ? COLORS.dark.grey : COLORS.light.grey}
                       />
                     </Button>
                   </View>

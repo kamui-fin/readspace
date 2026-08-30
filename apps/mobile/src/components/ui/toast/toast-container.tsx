@@ -1,7 +1,6 @@
-import CheckCircleBoldIcon from '@components/icons/solar/check-circle-bold';
-import CloseCircleBoldIcon from '@components/icons/solar/close-circle-bold';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { CheckCircleIcon, CloseCircleIcon } from '@solar-icons/react-native/bold';
 import { useCallback, useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, {
@@ -12,7 +11,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
-
 import { getToastBackgroundColor, getToastBorderColor, getToastTextColor } from './utils';
 
 export type ToastType = 'success' | 'error';
@@ -117,9 +115,9 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
           }}>
           <Animated.View style={[{ marginRight: 12 }, iconAnimatedStyle]}>
             {toast.type === 'success' ? (
-              <CheckCircleBoldIcon width={24} height={24} color={colors.secondary} />
+              <CheckCircleIcon size={24} color={colors.secondary} />
             ) : (
-              <CloseCircleBoldIcon width={24} height={24} color={colors.red} />
+              <CloseCircleIcon size={24} color={colors.red} />
             )}
           </Animated.View>
 

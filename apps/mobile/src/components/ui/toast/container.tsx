@@ -1,10 +1,8 @@
-import CheckCircleBoldIcon from '@components/icons/solar/check-circle-bold';
-import CloseCircleBoldIcon from '@components/icons/solar/close-circle-bold';
-import InfoCircleBoldIcon from '@components/icons/solar/info-circle-bold';
 import { Spinner } from '@components/ui/spinner';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { CheckCircleIcon, CloseCircleIcon, InfoCircleIcon } from '@solar-icons/react-native/bold';
 import { useSegments } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -16,7 +14,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
-
 import { getToastBackgroundColor, getToastBorderColor, getToastTextColor } from './utils';
 
 export type ToastType = 'success' | 'error' | 'promise' | 'info' | 'custom';
@@ -183,7 +180,7 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
       return toast.custom.icon;
     }
     if (toast.type === 'success') {
-      return <CheckCircleBoldIcon width={20} height={20} color={colors.secondary} />;
+      return <CheckCircleIcon size={20} color={colors.secondary} />;
     }
     if (toast.type === 'promise') {
       return (
@@ -204,9 +201,9 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
       );
     }
     if (toast.type === 'info') {
-      return <InfoCircleBoldIcon width={20} height={20} color={colors.orange} />;
+      return <InfoCircleIcon size={20} color={colors.orange} />;
     }
-    return <CloseCircleBoldIcon width={20} height={20} color={colors.red} />;
+    return <CloseCircleIcon size={20} color={colors.red} />;
   };
 
   return (

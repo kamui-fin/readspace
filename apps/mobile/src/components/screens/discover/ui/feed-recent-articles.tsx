@@ -1,10 +1,10 @@
-import DocumentTextLinearIcon from '@components/icons/solar/document-text-linear';
 import { Card } from '@components/ui/card';
 import { EmptyState } from '@components/ui/empty-state';
 import { SectionHeader } from '@components/ui/section-header';
 import { Skeleton } from '@components/ui/skeleton';
 import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import { Feed, FeedDiscoveryResult, formatRelativeDate } from '@readspace/shared';
+import { DocumentTextIcon } from '@solar-icons/react-native/linear';
 import { Dimensions, FlatList, View } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -84,7 +84,7 @@ export function FeedRecentArticles({
         />
       ) : (
         <EmptyState
-          icon={DocumentTextLinearIcon}
+          icon={DocumentTextIcon}
           message="No recent articles available"
           className="py-8"
         />

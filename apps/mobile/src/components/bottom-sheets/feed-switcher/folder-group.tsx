@@ -1,11 +1,3 @@
-import AltArrowRightLinearIcon from '@components/icons/solar/alt-arrow-right-linear';
-import AltArrowRightOutlineIcon from '@components/icons/solar/alt-arrow-right-outline';
-import CheckCircleBoldIcon from '@components/icons/solar/check-circle-bold';
-import FolderOpenBoldIcon from '@components/icons/solar/folder-open-bold';
-import FolderOpenLinearIcon from '@components/icons/solar/folder-open-linear';
-import FolderWithFilesBoldIcon from '@components/icons/solar/folder-with-files-bold';
-import FolderWithFilesLinearIcon from '@components/icons/solar/folder-with-files-linear';
-import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
 import { Button } from '@components/ui/button';
 import { Chip } from '@components/ui/chip';
 import {
@@ -23,6 +15,13 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import type { Folder, Subscription } from '@readspace/shared';
+import {
+  CheckCircleIcon,
+  FolderOpenIcon,
+  FolderWithFilesIcon,
+  MenuDotsIcon,
+} from '@solar-icons/react-native/bold';
+import { AltArrowRightIcon } from '@solar-icons/react-native/linear';
 import * as Haptics from 'expo-haptics';
 import { AnimatePresence, MotiView } from 'moti';
 import { memo } from 'react';
@@ -139,11 +138,11 @@ const FolderGroupComponent = ({
 
   const FolderIcon = isExpanded
     ? isEmpty
-      ? FolderOpenLinearIcon
-      : FolderOpenBoldIcon
+      ? FolderOpenIcon
+      : FolderOpenIcon
     : isEmpty
-      ? FolderWithFilesLinearIcon
-      : FolderWithFilesBoldIcon;
+      ? FolderWithFilesIcon
+      : FolderWithFilesIcon;
 
   const allSelected = !isEmpty && folderFeeds.every((f) => selectedFeedIds.has(f.feed.id));
   const someSelected =
@@ -185,7 +184,7 @@ const FolderGroupComponent = ({
             {isSelectionMode ? (
               <View className="h-7 w-7 items-center justify-center">
                 {isSelected ? (
-                  <CheckCircleBoldIcon width={28} height={28} color={colors.secondary} />
+                  <CheckCircleIcon size={28} color={colors.secondary} />
                 ) : (
                   <View
                     className="h-6 w-6 rounded-full border-[1.5px]"
@@ -194,9 +193,9 @@ const FolderGroupComponent = ({
                 )}
               </View>
             ) : isFolderViewing ? (
-              <CheckCircleBoldIcon width={28} height={28} color={colors.secondary} />
+              <CheckCircleIcon size={28} color={colors.secondary} />
             ) : (
-              <FolderIcon width={28} height={28} color={colors.secondary} />
+              <FolderIcon size={28} color={colors.secondary} />
             )}
           </View>
 
@@ -211,12 +210,7 @@ const FolderGroupComponent = ({
             {!isSelectionMode && (
               <View className="flex-row items-center gap-0.5" style={{ marginTop: 1 }}>
                 <Text className="font-geist text-grey3 text-xs">{feedCountLabel}</Text>
-                <AltArrowRightLinearIcon
-                  width={11}
-                  height={11}
-                  color={colors.grey3}
-                  style={{ marginLeft: 1 }}
-                />
+                <AltArrowRightIcon size={11} color={colors.grey3} style={{ marginLeft: 1 }} />
               </View>
             )}
           </View>
@@ -245,7 +239,7 @@ const FolderGroupComponent = ({
                     size="small"
                     fullWidth={false}
                     className="flex h-9 w-9 items-center justify-center bg-transparent dark:bg-transparent">
-                    <MenuDotsBoldIcon width={18} height={18} color={colors.grey2} />
+                    <MenuDotsIcon size={18} color={colors.grey2} />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -280,9 +274,8 @@ const FolderGroupComponent = ({
                     onToggleExpand(folder.id);
                   }}
                   className="flex h-9 w-9 items-center justify-center bg-transparent dark:bg-transparent">
-                  <AltArrowRightOutlineIcon
-                    width={18}
-                    height={18}
+                  <AltArrowRightIcon
+                    size={18}
                     color={colors.grey2}
                     style={{ transform: [{ rotate: '90deg' }] }}
                   />

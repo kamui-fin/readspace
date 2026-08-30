@@ -546,7 +546,17 @@ export function useSaveArticle(
 }
 
 export function useUnsaveArticle(
-  options?: UseMutationOptions<void, unknown, { articleId: string; url: string }>
+  options?: UseMutationOptions<
+    void,
+    unknown,
+    { articleId: string; url: string },
+    { previousArticle: Article | undefined; previousReadLater: InfiniteData<{
+      items: ArticleSummary[];
+      next_cursor: string | null;
+      has_more: boolean;
+      total_count: number | null;
+    }> | undefined }
+  >
 ) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -554,13 +564,62 @@ export function useUnsaveArticle(
     mutationFn: ({ articleId }: { articleId: string; url: string }) => {
       return ApiClient.updateArticle(articleId, { is_saved: false }).then(() => undefined);
     },
-    onSettled: async (_data, _error, variables) => {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.checkArticleSaved(variables.url),
+    onMutate: async ({ articleId }) => {
+      // Cancel any outgoing refetches
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: queryKeys.article(articleId) }),
+        queryClient.cancelQueries({ queryKey: queryKeys.infiniteReadLater() }),
+      ]);
+
+      // Snapshot previous state
+      const previousArticle = queryClient.getQueryData<Article>(queryKeys.article(articleId));
+      const previousReadLater = queryClient.getQueryData<InfiniteData<{
+        items: ArticleSummary[];
+        next_cursor: string | null;
+        has_more: boolean;
+        total_count: number | null;
+      }>>(queryKeys.infiniteReadLater());
+
+      // Optimistically remove from read later list
+      queryClient.setQueriesData({ queryKey: queryKeys.infiniteReadLater() }, (oldData: any) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page: any) => ({
+            ...page,
+            items: page.items.filter((item: ArticleSummary) => item.id !== articleId),
+          })),
+        };
       });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.infiniteReadLater(),
-      });
+
+      // Optimistically update article detail
+      if (previousArticle) {
+        queryClient.setQueryData<Article>(queryKeys.article(articleId), (old) => {
+          if (!old) return old;
+          return { ...old, is_saved: false };
+        });
+      }
+
+      return { previousArticle, previousReadLater };
+    },
+    onError: (_err, { articleId }, context) => {
+      // Rollback
+      if (context?.previousArticle) {
+        queryClient.setQueryData(queryKeys.article(articleId), context.previousArticle);
+      }
+      if (context?.previousReadLater) {
+        queryClient.setQueryData(queryKeys.infiniteReadLater(), context.previousReadLater);
+      }
+    },
+    onSettled: (_data, _error, variables) => {
+      return Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.checkArticleSaved(variables.url),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.infiniteReadLater(),
+        }),
+      ]);
     },
     ...options,
   });

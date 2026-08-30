@@ -1,11 +1,11 @@
-import CompassBoldIcon from '@components/icons/solar/compass-bold';
-import NotesBoldDuotoneIcon from '@components/icons/solar/notes-bold-duotone';
 import { TabBarIcon } from '@components/navigation/bottom-tab-bar-icon';
 import { BottomTabbar } from '@components/navigation/bottom-tabs';
 import { Avatar } from '@components/ui/avatar';
 import { useSession } from '@contexts/auth-context';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { CompassIcon } from '@solar-icons/react-native/bold';
+import { NotesIcon } from '@solar-icons/react-native/bold-duotone';
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 
@@ -27,12 +27,7 @@ export default function TabsLayout() {
           title: 'Following',
           tabBarLabel: 'Following',
           tabBarIcon: ({ color, size, focused }) => (
-            <TabBarIcon
-              component={NotesBoldDuotoneIcon}
-              size={size}
-              color={color}
-              focused={focused}
-            />
+            <TabBarIcon component={NotesIcon} size={size} color={color} focused={focused} />
           ),
         }}
       />
@@ -42,7 +37,7 @@ export default function TabsLayout() {
           title: 'Discover',
           tabBarLabel: 'Discover',
           tabBarIcon: ({ color, size, focused }) => (
-            <TabBarIcon component={CompassBoldIcon} size={size} color={color} focused={focused} />
+            <TabBarIcon component={CompassIcon} size={size} color={color} focused={focused} />
           ),
         }}
       />

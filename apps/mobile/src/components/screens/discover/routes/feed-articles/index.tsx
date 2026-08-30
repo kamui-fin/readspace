@@ -1,5 +1,3 @@
-import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
-import InboxLineLinearIcon from '@components/icons/solar/inbox-line-linear';
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
 import { Button } from '@components/ui/button';
 import { Card } from '@components/ui/card';
@@ -11,6 +9,7 @@ import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import { ApiClient, type Article, formatRelativeDate, useFeed } from '@readspace/shared';
+import { ArrowLeftIcon, InboxLineIcon } from '@solar-icons/react-native/linear';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSegments } from 'expo-router';
 import { useCallback, useRef } from 'react';
@@ -107,7 +106,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
       <View className="px-4 py-3">
         <View className="flex-row items-center">
           <Button variant="icon" size="small" fullWidth={false} onPress={handleBack}>
-            <ArrowLeftLinearIcon width={18} height={18} strokeWidth={2.4} color={colors.grey} />
+            <ArrowLeftIcon size={18} strokeWidth={2.4} color={colors.grey} />
           </Button>
           <View className="absolute inset-x-12 items-center justify-center">
             <Text
@@ -126,9 +125,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
   );
 
   if (isError) {
-    const errorMessage = !isOnline
-      ? 'No internet connection'
-      : "Couldn't load articles";
+    const errorMessage = !isOnline ? 'No internet connection' : "Couldn't load articles";
 
     return (
       <View className="bg-background flex-1">
@@ -167,7 +164,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
           />
         ) : !isLoading ? (
           <View className="flex-1 items-center justify-center px-6">
-            <InboxLineLinearIcon width={64} height={64} color={colors.grey5} />
+            <InboxLineIcon size={64} color={colors.grey5} />
             <Text
               size="lg"
               fontFamily="geist-semibold"

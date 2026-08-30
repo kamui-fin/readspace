@@ -1,5 +1,7 @@
 from datetime import timezone
 
+import pytest
+
 from app.services.feeds.parsing import parse_feed_content
 
 RSS_FEED_WITH_TAGS_TTL = """
@@ -47,6 +49,7 @@ ATOM_FEED_FULL = """
 """
 
 
+@pytest.mark.unit
 def test_parse_rss_feed_with_tags_ttl():
     parsed = parse_feed_content(RSS_FEED_WITH_TAGS_TTL, "https://example.com/rss")
 
@@ -59,6 +62,7 @@ def test_parse_rss_feed_with_tags_ttl():
     assert parsed.articles[0].title == "New Python Release"
 
 
+@pytest.mark.unit
 def test_parse_atom_feed_full():
     parsed = parse_feed_content(ATOM_FEED_FULL, "https://example.org/atom")
 
@@ -77,6 +81,7 @@ def test_parse_atom_feed_full():
     assert "Full content" in article.content
 
 
+@pytest.mark.unit
 def test_parse_feed_minimal():
     minimal_rss = """
     <rss version="2.0">
@@ -94,6 +99,7 @@ def test_parse_feed_minimal():
     assert parsed.articles == []
 
 
+@pytest.mark.unit
 def test_parse_feed_broken_ttl():
     rss_broken_ttl = """
     <rss version="2.0">
@@ -107,6 +113,7 @@ def test_parse_feed_broken_ttl():
     # Just ensure it doesn't crash
 
 
+@pytest.mark.unit
 def test_article_extraction_details():
     feed_content = """
     <rss version="2.0">
@@ -140,6 +147,7 @@ def test_article_extraction_details():
     assert article.published_at is not None
 
 
+@pytest.mark.unit
 def test_parse_feed_content_unescapes_entities():
     # Mock feed content with HTML entities
     content = """
@@ -191,6 +199,7 @@ def test_parse_feed_content_unescapes_entities():
     # assert article.description == "Article <Summary>"
 
 
+@pytest.mark.unit
 def test_guid_normalization():
     # Test that HTTP(S) URL GUIDs have their fragment parts stripped
     feed_content = """

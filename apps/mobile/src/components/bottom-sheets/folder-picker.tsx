@@ -2,7 +2,6 @@ import {
   CreateFolderModal,
   type CreateFolderModalRef,
 } from '@components/bottom-sheets/create-folder';
-import SolarFolderLinearIcon from '@components/icons/solar/folder-linear';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { EmptyState } from '@components/ui/empty-state';
@@ -10,6 +9,7 @@ import { Radio } from '@components/ui/radio';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { useFeeds } from '@readspace/shared';
+import { FolderIcon } from '@solar-icons/react-native/linear';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { View } from 'react-native';
 
@@ -106,7 +106,7 @@ export const FolderPickerBottomSheet = forwardRef<
             ))}
           </View>
         ) : (
-          <EmptyState icon={SolarFolderLinearIcon} message="No folders" className="py-8" />
+          <EmptyState icon={FolderIcon} message="No folders" className="py-8" />
         )}
 
         {/* Bottom action buttons */}

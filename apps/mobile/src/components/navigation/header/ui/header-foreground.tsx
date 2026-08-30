@@ -1,8 +1,8 @@
 import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
-import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { COLORS } from '@lib/constants/colors';
+import { ArrowLeftIcon } from '@solar-icons/react-native/linear';
 import clsx from 'clsx';
 import { Platform, TouchableOpacity, View } from 'react-native';
 import {
@@ -67,7 +67,7 @@ export function HeaderForeground({
         {showBackButton && (
           <View className="absolute left-4 top-0 z-10">
             <Button onPress={onBackPress} variant="icon" size="small" fullWidth={false}>
-              <ArrowLeftLinearIcon width={18} height={18} strokeWidth={2.4} color={colors.grey} />
+              <ArrowLeftIcon size={18} strokeWidth={2.4} color={colors.grey} />
             </Button>
           </View>
         )}
@@ -96,7 +96,7 @@ export function HeaderForeground({
           size="small"
           fullWidth={false}
           className="mr-3">
-          <ArrowLeftLinearIcon width={18} height={18} strokeWidth={2.4} color={colors.grey} />
+          <ArrowLeftIcon size={18} strokeWidth={2.4} color={colors.grey} />
         </Button>
       )}
 
@@ -120,7 +120,7 @@ export function HeaderForeground({
             <View
               className="justify-center"
               style={{ marginBottom: Platform.OS === 'ios' ? 6 : 2 }}>
-              <ExpandVerticalIcon width={24} height={24} color={colors.black} fill={colors.black} />
+              <ExpandVerticalIcon />
             </View>
           </TouchableOpacity>
         ) : (

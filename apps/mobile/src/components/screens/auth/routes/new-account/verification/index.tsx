@@ -1,10 +1,10 @@
-import SolarShieldKeyholeMinimalisticLinearIcon from '@components/icons/solar/shield-keyhole-minimalistic-linear';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { supabase } from '@lib/supabase/client';
+import { ShieldKeyholeMinimalisticIcon } from '@solar-icons/react-native/linear';
 import { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
@@ -160,9 +160,8 @@ export function VerificationStep({ email, isActive }: VerificationStepProps) {
             <View
               className="mb-6 h-14 w-14 items-center justify-center rounded-full"
               style={{ backgroundColor: colors.grey6 }}>
-              <SolarShieldKeyholeMinimalisticLinearIcon
-                width={26}
-                height={26}
+              <ShieldKeyholeMinimalisticIcon
+                size={26}
                 color={isDark ? colors.secondary : colors.primary}
               />
             </View>

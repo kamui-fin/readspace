@@ -7,13 +7,6 @@ import {
   RenameFolderModal,
   type RenameFolderModalRef,
 } from '@components/bottom-sheets/rename-folder';
-import AddFolderBoldIcon from '@components/icons/solar/add-folder-bold';
-import ChecklistMinimalisticLinearIcon from '@components/icons/solar/checklist-minimalistic-linear';
-import FolderWithFilesBoldIcon from '@components/icons/solar/folder-with-files-bold';
-import InboxBrokenIcon from '@components/icons/solar/inbox-broken';
-import MenuDotsBoldIcon from '@components/icons/solar/menu-dots-bold';
-import StarBoldIcon from '@components/icons/solar/star-bold';
-import TrashBinTrashBoldIcon from '@components/icons/solar/trash-bin-trash-bold';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Checkbox } from '@components/ui/checkbox';
@@ -24,10 +17,10 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import {
-  RSS_QUERY_KEYS,
   type Folder,
-  type Subscription,
   queryKeys,
+  RSS_QUERY_KEYS,
+  type Subscription,
   useBulkDeleteFeeds,
   useBulkUpdateFeedsFolder,
   useDeleteFeed,
@@ -36,6 +29,15 @@ import {
   useUnreadCounts,
   useUpdateFeed,
 } from '@readspace/shared';
+import {
+  AddFolderIcon,
+  FolderWithFilesIcon,
+  MenuDotsIcon,
+  StarIcon,
+  TrashBinTrashIcon,
+} from '@solar-icons/react-native/bold';
+import { InboxIcon } from '@solar-icons/react-native/broken';
+import { ChecklistMinimalisticIcon } from '@solar-icons/react-native/linear';
 import { type FeedSwitcherStore, useFeedSwitcherStore } from '@stores/feed-switcher';
 import { useFeedViewStore } from '@stores/feed-view';
 import { useQueryClient } from '@tanstack/react-query';
@@ -235,16 +237,15 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
     const handleToggleFavorite = useCallback(
       (sub: Subscription) => {
         const wasFavorite = sub.is_favorite;
-        updateFeed.mutate(
-          {
+        toast.promise(
+          updateFeed.mutateAsync({
             feedId: sub.feed.id,
             data: { is_favorite: !wasFavorite },
-          },
+          }),
           {
-            onSuccess: () => {
-              toast.success(wasFavorite ? 'Removed from favorites' : 'Added to favorites');
-            },
-            onError: () => toast.error('Failed to update favorite'),
+            loading: 'Updating...',
+            success: wasFavorite ? 'Removed from favorites' : 'Added to favorites',
+            error: 'Failed to update favorite',
           }
         );
       },
@@ -261,14 +262,13 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
             {
               text: 'Unfollow',
               style: 'destructive',
-              onPress: () =>
-                deleteFeed.mutate(
-                  { feedId: sub.feed.id },
-                  {
-                    onSuccess: () => toast.success('Unfollowed feed'),
-                    onError: () => toast.error('Failed to unfollow feed'),
-                  }
-                ),
+              onPress: () => {
+                toast.promise(deleteFeed.mutateAsync({ feedId: sub.feed.id }), {
+                  loading: 'Unfollowing...',
+                  success: 'Unfollowed feed',
+                  error: 'Failed to unfollow feed',
+                });
+              },
             },
           ]
         );
@@ -286,11 +286,13 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
             {
               text: 'Delete',
               style: 'destructive',
-              onPress: () =>
-                deleteFolder.mutate(folder.id, {
-                  onSuccess: () => toast.success('Folder deleted'),
-                  onError: () => toast.error('Failed to delete folder'),
-                }),
+              onPress: () => {
+                toast.promise(deleteFolder.mutateAsync(folder.id), {
+                  loading: 'Deleting...',
+                  success: 'Folder deleted',
+                  error: 'Failed to delete folder',
+                });
+              },
             },
           ]
         );
@@ -477,7 +479,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
               className="h-8 w-8"
               fullWidth={false}
               onPress={handleBulkDelete}>
-              <TrashBinTrashBoldIcon width={20} height={20} color={colors.red} />
+              <TrashBinTrashIcon size={20} color={colors.red} />
             </Button>
             <Button
               variant="icon"
@@ -485,7 +487,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
               className="h-8 w-8"
               fullWidth={false}
               onPress={handleBulkMove}>
-              <FolderWithFilesBoldIcon width={20} height={20} color={colors.primary} />
+              <FolderWithFilesIcon size={20} color={colors.primary} />
             </Button>
             <Pressable onPress={toggleSelectionMode} className="py-2 pl-2">
               <Text className="font-geist text-grey dark:text-grey text-base">Cancel</Text>
@@ -502,7 +504,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
             className="h-8 w-8"
             fullWidth={false}
             onPress={handleCreateFolderPress}>
-            <AddFolderBoldIcon width={16} height={16} color={colors.grey} />
+            <AddFolderIcon size={16} color={colors.grey} />
           </Button>
           <Button
             variant="icon"
@@ -510,7 +512,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
             className="h-8 w-8"
             fullWidth={false}
             onPress={toggleSelectionMode}>
-            <ChecklistMinimalisticLinearIcon width={18} height={18} color={colors.grey} />
+            <ChecklistMinimalisticIcon size={18} color={colors.grey} />
           </Button>
         </View>
       );
@@ -554,7 +556,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
           contentPaddingHorizontal={0}>
           {listData.length === 0 && favoriteFeeds.length === 0 ? (
             <View className="items-center justify-center py-12">
-              <InboxBrokenIcon width={64} height={64} color={colors.grey} />
+              <InboxIcon size={64} color={colors.grey} />
               <Text className="font-geist-medium text-grey dark:text-grey mt-4 text-base">
                 No feeds yet
               </Text>
@@ -570,7 +572,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
                   <View style={{ paddingLeft: 24, paddingRight: 0 }}>
                     <SectionLabel
                       label="Pinned"
-                      icon={<StarBoldIcon width={14} height={14} color={PINNED_YELLOW} />}
+                      icon={<StarIcon size={14} color={PINNED_YELLOW} />}
                       accentYellow
                     />
                   </View>

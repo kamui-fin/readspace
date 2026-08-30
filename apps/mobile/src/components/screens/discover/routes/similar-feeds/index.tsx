@@ -2,8 +2,6 @@ import {
   FolderPickerBottomSheet,
   type FolderPickerBottomSheetRef,
 } from '@components/bottom-sheets/folder-picker';
-import ArrowLeftLinearIcon from '@components/icons/solar/arrow-left-linear';
-import DocumentTextLinearIcon from '@components/icons/solar/document-text-linear';
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { Button } from '@components/ui/button';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
@@ -15,6 +13,7 @@ import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import { ApiClient, useCreateFeed } from '@readspace/shared';
+import { ArrowLeftIcon, DocumentTextIcon } from '@solar-icons/react-native/linear';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -106,7 +105,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
       <View className="px-4 py-3">
         <View className="flex-row items-center">
           <Button variant="icon" size="small" fullWidth={false} onPress={() => router.back()}>
-            <ArrowLeftLinearIcon width={18} height={18} strokeWidth={2.4} color={colors.grey} />
+            <ArrowLeftIcon size={18} strokeWidth={2.4} color={colors.grey} />
           </Button>
           <View className="absolute left-0 right-0 items-center">
             <Text
@@ -195,7 +194,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
   const renderEmpty = useCallback(
     () => (
       <View className="flex-1 items-center justify-center px-6">
-        <DocumentTextLinearIcon width={64} height={64} color={colors.grey5} />
+        <DocumentTextIcon size={64} color={colors.grey5} />
         <Text
           size="lg"
           fontFamily="geist-semibold"

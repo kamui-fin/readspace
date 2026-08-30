@@ -1,5 +1,3 @@
-import DocumentTextBoldIcon from '@components/icons/solar/document-text-bold';
-import InfoCircleBoldIcon from '@components/icons/solar/info-circle-bold';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
@@ -9,6 +7,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { useImportOPML } from '@readspace/shared';
+import { DocumentTextIcon, InfoCircleIcon } from '@solar-icons/react-native/bold';
 import type * as DocumentPicker from 'expo-document-picker';
 import { forwardRef, useCallback } from 'react';
 import { View } from 'react-native';
@@ -92,7 +91,7 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
                 style={{
                   backgroundColor: isDark ? 'rgba(106, 153, 78, 0.15)' : 'rgba(106, 153, 78, 0.1)',
                 }}>
-                <DocumentTextBoldIcon width={20} height={20} color={colors.secondary} />
+                <DocumentTextIcon size={20} color={colors.secondary} />
               </View>
               <View className="flex-1">
                 <Text
@@ -140,7 +139,7 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
             }}>
             <View className="flex-row items-start gap-2.5">
               <View style={{ marginTop: 2 }}>
-                <InfoCircleBoldIcon width={16} height={16} color={colors.grey} />
+                <InfoCircleIcon size={16} color={colors.grey} />
               </View>
               <Text className="font-geist-medium text-grey dark:text-grey flex-1 text-xs leading-5">
                 The import will run in the background. You can track its progress immediately after.

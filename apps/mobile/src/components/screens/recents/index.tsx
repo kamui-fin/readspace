@@ -1,6 +1,6 @@
+import { HistoryIcon } from '@solar-icons/react-native/broken';
 /** biome-ignore-all lint/suspicious/noExplicitAny: any is used for compatibility with the toast library */
 
-import HistoryBrokenIcon from '@components/icons/solar/history-broken';
 import { Header } from '@components/navigation/header';
 import { ArticleListItem } from '@components/screens/following/components/article-list-item';
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
@@ -233,11 +233,7 @@ export function RecentsScreen() {
     }
 
     return (
-      <EmptyState
-        variant="centered"
-        icon={HistoryBrokenIcon}
-        message="No recently read articles."
-      />
+      <EmptyState variant="centered" icon={HistoryIcon} message="No recently read articles." />
     );
   };
 

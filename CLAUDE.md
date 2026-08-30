@@ -318,6 +318,55 @@ Match CI locally before pushing: `poe lint && poe format && poe test-unit` in `s
   3. Format code (`bun run format`)
   4. Lint code (`bun run lint`)
 
+### TanStack Query & Cache Invalidation
+
+**CRITICAL**: Cache invalidation bugs cause silent data inconsistencies that are hard to debug. Follow these patterns strictly:
+
+- **Mutation hooks in `packages/shared`**: Always define invalidation in `onSettled` (not `onSuccess`), returning a `Promise.all()` to ensure the mutation waits for invalidations to complete before resolving
+  ```typescript
+  onSettled: (_data, _error, variables) => {
+    return Promise.all([
+      queryClient.invalidateQueries({ queryKey: [...] }),
+      queryClient.invalidateQueries({ queryKey: [...] }),
+    ]);
+  }
+  ```
+- **Component-level mutations**: Use `.mutateAsync()` with `toast.promise()` instead of `.mutate()` with callbacks — this ensures UI feedback waits for cache to sync
+  ```typescript
+  // ✅ Correct: toast waits for invalidations
+  toast.promise(updateFeed.mutateAsync({ feedId, data }), {
+    loading: 'Updating...',
+    success: 'Updated',
+    error: 'Failed',
+  });
+
+  // ❌ Wrong: .mutate() doesn't await invalidations
+  updateFeed.mutate({ feedId, data }, {
+    onSuccess: () => toast.success('Updated'),
+  });
+  ```
+- **Optimistic updates**: For mutations that modify lists (save, delete, move), add `onMutate` with rollback on `onError` for instant UI feedback
+  ```typescript
+  onMutate: async ({ articleId }) => {
+    await queryClient.cancelQueries({ queryKey: [...] });
+    const previous = queryClient.getQueryData([...]);
+    queryClient.setQueryData([...], oldData => /* remove item */);
+    return { previous };
+  },
+  onError: (_err, _vars, context) => {
+    if (context?.previous) queryClient.setQueryData([...], context.previous);
+  },
+  ```
+- **Consistency across all mutations**: All feed/article mutations must invalidate the same cache keys to prevent divergence (feeds list, articles list, unread counts, saved articles)
+- **Avoid `.mutate()` with `onSuccess`**: It doesn't wait for `onSettled` invalidations, causing race conditions
+
+**Common regressions to avoid**:
+- Missing invalidation of dependent queries (e.g., favorite toggle missing unread count refresh)
+- Non-blocking mutations (`.mutate()` without awaiting invalidations)
+- Invalidations in components instead of hooks (spreads logic, easy to miss)
+- Mixing optimistic + server-driven updates without rollback
+- **Missing `return` in `onSettled`**: Must `return Promise.all([...invalidations...])` so the mutation waits. Without it, the toast shows success before the cache is actually cleared, causing stale data to appear on re-renders. This caused the "add feed doesn't update feed switcher" bug.
+
 ### Monorepo Guidelines
 
 - **Workspace Dependencies**: Use workspace references (e.g., `"@readspace/shared": "workspace:*"`) for internal packages
