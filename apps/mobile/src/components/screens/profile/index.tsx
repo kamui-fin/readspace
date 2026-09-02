@@ -29,6 +29,7 @@ import {
   ArchiveUpMinimalisticIcon,
   DownloadIcon,
   HistoryIcon,
+  LinkIcon,
   Logout2Icon,
   PaletteIcon,
 } from '@solar-icons/react-native/linear';
@@ -103,6 +104,13 @@ export function ProfileScreen() {
     const url = 'https://discord.com/invite/2Q5PtYwUQZ';
     Linking.openURL(url).catch(() => {
       toast.error('Cannot open Discord link');
+    });
+  };
+
+  const handleWebsitePress = () => {
+    const url = 'https://readspace.ai/contact';
+    Linking.openURL(url).catch(() => {
+      toast.error('Cannot open website link');
     });
   };
 
@@ -312,6 +320,13 @@ export function ProfileScreen() {
 
           {/* Other Section */}
           <SettingsGroup title="Other" className="mb-6">
+            <SettingsItem
+              label="Contact Us"
+              variant="link"
+              leftIcon={<LinkIcon size={22} color={colors.black} />}
+              onPress={handleWebsitePress}
+            />
+
             <SettingsItem
               label="GitHub"
               variant="link"

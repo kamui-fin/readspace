@@ -3,7 +3,7 @@
     "version": "0.1.0",
     "private": true,
     "scripts": {
-        "dev": "next dev --turbopack -p 8081",
+        "dev": "next dev -p 8081",
         "build": "next build",
         "start": "next start -p 8080",
         "lint": "next lint",
@@ -12,6 +12,7 @@
         "email:preview": "email dev --dir components/_templates/"
     },
     "dependencies": {
+        "@formspree/react": "^3.0.0",
         "@iconify/react": "^5.2.0",
         "@next/eslint-plugin-next": "^15.2.3",
         "@plunk/node": "^3.0.3",

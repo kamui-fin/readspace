@@ -8,6 +8,7 @@ import { useGoogleAuth } from '@hooks/useGoogleAuth';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { SPACING } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { useSettingsStore } from '@stores/settings';
 import { LetterIcon } from '@solar-icons/react-native/bold';
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
@@ -22,6 +23,7 @@ export function WelcomeScreen() {
   const { signInWithGoogle } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [hasSignedIn, setHasSignedIn] = useState(false);
+  const { settings, resetToCloud } = useSettingsStore();
 
   // TODO: Replace with your actual Google OAuth client ID
   // You'll need to provide this from your environment variables
@@ -88,6 +90,10 @@ export function WelcomeScreen() {
 
   const handleGoogleSignIn = async () => {
     try {
+      if (settings.instance_type === 'self-hosted') {
+        resetToCloud();
+        toast.success('Switched to cloud for Google sign-in');
+      }
       await promptAsync();
     } catch (error) {
       console.error('Error prompting Google auth:', error);
