@@ -4,16 +4,10 @@ import { Button } from './ui/button'
 import { ArrowLeft, LogOut, Cloud, Server } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { SelfHostedSettings } from './SelfHostedSettings'
+import { PRODUCTION_DEFAULTS } from '@/lib/constants'
 
 interface SettingsProps {
   onBack: () => void
-}
-
-const PRODUCTION_DEFAULTS = {
-  readspace_url: 'https://api.readspace.ai',
-  supabase_url: 'https://hnqyngkyugiamvlhqoaf.supabase.co',
-  supabase_anon_key:
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs',
 }
 
 export function Settings({

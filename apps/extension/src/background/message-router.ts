@@ -58,6 +58,10 @@ export async function handleMessage(msg: ExtensionMessage) {
     case 'getCachedPageByUrl':
       return pageCache.get(msg.payload)
 
+    case 'config-changed':
+      // Config change is handled by supabase-client listener
+      return { success: true }
+
     default:
       throw new Error(`Unknown message type: ${msg.type}`)
   }

@@ -7,9 +7,10 @@ import { UnsupportedPage } from './components/UnsupportedPage'
 import { useCurrentPage } from './hooks/use-current-page'
 import './index.css'
 import { useExtensionStore } from './store'
+import { PRODUCTION_DEFAULTS } from '@/lib/constants'
 
 function PopupContent() {
-  const { isAuthenticated, settings, checkExistingSession } =
+  const { isAuthenticated, settings, checkExistingSession, logout } =
     useExtensionStore()
 
   const {
@@ -22,13 +23,16 @@ function PopupContent() {
   } = useCurrentPage()
 
   const [currentView, setCurrentView] = useState<
-    'main' | 'settings' | 'settings-self-hosted' | 'login'
+    'main' | 'self-hosted' | 'login'
   >('main')
 
   useEffect(() => {
     // Check for existing session on load
     checkExistingSession()
   }, [checkExistingSession])
+
+  const isUsingProduction =
+    settings.readspace_url === PRODUCTION_DEFAULTS.readspace_url
 
   const openReadspace = () => {
     // Use the app URL, not the API URL
@@ -46,21 +50,15 @@ function PopupContent() {
 
   // Show unsupported page message (only when authenticated)
   if (isUnsupportedPage) {
-    return (
-      <UnsupportedPage
-        currentUrl={currentTab?.url}
-        currentView={currentView}
-        onViewChange={setCurrentView}
-      />
-    )
+    return <UnsupportedPage currentUrl={currentTab?.url} />
   }
 
   // Main authenticated view
   return (
     <MainView
-      currentView={currentView}
-      onViewChange={setCurrentView}
       onOpenReadspace={openReadspace}
+      onLogout={logout}
+      isSelfHosted={!isUsingProduction}
       isFeedDataLoading={isFeedDataLoading}
       currentPageMetadata={currentPageMetadata}
       isMetadataLoading={isMetadataLoading}

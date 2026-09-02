@@ -3,258 +3,183 @@ import { useExtensionStore } from '@/store'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
-import { ArrowLeft, Cloud, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Cloud, Loader } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { PRODUCTION_DEFAULTS } from '@/lib/constants'
 
 interface SelfHostedSettingsProps {
   onBack: () => void
 }
 
-const PRODUCTION_DEFAULTS = {
-  readspace_url: 'https://api.readspace.ai',
-  readspace_app_url: 'https://app.readspace.ai',
-  supabase_url: 'https://hnqyngkyugiamvlhqoaf.supabase.co',
-  supabase_anon_key:
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs',
+interface ConfigResponse {
+  supabase_url: string
+  supabase_anon_key: string
+  meilisearch_url: string
+  meilisearch_search_key: string
 }
 
 export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
-  const { settings, user, updateSettings, logout } = useExtensionStore()
-
-  // Initialize state with empty strings if matching production defaults
-  const [readspaceUrl, setReadspaceUrl] = useState(
+  const { settings, updateSettings } = useExtensionStore()
+  const [apiUrl, setApiUrl] = useState(
     settings.readspace_url === PRODUCTION_DEFAULTS.readspace_url
       ? ''
       : settings.readspace_url
   )
-  const [supabaseUrl, setSupabaseUrl] = useState(
-    settings.supabase_url === PRODUCTION_DEFAULTS.supabase_url
-      ? ''
-      : settings.supabase_url
-  )
-  const [supabaseAnonKey, setSupabaseAnonKey] = useState(
-    settings.supabase_anon_key === PRODUCTION_DEFAULTS.supabase_anon_key
-      ? ''
-      : settings.supabase_anon_key
-  )
-  const [isSaving, setIsSaving] = useState(false)
+  const [isValidating, setIsValidating] = useState(false)
+  const [error, setError] = useState<string>('')
 
-  // Check if using production settings
   const isUsingProduction =
-    settings.readspace_url === PRODUCTION_DEFAULTS.readspace_url &&
-    settings.supabase_url === PRODUCTION_DEFAULTS.supabase_url &&
-    settings.supabase_anon_key === PRODUCTION_DEFAULTS.supabase_anon_key
+    settings.readspace_url === PRODUCTION_DEFAULTS.readspace_url
 
-  const validateSettings = () => {
-    const hasAnyCustomField =
-      readspaceUrl.trim() || supabaseUrl.trim() || supabaseAnonKey.trim()
-
-    if (hasAnyCustomField) {
-      if (
-        !readspaceUrl.trim() ||
-        !supabaseUrl.trim() ||
-        !supabaseAnonKey.trim()
-      ) {
-        return 'For self-hosted configuration, all 3 fields are required'
-      }
-    }
-    return null
-  }
-
-  const getFinalSettings = () => {
-    return {
-      readspace_url: readspaceUrl.trim() || PRODUCTION_DEFAULTS.readspace_url,
-      supabase_url: supabaseUrl.trim() || PRODUCTION_DEFAULTS.supabase_url,
-      supabase_anon_key:
-        supabaseAnonKey.trim() || PRODUCTION_DEFAULTS.supabase_anon_key,
-    }
-  }
+  const isValid = apiUrl.trim().length > 0
 
   const handleSave = async () => {
-    setIsSaving(true)
-    const toastId = toast.loading('Saving settings...')
+    setIsValidating(true)
+    setError('')
+    const toastId = toast.loading('Connecting to server...')
 
     try {
-      const validationError = validateSettings()
-      if (validationError) {
-        toast.error(validationError, { id: toastId })
-        setIsSaving(false)
-        return
+      const trimmedUrl = apiUrl.trim()
+
+      // Validate URL format
+      try {
+        new URL(trimmedUrl)
+      } catch {
+        throw new Error('Please enter a valid URL (e.g., http://localhost:8008)')
       }
 
-      const finalSettings = getFinalSettings()
+      // Fetch config from server
+      const configResponse = await fetch(`${trimmedUrl}/api/config`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      })
 
-      // Check if switching from cloud to self-hosted or vice versa
-      const switchingToSelfHosted =
-        isUsingProduction &&
-        (finalSettings.readspace_url !== PRODUCTION_DEFAULTS.readspace_url ||
-          finalSettings.supabase_url !== PRODUCTION_DEFAULTS.supabase_url ||
-          finalSettings.supabase_anon_key !==
-            PRODUCTION_DEFAULTS.supabase_anon_key)
-
-      const switchingToCloud =
-        !isUsingProduction &&
-        finalSettings.readspace_url === PRODUCTION_DEFAULTS.readspace_url &&
-        finalSettings.supabase_url === PRODUCTION_DEFAULTS.supabase_url &&
-        finalSettings.supabase_anon_key ===
-          PRODUCTION_DEFAULTS.supabase_anon_key
-
-      // If user is authenticated and switching configurations, log them out first
-      if (user && (switchingToSelfHosted || switchingToCloud)) {
-        logout()
+      if (!configResponse.ok) {
+        if (configResponse.status === 404) {
+          throw new Error('Server endpoint not found (404). Verify the server URL is correct.')
+        } else if (configResponse.status >= 500) {
+          throw new Error(
+            `Server error (${configResponse.status}). The Readspace server may be down.`
+          )
+        }
+        throw new Error(`Server returned error status ${configResponse.status}`)
       }
 
-      updateSettings(finalSettings)
+      const config: ConfigResponse = await configResponse.json()
 
-      if (switchingToSelfHosted || switchingToCloud) {
-        toast.success('Settings saved! Please sign in again.', { id: toastId })
-      } else {
-        toast.success('Settings saved successfully!', { id: toastId })
+      if (!config.supabase_url || !config.supabase_anon_key) {
+        throw new Error('Server configuration is incomplete (missing Supabase credentials).')
       }
+
+      // Update settings with fetched config
+      updateSettings({
+        readspace_url: trimmedUrl,
+        supabase_url: config.supabase_url,
+        supabase_anon_key: config.supabase_anon_key,
+      })
+
+      toast.success('Connected successfully!', { id: toastId })
       onBack()
-    } catch (error) {
-      console.error('Failed to save settings:', error)
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to save settings'
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to connect to server'
+      setError(errorMessage)
       toast.error(errorMessage, { id: toastId })
     } finally {
-      setIsSaving(false)
+      setIsValidating(false)
     }
   }
 
-  const handleUseCloudConfig = async () => {
-    setIsSaving(true)
-    const toastId = toast.loading('Switching to Readspace Cloud...')
-
-    try {
-      // If user is authenticated with self-hosted, log them out first
-      if (user && !isUsingProduction) {
-        logout()
-      }
-
-      // Reset to production defaults (empty the form fields)
-      setReadspaceUrl('')
-      setSupabaseUrl('')
-      setSupabaseAnonKey('')
-
-      updateSettings(PRODUCTION_DEFAULTS)
-
-      toast.success('Switched to Readspace Cloud! Please sign in.', {
-        id: toastId,
-      })
-      onBack()
-    } catch (error) {
-      console.error('Failed to switch to cloud config:', error)
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to switch to cloud config'
-      toast.error(errorMessage, { id: toastId })
-    } finally {
-      setIsSaving(false)
-    }
+  const handleUseCloudConfig = () => {
+    setApiUrl('')
+    updateSettings(PRODUCTION_DEFAULTS)
+    toast.success('Switched to Readspace Cloud')
+    onBack()
   }
 
   return (
     <div className="space-y-6 max-w-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBack}
-          className="h-8 w-8 p-0"
-        >
+        <Button variant="ghost" size="sm" onClick={onBack} className="h-8 w-8 p-0">
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <h2 className="text-xl font-semibold">Self-Hosted Configuration</h2>
+        <h2 className="text-xl font-semibold">Server connection</h2>
       </div>
 
-      {/* Warning */}
-      <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg">
-        <div className="flex gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-              Advanced Users Only
-            </p>
-            <p className="text-sm text-amber-800 dark:text-amber-300">
-              Only modify these settings if you&apos;re self-hosting.
-            </p>
-          </div>
-        </div>
+      {/* Current mode */}
+      <div className="p-3 bg-muted rounded-lg text-sm">
+        <p className="text-muted-foreground">
+          {isUsingProduction ? (
+            <>Connected to <span className="font-medium">Readspace Cloud</span></>
+          ) : (
+            <>Self-hosted: <span className="font-mono text-xs break-all">{settings.readspace_url}</span></>
+          )}
+        </p>
       </div>
 
       {/* Form */}
-      <div className="space-y-4 px-2">
+      <div className="space-y-4 px-1">
         <div className="space-y-2">
-          <Label htmlFor="readspaceUrl">Server URL</Label>
+          <Label htmlFor="apiUrl">{isUsingProduction ? 'Self-host URL' : 'Server URL'}</Label>
           <Input
-            id="readspaceUrl"
+            id="apiUrl"
             type="url"
-            placeholder="http://localhost:8008"
-            value={readspaceUrl}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setReadspaceUrl(e.target.value)
-            }
-            className="w-full"
+            placeholder="Server URL"
+            value={apiUrl}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              setApiUrl(e.target.value)
+              setError('')
+            }}
+            disabled={isValidating}
+            className={error ? 'border-red-500' : ''}
           />
-          <p className="text-xs text-muted-foreground">
-            Your Readspace server API endpoint
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="supabaseUrl">Supabase URL</Label>
-          <Input
-            id="supabaseUrl"
-            type="url"
-            placeholder="http://localhost:8000"
-            value={supabaseUrl}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setSupabaseUrl(e.target.value)
-            }
-            className="w-full"
-          />
-          <p className="text-xs text-muted-foreground">
-            Your Supabase instance URL
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="supabaseAnonKey">Supabase Anonymous Key</Label>
-          <Input
-            id="supabaseAnonKey"
-            type="text"
-            placeholder="Your Supabase anon key"
-            value={supabaseAnonKey}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setSupabaseAnonKey(e.target.value)
-            }
-            className="w-full"
-          />
-          <p className="text-xs text-muted-foreground">
-            Your Supabase anonymous/public key
-          </p>
+          {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
         </div>
       </div>
 
       {/* Actions */}
-      <div className="space-y-2 pt-2">
-        <Button onClick={handleSave} className="w-full" disabled={isSaving}>
-          {isSaving ? 'Saving...' : 'Save Configuration'}
-        </Button>
-
-        {!isUsingProduction && (
+      <div className="space-y-2">
+        {isUsingProduction ? (
           <Button
-            variant="outline"
-            onClick={handleUseCloudConfig}
+            onClick={handleSave}
             className="w-full"
-            disabled={isSaving}
+            disabled={!isValid || isValidating}
           >
-            <Cloud className="w-4 h-4 mr-2" />
-            Switch to Readspace Cloud
+            {isValidating ? (
+              <>
+                <Loader className="w-4 h-4 mr-2 animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              'Switch to Self-Hosted'
+            )}
           </Button>
+        ) : (
+          <>
+            <Button
+              onClick={handleSave}
+              className="w-full"
+              disabled={!isValid || isValidating}
+            >
+              {isValidating ? (
+                <>
+                  <Loader className="w-4 h-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Update Server URL'
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleUseCloudConfig}
+              className="w-full"
+              disabled={isValidating}
+            >
+              <Cloud className="w-4 h-4 mr-2" />
+              Switch to Cloud
+            </Button>
+          </>
         )}
       </div>
     </div>

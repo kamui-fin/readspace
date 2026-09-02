@@ -1,13 +1,11 @@
 import { useIsCloudProd } from '@/hooks/use-is-cloud-prod'
 import browser from 'webextension-polyfill'
 import { LoginForm } from './LoginForm'
-import { Settings } from './Settings'
+import { SelfHostedSettings } from './SelfHostedSettings'
 
 interface LoginViewProps {
-  currentView: 'main' | 'settings' | 'settings-self-hosted' | 'login'
-  onViewChange: (
-    view: 'main' | 'settings' | 'settings-self-hosted' | 'login'
-  ) => void
+  currentView: 'main' | 'self-hosted' | 'login'
+  onViewChange: (view: 'main' | 'self-hosted' | 'login') => void
 }
 
 export function LoginView({ currentView, onViewChange }: LoginViewProps) {
@@ -15,11 +13,8 @@ export function LoginView({ currentView, onViewChange }: LoginViewProps) {
 
   return (
     <div className="w-[450px] min-h-[500px] p-6">
-      {currentView === 'settings' || currentView === 'settings-self-hosted' ? (
-        <Settings
-          onBack={() => onViewChange('main')}
-          initialShowSelfHosted={currentView === 'settings-self-hosted'}
-        />
+      {currentView === 'self-hosted' ? (
+        <SelfHostedSettings onBack={() => onViewChange('main')} />
       ) : (
         <div className="space-y-6">
           {/* Logo and Title */}
@@ -38,7 +33,7 @@ export function LoginView({ currentView, onViewChange }: LoginViewProps) {
 
           {/* Embedded Login Form */}
           <LoginForm
-            onShowSelfHosted={() => onViewChange('settings-self-hosted')}
+            onShowSelfHosted={() => onViewChange('self-hosted')}
           />
 
           {/* New to Readspace link */}

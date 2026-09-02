@@ -1,18 +1,16 @@
 import browser from 'webextension-polyfill'
 import type { PageMetadata } from '@readspace/shared'
-import { ExternalLink, Settings as SettingsIcon } from 'lucide-react'
+import { ExternalLink, LogOut } from 'lucide-react'
 import { ArticlePreview } from './ArticlePreview'
 import { FeedDiscoveryCard } from './FeedDiscoveryCard'
-import { Settings } from './Settings'
 import ThemeSwitcher from './ThemeSwitcher'
 import { Button } from './ui/button'
+import toast from 'react-hot-toast'
 
 interface MainViewProps {
-  currentView: 'main' | 'settings' | 'settings-self-hosted' | 'login'
-  onViewChange: (
-    view: 'main' | 'settings' | 'settings-self-hosted' | 'login'
-  ) => void
   onOpenReadspace: () => void
+  onLogout: () => Promise<void>
+  isSelfHosted: boolean
   isFeedDataLoading: boolean
   currentPageMetadata: PageMetadata | null
   isMetadataLoading: boolean
@@ -21,15 +19,23 @@ interface MainViewProps {
 }
 
 export function MainView({
-  currentView,
-  onViewChange,
   onOpenReadspace,
+  onLogout,
+  isSelfHosted,
   isFeedDataLoading,
   currentPageMetadata,
   isMetadataLoading,
   readingTime,
   currentUrl,
 }: MainViewProps) {
+  const handleLogout = async () => {
+    try {
+      await onLogout()
+      toast.success('Signed out')
+    } catch {
+      toast.error('Failed to sign out')
+    }
+  }
   return (
     <div className="w-[450px] min-h-[500px] p-4">
       {/* Header */}
@@ -51,51 +57,49 @@ export function MainView({
         </div>
         <div className="flex items-center gap-2">
           <ThemeSwitcher />
-          <div className="flex items-center gap-1">
+          {!isSelfHosted && (
             <Button
               variant="ghost"
               size="sm"
               onClick={onOpenReadspace}
               className="h-8 w-8 p-0"
+              title="Open Readspace"
             >
               <ExternalLink className="w-4 h-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onViewChange('settings')}
-              className="h-8 w-8 p-0"
-            >
-              <SettingsIcon className="w-4 h-4" />
-            </Button>
-          </div>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="h-8 w-8 p-0"
+            title="Sign out"
+          >
+            <LogOut className="w-4 h-4" />
+          </Button>
         </div>
       </div>
 
-      {currentView === 'settings' ? (
-        <Settings onBack={() => onViewChange('main')} />
-      ) : (
-        <div className="space-y-4">
-          {/* RSS Feed Discovery Card - Show skeleton while loading or if feeds exist */}
-          {(isFeedDataLoading ||
-            (currentPageMetadata?.feeds &&
-              currentPageMetadata.feeds.length > 0)) && (
-            <FeedDiscoveryCard
-              feeds={currentPageMetadata?.feeds}
-              websiteTitle={currentPageMetadata?.title}
-              isLoading={isFeedDataLoading}
-            />
-          )}
-
-          {/* Current Page Preview - Always show, with skeleton while loading */}
-          <ArticlePreview
-            metadata={currentPageMetadata || undefined}
-            isMetadataLoading={isMetadataLoading}
-            readingTime={readingTime}
-            currentUrl={currentUrl}
+      <div className="space-y-4">
+        {/* RSS Feed Discovery Card - Show skeleton while loading or if feeds exist */}
+        {(isFeedDataLoading ||
+          (currentPageMetadata?.feeds &&
+            currentPageMetadata.feeds.length > 0)) && (
+          <FeedDiscoveryCard
+            feeds={currentPageMetadata?.feeds}
+            websiteTitle={currentPageMetadata?.title}
+            isLoading={isFeedDataLoading}
           />
-        </div>
-      )}
+        )}
+
+        {/* Current Page Preview - Always show, with skeleton while loading */}
+        <ArticlePreview
+          metadata={currentPageMetadata || undefined}
+          isMetadataLoading={isMetadataLoading}
+          readingTime={readingTime}
+          currentUrl={currentUrl}
+        />
+      </div>
     </div>
   )
 }

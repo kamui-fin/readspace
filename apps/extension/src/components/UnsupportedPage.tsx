@@ -1,19 +1,10 @@
 import { AlertTriangle } from 'lucide-react'
-import { Settings } from './Settings'
 
 interface UnsupportedPageProps {
   currentUrl?: string
-  currentView: 'main' | 'settings' | 'settings-self-hosted' | 'login'
-  onViewChange: (
-    view: 'main' | 'settings' | 'settings-self-hosted' | 'login'
-  ) => void
 }
 
-export function UnsupportedPage({
-  currentUrl,
-  currentView,
-  onViewChange,
-}: UnsupportedPageProps) {
+export function UnsupportedPage({ currentUrl }: UnsupportedPageProps) {
   return (
     <div className="w-[450px] min-h-[500px] p-6">
       <div className="text-center space-y-4">
@@ -37,13 +28,6 @@ export function UnsupportedPage({
           </div>
         </div>
       </div>
-
-      {/* Settings overlay */}
-      {currentView === 'settings' && (
-        <div className="absolute inset-0 bg-background">
-          <Settings onBack={() => onViewChange('main')} />
-        </div>
-      )}
     </div>
   )
 }
