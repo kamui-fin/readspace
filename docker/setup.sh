@@ -30,6 +30,43 @@ set -e # Exit immediately if a command exits with a non-zero status.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# Helper function: Set environment variable in a file safely
+set_env_var() {
+    local file="$1"
+    local key="$2"
+    local value="$3"
+
+    # If the key exists, replace its value (anchored line match)
+    if grep -q "^${key}=" "$file"; then
+        # Use a temporary file for safe in-place editing
+        sed -i.bak "s/^${key}=.*/${key}=${value}/" "$file"
+        rm -f "${file}.bak"
+    else
+        # Key doesn't exist, append it
+        echo "${key}=${value}" >> "$file"
+    fi
+}
+
+# Helper function: Validate that required env vars are set and non-empty
+validate_env_file() {
+    local file="$1"
+    shift  # Remove first argument
+    local keys=("$@")  # Remaining arguments are the required keys
+
+    for key in "${keys[@]}"; do
+        if ! grep -q "^${key}=" "$file"; then
+            echo "❌ Error: Required variable '$key' not found in $file" >&2
+            return 1
+        fi
+        local value=$(grep "^${key}=" "$file" | cut -d'=' -f2-)
+        if [ -z "$value" ]; then
+            echo "❌ Error: Required variable '$key' is empty in $file" >&2
+            return 1
+        fi
+    done
+    return 0
+}
+
 # --- Access Configuration ---
 # Check if --dev flag is provided
 if [ "$1" = "--dev" ]; then
@@ -76,22 +113,15 @@ else
         echo "   Meilisearch: ${MEILISEARCH_PUBLIC_URL}"
     else
         echo ""
-        echo "📋 IP Address Configuration"
-        echo "Enter your machine's IP address (e.g., 192.168.1.100)"
-        echo ""
-        read -p "IP Address: " API_HOST
-        
-        if [ -z "$API_HOST" ]; then
-            echo "❌ Error: IP address is required" >&2
-            exit 1
-        fi
+        read -p "IP address [localhost]: " API_HOST
+        API_HOST=${API_HOST:-"localhost"}
 
         WEB_URL="http://${API_HOST}:18042"
         API_URL="http://${API_HOST}:18008"
         SUPABASE_PUBLIC_URL="http://${API_HOST}:18000"
         MEILISEARCH_PUBLIC_URL="http://${API_HOST}:7700"
 
-        echo "✅ Using IP:PORT access"
+        echo "✅ Access via $API_HOST"
     fi
 fi
 
@@ -99,6 +129,7 @@ fi
 if [ "$ACCESS_TYPE" = "dev" ]; then
     # Dev mode: always use local RSSHub
     RSSHUB_URL="http://localhost:1200"
+    RSSHUB_MODE="local"
     echo ""
     echo "📡 RSSHub: Using local instance at ${RSSHUB_URL}"
 else
@@ -111,6 +142,7 @@ else
     USE_LOCAL_RSSHUB_INPUT=${USE_LOCAL_RSSHUB_INPUT:-"Y"}
 
     if [[ "$USE_LOCAL_RSSHUB_INPUT" =~ ^[Yy]$ ]]; then
+        RSSHUB_MODE="local"
         # For domain mode, RSSHub is accessed via Docker network; for IP mode use the configured host
         if [ "$ACCESS_TYPE" = "2" ]; then
             RSSHUB_URL="http://rsshub:1200"
@@ -119,6 +151,7 @@ else
         fi
         echo "✅ Local RSSHub instance will be used at ${RSSHUB_URL}"
     else
+        RSSHUB_MODE="external"
         echo ""
         read -p "Enter your external RSSHub URL: " EXTERNAL_RSSHUB_URL
         if [ -n "$EXTERNAL_RSSHUB_URL" ]; then
@@ -131,44 +164,25 @@ else
                 RSSHUB_URL="http://${API_HOST}:1200"
             fi
             echo "⚠️  No URL provided, defaulting to local instance: ${RSSHUB_URL}"
+            RSSHUB_MODE="local"
         fi
     fi
 fi
 
-# --- AI Configuration ---
-if [ "$ACCESS_TYPE" = "dev" ]; then
-    # Dev mode: disable AI by default
+# --- AI Configuration (unified for dev and self-host) ---
+echo ""
+echo "🤖 AI Support"
+read -p "Enable AI features (summaries, translations, similarity)? [Y/n]: " ENABLE_AI_INPUT
+ENABLE_AI_INPUT=${ENABLE_AI_INPUT:-"Y"}
+
+if [[ "$ENABLE_AI_INPUT" =~ ^[Yy]$ ]]; then
+    ENABLE_AI="true"
+    echo "Get a Gemini API key at: https://aistudio.google.com/app/apikey"
+    read -p "Gemini API key (or press Enter to configure later): " GEMINI_API_KEY
+    GEMINI_API_KEY=${GEMINI_API_KEY:-""}
+else
     ENABLE_AI="false"
     GEMINI_API_KEY=""
-    echo "🤖 AI Support: Disabled in development mode"
-else
-    echo ""
-    echo "🤖 AI Support Configuration"
-    echo "You can configure your AI API key later in the server/.env file."
-    echo ""
-    read -p "Enable AI support? (recommended) [Y/n]: " ENABLE_AI_INPUT
-    ENABLE_AI_INPUT=${ENABLE_AI_INPUT:-"Y"}
-
-    if [[ "$ENABLE_AI_INPUT" =~ ^[Yy]$ ]]; then
-        ENABLE_AI="true"
-        echo "✅ AI support will be enabled."
-        echo ""
-        echo "To use AI features, you'll need a Gemini API key."
-        echo "Get one at: https://aistudio.google.com/app/apikey"
-        echo ""
-        read -p "Enter your Gemini API key (or leave blank to configure later): " GEMINI_API_KEY
-        GEMINI_API_KEY=${GEMINI_API_KEY:-""}
-
-        if [ -n "$GEMINI_API_KEY" ]; then
-            echo "✅ Gemini API key configured."
-        else
-            echo "⚠️  No API key provided. You can add it to server/.env later."
-        fi
-    else
-        ENABLE_AI="false"
-        GEMINI_API_KEY=""
-        echo "❌ AI support will be disabled."
-    fi
 fi
 
 
@@ -193,8 +207,15 @@ API_URL=${API_URL}
 WEB_URL=${WEB_URL}
 SUPABASE_PUBLIC_URL=${SUPABASE_PUBLIC_URL}
 MEILISEARCH_PUBLIC_URL=${MEILISEARCH_PUBLIC_URL}
+RSSHUB_MODE=${RSSHUB_MODE}
 EOF
 echo "✅ Secure Meilisearch master key and deployment URLs saved to docker/.env."
+
+# Validate that initial config was written correctly
+if ! validate_env_file "$SCRIPT_DIR/.env" \
+    "MEILISEARCH_MASTER_KEY" "RSSHUB_MODE"; then
+    exit 1
+fi
 
 # --- Start Meilisearch to generate search key ---
 echo "🚀 Starting Meilisearch container with the generated master key..."
@@ -225,6 +246,12 @@ if [ -z "$MEILISEARCH_SEARCH_KEY" ] || [ "$MEILISEARCH_SEARCH_KEY" = "null" ]; t
 fi
 echo "MEILISEARCH_SEARCH_KEY=${MEILISEARCH_SEARCH_KEY}" >> "$SCRIPT_DIR/.env"
 echo "✅ Search API key fetched and appended to docker/.env."
+
+# Validate that Meilisearch keys are now set
+if ! validate_env_file "$SCRIPT_DIR/.env" \
+    "MEILISEARCH_MASTER_KEY" "MEILISEARCH_SEARCH_KEY" "RSSHUB_MODE"; then
+    exit 1
+fi
 
 # --- Port Availability Check ---
 echo "🔍 Checking port availability..."
@@ -363,19 +390,27 @@ if [ ! -f "$SCRIPT_DIR/supabase/.env.example" ]; then
 fi
 
 echo "📝 Creating docker/supabase/.env file..."
-sed \
-  -e "s|POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$POSTGRES_PASSWORD|" \
-  -e "s|JWT_SECRET=.*|JWT_SECRET=$JWT_SECRET|" \
-  -e "s|ANON_KEY=.*|ANON_KEY=$ANON_KEY|" \
-  -e "s|SERVICE_ROLE_KEY=.*|SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY|" \
-  -e "s|DASHBOARD_PASSWORD.*|DASHBOARD_PASSWORD=not_being_used|" \
-  -e "s|SECRET_KEY_BASE.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|" \
-  -e "s|VAULT_ENC_KEY.*|VAULT_ENC_KEY=$VAULT_ENC_KEY|" \
-  -e "s|API_EXTERNAL_URL=.*|API_EXTERNAL_URL=https://$DOMAIN|" \
-  -e "s|SUPABASE_PUBLIC_URL=.*|SUPABASE_PUBLIC_URL=https://$DOMAIN|" \
-  -e "s|ENABLE_EMAIL_AUTOCONFIRM=.*|ENABLE_EMAIL_AUTOCONFIRM=$AUTO_CONFIRM_EMAIL|" \
-  "$SCRIPT_DIR/supabase/.env.example" > "$SCRIPT_DIR/supabase/.env"
-echo "✅ docker/supabase/.env created."
+cp "$SCRIPT_DIR/supabase/.env.example" "$SCRIPT_DIR/supabase/.env"
+
+# Use the helper function for safe, anchored replacements
+set_env_var "$SCRIPT_DIR/supabase/.env" "POSTGRES_PASSWORD" "$POSTGRES_PASSWORD"
+set_env_var "$SCRIPT_DIR/supabase/.env" "JWT_SECRET" "$JWT_SECRET"
+set_env_var "$SCRIPT_DIR/supabase/.env" "ANON_KEY" "$ANON_KEY"
+set_env_var "$SCRIPT_DIR/supabase/.env" "SERVICE_ROLE_KEY" "$SERVICE_ROLE_KEY"
+set_env_var "$SCRIPT_DIR/supabase/.env" "DASHBOARD_PASSWORD" "not_being_used"
+set_env_var "$SCRIPT_DIR/supabase/.env" "SECRET_KEY_BASE" "$SECRET_KEY_BASE"
+set_env_var "$SCRIPT_DIR/supabase/.env" "VAULT_ENC_KEY" "$VAULT_ENC_KEY"
+set_env_var "$SCRIPT_DIR/supabase/.env" "API_EXTERNAL_URL" "https://$DOMAIN"
+set_env_var "$SCRIPT_DIR/supabase/.env" "SUPABASE_PUBLIC_URL" "https://$DOMAIN"
+set_env_var "$SCRIPT_DIR/supabase/.env" "ENABLE_EMAIL_AUTOCONFIRM" "$AUTO_CONFIRM_EMAIL"
+
+# Validate critical keys
+if ! validate_env_file "$SCRIPT_DIR/supabase/.env" \
+    "POSTGRES_PASSWORD" "JWT_SECRET" "ANON_KEY" "SERVICE_ROLE_KEY" \
+    "SECRET_KEY_BASE" "VAULT_ENC_KEY"; then
+    exit 1
+fi
+echo "✅ docker/supabase/.env created and validated."
 
 # --- Create apps/web/.env ---
 echo "📝 Creating apps/web/.env file..."
@@ -465,7 +500,11 @@ MEILISEARCH_MASTER_KEY=${MEILISEARCH_MASTER_KEY}
 MEILISEARCH_INDEX_NAME=feeds
 
 # AI Configuration
-ENABLE_AI=false
+ENABLE_AI=${ENABLE_AI}
+GEMINI_API_KEY=${GEMINI_API_KEY}
+GEMINI_SMART_MODEL=gemini-3.6-flash
+GEMINI_FAST_MODEL=gemini-3.5-flash-lite
+GEMINI_EMBEDDING_MODEL=gemini-embedding-001
 
 # RSShub Configuration
 RSSHUB_URL=${RSSHUB_URL}
@@ -497,7 +536,8 @@ MEILISEARCH_INDEX_NAME=feeds
 # AI Configuration
 ENABLE_AI=${ENABLE_AI}
 GEMINI_API_KEY=${GEMINI_API_KEY}
-GEMINI_MODEL=gemini-2.5-flash-lite
+GEMINI_SMART_MODEL=gemini-3.6-flash
+GEMINI_FAST_MODEL=gemini-3.5-flash-lite
 GEMINI_EMBEDDING_MODEL=gemini-embedding-001
 
 # RSShub Configuration

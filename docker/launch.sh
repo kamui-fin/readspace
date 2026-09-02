@@ -1,5 +1,5 @@
 #!/bin/bash
-# Automatically determine whether to start RSSHub based on configuration
+# Launch Readspace infrastructure and services (development or self-hosted)
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,86 +24,86 @@ print_error() {
     printf "\033[1;31mERROR: %s\033[0m\n" "$1" >&2
 }
 
-# --- Docker Compose Launch ---
+# Build the docker compose command
+COMPOSE_FILES=("-f" "$SCRIPT_DIR/supabase/docker-compose.yml" "-f" "$SCRIPT_DIR/docker-compose.yml")
+ENV_FILES=("--env-file" "$SCRIPT_DIR/supabase/.env" "--env-file" "$SCRIPT_DIR/.env")
+PROFILES=()
+
+# Load RSSHUB_MODE from docker/.env to determine if we should enable RSSHub profile
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    source "$SCRIPT_DIR/.env"
+fi
+
+# Add dev-specific overlay if in development mode
 if [ "$DEV_MODE" = true ]; then
-    print_info "› Starting Supabase services in DEVELOPMENT mode..."
-    # Start with dev compose file for additional services (studio, analytics, etc.)
-    if ! docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" -f "$SCRIPT_DIR/supabase/docker-compose.dev.yml" --env-file "$SCRIPT_DIR/supabase/.env" up -d; then
-        print_error "Failed to start Supabase services in dev mode. Check Docker and the logs."
-        exit 1
-    fi
-    print_success "✓ Supabase stack with dev tools is starting in the background."
+    COMPOSE_FILES+=("-f" "$SCRIPT_DIR/supabase/docker-compose.dev.yml")
+    print_info "› Starting Readspace in DEVELOPMENT mode..."
 else
-    print_info "› Starting Supabase services with Docker Compose..."
-    # Start the core Supabase stack first
-    if ! docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" up -d; then
-        print_error "Failed to start core Supabase services. Check Docker and the logs."
-        exit 1
-    fi
-    print_success "✓ Core Supabase stack is starting in the background."
+    # Add app profile for self-host (full Docker stack)
+    PROFILES+=("app")
+    print_info "› Starting Readspace in SELF-HOSTED mode..."
 fi
 
-# Start any other services (like your custom web/server containers)
-if [ -f "$SCRIPT_DIR/docker-compose.yml" ]; then
-    if [ "$DEV_MODE" = true ]; then
-        print_info "› Starting readspace development infrastructure (Redis + Meilisearch)..."
-        if ! docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" --env-file "$SCRIPT_DIR/.env" up -d; then
-            print_error "Failed to start infrastructure services."
-            exit 1
-        fi
-        print_success "✓ Database infrastructure is starting in the background (API and Web should be run locally)."
-    else
-        print_info "› Starting readspace production services (including application containers)..."
-        if ! docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" --env-file "$SCRIPT_DIR/.env" --profile app up -d; then
-            print_error "Failed to start application services."
-            exit 1
-        fi
-        print_success "✓ Production application services are starting in the background."
-    fi
-else
-    print_info "› No docker/docker-compose.yml found, skipping custom service startup."
+# Add RSSHub profile if using local instance
+if [ "$RSSHUB_MODE" = "local" ]; then
+    PROFILES+=("rsshub")
 fi
 
-# Check if we should start RSShub services
-# Load environment to check RSSHUB_URL configuration
-if [ -f "$PROJECT_ROOT/server/.env" ]; then
-    RSSHUB_URL=$(grep "^RSSHUB_URL=" "$PROJECT_ROOT/server/.env" | cut -d'=' -f2)
+# Build profile flags
+PROFILE_FLAGS=()
+for profile in "${PROFILES[@]}"; do
+    PROFILE_FLAGS+=("--profile" "$profile")
+done
+
+# Print the command being executed (useful for debugging and documentation)
+echo "🐳 Docker Compose command:"
+echo "docker compose ${COMPOSE_FILES[@]} ${ENV_FILES[@]} ${PROFILE_FLAGS[@]} up -d"
+echo ""
+
+# Execute the unified docker compose command
+if ! docker compose "${COMPOSE_FILES[@]}" "${ENV_FILES[@]}" "${PROFILE_FLAGS[@]}" up -d; then
+    print_error "Failed to start services. Check Docker and the logs."
+    exit 1
 fi
 
-# Start RSShub services if using local instance
-if [ -f "$SCRIPT_DIR/docker-compose.rsshub.yml" ] && [[ "$RSSHUB_URL" == *":1200"* ]]; then
-    print_info "› Starting local RSShub services..."
-    if ! docker compose -f "$SCRIPT_DIR/docker-compose.rsshub.yml" --env-file "$SCRIPT_DIR/supabase/.env" up -d; then
-        print_error "Failed to start RSShub services."
-        exit 1
-    fi
-    print_success "✓ RSShub services are starting in the background."
-elif [ -f "$SCRIPT_DIR/docker-compose.rsshub.yml" ]; then
-    print_info "› External RSShub configured, skipping local RSShub startup."
-else
-    print_info "› No RSShub docker-compose found, skipping RSShub startup."
+print_success "✓ All services are starting in the background."
+
+if [ "$RSSHUB_MODE" = "external" ]; then
+    print_info "› External RSSHub configured."
 fi
 
 # --- Final Output ---
 print_info "🎉 --- Readspace Setup Complete! --- 🎉"
 echo "Your Readspace instance is now running."
-echo "You can access the services at the following URLs:"
 echo ""
 print_success "Readspace Web App: http://localhost:18042"
 echo ""
+
 if [ "$DEV_MODE" = true ]; then
     echo "Development tools are available at:"
     print_success "Supabase Studio: http://localhost:18000"
+    print_success "Supabase Analytics: http://localhost:4000"
     print_success "Meilisearch: http://localhost:7700"
-    print_success "Analytics Dashboard: http://localhost:4000"
-    print_success "RSShub API: http://localhost:1200"
+    if [ "$RSSHUB_MODE" = "local" ]; then
+        print_success "RSSHub API: http://localhost:1200"
+    fi
+    echo ""
+    echo "Run the following to start application services locally:"
+    echo "  cd apps/web && bun dev        # Next.js web app (port 8042)"
+    echo "  cd server && poe start        # FastAPI backend (port 8008)"
 else
-    echo "For developers, you can access:"
-    print_success "Supabase Dashboard: http://localhost:18000"
+    echo "Self-hosted instance:"
     print_success "Meilisearch: http://localhost:7700"
-    print_success "RSShub API: http://localhost:1200"
+    if [ "$RSSHUB_MODE" = "local" ]; then
+        print_success "RSSHub API: http://localhost:1200"
+    fi
+    echo ""
+    echo "For admin tasks:"
+    echo "  ./docker/promote-admin.sh <email>    # Make a user an admin"
+    echo "  ./docker/supabase/reset.sh           # Completely reset the database"
 fi
+
 echo ""
 echo "It may take a few minutes for all services to become fully available."
-echo "Use 'docker compose logs -f' to monitor the startup process."
+echo "Monitor startup with: docker compose logs -f"
 echo "------------------------------------------------"

@@ -134,7 +134,7 @@ services:
       context: ../server
       dockerfile: Dockerfile.taskiq
     container_name: readspace_scheduler
-    command: taskiq scheduler app.core.taskiq_app:scheduler app.workers.registry 
+    command: taskiq scheduler app.core.taskiq_app:scheduler app.workers.registry
     volumes:
       - ../server:/app
     depends_on:
@@ -153,68 +153,50 @@ services:
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
 
-  # loki:
-  #   image: grafana/loki:3.5
-  #   command: -config.file=/etc/loki/loki-config.yaml
-  #   volumes:
-  #     - ./loki-config.yaml:/etc/loki/loki-config.yaml
-  #     # - ./loki-data:/loki
-  #   ports:
-  #     - "3100:3100"
+  # RSSHub for generating RSS feeds from sites that don't provide them
+  # Enable with: docker compose ... --profile rsshub up
+  browserless:
+    profiles: ["rsshub"]
+    image: browserless/chrome
+    container_name: readspace_browserless
+    restart: always
+    ulimits:
+      core:
+        hard: 0
+        soft: 0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/pressure"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # alloy:
-  #   image: grafana/alloy:latest
-  #   command: ["run", "/etc/alloy/alloy.alloy"]
-  #   volumes:
-  #     - ./alloy.alloy:/etc/alloy/alloy.alloy
-  #     - /run/docker.sock:/var/run/docker.sock:ro
-  #   depends_on:
-  #     - loki
-
-  # prometheus:
-  #   image: prom/prometheus:latest
-  #   container_name: readspace_prometheus
-  #   command:
-  #     - "--config.file=/etc/prometheus/prometheus.yml"
-  #     - "--storage.tsdb.path=/prometheus"
-  #     - "--web.console.libraries=/etc/prometheus/console_libraries"
-  #     - "--web.console.templates=/etc/prometheus/consoles"
-  #     - "--web.enable-lifecycle"
-  #   volumes:
-  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml
-  #     - prometheus-data:/prometheus
-  #   ports:
-  #     - "9090:9090" # Prometheus UI
-  #   networks:
-  #     - default
-  #   restart: unless-stopped
-
-  # grafana:
-  #   image: grafana/grafana:latest
-  #   container_name: readspace_grafana
-  #   user: "472" # Grafana user ID
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - GF_SECURITY_ADMIN_PASSWORD=admin
-  #     - GF_PLUGINS_GRAFANA_PIECHART_PANEL=grafana-piechart-panel
-  #     - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
-  #     - GF_SECURITY_ALLOW_EMBEDDING=true
-  #   volumes:
-  #     - grafana-data:/var/lib/grafana
-  #     - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
-  #   depends_on:
-  #     - loki
-  #     - prometheus
-  #   restart: unless-stopped
+  rsshub:
+    profiles: ["rsshub"]
+    image: diygod/rsshub
+    container_name: readspace_rsshub
+    restart: always
+    ports:
+      - "1200:1200"
+    depends_on:
+      redis:
+        condition: service_healthy
+      browserless:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      CACHE_TYPE: redis
+      REDIS_URL: "redis://redis:6379/"
+      CACHE_EXPIRE: 3600
+      CACHE_CONTENT_EXPIRE: 86400
+      MEMORY_MAX: 1024
+      PUPPETEER_WS_ENDPOINT: "ws://browserless:3000"
+      ALLOW_ORIGIN: "*"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1200/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   redis-data:
   meilisearch-data:
-  prometheus-data:
-  grafana-data:
-
-networks:
-  default:
-    name: readspace_shared_net
-    external: true

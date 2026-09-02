@@ -16,7 +16,7 @@ export const headerContainerVariants = cva('w-full ', {
 export const foregroundVariants = cva('flex-row items-center pb-3', {
   variants: {
     layout: {
-      default: 'justify-between px-6',
+      default: 'justify-between px-4',
       centered: 'justify-center',
     },
   },

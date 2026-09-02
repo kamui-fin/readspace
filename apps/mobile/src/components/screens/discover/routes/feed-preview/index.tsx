@@ -282,7 +282,7 @@ export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPre
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            paddingBottom: BOTTOM_TABBAR_BASE_HEIGHT + 16,
+            paddingBottom: 16,
           }}>
           <FeedInfoHeader
             feed={feed}

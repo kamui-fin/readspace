@@ -64,7 +64,7 @@ First off, thank you for considering contributing to Readspace! It's people like
 
 ## Development Environment Setup
 
-Our recommended development setup uses Docker to run the core infrastructure (Supabase, Redis, RSSHub, Celery workers) while you run the application services (Web, API, Extension, Mobile) directly on your host machine. This gives you the best of both worlds: a stable backend foundation and a fast, hot-reloading development loop for the parts you're actively working on.
+Our recommended development setup uses Docker to run the core infrastructure (Supabase, Redis, RSSHub, Taskiq workers) while you run the application services (Web, API, Extension, Mobile) directly on your host machine. This gives you the best of both worlds: a stable backend foundation and a fast, hot-reloading development loop for the parts you're actively working on.
 
 First, configure your environment for development mode by running the setup script with the `--dev` flag (this automatically configures localhost loopback URLs and disables AI for local work without interactive prompts):
 
@@ -97,7 +97,7 @@ Wait a minute for the services to initialize. You can check their status with `d
 ./docker/supabase/reset.sh
 ```
 
-This will wipe all data and reinitialize the database.
+This will wipe all data and reinitialize the database. You can run this from any directory.
 
 ### 2. Run Application Services
 
@@ -247,6 +247,20 @@ bun run format
 
 # Type check all projects
 bun run check-types
+```
+
+#### Prefer raw Docker Compose for development?
+
+If you prefer to use Docker Compose directly:
+
+```bash
+# Start development infrastructure (database, cache, search)
+docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml -f docker/supabase/docker-compose.dev.yml --env-file docker/supabase/.env --env-file docker/.env up -d
+
+# Then start services on your host machine (see "Run Application Services" section above)
+
+# To stop:
+docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml -f docker/supabase/docker-compose.dev.yml down
 ```
 
 **Stopping Services:**

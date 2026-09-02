@@ -112,6 +112,26 @@ Readspace is designed for easy self-hosting, giving you complete control over yo
     ./promote-admin.sh your-email@example.com
     ```
 
+#### Prefer raw Docker Compose?
+
+If you prefer to run Docker directly instead of using the wrapper scripts, you can use:
+
+```bash
+# After running ./setup.sh to generate .env files, start the full stack with:
+docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml \
+  --env-file docker/supabase/.env --env-file docker/.env \
+  --profile app --profile rsshub up -d
+
+# If you configured RSSHub as external, omit the --profile rsshub flag:
+docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml \
+  --env-file docker/supabase/.env --env-file docker/.env \
+  --profile app up -d
+
+# To stop:
+docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml \
+  --env-file docker/supabase/.env --env-file docker/.env down
+```
+
 6.  **Configure Browser Extension** (Optional)
 
     To connect the browser extension to your self-hosted instance, configure:

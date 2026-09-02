@@ -1,10 +1,8 @@
 #!/bin/bash
-# Stop all services started by launch.sh
+# Stop all services started by launch.sh (development or self-hosted)
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Get the project root (parent of the docker directory)
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Check for dev mode flag
 DEV_MODE=false
@@ -25,48 +23,42 @@ print_error() {
     printf "\033[1;31mERROR: %s\033[0m\n" "$1" >&2
 }
 
-# --- Stop Services in Reverse Order ---
+# Build the docker compose command (mirrors launch.sh logic)
+COMPOSE_FILES=("-f" "$SCRIPT_DIR/supabase/docker-compose.yml" "-f" "$SCRIPT_DIR/docker-compose.yml")
+ENV_FILES=("--env-file" "$SCRIPT_DIR/supabase/.env" "--env-file" "$SCRIPT_DIR/.env")
+PROFILES=()
 
-# Stop RSShub services
-if [ -f "$SCRIPT_DIR/docker-compose.rsshub.yml" ]; then
-    print_info "› Stopping RSShub services..."
-    if ! docker compose -f "$SCRIPT_DIR/docker-compose.rsshub.yml" --env-file "$SCRIPT_DIR/supabase/.env" down; then
-        print_error "Failed to stop RSShub services."
-        exit 1
-    fi
-    print_success "✓ RSShub services stopped."
-else
-    print_info "› No RSShub docker-compose found, skipping RSShub shutdown."
+# Load RSSHUB_MODE from docker/.env to determine if we should include RSSHub profile
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    source "$SCRIPT_DIR/.env"
 fi
 
-# Stop custom application services
-if [ -f "$SCRIPT_DIR/docker-compose.yml" ]; then
-    print_info "› Stopping readspace application services..."
-    if ! docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" --env-file "$SCRIPT_DIR/.env" down; then
-        print_error "Failed to stop custom application services."
-        exit 1
-    fi
-    print_success "✓ Custom application services stopped."
-else
-    print_info "› No docker/docker-compose.yml found, skipping custom service shutdown."
-fi
-
-# Stop core Supabase stack
+# Add dev-specific overlay if in development mode
 if [ "$DEV_MODE" = true ]; then
-    print_info "› Stopping Supabase services (dev mode)..."
-    if ! docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" -f "$SCRIPT_DIR/supabase/docker-compose.dev.yml" --env-file "$SCRIPT_DIR/supabase/.env" down; then
-        print_error "Failed to stop Supabase services in dev mode."
-        exit 1
-    fi
-    print_success "✓ Supabase stack with dev tools stopped."
+    COMPOSE_FILES+=("-f" "$SCRIPT_DIR/supabase/docker-compose.dev.yml")
+    print_info "› Stopping Readspace in DEVELOPMENT mode..."
 else
-    print_info "› Stopping Supabase services..."
-    if ! docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" down; then
-        print_error "Failed to stop core Supabase services."
-        exit 1
-    fi
-    print_success "✓ Core Supabase stack stopped."
+    PROFILES+=("app")
+    print_info "› Stopping Readspace in SELF-HOSTED mode..."
 fi
+
+# Add RSSHub profile if using local instance (matches launch.sh)
+if [ "$RSSHUB_MODE" = "local" ]; then
+    PROFILES+=("rsshub")
+fi
+
+# Build profile flags
+PROFILE_FLAGS=()
+for profile in "${PROFILES[@]}"; do
+    PROFILE_FLAGS+=("--profile" "$profile")
+done
+
+# Stop the main services (supabase + readspace app + optionally rsshub)
+if ! docker compose "${COMPOSE_FILES[@]}" "${ENV_FILES[@]}" "${PROFILE_FLAGS[@]}" down; then
+    print_error "Failed to stop services."
+    exit 1
+fi
+print_success "✓ All services stopped."
 
 # --- Final Output ---
 print_info "🎉 --- Readspace Shutdown Complete! --- 🎉"

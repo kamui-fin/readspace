@@ -24,22 +24,15 @@ logger = structlog.get_logger(__name__)
 def _get_vertex_client() -> genai.Client:
     """Initialize Gemini client configured for Vertex AI."""
     settings = get_settings()
-
-    # Check if GOOGLE_CLOUD_PROJECT is set
     project = settings.GOOGLE_CLOUD_PROJECT or os.getenv("GOOGLE_CLOUD_PROJECT")
     location = settings.GOOGLE_CLOUD_LOCATION or os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
 
-    if project:
-        logger.info("Initializing Vertex AI Client", project=project, location=location)
-        return genai.Client(
-            vertexai=True,
-            project=project,
-            location=location,
-        )
-    else:
-        # Fallback to standard client if project is not configured yet
-        logger.warning("GOOGLE_CLOUD_PROJECT not configured. Falling back to standard Gemini API.")
-        return genai.Client(api_key=settings.GEMINI_API_KEY)
+    logger.info("Initializing Vertex AI Client", project=project, location=location)
+    return genai.Client(
+        vertexai=True,
+        project=project,
+        location=location,
+    )
 
 
 async def enrich_feeds_batch(
@@ -48,17 +41,19 @@ async def enrich_feeds_batch(
 ) -> list[FeedEnrichmentResponse | None]:
     """
     Process a list of feeds via Vertex AI Batch API using GCS.
+
+    Requires GOOGLE_CLOUD_PROJECT to be configured; enrichment is not supported
+    without GCP billing. Self-hosted deployments should disable AI if GCP is unavailable.
     """
     if not feeds:
         return []
 
     settings = get_settings()
-
-    # 1. Check if we should route through Vertex AI (based on PROJECT variable)
     project = settings.GOOGLE_CLOUD_PROJECT or os.getenv("GOOGLE_CLOUD_PROJECT")
+
     if not project:
-        # If no project configured, fall back to standard Google AI Studio batch implementation
-        return await _enrich_feeds_batch_ai_studio(feeds, timeout_seconds)
+        logger.warning("Vertex AI enrichment skipped: GOOGLE_CLOUD_PROJECT not configured")
+        return [None] * len(feeds)
 
     bucket_name = settings.GCS_BUCKET or os.getenv("GCS_BUCKET")
     if not bucket_name:
@@ -131,56 +126,13 @@ async def enrich_feeds_batch(
         _cleanup_gcs(storage_client, bucket_name, temp_file_path, gcs_job_prefix)
 
 
-# --- Google AI Studio Fallback Implementation (Original Flow) ---
-
-
-async def _enrich_feeds_batch_ai_studio(
-    feeds: list[FeedEnrichmentInput],
-    timeout_seconds: int,
-) -> list[FeedEnrichmentResponse | None]:
-    """Fallback batch enrichment using standard AI Studio API when GCP settings are omitted."""
-    logger.info("Processing batch via standard Google AI Studio Files API")
-    client = genai.Client(api_key=get_settings().GEMINI_API_KEY)
-    temp_file_path = None
-    uploaded_file = None
-
-    try:
-        temp_file_path = _create_batch_file(feeds)
-        uploaded_file = client.files.upload(file=temp_file_path, config=types.UploadFileConfig(mime_type="jsonl"))
-
-        if not uploaded_file.name:
-            raise ValueError("Uploaded file has no name")
-
-        job = client.batches.create(model=get_settings().GEMINI_SMART_MODEL, src=uploaded_file.name)
-        logger.info("AI Studio Batch job started", job=job.name, size=len(feeds))
-
-        job = await _poll_job(client, job.name, timeout_seconds)
-
-        if job.state.name != "JOB_STATE_SUCCEEDED":
-            logger.error("AI Studio Batch job failed", state=job.state.name)
-            return [None] * len(feeds)
-
-        if not job.dest or not job.dest.file_name:
-            logger.error("AI Studio Batch job has no result file")
-            return [None] * len(feeds)
-
-        return _download_results_ai_studio(client, job.dest.file_name, len(feeds))
-
-    except Exception as e:
-        logger.error("AI Studio Batch enrichment failed", error=str(e))
-        return [None] * len(feeds)
-
-    finally:
-        _cleanup_ai_studio(client, temp_file_path, uploaded_file)
-
-
 # --- Helper Operations ---
 
 
 def _create_batch_file(feeds: list[FeedEnrichmentInput]) -> str:
     """Write requests to temp JSONL file."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
-        for idx, feed in enumerate(feeds):
+        for feed in feeds:
             lang_note = f"Content Language: {feed.language}. "
 
             extras = []
@@ -196,13 +148,11 @@ def _create_batch_file(feeds: list[FeedEnrichmentInput]) -> str:
             extra_text = "\n".join(extras)
 
             user_prompt = (
-                f"{lang_note}\nTitle: {feed.title}\nDesc: {feed.description}"
+                f"Feed ID: {feed.id}\n\n{lang_note}\nTitle: {feed.title}\nDesc: {feed.description}"
                 f"\nDomain: {feed.domain}\n{extra_text}\n\n{ENRICHMENT_SYSTEM_PROMPT}"
             )
 
             request_obj = {
-                "key": f"{idx}",
-                "custom_id": f"{idx}",
                 "request": {
                     "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
                     "generationConfig": {
@@ -294,76 +244,16 @@ def _find_gemini_json_response(data: Any) -> str | None:
     return None
 
 
-def _find_request_id(data: Any) -> int | None:
-    """Recursively search for the index key (key, custom_id, id) inside the response item."""
-    if isinstance(data, dict):
-        for key_name in ("custom_id", "key", "id"):
-            if key_name in data:
-                try:
-                    return int(data[key_name])
-                except (ValueError, TypeError):
-                    pass
-        # Recursive search in dict values
-        for v in data.values():
-            if (result := _find_request_id(v)) is not None:
-                return result
-    elif isinstance(data, list):
-        for item in data:
-            if (result := _find_request_id(item)) is not None:
-                return result
-    return None
-
-
-def _find_prompt_match(data: Any, prompt_to_idx: dict[str, int]) -> int | None:
-    """Recursively search for any prompt text that matches one of our expected inputs."""
-    if isinstance(data, str):
-        cleaned = data.strip()
-        if cleaned in prompt_to_idx:
-            return prompt_to_idx[cleaned]
-        # Partial match fallbacks
-        for prompt_text, idx in prompt_to_idx.items():
-            if prompt_text.startswith(cleaned) or cleaned.startswith(prompt_text):
-                return idx
-    elif isinstance(data, dict):
-        for v in data.values():
-            if (result := _find_prompt_match(v, prompt_to_idx)) is not None:
-                return result
-    elif isinstance(data, list):
-        for item in data:
-            if (result := _find_prompt_match(item, prompt_to_idx)) is not None:
-                return result
-    return None
-
-
 def _download_results_from_gcs(
     storage_client: storage.Client, bucket_name: str, output_prefix: str, count: int, feeds: list[FeedEnrichmentInput]
 ) -> list[FeedEnrichmentResponse | None]:
-    """Download and robustly parse output prediction files from GCS using deep search fallbacks."""
+    """Download and parse output prediction files from GCS by feed_id."""
     results: list[FeedEnrichmentResponse | None] = [None] * count
+    feed_map = {feed.id: idx for idx, feed in enumerate(feeds)}
+
     try:
         bucket = storage_client.bucket(bucket_name)
         blobs = list(bucket.list_blobs(prefix=output_prefix))
-
-        # Build prompt lookup mapping to fallback-match prompts back to their original list index
-        prompt_to_idx = {}
-        for idx, feed in enumerate(feeds):
-            lang_note = f"Content Language: {feed.language}. "
-            extras = []
-            if feed.link:
-                extras.append(f"Website: {feed.link}")
-            if feed.url:
-                extras.append(f"RSS: {feed.url}")
-            if feed.tags:
-                extras.append(f"Tags: {', '.join(feed.tags)}")
-            if feed.contributors:
-                extras.append(f"Contributors: {', '.join(feed.contributors)}")
-            extra_text = "\n".join(extras)
-
-            prompt_text = (
-                f"{lang_note}\nTitle: {feed.title}\nDesc: {feed.description}"
-                f"\nDomain: {feed.domain}\n{extra_text}\n\n{ENRICHMENT_SYSTEM_PROMPT}"
-            ).strip()
-            prompt_to_idx[prompt_text] = idx
 
         for blob in blobs:
             if not blob.name.endswith(".jsonl"):
@@ -378,56 +268,30 @@ def _download_results_from_gcs(
                 try:
                     data = orjson.loads(line)
 
-                    # 1. Deep search request ID (key / custom_id)
-                    idx = _find_request_id(data)
+                    # Extract the JSON response from nested structure
+                    text = _find_gemini_json_response(data)
+                    if not text:
+                        logger.warning("Failed to find JSON response payload in result line")
+                        continue
 
-                    # 2. Deep search request prompt text match fallback
-                    if idx is None or idx < 0 or idx >= count:
-                        idx = _find_prompt_match(data, prompt_to_idx)
+                    response_data = orjson.loads(text)
+                    feed_id = response_data.get("feed_id")
 
-                    if idx is not None and 0 <= idx < count:
-                        # 3. Deep search the output text block
-                        text = _find_gemini_json_response(data)
-                        if text:
-                            results[idx] = FeedEnrichmentResponse.model_validate_json(text)
-                            logger.info("Successfully matched and parsed feed result", index=idx)
-                        else:
-                            logger.warning(
-                                "Located feed prediction index, but failed to find JSON response payload",
-                                index=idx,
-                            )
-                    else:
-                        logger.warning(
-                            "Unable to associate result line with any expected index",
-                            line_preview=line[:200],
-                        )
+                    if feed_id not in feed_map:
+                        logger.warning("Unknown feed_id in result", feed_id=str(feed_id)[:50])
+                        continue
+
+                    idx = feed_map[feed_id]
+                    results[idx] = FeedEnrichmentResponse.model_validate(response_data)
+                    logger.info("Successfully parsed feed result", feed_id=str(feed_id)[:50])
+
                 except Exception as e:
                     logger.warning("Failed to parse prediction result row", error=str(e), line_preview=line[:200])
                     continue
+
     except Exception as e:
         logger.error("Error during GCS output download and parsing", error=str(e), exc_info=True)
-    return results
 
-
-def _download_results_ai_studio(
-    client: genai.Client, result_file: str, count: int
-) -> list[FeedEnrichmentResponse | None]:
-    """Download results file from Google AI Studio Files API."""
-    results: list[FeedEnrichmentResponse | None] = [None] * count
-    try:
-        content = client.files.download(file=result_file)
-        for line in content.decode("utf-8").strip().split("\n"):
-            try:
-                data = orjson.loads(line)
-                idx = int(data["key"])
-                if "response" in data:
-                    text = data["response"]["candidates"][0]["content"]["parts"][0]["text"]
-                    results[idx] = FeedEnrichmentResponse.model_validate_json(text)
-            except Exception as e:
-                logger.debug("Failed to parse AI Studio batch result item", error=str(e))
-                continue
-    except Exception as e:
-        logger.error("Error parsing AI Studio batch results", error=str(e))
     return results
 
 
@@ -450,20 +314,3 @@ def _cleanup_gcs(storage_client: storage.Client, bucket_name: str, local_path: s
             logger.debug("Failed to delete GCS files", prefix=gcs_job_prefix, error=str(e))
 
 
-def _cleanup_ai_studio(client: genai.Client, temp_path: str | None, uploaded_file: Any):
-    """Clean up local temp files and Files API uploads in AI Studio."""
-    if temp_path and os.path.exists(temp_path):
-        import contextlib
-
-        with contextlib.suppress(OSError):
-            os.unlink(temp_path)
-
-    if uploaded_file and client and hasattr(uploaded_file, "name") and uploaded_file.name:
-        try:
-            client.files.delete(name=uploaded_file.name)
-        except Exception as e:
-            logger.debug(
-                "Failed to delete uploaded file",
-                file_name=uploaded_file.name,
-                error=str(e),
-            )

@@ -46,8 +46,8 @@ ARTICLE_LIST_CACHE_TTL = 300  # 5 minutes for article lists
 AI_CACHE_TTL = 86400  # 24 hours for AI results
 OPML_TASK_CACHE_TTL = 86400  # 24 hours for OPML import tasks
 
-# User Agent
-BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+# User Agent — realistic modern Chrome UA to avoid 403 blocks from bot detection
+BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 
 # HTTP Client Configuration
 HTTP_CLIENT_POOL_LIMITS = 200  # Maximum number of connections to pool

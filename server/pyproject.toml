@@ -92,6 +92,7 @@ listparser = {extras = ["lxml"], version = "^0.20"}
 langcodes = "^3.5.0"
 url-normalize = "^2.2.1"
 google-cloud-storage = "^3.9.0"
+google-cloud-aiplatform = "^2.1.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"

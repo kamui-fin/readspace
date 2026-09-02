@@ -29,6 +29,11 @@ export const env = createEnv({
             .url()
             .default("http://localhost:8008"),
         NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:8042"),
+        NEXT_PUBLIC_MEILISEARCH_URL: z
+            .string()
+            .url()
+            .default("http://localhost:7700"),
+        NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY: z.string().optional(),
         NEXT_PUBLIC_POLAR_MONTHLY_CHECKOUT_URL: z.string().url().optional(),
         NEXT_PUBLIC_POLAR_YEARLY_CHECKOUT_URL: z.string().url().optional(),
     },
@@ -49,6 +54,9 @@ export const env = createEnv({
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
         NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+        NEXT_PUBLIC_MEILISEARCH_URL: process.env.NEXT_PUBLIC_MEILISEARCH_URL,
+        NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY:
+            process.env.NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY,
         NEXT_PUBLIC_POLAR_MONTHLY_CHECKOUT_URL:
             process.env.NEXT_PUBLIC_POLAR_MONTHLY_CHECKOUT_URL,
         NEXT_PUBLIC_POLAR_YEARLY_CHECKOUT_URL:

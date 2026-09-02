@@ -41,10 +41,9 @@ export function RecentsScreen() {
     }, [])
   );
 
-  // Compute bottom padding to account for tab bar (matches FollowingScreen)
+  // Compute bottom padding (no tab bar on recents screen)
   const contentPaddingBottom = useMemo(() => {
-    const tabBarHeight = BOTTOM_TABBAR_BASE_HEIGHT + 0.8 * insets.bottom;
-    return tabBarHeight + 16;
+    return insets.bottom + 16;
   }, [insets.bottom]);
 
   // Fetch recently read articles

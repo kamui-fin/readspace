@@ -8,15 +8,14 @@
 import { instantMeiliSearch } from "@meilisearch/instant-meilisearch"
 import { MeiliSearch } from "meilisearch"
 import type { HybridSearchConfig } from "@readspace/shared"
+import { env } from "@/env"
 
 // ============================================================================
 // Environment Configuration
 // ============================================================================
 
-export const MEILISEARCH_URL =
-    process.env.NEXT_PUBLIC_MEILISEARCH_URL || "http://localhost:7700"
-export const MEILISEARCH_SEARCH_KEY =
-    process.env.NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY || ""
+export const MEILISEARCH_URL = env.NEXT_PUBLIC_MEILISEARCH_URL
+export const MEILISEARCH_SEARCH_KEY = env.NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY || ""
 
 if (!MEILISEARCH_SEARCH_KEY) {
     console.warn(

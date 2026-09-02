@@ -32,8 +32,8 @@ class Settings(BaseSettings):
 
     # Gemini Configuration (Primary AI service)
     GEMINI_API_KEY: str = ""
-    GEMINI_SMART_MODEL: str = "gemini-3.5-flash"  # For complex reasoning (e.g. enrichment)
-    GEMINI_FAST_MODEL: str = "gemini-3.1-flash-lite"  # For high-volume continuous parsing (summaries, translation)
+    GEMINI_SMART_MODEL: str = "gemini-3.6-flash"  # For complex reasoning (e.g. enrichment)
+    GEMINI_FAST_MODEL: str = "gemini-3.5-flash-lite"  # For high-volume continuous parsing (summaries, translation)
     GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"  # For embeddings
 
     # RSShub Configuration (validated URL)

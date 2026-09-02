@@ -299,7 +299,7 @@ export function ProfileScreen() {
               label="Reading History"
               variant="button"
               leftIcon={<HistoryIcon size={22} color={colors.black} />}
-              onPress={() => router.push('/(protected)/(tabs)/recents')}
+              onPress={() => router.push('/(protected)/settings/recents')}
             />
 
             <SettingsItem

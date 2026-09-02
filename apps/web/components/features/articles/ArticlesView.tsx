@@ -320,6 +320,7 @@ export function ArticlesView({
         filteredArticles.length === 0 &&
         articles.length === 0
     ) {
+        const previewRefreshFailed = shouldShowPreviewBanner && query.isError
         return (
             <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
                 <ArticlesEmptyState
@@ -327,7 +328,7 @@ export function ArticlesView({
                     feedId={feedId}
                     folderId={folderId}
                     isPreviewMode={shouldShowPreviewBanner}
-                    previewRefreshFailed={false}
+                    previewRefreshFailed={previewRefreshFailed}
                     onRefresh={() =>
                         handleRefreshWithMessage("Refreshing articles...")
                     }

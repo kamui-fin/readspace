@@ -31,11 +31,11 @@ export function FeedRecentArticles({
   greyColor,
 }: FeedRecentArticlesProps) {
   return (
-    <View className="mb-8 mt-8">
+    <View className="mb-8 mt-6">
       <SectionHeader
         title="Recent articles"
         onSeeAll={articles.length > 0 ? onShowMore : undefined}
-        className="mb-4 px-6"
+        className="mb-3 px-6"
         iconColor={greyColor}
       />
 

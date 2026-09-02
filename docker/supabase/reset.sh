@@ -1,6 +1,9 @@
 #!/bin/bash
 
-echo "WARNING: This will remove all containers and container data.env file. This action cannot be undone!"
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+echo "WARNING: This will remove all containers and data. This action cannot be undone!"
 read -p "Are you sure you want to proceed? (y/N) " -n 1 -r
 echo    # Move to a new line
 if [[ ! $REPLY =~ ^[Yy]$ ]]
@@ -10,7 +13,7 @@ then
 fi
 
 echo "Stopping and removing all containers..."
-docker compose -f docker-compose.yml -f ./dev/docker-compose.dev.yml down -v --remove-orphans
+docker compose -f "$SCRIPT_DIR/docker-compose.yml" -f "$SCRIPT_DIR/docker-compose.dev.yml" down -v --remove-orphans
 
 echo "Cleaning up bind-mounted directories..."
 BIND_MOUNTS=(

@@ -110,6 +110,9 @@ async def fetch_feed_content(
 
     headers = {
         "User-Agent": BROWSER_USER_AGENT,
+        "Accept": "application/rss+xml,application/atom+xml,application/xml;q=0.9,text/xml;q=0.8,*/*;q=0.1",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Language": "en-US,en;q=0.9",
     }
     if etag:
         headers["If-None-Match"] = etag

@@ -127,17 +127,45 @@ A high-signal, editorial logline written in the DETECTED LANGUAGE.
 * Example: "Concise, long-form essays on programming and team management from Stack Overflow's co-founder."
 
 ### 5. Popularity & Quality Score (0-100)
-Rate based on Reputation, Editorial Quality, and broad appeal. Be EXTREMELY conservative:
-* **Platinum (90-100)**: Global category titans, household names, and legendary authority
-  sources (e.g., NYT, Hacker News, SCOTUSblog, Bleacher Report, Stratechery).
-* **Gold (75-89)**: Highly reputable specialized publications, top Substacks, major niche
-  portals (e.g., SB Nation, FanGraphs, The Pragmatic Engineer).
-* **Silver (50-74)**: Solid indie blogs, official tech changelogs.
-  * *CRITICAL*: Specific sub-feeds or team-specific sub-blogs of major brands (e.g.,
-    "ESPN FC - Chelsea Blog", "talkSPORT Liverpool", "Yahoo Sports - NHL") MUST be demoted
-    to Silver (50-74) or lower, as they lack general category interest.
-* **Noise (0-49)**: Low value, dry corporate PR, local law firm promotional blogs, SEO spam,
-  low-quality affiliate blogs, personal developer diaries, or automated listings.
+Score based on Reputation, Editorial Quality, and broad appeal. Use the FULL range — do not compress scores into a narrow band.
+
+**BASE SCORE BANDS (Authority)**
+- **95-100 — Platinum**: Globally dominant, near-universally recognized flagship outlets (BBC News, Reuters, AP, NYT, WSJ, The Economist, Hacker News, The Verge) at their main feed.
+- **85-94 — Gold**: Major recognized outlets/platforms with broad reach (TechCrunch, The Guardian, Wired) at their main feed, OR genuine subsections of top-tier outlets (e.g., "NYT Technology").
+- **70-84 — Silver**: Solid, real, professionally-run outlets: national/regional papers, established trade publications, well-known magazines, subject-matter experts with institutional standing.
+- **50-69 — Legitimate**: Legitimate but narrow: local outlets, niche trade blogs, smaller magazines, real corporate blogs, independent experts without wide name recognition.
+- **30-49 — Marginal**: Unverified personal blogs, thin corporate content, generic aggregators, low-confidence editorial sources.
+- **0-29 — Noise**: Spam, SEO farms, placeholder pages, content-mill patterns, or content unrelated to what title/category claims.
+
+**ACTIVITY GATE (Hard Cap)**
+Reduce final score based on article frequency:
+- 10+ articles/month → no cap, use base authority score.
+- 3-9 articles/month → cap final score at 70.
+- 1-2 articles/month → cap final score at 55.
+- 0 articles/month → score 0-20 regardless of apparent prestige. A dead feed is a dead feed.
+
+**SAMPLE ARTICLES (Primary Quality Signal)**
+Weight sample articles more heavily than description:
+- Specific, substantive, clearly match claimed subject/brand → +5 to +10 boost.
+- Generic, templated, AI-generated filler, unrelated to topic → -10 to -15 penalty.
+- No sample articles → score from description and category alone, stay within 25-80 unless activity gate caps lower.
+
+**CATEGORY VERIFICATION**
+Anchor to category as a prior, but verify against description + sample articles:
+- If category says "news_outlet"/"magazine_editorial" and content is genuinely on-topic, editorial, specific → treat as real, score 70-95.
+- If category claims authority but description/articles read as generic, unrelated, or off-brand → ignore brand recognition, score ACTUAL content 20-45.
+
+**FEED SCOPE ADJUSTMENT**
+- Clearly the main/flagship feed (not subsection) → +5 to +10 within band.
+- Clearly narrow topic/tag/section feed → no boost.
+
+**CALIBRATION REFERENCE**
+- BBC News, real current events → 97 | NBC Sports → 98 | TechCrunch main → 92 | The Verge → 100
+- Hacker News → 98 | Joel on Software → 88 | Defector → 88
+- Regional newspaper, 15 articles/month → 76 | Trade publication → 68 | Corporate dev blog → 65
+- Small corporate blog, 4 posts/month → 55 (capped by activity)
+- Personal blog, unclear authority, generic content → 35 | Title suggests outlet, articles are unrelated → 22
+- 0 articles in 30 days → 15 | Spam/SEO-farm pattern → 8
 
 ### 6. Category
 Choose EXACTLY ONE from the following list. Be precise (e.g., do not put pop-culture
@@ -232,8 +260,9 @@ Use these actual calibrated feeds as your mental model for scoring and naming:
     *   *Noise (0-49)*: Cryptocoin affiliate shilling blogs, commercial real estate
       listings.
 
-Return JSON format:
+Return ONLY valid JSON (CRITICAL: include feed_id, no markdown or extra text):
 {
+  "feed_id": "string",
   "clean_title": "string",
   "author": "string or null",
   "enhanced_description": "string",
