@@ -61,10 +61,26 @@ export function getSupabaseClient(supabaseUrl?: string, supabaseAnonKey?: string
  * This should be called when switching instances to force recreation with new settings.
  * Note: This will invalidate any active subscriptions!
  */
-export function resetSupabaseClient() {
-  console.log('[Supabase] Resetting client (this will invalidate subscriptions)');
+export async function resetSupabaseClient() {
+  console.log('[Supabase] Resetting client and clearing all session keys');
   if (supabaseClient) {
+    try {
+      supabaseClient.auth.stopAutoRefresh();
+    } catch (e) {
+      console.log('[Supabase] Error stopping auto refresh:', e);
+    }
     supabaseClient = null;
+  }
+  // Clear all possible session storage keys to prevent session leakage
+  try {
+    await AsyncStorage.multiRemove([
+      'supabase-auth-cloud',
+      'supabase-auth-self-hosted',
+      'supabase-auth-validation',
+    ]);
+    console.log('[Supabase] Cleared all session keys from AsyncStorage');
+  } catch (e) {
+    console.error('[Supabase] Error clearing session keys:', e);
   }
 }
 
@@ -117,7 +133,9 @@ AppState.addEventListener('change', (state) => {
 // Reset the Supabase client when settings change
 if (typeof useSettingsStore !== 'undefined') {
   useSettingsStore.subscribe(() => {
-    resetSupabaseClient();
+    resetSupabaseClient().catch((e) => {
+      console.error('[Supabase] Error resetting client:', e);
+    });
   });
 }
 

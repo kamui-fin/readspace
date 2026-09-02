@@ -10,8 +10,8 @@ import {
 import { cn } from "@/lib/utils"
 
 const LANGUAGES = [
-    { value: "all", label: "All Languages" },
     { value: "en", label: "English" },
+    { value: "all", label: "All Languages" },
     { value: "zh", label: "中文" },
     { value: "ja", label: "日本語" },
 ]

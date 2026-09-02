@@ -1,4 +1,4 @@
-import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
+import { ExpandVertical } from '@components/icons/svg';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
@@ -67,7 +67,7 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
               <Text size={15} fontFamily="geist" className="text-grey dark:text-grey">
                 {value}
               </Text>
-              <ExpandVerticalIcon color={colors.grey} />
+              <ExpandVertical width={20} height={20} color={colors.grey} />
             </View>
           );
         case 'button':

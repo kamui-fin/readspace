@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { configureApiClient } from '@lib/api-client';
 import { supabase } from '@lib/supabase/client';
 import { ApiClient } from '@readspace/shared';
@@ -6,6 +7,7 @@ import { useFeedViewStore } from '@stores/feed-view';
 import { useFollowingStore } from '@stores/following';
 import { useOnboardingStore } from '@stores/onboarding';
 import { useSearchHistory } from '@stores/search-history';
+import { useSettingsStore } from '@stores/settings';
 import type { Session, User } from '@supabase/supabase-js';
 import { useRouter, useSegments } from 'expo-router';
 import type React from 'react';
@@ -71,8 +73,11 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null);
   const router = useRouter();
   const segments = useSegments();
+  const isInAuthGroup = segments?.[0] === '(auth)';
 
   const isInitializing = useRef(true);
+
+  const currentInstanceType = useSettingsStore((state) => state.settings.instance_type);
 
   useEffect(() => {
     console.log('[AuthContext] 🚀 Starting initialization...');
@@ -171,11 +176,21 @@ export function SessionProvider({ children }: SessionProviderProps) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [currentInstanceType]);
 
-  // Note: We deliberately removed the strict manual redirection effect here.
-  // The app's routing is controlled entirely by `app/index.tsx` on initialization,
-  // and by Expo Router's automatic segmented hierarchy rendering during the session.
+  // Handle explicit navigation after session state changes
+  // This ensures the router properly transitions out of (auth) routes
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (session && isInAuthGroup) {
+      console.log('[AuthContext] 🔀 Session detected while in (auth) group, navigating to root');
+      router.replace('/');
+    } else if (!session && !isInAuthGroup) {
+      console.log('[AuthContext] 🔀 Session cleared while in protected route, navigating to auth');
+      router.replace('/(auth)');
+    }
+  }, [session, isInAuthGroup, isLoading, router]);
 
   const signIn = async (credentials: SignInCredentials) => {
     setIsNewSignup(false);
@@ -209,6 +224,17 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const signOut = async () => {
     setIsNewSignup(false);
     await supabase.auth.signOut({ scope: 'local' });
+    // Also clear all possible session keys from AsyncStorage to prevent session leakage
+    try {
+      await AsyncStorage.multiRemove([
+        'supabase-auth-cloud',
+        'supabase-auth-self-hosted',
+        'supabase-auth-validation',
+      ]);
+      console.log('[AuthContext] Cleared all session keys from AsyncStorage');
+    } catch (e) {
+      console.error('[AuthContext] Error clearing session keys:', e);
+    }
   };
 
   const signInWithGoogle = async (idToken: string, accessToken: string) => {

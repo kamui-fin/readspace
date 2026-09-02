@@ -120,18 +120,24 @@ export function ArticleReader({
 
   // Calculate reading time from content with proper CJK support
   const readTimeMinutes = useMemo(() => {
-    if (article.content) {
-      const textLength = article.content.replace(/<[^>]*>?/gm, '').length;
+    const contentToUse = article.extracted_content || article.content;
+    if (contentToUse) {
+      const textLength = contentToUse.replace(/<[^>]*>?/gm, '').length;
       return Math.max(1, Math.ceil(textLength / 1000));
     }
     return 1;
-  }, [article.content]);
+  }, [article.extracted_content, article.content]);
 
   const readTime = `${readTimeMinutes} min read`;
 
   // Remove the first image from HTML content if it matches the featured image
   const cleanedContent = useMemo(() => {
-    if (!article.content || !article.image_url) return article.content;
+    // Use the content prop which respects the view mode selection (original/extracted/translated)
+    const contentToUse = article.content;
+
+    if (!contentToUse || !article.image_url) {
+      return contentToUse;
+    }
     // Normalize URLs by decoding HTML entities
     const normalizeUrl = (url: string) => {
       return url
@@ -142,29 +148,17 @@ export function ArticleReader({
     };
 
     const normalizedImageUrl = normalizeUrl(article.image_url);
-    let content = article.content;
+    let content = contentToUse;
 
-    // Remove img tags that match the featured image
+    // Remove img tags that match the featured image (but preserve figure structure)
     const imgPattern = /<img[^>]*src=["'][^"']*["'][^>]*>/gi;
     content = content.replace(imgPattern, (match) => {
       const normalizedMatch = normalizeUrl(match);
       return normalizedMatch.includes(normalizedImageUrl) ? '' : match;
     });
 
-    // Remove figure tags containing the featured image
-    const figurePattern =
-      /<figure[^>]*>[\s\S]*?<img[^>]*src=["'][^"']*["'][^>]*>[\s\S]*?<\/figure>/gi;
-    content = content.replace(figurePattern, (match) => {
-      const normalizedMatch = normalizeUrl(match);
-      return normalizedMatch.includes(normalizedImageUrl) ? '' : match;
-    });
-
-    // Clean up any empty figure tags left behind
-    content = content.replace(/<figure[^>]*>\s*<figcaption>\s*<\/figcaption>\s*<\/figure>/gi, '');
-    content = content.replace(/<figure[^>]*>\s*<\/figure>/gi, '');
-
     return content;
-  }, [article.content, article.image_url]);
+  }, [article.extracted_content, article.content, article.image_url]);
 
   // Handle dark mode / theme change inside WebView dynamically
   useEffect(() => {
@@ -178,10 +172,11 @@ export function ArticleReader({
         document.documentElement.style.setProperty('--color-secondary', '${colors.secondary}');
         document.documentElement.style.setProperty('--color-primary', '${colors.primary}');
         document.documentElement.style.setProperty('--color-muted-green', '${colors.muted_green}');
+        document.documentElement.style.setProperty('--color-code-text', '${isDark ? colors.secondary : colors.primary}');
         true;
       `);
     }
-  }, [textColor, greyColor, bgColor, lightGreyColor, midGreyColor, colors]);
+  }, [textColor, greyColor, bgColor, lightGreyColor, midGreyColor, colors, isDark]);
 
   const htmlContent = useMemo(() => {
     return `
@@ -202,6 +197,7 @@ export function ArticleReader({
       --color-secondary: ${colors.secondary};
       --color-primary: ${colors.primary};
       --color-muted-green: ${colors.muted_green};
+      --color-code-text: ${isDark ? colors.secondary : colors.primary};
     }
 
     html, body {
@@ -299,7 +295,7 @@ export function ArticleReader({
         font-family: 'Geist Mono', Consolas, "Liberation Mono", Menlo, Courier, monospace;
         font-size: 15px;
         background-color: var(--color-grey-mid);
-        color: var(--color-primary);
+        color: var(--color-code-text);
         padding: 2px 6px;
         border-radius: 4px;
         word-wrap: break-word;
@@ -318,6 +314,10 @@ export function ArticleReader({
         overflow-x: auto;
         white-space: pre-wrap;
         word-wrap: break-word;
+      }
+
+      pre code {
+        color: var(--color-text);
       }
 
       blockquote {

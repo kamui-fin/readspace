@@ -1,5 +1,4 @@
-import DiscordIcon from '@components/icons/local/discord';
-import GitHubIcon from '@components/icons/local/github';
+import { Discord, Github } from '@components/icons/svg';
 import { Header } from '@components/navigation/header';
 import { SettingsGroup } from '@components/screens/profile/ui/settings-group';
 import { SettingsItem } from '@components/screens/profile/ui/settings-item';
@@ -19,6 +18,7 @@ import { toast } from '@components/ui/toast';
 import { useSession } from '@contexts/auth-context';
 import { useRevenueCat } from '@contexts/revenuecat-context';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { useIconColor } from '@hooks/useIconColor';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { CLOUD_CONFIG } from '@lib/constants/config';
@@ -49,6 +49,7 @@ export function ProfileScreen() {
   const { open: openUpgrade } = useUpgradeDialog();
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+  const iconColor = useIconColor();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const insets = useSafeAreaInsets();
 
@@ -314,14 +315,14 @@ export function ProfileScreen() {
             <SettingsItem
               label="GitHub"
               variant="link"
-              leftIcon={<GitHubIcon size={20} />}
+              leftIcon={<Github width={20} height={20} color={iconColor} />}
               onPress={handleGithubPress}
             />
 
             <SettingsItem
               label="Join the Discord"
               variant="link"
-              leftIcon={<DiscordIcon size={20} />}
+              leftIcon={<Discord width={20} height={20} color={discordColor} />}
               onPress={handleDiscordPress}
               isLast={true}
             />

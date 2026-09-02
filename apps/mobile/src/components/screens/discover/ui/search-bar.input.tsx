@@ -1,4 +1,4 @@
-import LanguagesIcon from '@components/icons/local/languages';
+import { Languages } from '@components/icons/svg';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
@@ -166,7 +166,7 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
               }}
               activeOpacity={0.6}
               style={{ padding: 8 }}>
-              <LanguagesIcon width={20} height={20} color={colors.grey} />
+              <Languages width={20} height={20} color={colors.grey} />
             </TouchableOpacity>
           </MotiView>
         </View>

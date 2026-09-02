@@ -114,7 +114,7 @@ export function LoginScreen() {
     setIsModalOpen(false);
   };
 
-  const handleSelfHostSave = (data: {
+  const handleSelfHostSave = async (data: {
     apiUrl: string;
     supabaseUrl: string;
     supabaseAnonKey: string;
@@ -122,6 +122,9 @@ export function LoginScreen() {
     meilisearchSearchKey?: string;
   }) => {
     setSelfHosted(data);
+    // Give AsyncStorage a moment to persist before returning
+    // This ensures the settings are saved before the user can attempt login
+    await new Promise((resolve) => setTimeout(resolve, 100));
     toast.success('Self-hosted instance configured');
   };
 

@@ -96,7 +96,7 @@ export function BaseFeedCard({
                                 href={feed.link || feed.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-xs text-[#BDC6B7] dark:text-secondary truncate block mt-0.5"
+                                className="text-xs text-[#BDC6B7] dark:text-secondary truncate inline-block mt-0.5"
                             >
                                 {(feed.link || feed.url)
                                     ?.replace(/^https?:\/\//, "")

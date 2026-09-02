@@ -1,4 +1,4 @@
-import SparkleIcon from '@components/icons/local/sparkle';
+import { Sparkle } from '@components/icons/svg';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
@@ -33,7 +33,7 @@ export const ArticleSummaryBottomSheet = forwardRef<
   const headerLeft = useMemo(
     () => (
       <View className="flex-row items-center gap-3">
-        <SparkleIcon color={colors.secondary} width={20} height={20} />
+        <Sparkle color={colors.secondary} width={20} height={20} />
         <Text size="xl" fontFamily="geist-semibold" className="text-primary_foreground">
           The Gist
         </Text>

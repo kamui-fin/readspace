@@ -1,4 +1,4 @@
-import SparkleIcon from '@components/icons/local/sparkle';
+import { Sparkle } from '@components/icons/svg';
 import { Button } from '@components/ui/button';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
@@ -155,7 +155,7 @@ export function ArticleActionBar({
         {/* Generate Summary Button */}
         {!isClipped && onGenerateSummary && (
           <Button variant="icon" size="small" fullWidth={false} onPress={onGenerateSummary}>
-            <SparkleIcon width={18} height={18} color={greyColor} />
+            <Sparkle width={18} height={18} color={greyColor} />
           </Button>
         )}
 

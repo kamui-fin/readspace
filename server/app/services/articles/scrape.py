@@ -121,57 +121,35 @@ def _remove_duplicate_image(soup: BeautifulSoup, main_image_url: str | None) -> 
 
 def _heal_html_code_tags(soup: BeautifulSoup) -> None:
     """
-    Trafilatura extracts inline code as block <pre> tags and splits paragraphs.
-    This function traverses the body, detects when a paragraph was split by inline
-    pre/text nodes, converts those <pre> nodes to inline <code>, and merges them
-    back into the preceding <p> tag. Also removes nested <pre> wrappers.
+    Fix trafilatura's malformed code tags:
+    1. Remove nested <pre> wrappers (e.g., <pre><pre>code</pre></pre> → <pre>code</pre>)
+    2. Convert single-line <pre> tags to inline <code> tags
     """
-    body = soup.body if soup.body else soup
-    if not body:
-        return
+    try:
+        # 1. Unwrap nested <pre> tags first (before converting to <code>)
+        for pre_tag in list(soup.find_all("pre")):
+            if not isinstance(pre_tag, Tag):
+                continue
+            inner_pre = pre_tag.find("pre", recursive=False)
+            if inner_pre:
+                # Replace the outer <pre> with the inner <pre>'s content
+                inner_pre.unwrap()
 
-    # 1. Fix nested <pre> tags (like <pre><pre>code</pre></pre>)
-    for nested_pre in body.find_all("pre"):
-        inner_pre = nested_pre.find("pre")
-        if inner_pre:
-            nested_pre.string = inner_pre.get_text()
+        # 2. Convert single-line <pre> tags to <code> tags
+        for pre_tag in list(soup.find_all("pre")):
+            if not isinstance(pre_tag, Tag):
+                continue
 
-    # 2. Merge split inline elements back into paragraphs
-    children = list(body.children)
-    current_p = None
-    nodes_to_merge = []
-
-    for child in children:
-        if isinstance(child, Tag) and child.name == "p":
-            if current_p and nodes_to_merge:
-                for node in nodes_to_merge:
-                    if isinstance(node, Tag) and node.name == "pre":
-                        code_tag = soup.new_tag("code")
-                        code_tag.string = node.get_text()
-                        current_p.append(code_tag)
-                        node.decompose()
-                    else:
-                        current_p.append(node)
-                nodes_to_merge = []
-            current_p = child
-        elif current_p:
-            is_text = not isinstance(child, Tag)
-            is_inline_pre = isinstance(child, Tag) and child.name == "pre" and "\n" not in child.get_text()
-
-            if is_text or is_inline_pre:
-                nodes_to_merge.append(child)
-            else:
-                if nodes_to_merge:
-                    for node in nodes_to_merge:
-                        if isinstance(node, Tag) and node.name == "pre":
-                            code_tag = soup.new_tag("code")
-                            code_tag.string = node.get_text()
-                            current_p.append(code_tag)
-                            node.decompose()
-                        else:
-                            current_p.append(node)
-                    nodes_to_merge = []
-                current_p = None
+            text_content = pre_tag.get_text()
+            # Check if this looks like inline code (no newlines, reasonable length)
+            if text_content and "\n" not in text_content and len(text_content) < 500:
+                # Replace <pre> with <code>, preserving all children
+                code_tag = soup.new_tag("code")
+                for child in list(pre_tag.children):
+                    code_tag.append(child)
+                pre_tag.replace_with(code_tag)
+    except Exception as e:
+        logger.debug("Error healing code tags", error=str(e))
 
 
 # ==============================================================================

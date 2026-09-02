@@ -94,6 +94,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-font',
       'expo-sqlite',
       [
+        'expo-build-properties',
+        {
+          android: {
+            usesCleartextTraffic: true,
+          },
+        },
+      ],
+      [
         'expo-web-browser',
         {
           experimentalLauncherActivity: true,

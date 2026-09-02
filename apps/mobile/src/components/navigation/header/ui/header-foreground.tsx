@@ -1,6 +1,7 @@
-import ExpandVerticalIcon from '@components/icons/local/expand-vertical';
+import { ExpandVertical } from '@components/icons/svg';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
+import { useIconColor } from '@hooks/useIconColor';
 import { COLORS } from '@lib/constants/colors';
 import { ArrowLeftIcon } from '@solar-icons/react-native/linear';
 import clsx from 'clsx';
@@ -56,6 +57,7 @@ export function HeaderForeground({
   rightElement,
   disableCenteredLayout = false,
 }: HeaderForegroundProps) {
+  const iconColor = useIconColor();
   // Determine if we should use centered layout (for similar feeds with back button and no actions)
   const useCenteredLayout =
     !disableCenteredLayout && showBackButton && actions.length === 0 && !subtitle;
@@ -120,7 +122,7 @@ export function HeaderForeground({
             <View
               className="justify-center"
               style={{ marginBottom: Platform.OS === 'ios' ? 6 : 2 }}>
-              <ExpandVerticalIcon />
+              <ExpandVertical width={20} height={20} color={iconColor} />
             </View>
           </TouchableOpacity>
         ) : (

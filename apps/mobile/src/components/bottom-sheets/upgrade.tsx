@@ -1,5 +1,4 @@
-import RssIcon from '@components/icons/local/rss';
-import SparkleIcon from '@components/icons/local/sparkle';
+import { RSSIcon, Sparkle } from '@components/icons/svg';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { useRevenueCat } from '@contexts/revenuecat-context';
@@ -134,7 +133,7 @@ export function UpgradePaywallModal() {
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <RssIcon />
+                  <RSSIcon width={20} height={20} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
@@ -178,7 +177,7 @@ export function UpgradePaywallModal() {
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <SparkleIcon />
+                  <Sparkle width={20} height={20} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>

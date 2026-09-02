@@ -58,20 +58,43 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   // Check if this is a clipped article
   const isClipped = article?.article_type === 'clipped';
 
-  // Content source state - start with original, will update when content is available
+  // ============ View Mode State ============
   const [contentSource, setContentSource] = useState<ArticleViewMode>('original');
   const [userSelectedView, setUserSelectedView] = useState<ArticleViewMode | null>(null);
-
   const [targetLanguage, setTargetLanguage] = useState<string | null>(null);
+
+  // ============ Extraction & Translation ============
+  const extractMutation = useExtractFullTextMutation();
+  const extractedData = extractMutation.data;
+  const translateMutation = useTranslateArticleMutation();
+  const translateData = translateMutation.data;
+  const summarizeMutation = useSummarizeArticleMutation();
+  const summaryData = summarizeMutation.data;
+  const isSummaryLoading = summarizeMutation.isPending;
 
   const recentLanguages = useTranslationHistory((state) => state.recentLanguages);
   const addRecentLanguage = useTranslationHistory((state) => state.addRecentLanguage);
-
   const updateArticle = useUpdateArticle();
 
-  // Extract full text hook - auto-trigger for articles without extracted content
-  const extractMutation = useExtractFullTextMutation();
-  const extractedData = extractMutation.data;
+  // ============ Content Selection Logic ============
+  const currentContent = useMemo(() => {
+    switch (contentSource) {
+      case 'extracted':
+        // Priority: server-extracted → live-extracted → original
+        return article?.extracted_content || extractedData?.content || article?.content;
+      case 'original':
+        // Priority: original → extracted → description (as fallback)
+        return article?.content || article?.extracted_content || article?.description;
+      default:
+        return article?.content;
+    }
+  }, [contentSource, article?.content, article?.extracted_content, article?.description, extractedData?.content]);
+
+  const activeContent =
+    contentSource === 'translated' && translateData?.translated_content
+      ? translateData.translated_content
+      : currentContent;
+
   const extractFullText = useCallback(async () => {
     return extractMutation.mutateAsync({
       articleId: articleId || '',
@@ -79,24 +102,6 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     });
   }, [articleId, article?.link, extractMutation]);
 
-  // Get the current content based on source
-  const currentContent =
-    contentSource === 'extracted' && (article?.extracted_content || extractedData?.content)
-      ? article?.extracted_content || extractedData?.content
-      : article?.content;
-
-  const translateMutation = useTranslateArticleMutation();
-  const translateData = translateMutation.data;
-
-  const activeContent =
-    contentSource === 'translated' && translateData?.translated_content
-      ? translateData.translated_content
-      : currentContent;
-
-  // AI Summary hooks
-  const summarizeMutation = useSummarizeArticleMutation();
-  const summaryData = summarizeMutation.data;
-  const isSummaryLoading = summarizeMutation.isPending;
   const generateSummary = useCallback(async () => {
     if (!checkAndTriggerUpgrade('ai')) {
       throw new Error('AI limit reached');
@@ -108,20 +113,24 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     });
   }, [articleId, currentContent, contentSource, summarizeMutation, checkAndTriggerUpgrade]);
 
-  // Reset user selection when article changes (e.g., navigating to a different article)
+  // ============ View Mode Effects ============
+  // Initialize view based on available content
   useEffect(() => {
     setUserSelectedView(null);
-    // If article has extracted content when it loads, prefer extracted view
+    // Prefer server-side extracted content if available, otherwise show original
     setContentSource(article?.extracted_content ? 'extracted' : 'original');
-  }, [articleId]);
+  }, [articleId, article?.extracted_content]);
 
-  // Auto-switch to extracted when extraction completes (only if user hasn't manually selected a view)
-  // This is safe now because we've removed the invalidation race conditions
+  // Auto-switch to extracted when extraction completes (only if user hasn't manually selected)
   useEffect(() => {
-    if (userSelectedView === null && article?.extracted_content && contentSource !== 'extracted') {
+    const hasExtractedContent = !!extractedData?.content;
+    const userHasNotSelected = userSelectedView === null;
+    const isExtractionComplete = extractMutation.status === 'success';
+
+    if (userHasNotSelected && isExtractionComplete && hasExtractedContent) {
       setContentSource('extracted');
     }
-  }, [article?.extracted_content, userSelectedView]);
+  }, [extractMutation.status, extractedData?.content, userSelectedView]);
 
   const sortedLanguages = useMemo(() => {
     // Put recent languages at the top, followed by the rest
@@ -143,10 +152,19 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
       !article.link.startsWith('newsletter://') &&
       extractMutation.status === 'idle'
     ) {
-      // Trigger extraction automatically, but don't auto-switch view (let user decide)
-      extractFullText().catch((error) => {
-        console.warn('Failed to auto-extract article content:', error);
-      });
+      // Trigger extraction automatically
+      const timeoutId = setTimeout(() => {
+        // If extraction takes too long, log warning but don't error
+        if (extractMutation.isPending) {
+          console.warn('Article extraction is taking longer than expected');
+        }
+      }, 5000);
+
+      extractFullText()
+        .catch((error) => {
+          console.warn('Failed to auto-extract article content:', error);
+        })
+        .finally(() => clearTimeout(timeoutId));
     }
   }, [article, extractMutation.status, extractFullText]);
 
@@ -341,26 +359,40 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
 
   const handleSelectView = useCallback(
     (view: ArticleViewMode) => {
-      // Mark that user explicitly selected a view to prevent sync effect from overriding
+      // Mark user selection to prevent auto-switch effects
       setUserSelectedView(view);
 
-      if (view === 'extracted' && !(article?.extracted_content || extractedData?.content)) {
-        toast.info('Extracting full text...');
-        extractFullText()
-          .then(() => {
-            setContentSource('extracted');
-            toast.success('Full text extracted!');
-          })
-          .catch(() => {
-            toast.error('Failed to extract text');
-          });
+      // For extracted view, check if we need to trigger extraction
+      if (view === 'extracted') {
+        const hasExtractedContent = !!article?.extracted_content || !!extractedData?.content;
+
+        if (!hasExtractedContent) {
+          // Extraction not available yet, trigger it
+          toast.info('Extracting full text...');
+          extractFullText()
+            .then(() => {
+              setContentSource('extracted');
+              toast.success('Full text extracted!');
+            })
+            .catch(() => {
+              toast.error('Failed to extract text');
+            });
+        } else {
+          // Extracted content available, show it immediately
+          setContentSource('extracted');
+          toast.success('Showing full text');
+        }
       } else {
+        // For original or translated, just switch the view
         setContentSource(view);
-        if (view === 'original') toast.success('Showing original content');
-        if (view === 'extracted') toast.success('Showing extracted content');
+        const messages = {
+          original: 'Showing original content',
+          translated: 'Showing translated content',
+        };
+        toast.success(messages[view] || 'View changed');
       }
     },
-    [article, extractedData, extractFullText]
+    [article?.extracted_content, extractedData?.content, extractFullText]
   );
 
   if (!isArticleLoading && !article) {

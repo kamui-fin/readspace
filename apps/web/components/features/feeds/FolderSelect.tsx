@@ -90,10 +90,7 @@ export function FolderSelect({
                                 value={folder.id}
                                 className="cursor-pointer"
                             >
-                                <div className="flex items-center gap-2">
-                                    <div className="h-2 w-2 rounded-full bg-primary/60" />
-                                    {folder.name}
-                                </div>
+                                {folder.name}
                             </SelectItem>
                         ))}
                     </SelectContent>

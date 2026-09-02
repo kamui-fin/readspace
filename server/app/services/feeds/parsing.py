@@ -380,20 +380,51 @@ def _get_best_content_candidate(entry: dict) -> str:
     return entry.get("summary", "") or entry.get("description", "")
 
 
+def _heal_html_code_tags(soup: BeautifulSoup) -> None:
+    """
+    Fix trafilatura's malformed code tags:
+    1. Remove nested <pre> wrappers (e.g., <pre><pre>code</pre></pre> → <pre>code</pre>)
+    2. Convert single-line <pre> tags to inline <code> tags
+    """
+    try:
+        # 1. Unwrap nested <pre> tags first (before converting to <code>)
+        for pre_tag in list(soup.find_all("pre")):
+            if not isinstance(pre_tag, Tag):
+                continue
+            inner_pre = pre_tag.find("pre", recursive=False)
+            if inner_pre:
+                inner_pre.unwrap()
+
+        # 2. Convert single-line <pre> tags to <code> tags
+        for pre_tag in list(soup.find_all("pre")):
+            if not isinstance(pre_tag, Tag):
+                continue
+            text_content = pre_tag.get_text()
+            if text_content and "\n" not in text_content and len(text_content) < 500:
+                code_tag = soup.new_tag("code")
+                for child in list(pre_tag.children):
+                    code_tag.append(child)
+                pre_tag.replace_with(code_tag)
+    except Exception as e:
+        logger.debug("Error healing code tags", error=str(e))
+
+
 def _sanitize_and_fix_html(html_content: str, base_url: str | None) -> str:
     """
-    Fix relative URLs in HTML content.
+    Fix relative URLs and normalize code tags in HTML content.
 
     Note: HTML sanitization is already handled by feedparser when sanitize_html=True.
-    We only need to resolve relative URLs here.
+    We resolve relative URLs and convert block <pre> to inline <code>.
     """
     if not html_content:
         return ""
 
-    if base_url:
-        try:
-            soup = BeautifulSoup(html_content, "html.parser")
-            has_changes = False
+    try:
+        soup = BeautifulSoup(html_content, "html.parser")
+        has_changes = False
+
+        # Fix relative URLs
+        if base_url:
             for tag in soup.find_all(["a", "img", "video", "source"]):
                 if not isinstance(tag, Tag):
                     continue
@@ -407,10 +438,15 @@ def _sanitize_and_fix_html(html_content: str, base_url: str | None) -> str:
                     if val and isinstance(val, str) and not (val.startswith("data:") or val.startswith("mailto:")):
                         tag["src"] = urljoin(base_url, val)
                         has_changes = True
-            if has_changes:
-                html_content = str(soup)
-        except Exception as e:
-            logger.debug("Failed to fix relative URLs", error=str(e))
+
+        # Heal inline code tags (convert block <pre> to inline <code>)
+        _heal_html_code_tags(soup)
+        has_changes = True
+
+        if has_changes:
+            html_content = str(soup)
+    except Exception as e:
+        logger.debug("Failed to process HTML", error=str(e))
 
     return html_content
 

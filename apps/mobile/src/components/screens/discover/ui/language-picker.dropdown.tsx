@@ -30,8 +30,8 @@ export interface LanguagePickerProps {
 }
 
 const DEFAULT_LANGUAGES: LanguageOption[] = [
-  { value: 'all', label: 'All languages' },
   { value: 'english', label: 'English' },
+  { value: 'all', label: 'All languages' },
   { value: 'chinese', label: '中文' },
   { value: 'japanese', label: '日本語' },
 ];

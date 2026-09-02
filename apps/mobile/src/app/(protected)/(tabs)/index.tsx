@@ -1,5 +1,5 @@
 import { FeedSwitcherBottomSheet } from '@components/bottom-sheets/feed-switcher';
-import RssIcon from '@components/icons/local/rss';
+import { RSSIcon } from '@components/icons/svg';
 import { Header } from '@components/navigation/header';
 import { FollowingScreen } from '@components/screens/following';
 import { FilterActionButton } from '@components/screens/following/ui/filter-action.button';
@@ -56,7 +56,7 @@ export default function FollowingRoute() {
       return <FolderIcon size={24} color={COLORS[isDark ? 'dark' : 'light'].primary_foreground} />;
     }
     if (viewType === 'feed' || viewType === 'feedPreview') {
-      return <RssIcon size={24} color={COLORS[isDark ? 'dark' : 'light'].orange} />;
+      return <RSSIcon width={24} height={24} color={COLORS[isDark ? 'dark' : 'light'].orange} />;
     }
     return undefined;
   }, [viewType, isDark]);

@@ -1,5 +1,4 @@
-import GoogleIcon from '@components/icons/local/google';
-import ReadspaceLogo from '@components/icons/local/readspace-logo';
+import { Google, ReadspaceLogo } from '@components/icons/svg';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { ThreeDotsAnimation } from '@components/ui/three-dots';
@@ -107,9 +106,9 @@ export function WelcomeScreen() {
         style={{ paddingHorizontal: horizontalPadding, paddingTop: topPadding }}>
         <View className="mb-8 flex-row items-center">
           <View
-            className="items-center justify-center rounded-xl bg-black dark:bg-black"
-            style={{ width: logoSize, height: logoSize }}>
-            <ReadspaceLogo />
+            className="items-center justify-center overflow-hidden rounded-xl"
+            style={{ width: logoSize, height: logoSize, backgroundColor: '#232222' }}>
+            <ReadspaceLogo width={logoSize} height={logoSize} />
           </View>
           <Text className="text-primary-foreground font-figtree-semibold ml-4 text-4xl">
             readspace
@@ -138,29 +137,29 @@ export function WelcomeScreen() {
         <Button
           variant="primary"
           size="large"
-          onPress={() => router.push('/(auth)/login')}
-          leftIcon={<LetterIcon size={20} color={COLORS.white} />}>
-          Continue with Email
-        </Button>
-
-        <Button
-          variant="secondary"
-          size="large"
           onPress={handleGoogleSignIn}
           disabled={isLoading}
           leftIcon={
             !isLoading ? (
-              <GoogleIcon size={20} color={isDark ? '#ffffff' : COLORS.light.black} />
+              <Google width={20} height={20} color={COLORS.white} />
             ) : undefined
           }>
           {isLoading ? (
             <ThreeDotsAnimation
-              color={isDark ? COLORS.dark.secondary : COLORS.light.secondary}
+              color={COLORS.white}
               dotStyle={{ width: 6, height: 6, borderRadius: 6, marginLeft: 4 }}
             />
           ) : (
             'Continue with Google'
           )}
+        </Button>
+
+        <Button
+          variant="secondary"
+          size="large"
+          onPress={() => router.push('/(auth)/login')}
+          leftIcon={<LetterIcon size={20} color={isDark ? COLORS.dark.primary_foreground : COLORS.light.primary_foreground} />}>
+          Continue with Email
         </Button>
       </View>
     </View>

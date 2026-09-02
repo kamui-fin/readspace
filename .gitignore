@@ -95,6 +95,3 @@ pnpm-lock.yaml
 favicons/
 rss-r-us
 feeds.jsonl
-
-# Database Backups & Curation Scripts
-server/scripts/

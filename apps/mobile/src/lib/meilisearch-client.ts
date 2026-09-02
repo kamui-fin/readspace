@@ -56,17 +56,70 @@ function hasQuery(params?: SearchParams): boolean {
 function hasCategoryFilter(filters: Array<string | string[]>): boolean {
   return filters.some((filter) => {
     if (typeof filter === 'string') {
-      return filter.startsWith('top_level_category:') || filter.includes('top_level_category');
+      // Support both facetFilters syntax (top_level_category:value) and explicit filter syntax (top_level_category = "value")
+      return filter.includes('top_level_category');
     }
     if (Array.isArray(filter)) {
       return filter.some(
-        (f: string) =>
-          typeof f === 'string' &&
-          (f.startsWith('top_level_category:') || f.includes('top_level_category'))
+        (f: string) => typeof f === 'string' && f.includes('top_level_category')
       );
     }
     return false;
   });
+}
+
+/**
+ * Strip 'popular' category filter from requests so Meilisearch queries all categories by popularity_score.
+ */
+function stripPopularCategoryFilter(request: SearchRequest): SearchRequest {
+  if (!request.params) return request;
+
+  const cleanFilter = (filters: any) => {
+    if (!filters) return filters;
+    if (Array.isArray(filters)) {
+      return filters
+        .map((f) => {
+          if (typeof f === 'string') {
+            return f.includes('popular') ? null : f;
+          }
+          if (Array.isArray(f)) {
+            const cleaned = f.filter(
+              (item: string) => typeof item === 'string' && !item.includes('popular')
+            );
+            return cleaned.length > 0 ? cleaned : null;
+          }
+          return f;
+        })
+        .filter(Boolean);
+    }
+    return filters;
+  };
+
+  const beforeFacetFilters = request.params.facetFilters;
+  const beforeFilter = request.params.filter;
+  const afterFacetFilters = cleanFilter(request.params.facetFilters);
+  const afterFilter = cleanFilter(request.params.filter);
+
+  if (
+    JSON.stringify(beforeFacetFilters) !== JSON.stringify(afterFacetFilters) ||
+    JSON.stringify(beforeFilter) !== JSON.stringify(afterFilter)
+  ) {
+    console.log('[banana] stripPopularCategoryFilter triggered', {
+      beforeFacetFilters,
+      afterFacetFilters,
+      beforeFilter,
+      afterFilter,
+    });
+  }
+
+  return {
+    ...request,
+    params: {
+      ...request.params,
+      facetFilters: afterFacetFilters,
+      filter: afterFilter,
+    },
+  };
 }
 
 function hasMeaningfulCriteria(params?: SearchParams): boolean {
@@ -77,6 +130,13 @@ function hasMeaningfulCriteria(params?: SearchParams): boolean {
   }
   if (params.filter && Array.isArray(params.filter)) {
     if (hasCategoryFilter(params.filter)) return true;
+  }
+  // Check for filters in the string format (from Configure component)
+  if (params.filters && typeof params.filters === 'string') {
+    if (params.filters.includes('top_level_category')) {
+      console.log('[banana] Found category filter in params.filters (string):', params.filters);
+      return true;
+    }
   }
   return false;
 }
@@ -123,6 +183,8 @@ export function createSearchClient(getHybridConfig?: () => HybridSearchConfig | 
 
   const searchClientObject = {
     search(requests: SearchRequest[]) {
+      console.log('[banana] search() called with requests:', requests);
+
       const { host, apiKey } = getMeiliSearchConfig();
       const baseClient = instantMeiliSearch(host, apiKey, config);
 
@@ -135,17 +197,54 @@ export function createSearchClient(getHybridConfig?: () => HybridSearchConfig | 
         );
       }
 
-      const hasAnyMeaningfulSearch = processedRequests.some(({ params }) =>
-        hasMeaningfulCriteria(params)
-      );
+      // Strip popular category filter so Meilisearch queries all categories by popularity_score
+      processedRequests = processedRequests.map((r) => stripPopularCategoryFilter(r));
+      console.log('[banana] after stripPopularCategoryFilter:', processedRequests);
+
+      // Ensure sort parameter is always included for consistent popularity_score sorting
+      processedRequests = processedRequests.map((r) => {
+        if (!r.params) return r;
+        // Only add sort if it's not already specified
+        if (!r.params.sort && !r.params.sortBy) {
+          console.log('[banana] Adding explicit sort parameter to request');
+          return {
+            ...r,
+            params: {
+              ...r.params,
+              sort: ['popularity_score:desc'],
+            },
+          };
+        }
+        return r;
+      });
+      console.log('[banana] after ensuring sort parameter:', processedRequests);
+
+      const hasAnyMeaningfulSearch = processedRequests.some(({ params }) => {
+        const meaningful = hasMeaningfulCriteria(params);
+        console.log('[banana] hasMeaningfulCriteria for params', params, '=', meaningful);
+        return meaningful;
+      });
+
+      console.log('[banana] hasAnyMeaningfulSearch:', hasAnyMeaningfulSearch);
 
       if (!hasAnyMeaningfulSearch) {
+        console.log('[banana] No meaningful search, returning empty results');
         return Promise.resolve({
           results: requests.map(() => createEmptyResult()),
         });
       }
 
-      return baseClient.searchClient.search(processedRequests as any);
+      console.log('[banana] Sending to baseClient.searchClient.search:', processedRequests);
+
+      // Log what instant-meilisearch is about to send to Meilisearch
+      const result = baseClient.searchClient.search(processedRequests as any);
+      result.then((res: any) => {
+        console.log('[banana] Meilisearch response:', res);
+      }).catch((err: any) => {
+        console.log('[banana] Meilisearch error:', err);
+      });
+
+      return result;
     },
   };
 

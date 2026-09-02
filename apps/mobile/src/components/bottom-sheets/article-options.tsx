@@ -1,4 +1,4 @@
-import LanguageIcon from '@components/icons/local/language';
+import { Language } from '@components/icons/svg';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Text } from '@components/ui/text';
 import { type BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -116,7 +116,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
             {!isClipped &&
               !isNewsletter &&
               renderOption(
-                <LanguageIcon width={20} height={20} />,
+                <Language width={20} height={20} color={greyColor} />,
                 hasTranslatedContent ? 'Translate to a different language' : 'Translate Article',
                 hasTranslatedContent ? 'Change current language' : 'Pick a language',
                 onTranslate
@@ -166,7 +166,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
                   )}
 
                 {renderOption(
-                  <LanguageIcon
+                  <Language
                     width={20}
                     height={20}
                     color={currentView === 'translated' ? activeColor : greyColor}

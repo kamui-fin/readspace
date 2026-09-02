@@ -7,7 +7,7 @@ import {
   FolderPickerBottomSheet,
   type FolderPickerBottomSheetRef,
 } from '@components/bottom-sheets/folder-picker';
-import PlusIcon from '@components/icons/local/plus';
+import { Plus } from '@components/icons/svg';
 import { LanguagePicker } from '@components/screens/discover/ui/language-picker.dropdown';
 import { RecentSearches } from '@components/screens/discover/ui/recent-searches';
 import { type Language, SearchBar } from '@components/screens/discover/ui/search-bar.input';
@@ -172,7 +172,6 @@ function DiscoverScreenInner() {
   );
 
   const { refine: refineQuery } = useSearchBox();
-  const { refine: refineCategory } = useMenu({ attribute: 'top_level_category', limit: 100 });
   const { items: hits, isLastPage, showMore } = useInfiniteHits();
   const { status } = useInstantSearch();
 
@@ -187,6 +186,7 @@ function DiscoverScreenInner() {
 
   const handleCategoryPress = useCallback(
     (category: string) => {
+      console.log('[banana] handleCategoryPress called with category:', category);
       // 1. Immediately highlight chip, clear search query inputs, close search focus, and scroll to beginning
       setSelectedCategory(category);
       setSearchQuery('');
@@ -199,11 +199,10 @@ function DiscoverScreenInner() {
       startTransition(() => {
         setIsPendingFilter(true);
         setViewState('category');
-        refineCategory(category);
         refineQuery('');
       });
     },
-    [refineCategory, refineQuery]
+    [refineQuery]
   );
 
   const orderedCategories = selectedCategory
@@ -339,24 +338,35 @@ function DiscoverScreenInner() {
   }, []);
 
   const handleClearCategory = useCallback(() => {
-    const prevCategory = selectedCategory;
     setSelectedCategory(null);
 
-    // Defer the view state swap and query refinement to make the chip state change instant
+    // Defer the view state swap to make the chip state change instant
     startTransition(() => {
       setIsPendingFilter(true);
       const hasSearch = searchQuery.trim().length > 0;
       setViewState(hasSearch ? 'search' : 'default');
-      if (prevCategory) {
-        refineCategory(prevCategory);
-      }
     });
-  }, [selectedCategory, refineCategory, searchQuery]);
+  }, [searchQuery]);
 
   const insets = useSafeAreaInsets();
 
   // Whether user is actively typing (show instant results instead of recent searches)
   const hasTypedQuery = searchQuery.trim().length > 0;
+
+  const computedFilters =
+    selectedCategory
+      ? languageCode
+        ? `language = ${languageCode} AND top_level_category = "${selectedCategory}"`
+        : `top_level_category = "${selectedCategory}"`
+      : languageCode
+        ? `language = ${languageCode}`
+        : undefined;
+
+  console.log('[banana] Configure filters computed:', {
+    selectedCategory,
+    languageCode,
+    computedFilters,
+  });
 
   return (
     <View
@@ -365,8 +375,7 @@ function DiscoverScreenInner() {
       <Configure
         hitsPerPage={20}
         attributesToHighlight={['title', 'description']}
-        sortBy="popularity_score:desc"
-        filters={languageCode ? `language = ${languageCode}` : undefined}
+        filters={computedFilters}
       />
       <TouchableWithoutFeedback onPress={handleOutsidePress}>
         <View className="flex-1">
@@ -398,7 +407,7 @@ function DiscoverScreenInner() {
                   className="bg-grey6"
                   fullWidth={false}
                   onPress={() => addFeedModalRef.current?.present()}>
-                  <PlusIcon width={20} height={20} color={colors.grey} />
+                  <Plus width={20} height={20} color={colors.grey} />
                 </Button>
               </View>
             </MotiView>

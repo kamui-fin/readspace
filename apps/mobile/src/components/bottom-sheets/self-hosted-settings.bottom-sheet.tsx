@@ -49,7 +49,7 @@ export interface SelfHostSettingsProps {
     supabaseAnonKey: string;
     meilisearchUrl?: string;
     meilisearchSearchKey?: string;
-  }) => void;
+  }) => void | Promise<void>;
   onClose?: () => void;
   initialData?: {
     apiUrl?: string;
@@ -123,8 +123,14 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
             });
           } catch (error) {
             console.log('[SelfHostSettingsBottomSheet] Config fetch error:', error);
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            if (errorMsg.includes('NetworkError') || errorMsg.includes('Network request failed')) {
+              throw new Error(
+                'Network connection failed. Check your internet connection and the server URL.'
+              );
+            }
             throw new Error(
-              'Unable to connect to the Readspace server. Check the URL and try again.'
+              'Unable to connect to the Readspace server. Verify the URL is correct and the server is running.'
             );
           }
 
@@ -133,6 +139,11 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
               '[SelfHostSettingsBottomSheet] Config endpoint failed:',
               configResponse.status
             );
+            if (configResponse.status === 404) {
+              throw new Error('Server endpoint not found (404). Verify the server URL is correct.');
+            } else if (configResponse.status >= 500) {
+              throw new Error(`Server error (${configResponse.status}). The Readspace server may be down.`);
+            }
             throw new Error(`Server returned error status ${configResponse.status}`);
           }
 
@@ -216,7 +227,12 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
           );
 
           if (!supabaseValidation.valid) {
-            throw new Error(supabaseValidation.error || 'Database connection failed');
+            const error = supabaseValidation.error || 'Database connection failed';
+            // Check if it's a network issue vs auth issue
+            if (error.toLowerCase().includes('network') || error.toLowerCase().includes('failed to fetch')) {
+              throw new Error(`Database connection failed: ${error}. Make sure your self-hosted Supabase is accessible.`);
+            }
+            throw new Error(`Database connection failed: ${error}`);
           }
 
           return {
@@ -232,8 +248,8 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
         const finalConfig = await toast.promise(
           withTimeout(
             validationPromise,
-            4000,
-            'Connection timed out. Please check the URL or host availability.'
+            6000,
+            'Connection timed out. Please check the URL, host availability, and network connectivity.'
           ),
           {
             loading: 'Connecting to server...',
@@ -242,8 +258,8 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
           }
         );
 
-        // Save
-        onSave?.(finalConfig);
+        // Save and await if async
+        await Promise.resolve(onSave?.(finalConfig));
 
         if (ref && typeof ref !== 'function' && ref.current) {
           ref.current.dismiss();

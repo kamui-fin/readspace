@@ -14,7 +14,7 @@ import { Text } from '@components/ui/text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
-import CloseCircleIcon from '@components/icons/local/close-circle';
+import { CloseCircle } from '@components/icons/svg';
 import { Button } from '@components/ui/button';
 import { COLORS } from '@lib/constants/colors';
 
@@ -182,9 +182,9 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
                       className="h-8 w-8"
                       fullWidth={false}
                       onPress={onClose}>
-                      <CloseCircleIcon
-                        size={16}
-                        strokeWidth={2.8}
+                      <CloseCircle
+                        width={16}
+                        height={16}
                         color={isDark ? COLORS.dark.grey : COLORS.light.grey}
                       />
                     </Button>
