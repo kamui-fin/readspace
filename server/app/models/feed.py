@@ -58,6 +58,7 @@ class Feed(Base):
         default=FeedCategory.MISCELLANEOUS,
     )
     popularity_score = Column(Float, nullable=False, default=0.0)
+    frontend_rank_override = Column(Integer, nullable=False, server_default="9999", default=9999)
     subscriber_count = Column(Integer, nullable=False, default=0)
 
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

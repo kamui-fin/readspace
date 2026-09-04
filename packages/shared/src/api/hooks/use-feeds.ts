@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-query';
 import { ApiClient } from '../client';
 import { RSS_QUERY_KEYS, mutationKeys, queryKeys } from '../query-keys';
-import type { FeedDetail, Subscription, FeedDiscoveryResult, FeedsResponse } from '../types';
+import type { FeedDetail, Subscription, FeedDiscoveryResult, FeedsResponse, AdminFeedUpdate } from '../types';
 
 export function useFeeds(
   params?: {
@@ -316,16 +316,7 @@ export function useAdminUpdateFeed(
     unknown,
     {
       feedId: string;
-      data: {
-        title?: string;
-        description?: string;
-        language?: string;
-        top_level_category?: string;
-        url?: string;
-        link?: string;
-        image_url?: string;
-        popularity_score?: number;
-      };
+      data: AdminFeedUpdate;
     },
     unknown
   >

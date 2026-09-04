@@ -69,6 +69,7 @@ def feed_to_document(feed: Feed | dict[str, Any]) -> dict[str, Any]:
                 "content_type": feed.content_type,
                 "top_level_category": feed.top_level_category,
                 "popularity_score": feed.popularity_score,
+                "frontend_rank_override": feed.frontend_rank_override,
             }
         )
     else:

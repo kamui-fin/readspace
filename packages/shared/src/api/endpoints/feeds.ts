@@ -1,5 +1,5 @@
 import { ApiClient } from '../core';
-import { FeedDetail, Subscription, FeedsResponse } from '../types/feeds';
+import { FeedDetail, Subscription, FeedsResponse, AdminFeedUpdate } from '../types/feeds';
 
 export const feeds = {
   getFeeds: (params?: {
@@ -56,16 +56,7 @@ export const feeds = {
 
   adminUpdateFeed: (
     id: string,
-    data: {
-      title?: string;
-      description?: string;
-      language?: string;
-      top_level_category?: string;
-      url?: string;
-      link?: string;
-      image_url?: string;
-      popularity_score?: number;
-    }
+    data: AdminFeedUpdate
   ) => ApiClient.put<FeedDetail>(`/api/feeds/${id}/admin`, data),
 
   markFeedAllRead: (feed_id: string) =>

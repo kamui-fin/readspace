@@ -1,17 +1,14 @@
 import { meilisearchClient, FEEDS_INDEX_NAME } from "@/lib/meilisearch-client"
+import {
+    buildOnboardingFeedQueries,
+    interleaveOnboardingFeeds,
+    mapHitToOnboardingFeed,
+    type OnboardingFeed,
+} from "@readspace/shared"
 import { useQuery } from "@tanstack/react-query"
 import { useCallback, useMemo, useState } from "react"
 
-export type OnboardingFeed = {
-    id: string
-    title: string | null
-    description: string | null
-    url: string
-    link: string | null
-    image_url: string | null
-    category?: string | null
-    popularity_score?: number
-}
+export type { OnboardingFeed }
 
 type SimilarInsertion = {
     anchorId: string
@@ -59,57 +56,24 @@ export function useOnboardingFeeds(selectedCategories: string[]) {
                 return []
             }
 
-            const queries = selectedCategories.map((category) => ({
-                indexUid: FEEDS_INDEX_NAME,
-                q: "",
-                filter: `top_level_category = "${category}" AND language = "en"`,
-                limit: 20,
-                sort: ["popularity_score:desc"],
-                attributesToRetrieve: [
-                    "id",
-                    "title",
-                    "description",
-                    "url",
-                    "link",
-                    "image_url",
-                    "top_level_category",
-                    "popularity_score",
-                ],
-            }))
+            const queries = buildOnboardingFeedQueries(
+                FEEDS_INDEX_NAME,
+                selectedCategories,
+                20
+            )
 
             const multiSearchResults = await meilisearchClient.multiSearch({
                 queries,
             })
 
-            const interleavedFeeds: OnboardingFeed[] = []
             const categoryResults = multiSearchResults.results.map(
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (result: { hits: any[] }) =>
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    result.hits.map((hit: any) => ({
-                        id: hit.id,
-                        title: hit.title,
-                        description: hit.description,
-                        url: hit.url,
-                        link: hit.link,
-                        image_url: hit.image_url,
-                        category: hit.top_level_category,
-                        popularity_score: hit.popularity_score,
-                    }))
+                    result.hits.map((hit: any) => mapHitToOnboardingFeed(hit))
             )
 
-            const maxLength = Math.max(
-                ...categoryResults.map((r: OnboardingFeed[]) => r.length)
-            )
-            for (let i = 0; i < maxLength; i++) {
-                for (const categoryFeeds of categoryResults) {
-                    if (i < categoryFeeds.length) {
-                        interleavedFeeds.push(categoryFeeds[i]!)
-                    }
-                }
-            }
-
-            return interleavedFeeds
+            return interleaveOnboardingFeeds(categoryResults)
         },
         enabled: selectedCategories.length > 0,
     })

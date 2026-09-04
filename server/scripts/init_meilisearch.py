@@ -180,9 +180,11 @@ async def configure_meilisearch_index(
                 "top_level_category",
                 "content_type",
                 "author",
+                "frontend_rank_override",
             ],
             # Fields that can be used for sorting
             "sortable_attributes": [
+                "frontend_rank_override",
                 "popularity_score",
             ],
             # Fields to return in search results
@@ -200,6 +202,7 @@ async def configure_meilisearch_index(
                 "content_type",
                 "author",
                 "popularity_score",
+                "frontend_rank_override",
             ],
             # Ranking rules - order matters!
             "ranking_rules": [
@@ -209,7 +212,8 @@ async def configure_meilisearch_index(
                 "attribute",  # Match in important attributes (title > desc)
                 "sort",  # Custom sort criterion
                 "exactness",  # Exact matches ranked higher
-                "popularity_score:desc",  # Custom: Popular feeds ranked higher
+                "frontend_rank_override:asc",  # Curated ranking (1-50 first, then 9999)
+                "popularity_score:desc",  # Custom: Popular feeds ranked higher (tiebreaker)
             ],
             # Enable typo tolerance for better search UX
             "typo_tolerance": {
@@ -256,7 +260,8 @@ async def configure_meilisearch_index(
             }
             logger.info("ai_enabled_configuring_embedders", index=index_name)
         else:
-            logger.info("vector_search_disabled_skipping_embedders", index=index_name)
+            settings_dict["embedders"] = {}
+            logger.info("ai_disabled_disabling_embedders", index=index_name)
 
     # Create Pydantic model from dict
     # The SDK will automatically convert snake_case to camelCase for the API
@@ -354,6 +359,34 @@ async def sync_embeddings() -> None:
         "embeddings_sync_initiated",
         note="Meilisearch will generate embeddings in the background. Check status with --check",
     )
+
+
+async def reconfigure_index() -> None:
+    """
+    Push updated index settings without wiping documents.
+
+    This re-applies the sortableAttributes, rankingRules, filterableAttributes, etc.
+    without touching any indexed documents. Useful for updating Meilisearch settings
+    after schema or ranking changes in the application.
+
+    Safe and idempotent: can be run multiple times.
+    """
+    settings = Settings()
+    client = get_client(settings)
+    index_name = settings.MEILISEARCH_INDEX_NAME
+
+    logger.info("meilisearch_reconfigure_started")
+
+    # Check if index exists
+    exists = await check_index_exists(client, index_name)
+    if not exists:
+        logger.error("index_not_found_cannot_reconfigure")
+        raise RuntimeError("Index must exist before reconfiguring. Run init first.")
+
+    # Push updated settings (force=True means bypass any existing config check)
+    await configure_meilisearch_index(client, index_name, settings, force=True)
+
+    logger.info("meilisearch_reconfigure_complete")
 
 
 async def migrate_feeds(batch_size: int = 5) -> None:
@@ -476,6 +509,9 @@ Examples:
   # Check if index exists without making changes
   poetry run python scripts/init_meilisearch.py --check
 
+  # Reconfigure index settings (ranking rules, sortable attributes, etc.)
+  poetry run python scripts/init_meilisearch.py --reconfigure
+
   # Sync embeddings after enabling AI (for existing documents)
   poetry run python scripts/init_meilisearch.py --sync-embeddings
 
@@ -507,6 +543,11 @@ Examples:
         default=1000,
         help="Number of feeds to process in each batch during migration (default: 1000)",
     )
+    parser.add_argument(
+        "--reconfigure",
+        action="store_true",
+        help="Reconfigure index settings (sortable_attributes, ranking_rules, etc.) without resyncing documents",
+    )
 
     args = parser.parse_args()
 
@@ -529,6 +570,10 @@ Examples:
             # Check mode: just verify if index exists
             exists = asyncio.run(init_meilisearch(check_only=True))
             sys.exit(0 if exists else 1)
+        elif args.reconfigure:
+            # Reconfigure mode: update index settings without resyncing documents
+            logger.info("running_index_reconfigure")
+            asyncio.run(reconfigure_index())
         elif args.sync_embeddings:
             # Sync embeddings mode: enable AI for existing documents
             logger.info("running_embeddings_sync")

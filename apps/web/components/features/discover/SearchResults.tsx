@@ -170,6 +170,8 @@ export function SearchResults({
                                     ? (hitData.top_level_category as FeedCategory)
                                     : null,
                                 popularity_score: hitData.popularity_score,
+                                frontend_rank_override:
+                                    hitData.frontend_rank_override,
                                 is_subscribed: false,
                             }
 

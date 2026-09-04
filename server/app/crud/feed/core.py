@@ -261,6 +261,7 @@ async def admin_update_feed(
     url: str | None = None,
     top_level_category: str | FeedCategory | None = None,
     popularity_score: float | None = None,
+    frontend_rank_override: int | None = None,
     tags: list[str] | None = None,
     tags_native: list[str] | None = None,
     author: str | None = None,
@@ -300,6 +301,10 @@ async def admin_update_feed(
     # Handle popularity_score
     if popularity_score is not None:
         feed.popularity_score = popularity_score
+
+    # Handle frontend_rank_override (curated ranking signal)
+    if frontend_rank_override is not None:
+        feed.frontend_rank_override = frontend_rank_override
 
     # Handle tags
     if tags is not None:

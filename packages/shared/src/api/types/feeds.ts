@@ -62,6 +62,7 @@ export interface FeedSummary extends FeedBase {
   is_subscribed?: boolean;
   top_level_category?: FeedCategory | null;
   popularity_score?: number;
+  frontend_rank_override?: number;
 }
 
 export interface FeedDetail extends FeedSummary {
@@ -74,6 +75,7 @@ export interface FeedDetail extends FeedSummary {
 
   // Advanced Metadata
   popularity_score: number;
+  frontend_rank_override: number;
   subscriber_count: number;
   top_level_category: FeedCategory | null;
   tags: string[];
@@ -101,6 +103,7 @@ export interface AdminFeedUpdate {
   url?: string;
   top_level_category?: FeedCategory | null;
   popularity_score?: number;
+  frontend_rank_override?: number | null;
   tags?: string[];
   tags_native?: string[];
   author?: string;
@@ -196,6 +199,7 @@ export interface MeilisearchFeedDocument extends FeedScoringData {
   link: string | null;
   top_level_category: string | null;
   popularity_score: number;
+  frontend_rank_override: number;
 }
 
 export interface ParsedFeed {

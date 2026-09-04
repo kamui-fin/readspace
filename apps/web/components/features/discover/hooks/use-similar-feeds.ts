@@ -13,6 +13,7 @@ export interface MeilisearchHit {
     tags?: string[]
     top_level_category?: string | null
     popularity_score?: number | null
+    frontend_rank_override?: number | null
     _rankingScore?: number
 }
 
@@ -28,6 +29,8 @@ function convertHitToFeed(hit: MeilisearchHit): FeedSummary {
         content_type: null,
         tags_native: [],
         description: hit.description ?? null,
+        popularity_score: hit.popularity_score ?? undefined,
+        frontend_rank_override: hit.frontend_rank_override ?? undefined,
     } as FeedSummary // Warning: casting or ensure all fields
 }
 

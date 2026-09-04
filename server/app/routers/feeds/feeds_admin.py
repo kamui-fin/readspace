@@ -61,6 +61,7 @@ async def admin_update_feed(
             url=str(feed_in.url) if feed_in.url else None,
             top_level_category=feed_in.top_level_category,
             popularity_score=feed_in.popularity_score,
+            frontend_rank_override=feed_in.frontend_rank_override,
             tags=feed_in.tags,
         )
 

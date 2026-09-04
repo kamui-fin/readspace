@@ -22,7 +22,9 @@ import {
     type FeedDetail,
     type FeedSummary,
     useAdminUpdateFeed,
+    useFeed,
 } from "@readspace/shared"
+import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
@@ -34,8 +36,9 @@ const formSchema = z.object({
     top_level_category: z.string().optional(),
     url: z.string().url("Invalid URL").optional(),
     link: z.string().url("Invalid URL").optional().or(z.literal("")),
-    image_url: z.string().url("Invalid URL").optional().or(z.literal("")),
+    image_url: z.string().optional(),
     popularity_score: z.coerce.number().min(0).optional(),
+    frontend_rank_override: z.coerce.number().int().min(1).max(9999).optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -49,12 +52,23 @@ interface EditFeedFormProps {
                 | "language"
                 | "top_level_category"
                 | "popularity_score"
+                | "frontend_rank_override"
             >
         >
     onClose: () => void
 }
 
+function getCuratedRank(rank: number | null | undefined): number | undefined {
+    return rank !== undefined && rank !== null && rank < 9999 ? rank : undefined
+}
+
 export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
+    const { data: feedDetail } = useFeed(feed.id, {
+        enabled: !!feed.id,
+    })
+
+    const initialRank = getCuratedRank(feed.frontend_rank_override)
+
     const form = useForm<FormValues>({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(formSchema as any),
@@ -67,8 +81,27 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
             link: feed.link || "",
             image_url: feed.image_url || "",
             popularity_score: feed.popularity_score || 0,
+            frontend_rank_override: initialRank,
         },
     })
+
+    useEffect(() => {
+        if (feedDetail && !form.formState.isDirty) {
+            form.reset({
+                title: feedDetail.title || "",
+                description: feedDetail.description || "",
+                language: feedDetail.language || "",
+                top_level_category: feedDetail.top_level_category || "",
+                url: feedDetail.url || "",
+                link: feedDetail.link || "",
+                image_url: feedDetail.image_url || "",
+                popularity_score: feedDetail.popularity_score || 0,
+                frontend_rank_override: getCuratedRank(
+                    feedDetail.frontend_rank_override
+                ),
+            })
+        }
+    }, [feedDetail, form])
 
     const updateFeed = useAdminUpdateFeed({
         onSuccess: () => {
@@ -89,22 +122,33 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
     const onSubmit = (values: FormValues) => {
         const updates: Record<string, string | number | undefined> = {}
 
+        const currentFeed = feedDetail || feed
+        const effectiveInitialRank = getCuratedRank(
+            currentFeed.frontend_rank_override
+        )
+
         // Only include changed fields
-        if (values.title !== feed.title) updates.title = values.title
-        if (values.description !== feed.description)
+        if (values.title !== currentFeed.title) updates.title = values.title
+        if (values.description !== currentFeed.description)
             updates.description = values.description
-        if (values.language !== (feed.language || ""))
+        if (values.language !== (currentFeed.language || ""))
             updates.language = values.language || undefined
-        if (values.top_level_category !== (feed.top_level_category || "")) {
+        if (values.top_level_category !== (currentFeed.top_level_category || "")) {
             updates.top_level_category = values.top_level_category || undefined
         }
-        if (values.url !== feed.url) updates.url = values.url
-        if (values.link !== (feed.link || ""))
+        if (values.url !== currentFeed.url) updates.url = values.url
+        if (values.link !== (currentFeed.link || ""))
             updates.link = values.link || undefined
-        if (values.image_url !== (feed.image_url || ""))
+        if (values.image_url !== (currentFeed.image_url || ""))
             updates.image_url = values.image_url || undefined
-        if (values.popularity_score !== (feed.popularity_score || 0)) {
+        if (values.popularity_score !== (currentFeed.popularity_score || 0)) {
             updates.popularity_score = values.popularity_score
+        }
+        if (values.frontend_rank_override !== effectiveInitialRank) {
+            updates.frontend_rank_override =
+                values.frontend_rank_override !== undefined
+                    ? values.frontend_rank_override
+                    : 9999
         }
 
         if (Object.keys(updates).length === 0) {
@@ -272,8 +316,7 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
                             <FormLabel>Image URL</FormLabel>
                             <FormControl>
                                 <Input
-                                    placeholder="https://example.com/logo.png"
-                                    type="url"
+                                    placeholder="/storage/v1/object/public/favicons/... or URL"
                                     {...field}
                                 />
                             </FormControl>
@@ -299,6 +342,38 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
                             </FormControl>
                             <p className="text-xs text-muted-foreground">
                                 Popularity score used for ranking (typically 0-1000)
+                            </p>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                {/* Curated Rank Override */}
+                <FormField
+                    control={form.control}
+                    name="frontend_rank_override"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Curated Rank (Optional)</FormLabel>
+                            <FormControl>
+                                <Input
+                                    placeholder="Leave empty for default"
+                                    type="number"
+                                    min="1"
+                                    max="9999"
+                                    value={field.value ?? ""}
+                                    onChange={(e) =>
+                                        field.onChange(
+                                            e.target.value
+                                                ? Number(e.target.value)
+                                                : undefined
+                                        )
+                                    }
+                                />
+                            </FormControl>
+                            <p className="text-xs text-muted-foreground">
+                                For curated feeds: 1-50 (1 = highest priority).
+                                Leave empty or use 9999 for default ranking
                             </p>
                             <FormMessage />
                         </FormItem>

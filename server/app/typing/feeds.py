@@ -51,6 +51,7 @@ class AdminFeedUpdate(BaseModel):
     url: str | None = None
     top_level_category: FeedCategory | None = None
     popularity_score: float | None = None
+    frontend_rank_override: int | None = None
     tags: list[str] | None = None
     tags_native: list[str] | None = None
     author: str | None = None
@@ -113,6 +114,7 @@ class FeedDetail(FeedSummary):
 
     # Advanced Metadata
     popularity_score: float = 0.0
+    frontend_rank_override: int = 9999
     subscriber_count: int = 0
 
     top_level_category: FeedCategory | None = None
@@ -219,6 +221,7 @@ class MeilisearchFeedDocument(BaseModel):
     content_type: str | None = None
     top_level_category: str | None = None
     popularity_score: float = 0.0
+    frontend_rank_override: int = 9999
 
     @field_validator("top_level_category", "content_type", mode="before")
     @classmethod

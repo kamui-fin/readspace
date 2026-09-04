@@ -17,6 +17,7 @@ interface EditFeedDialogProps {
                 | "language"
                 | "top_level_category"
                 | "popularity_score"
+                | "frontend_rank_override"
             >
         >
     isOpen: boolean
