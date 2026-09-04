@@ -46,7 +46,7 @@ class Settings(BaseSettings):
 
     # Google Cloud / Vertex AI Configuration
     GOOGLE_CLOUD_PROJECT: str | None = None
-    GOOGLE_CLOUD_LOCATION: str = "us-central1"
+    GOOGLE_CLOUD_LOCATION: str = "global"
     GCS_BUCKET: str | None = None
     # Inbound Webhook Config
     INBOUND_WEBHOOK_SECRET: SecretStr = Field(default_factory=lambda: SecretStr("dev_inbound_secret"))

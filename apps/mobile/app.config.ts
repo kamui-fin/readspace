@@ -34,6 +34,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     userInterfaceStyle: 'automatic',
     backgroundColor: '#ffffff',
     scheme,
+    updates: {
+      url: 'https://u.expo.dev/e28b2485-c247-405c-829e-2b9c9c2e7733',
+    },
+    runtimeVersion: {
+      policy: 'appVersion',
+    },
     ios: {
       supportsTablet: true,
       bundleIdentifier,
@@ -46,9 +52,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           {
             CFBundleURLSchemes: [
               scheme,
-              // This should match your EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
-              // Falls back to the default if not set
-              `com.googleusercontent.apps.${process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.replace('.apps.googleusercontent.com', '') || '29989057291-ao019ihnv1afmctdg52dj6l3manpk1jm'}`,
+              ...(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
+                ? [
+                    `com.googleusercontent.apps.${process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID.replace(
+                      '.apps.googleusercontent.com',
+                      ''
+                    )}`,
+                  ]
+                : []),
             ],
           },
         ],
@@ -65,20 +76,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         backgroundColor: '#343434',
       },
       package: bundleIdentifier,
-      // Google Sign In intent filter for Android
-      intentFilters: [
-        {
-          action: 'VIEW',
-          autoVerify: true,
-          data: [
-            {
-              scheme: 'https',
-              host: 'readspace.rss',
-            },
-          ],
-          category: ['BROWSABLE', 'DEFAULT'],
-        },
-      ],
     },
     web: {
       favicon: './assets/app/favicon.png',

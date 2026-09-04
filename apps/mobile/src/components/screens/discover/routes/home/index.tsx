@@ -203,7 +203,7 @@ function DiscoverScreenInner() {
   );
 
   const orderedCategories = selectedCategory
-    ? [selectedCategory, ...CATEGORIES.filter((c) => c !== selectedCategory)]
+    ? [String(selectedCategory), ...CATEGORIES.filter((c) => c !== selectedCategory)]
     : CATEGORIES;
 
   const half = Math.ceil(orderedCategories.length / 2);
@@ -417,7 +417,7 @@ function DiscoverScreenInner() {
                 {/* Categories, scrolls with content */}
                 <View className="mb-2">
                   <CategoriesList
-                    selectedCategory={selectedCategory}
+                    selectedCategory={selectedCategory as string | null}
                     categoriesRow1={categoriesRow1}
                     categoriesRow2={categoriesRow2}
                     onCategoryPress={handleCategoryPress}
@@ -441,7 +441,7 @@ function DiscoverScreenInner() {
                 showSearchSkeleton={showSearchSkeleton}
                 hits={displayFeeds}
                 contentPaddingBottom={contentPaddingBottom}
-                selectedCategory={selectedCategory}
+                selectedCategory={selectedCategory as string | null}
                 categoriesRow1={categoriesRow1}
                 categoriesRow2={categoriesRow2}
                 onCategoryPress={handleCategoryPress}

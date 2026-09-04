@@ -68,9 +68,4 @@ __pycache__/
 *.so
 .Python
 
-# Temporary search / data files
-favicons/
-rss-r-us
-feeds.jsonl
-
 .codegraph

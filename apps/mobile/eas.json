@@ -7,6 +7,7 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "channel": "development",
       "bun": "1.3.14",
       "env": {
         "APP_VARIANT": "development",
@@ -16,6 +17,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "channel": "preview",
       "bun": "1.3.14",
       "env": {
         "APP_VARIANT": "preview",
@@ -26,6 +28,7 @@
     },
     "production": {
       "autoIncrement": true,
+      "channel": "production",
       "bun": "1.3.14",
       "env": {
         "APP_VARIANT": "production",
@@ -35,6 +38,14 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "track": "alpha",
+        "releaseStatus": "completed"
+      },
+      "ios": {
+        "ascAppId": "6790224641"
+      }
+    }
   }
 }

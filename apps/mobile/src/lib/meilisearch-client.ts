@@ -128,12 +128,6 @@ function hasMeaningfulCriteria(params?: SearchParams): boolean {
   if (params.filter && Array.isArray(params.filter)) {
     if (hasCategoryFilter(params.filter)) return true;
   }
-  // Check for filters in the string format (from Configure component)
-  if (params.filters && typeof params.filters === 'string') {
-    if (params.filters.includes('top_level_category')) {
-      return true;
-    }
-  }
   return false;
 }
 

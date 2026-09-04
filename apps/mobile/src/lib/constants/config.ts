@@ -14,8 +14,7 @@
  */
 
 export const GOOGLE_WEB_CLIENT_ID =
-  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
-  '29989057291-a6reeagst1192gcjmgrqouheuq61j8ra.apps.googleusercontent.com';
+  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
 
 /**
  * Cloud Configuration
