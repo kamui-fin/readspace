@@ -119,14 +119,8 @@ async def import_data():
                 try:
                     record = json.loads(line)
 
-                    # 1. Upload Favicon
-                    json_image_url = record.get("image_url")
-                    image_type = record.get("image_type", "image/jpeg")
-                    icon_storage_path = None
-                    if json_image_url:
-                        icon_storage_path = await upload_favicon(
-                            json_image_url, image_type
-                        )
+                    # 1. Use existing image_url directly (don't try to upload)
+                    icon_storage_path = record.get("image_url")
 
                     # 2. Extract Fields
                     url = record.get("feed_url")

@@ -5,9 +5,9 @@ import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
-import { useCreateFolder } from '@readspace/shared';
+import { useCreateFolder, ApiError } from '@readspace/shared';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { Keyboard, View } from 'react-native';
 
 export interface CreateFolderModalRef {
   present: () => void;
@@ -49,8 +49,12 @@ export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderMo
                 toast.success('Folder created successfully');
                 onSuccess?.(folder);
               },
-              onError: () => {
-                toast.error('Failed to create folder');
+              onError: (error: unknown) => {
+                const message =
+                  error instanceof ApiError && error.status === 409
+                    ? error.message
+                    : 'Failed to create folder';
+                toast.error(message);
               },
             }
           );
@@ -61,8 +65,11 @@ export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderMo
 
     const handleConfirm = useCallback(() => {
       if (!folderNameRef.current.trim()) return;
-      handleCreateFolder();
-      bottomSheetRef.current?.dismiss();
+      Keyboard.dismiss();
+      setTimeout(() => {
+        handleCreateFolder();
+        bottomSheetRef.current?.dismiss();
+      }, 50);
     }, [handleCreateFolder]);
 
     useImperativeHandle(ref, () => ({

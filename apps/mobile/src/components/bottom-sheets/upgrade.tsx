@@ -99,7 +99,7 @@ export function UpgradePaywallModal() {
             style={{ backgroundColor: colors.grey6, borderWidth: 1, borderColor: colors.grey5 }}
             accessibilityLabel="Close Upgrade Screen"
             accessibilityRole="button">
-            <SvgXml xml={CLOSE_XML} width={20} height={20} />
+            <SvgXml xml={CLOSE_XML} width={20} height={20} color={colors.black} />
           </Pressable>
         </View>
 
@@ -133,7 +133,7 @@ export function UpgradePaywallModal() {
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <RSSIcon width={20} height={20} />
+                  <RSSIcon width={20} height={20} color={colors.primary} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
@@ -155,7 +155,7 @@ export function UpgradePaywallModal() {
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <SvgXml xml={SEARCH_XML} width={18} height={18} />
+                  <SvgXml xml={SEARCH_XML} width={18} height={18} color={colors.primary} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
@@ -177,7 +177,7 @@ export function UpgradePaywallModal() {
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <Sparkle width={20} height={20} />
+                  <Sparkle width={20} height={20} color={colors.primary} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
@@ -198,7 +198,7 @@ export function UpgradePaywallModal() {
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <SvgXml xml={BOOK_XML} width={18} height={18} />
+                  <SvgXml xml={BOOK_XML} width={18} height={18} color={colors.primary} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>

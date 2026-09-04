@@ -3,7 +3,6 @@ import { useIsSubscribed, type FeedSummary } from "@readspace/shared"
 import { cn } from "@/lib/utils"
 import { Trash2 } from "lucide-react"
 import { useState } from "react"
-import Link from "next/link"
 import { FeedIcon } from "./FeedIcon"
 import { FeedSubscriptionModal } from "./FeedSubscriptionModal"
 import { FeedUnsubscribeDialog } from "./FeedUnsubscribeDialog"
@@ -90,7 +89,7 @@ export function BaseFeedCard({
                 <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                            <Link
+                            <a
                                 href={`/feeds/${feed.id}/articles`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -99,7 +98,7 @@ export function BaseFeedCard({
                                 <h3 className="font-semibold text-lg text-foreground dark:text-foreground leading-tight tracking-tight">
                                     {feed.title || "Untitled Feed"}
                                 </h3>
-                            </Link>
+                            </a>
                             <a
                                 href={feed.link || feed.url}
                                 target="_blank"

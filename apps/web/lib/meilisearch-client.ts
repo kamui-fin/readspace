@@ -8,6 +8,7 @@
 import { instantMeiliSearch } from "@meilisearch/instant-meilisearch"
 import { MeiliSearch } from "meilisearch"
 import type { HybridSearchConfig } from "@readspace/shared"
+import { POPULAR_CATEGORIES } from "@readspace/shared"
 import { env } from "@/env"
 
 // ============================================================================
@@ -101,40 +102,45 @@ function hasCategoryFilter(filters: Array<string | string[]>): boolean {
 }
 
 /**
- * Strip 'popular' category filter from requests so Meilisearch queries all categories by popularity_score.
+ * Transform 'popular' category filter to only include News, Tech, and Business categories.
  */
-function stripPopularCategoryFilter(request: SearchRequest): SearchRequest {
+function transformPopularCategoryFilter(request: SearchRequest): SearchRequest {
     if (!request.params) return request
 
-    const cleanFilter = (filters: any) => {
+    const transformFilter = (filters: any) => {
         if (!filters) return filters
         if (Array.isArray(filters)) {
-            return filters
-                .map((f) => {
-                    if (typeof f === "string") {
-                        return f.includes("popular") ? null : f
+            return filters.flatMap((f) => {
+                if (typeof f === "string") {
+                    if (f.includes("popular")) {
+                        return POPULAR_CATEGORIES.map((cat) => `top_level_category:${cat}`)
                     }
-                    if (Array.isArray(f)) {
-                        const cleaned = f.filter(
-                            (item) =>
-                                typeof item === "string" &&
-                                !item.includes("popular")
-                        )
-                        return cleaned.length > 0 ? cleaned : null
-                    }
-                    return f
-                })
-                .filter(Boolean)
+                    return [f]
+                }
+                if (Array.isArray(f)) {
+                    const transformed = f.flatMap((item: string) => {
+                        if (typeof item === "string" && item.includes("popular")) {
+                            return POPULAR_CATEGORIES.map((cat) => `top_level_category:${cat}`)
+                        }
+                        return [item]
+                    })
+                    return [transformed]
+                }
+                return [f]
+            })
         }
         return filters
     }
+
+    const afterFacetFilters = transformFilter(request.params.facetFilters)
+    const afterFilter = transformFilter(request.params.filter)
 
     return {
         ...request,
         params: {
             ...request.params,
-            facetFilters: cleanFilter(request.params.facetFilters),
-            filter: cleanFilter(request.params.filter),
+            facetFilters: afterFacetFilters,
+            filter: afterFilter,
         },
     }
 }
@@ -264,9 +270,9 @@ export function createSearchClient(
                     })
                 }
 
-                // Strip popular category filter so Meilisearch queries all categories by popularity_score
+                // Transform popular category filter to only include News, Tech, Business
                 const meiliRequests = processedRequests.map((r) =>
-                    stripPopularCategoryFilter(r)
+                    transformPopularCategoryFilter(r)
                 )
 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any

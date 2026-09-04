@@ -28,6 +28,15 @@ export const FEED_CATEGORIES: FeedCategory[] = [
 ];
 
 /**
+ * Categories included in the "Popular" section (curated subset of top categories).
+ */
+export const POPULAR_CATEGORIES: FeedCategory[] = [
+  FeedCategory.NEWS_CURRENT_EVENTS,
+  FeedCategory.CONSUMER_TECH_DIGITAL,
+  FeedCategory.BUSINESS_FINANCE,
+];
+
+/**
  * Display names for categories
  */
 export const CATEGORY_DISPLAY_NAMES: Record<FeedCategory, string> = {

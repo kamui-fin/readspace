@@ -5,9 +5,9 @@ import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
-import { useUpdateFolder } from '@readspace/shared';
+import { useUpdateFolder, ApiError } from '@readspace/shared';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { Keyboard, View } from 'react-native';
 
 export interface RenameFolderModalRef {
   present: (folderId: string, currentName: string) => void;
@@ -44,8 +44,12 @@ export const RenameFolderModal = forwardRef<RenameFolderModalRef, RenameFolderMo
               toast.success('Folder renamed successfully');
               onSuccess?.();
             },
-            onError: () => {
-              toast.error('Failed to rename folder');
+            onError: (error: unknown) => {
+              const message =
+                error instanceof ApiError && error.status === 409
+                  ? error.message
+                  : 'Failed to rename folder';
+              toast.error(message);
             },
           }
         );
@@ -54,8 +58,11 @@ export const RenameFolderModal = forwardRef<RenameFolderModalRef, RenameFolderMo
 
     const handleConfirm = useCallback(() => {
       if (!folderNameRef.current.trim()) return;
-      handleUpdateFolder();
-      bottomSheetRef.current?.dismiss();
+      Keyboard.dismiss();
+      setTimeout(() => {
+        handleUpdateFolder();
+        bottomSheetRef.current?.dismiss();
+      }, 50);
     }, [handleUpdateFolder]);
 
     useImperativeHandle(ref, () => ({

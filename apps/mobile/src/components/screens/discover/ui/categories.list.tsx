@@ -42,6 +42,14 @@ export function CategoriesList({
         className="pl-6">
         <View className="gap-2 pr-6">
           <View className="flex-row gap-2">
+            {/* Popular category — shows all feeds sorted by popularity */}
+            <Chip
+              key="popular"
+              label="Popular"
+              selected={selectedCategory === 'popular'}
+              onPress={() => onCategoryPress('popular')}
+              size="category"
+            />
             {categoriesRow1.map((categoryId) => (
               <Chip
                 key={categoryId}

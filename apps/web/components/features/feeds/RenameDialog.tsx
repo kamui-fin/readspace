@@ -8,7 +8,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { useUpdateFeed, useUpdateFolder } from "@readspace/shared"
+import { useUpdateFeed, useUpdateFolder, ApiError } from "@readspace/shared"
 import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
 
@@ -50,6 +50,13 @@ export function RenameDialog({
                             onOpenChange(false)
                             setNewName("")
                             toast.success("Folder renamed successfully!")
+                        },
+                        onError: (error: unknown) => {
+                            const message =
+                                error instanceof ApiError
+                                    ? error.message
+                                    : "Failed to rename folder. Please try again."
+                            toast.error(message)
                         },
                     }
                 )

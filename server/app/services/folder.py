@@ -9,6 +9,7 @@ import structlog
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.custom_exceptions import DuplicateResourceError
 from app.crud import folder as crud_folder
 from app.typing.folders import FolderCreate, FolderResponse, FolderUpdate
 from app.utils.validators import validate_folder_name
@@ -31,9 +32,10 @@ async def create_folder(db: AsyncSession, user_id: UUID, folder_in: FolderCreate
     # 2. Check Duplicates
     existing = await crud_folder.get_by_name(db, folder_in.name, user_id)
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Folder '{folder_in.name}' already exists.",
+        raise DuplicateResourceError(
+            message=f"A folder named '{folder_in.name}' already exists.",
+            error_code="FOLDER_NAME_TAKEN",
+            field_errors={"name": "A folder with this name already exists."},
         )
 
     # 3. Create
@@ -61,9 +63,10 @@ async def update_folder(db: AsyncSession, user_id: UUID, folder_id: UUID, folder
         # Check duplicate
         duplicate = await crud_folder.get_by_name(db, folder_in.name, user_id)
         if duplicate and str(duplicate.id) != str(folder_id):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Folder '{folder_in.name}' already exists.",
+            raise DuplicateResourceError(
+                message=f"A folder named '{folder_in.name}' already exists.",
+                error_code="FOLDER_NAME_TAKEN",
+                field_errors={"name": "A folder with this name already exists."},
             )
 
     # 3. Update

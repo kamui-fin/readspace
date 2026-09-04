@@ -638,8 +638,14 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
           )}
         </BottomSheet>
 
-        <CreateFolderModal ref={createFolderModalRef} />
-        <RenameFolderModal ref={renameFolderModalRef} />
+        <CreateFolderModal
+          ref={createFolderModalRef}
+          onSuccess={() => bottomSheetRef.current?.present()}
+        />
+        <RenameFolderModal
+          ref={renameFolderModalRef}
+          onSuccess={() => bottomSheetRef.current?.present()}
+        />
         <RenameFeedModal ref={renameFeedModalRef} />
         <FolderPickerBottomSheet
           ref={folderPickerModalRef}

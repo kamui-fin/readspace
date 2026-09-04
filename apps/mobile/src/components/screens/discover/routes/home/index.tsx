@@ -16,6 +16,7 @@ import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { useDiscoverController } from '@hooks/useDiscoverController';
 import {
   BOTTOM_TABBAR_BASE_HEIGHT,
   MAX_TRENDING_ITEMS,
@@ -24,7 +25,7 @@ import {
 import { COLORS } from '@lib/constants/colors';
 import { createSearchClient, FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import type { FeedSummary } from '@readspace/shared';
-import { MOBILE_CATEGORY_NAMES, useCreateFeed } from '@readspace/shared';
+import { MOBILE_CATEGORY_NAMES, POPULAR_CATEGORIES, useCreateFeed } from '@readspace/shared';
 import { useSearchHistory } from '@stores/search-history';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { MotiView } from 'moti';
@@ -34,8 +35,6 @@ import {
   InstantSearch,
   useInfiniteHits,
   useInstantSearch,
-  useMenu,
-  useSearchBox,
 } from 'react-instantsearch';
 import type { TextInput as RNTextInput } from 'react-native';
 import {
@@ -72,14 +71,19 @@ export function DiscoverScreen() {
 }
 
 function DiscoverScreenInner() {
-  const [viewState, setViewState] = useState<ViewState>('default');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [_activeQuery, setActiveQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('english');
   const [_isSearchFocused, setIsSearchFocused] = useState(false);
-  const [isPendingFilter, setIsPendingFilter] = useState(false);
+  const [viewState, setViewState] = useState<ViewState>('default');
   const [_, startTransition] = useTransition();
+
+  const {
+    query: searchQuery,
+    activeCategory: selectedCategory,
+    hasActiveSearch,
+    handleCategoryClick: controllerHandleCategoryClick,
+    refineQuery,
+    clearSearch: controllerClearSearch,
+  } = useDiscoverController();
 
   const addFeedModalRef = useRef<AddFeedBottomSheetRef>(null);
   const folderPickerModalRef = useRef<FolderPickerBottomSheetRef>(null);
@@ -120,6 +124,7 @@ function DiscoverScreenInner() {
           : 'en';
 
   // Fetch trending feeds using Meilisearch directly — infinite paginated, capped at MAX_TRENDING_ITEMS
+  // Trending shows popular feeds from News, Tech, and Business categories only
   const {
     data: trendingInfiniteData,
     isLoading: isTrendingLoading,
@@ -130,10 +135,17 @@ function DiscoverScreenInner() {
   } = useInfiniteQuery({
     queryKey: ['trending', languageCode],
     queryFn: async ({ pageParam = 0 }) => {
+      const categoryFilter = POPULAR_CATEGORIES.map(
+        (cat) => `top_level_category = "${cat}"`
+      ).join(' OR ');
+      const filter = languageCode
+        ? [`language = ${languageCode} AND (${categoryFilter})`]
+        : [categoryFilter];
+
       const res = await meilisearchClient.index(FEEDS_INDEX_NAME).search('', {
         limit: TRENDING_PAGE_SIZE,
         offset: pageParam,
-        filter: languageCode ? [`language=${languageCode}`] : undefined,
+        filter,
         sort: ['frontend_rank_override:asc', 'popularity_score:desc'],
       });
       return { hits: res.hits as unknown as FeedSummary[], offset: pageParam };
@@ -171,38 +183,23 @@ function DiscoverScreenInner() {
     [trendingHasNextPage, isTrendingFetchingNextPage, fetchTrendingNextPage]
   );
 
-  const { refine: refineQuery } = useSearchBox();
   const { items: hits, isLastPage, showMore } = useInfiniteHits();
   const { status } = useInstantSearch();
 
+  // InstantSearch handles both search and category filtering
+  const displayFeeds = (hits as any) || [];
   const isSearchLoading = status === 'loading' || status === 'stalled';
-  const showSearchSkeleton = (isSearchLoading && hits.length === 0) || isPendingFilter;
-
-  useEffect(() => {
-    if (!isSearchLoading) {
-      setIsPendingFilter(false);
-    }
-  }, [isSearchLoading]);
+  const showSearchSkeleton = isSearchLoading && displayFeeds.length === 0;
 
   const handleCategoryPress = useCallback(
     (category: string) => {
-      console.log('[banana] handleCategoryPress called with category:', category);
-      // 1. Immediately highlight chip, clear search query inputs, close search focus, and scroll to beginning
-      setSelectedCategory(category);
-      setSearchQuery('');
-      setActiveQuery('');
-      setIsSearchFocused(false);
+      controllerHandleCategoryClick(category);
       categoryScrollRef.current?.scrollTo({ x: 0, animated: true });
-
-      // 2. Defer the heavy view state swap, skeleton loading, and Meilisearch query to allow
-      // the chip color highlight and position change to render instantly.
       startTransition(() => {
-        setIsPendingFilter(true);
         setViewState('category');
-        refineQuery('');
       });
     },
-    [refineQuery]
+    [controllerHandleCategoryClick]
   );
 
   const orderedCategories = selectedCategory
@@ -216,18 +213,13 @@ function DiscoverScreenInner() {
   const handleSearchSubmit = useCallback(() => {
     if (!searchQuery.trim()) return;
     addSearch(searchQuery);
-    setActiveQuery(searchQuery);
     setIsSearchFocused(false);
     searchBarRef.current?.blur();
     Keyboard.dismiss();
-
-    // Defer query refinement and view state swap
     startTransition(() => {
-      setIsPendingFilter(true);
       setViewState('search');
-      refineQuery(searchQuery);
     });
-  }, [searchQuery, addSearch, refineQuery]);
+  }, [searchQuery, addSearch]);
 
   const handleAddFeedConfirm = useCallback((url: string) => {
     setPendingAddFeedUrl(url);
@@ -261,14 +253,8 @@ function DiscoverScreenInner() {
 
   const handleSearchChange = useCallback(
     (text: string) => {
-      setSearchQuery(text);
-      // Live instant search: refine query as user types inside transition to keep typing lag-free
       startTransition(() => {
-        if (text.trim()) {
-          refineQuery(text);
-        } else {
-          refineQuery('');
-        }
+        refineQuery(text);
       });
     },
     [refineQuery]
@@ -281,27 +267,17 @@ function DiscoverScreenInner() {
 
   const handleSearchCancel = useCallback(() => {
     setIsSearchFocused(false);
-    setSearchQuery('');
-    setActiveQuery('');
     searchBarRef.current?.blur();
     Keyboard.dismiss();
-
-    const hasCategory = selectedCategory !== null;
-
-    // Defer queries and view state changes until after urgent keyboard dismissals
+    controllerClearSearch();
     startTransition(() => {
-      setIsPendingFilter(true);
-      setViewState(hasCategory ? 'category' : 'default');
-      refineQuery('');
+      setViewState(selectedCategory ? 'category' : 'default');
     });
-  }, [refineQuery, selectedCategory]);
+  }, [controllerClearSearch, selectedCategory]);
 
   const handleClearSearch = useCallback(() => {
-    setSearchQuery('');
-    setActiveQuery('');
     setIsSearchFocused(true);
     searchBarRef.current?.focus();
-
     startTransition(() => {
       refineQuery('');
       setViewState('focused');
@@ -315,17 +291,12 @@ function DiscoverScreenInner() {
   const handleRecentSearchPress = useCallback(
     (query: string) => {
       addSearch(query);
-      setSearchQuery(query);
-      setActiveQuery(query);
       setIsSearchFocused(false);
       searchBarRef.current?.blur();
       Keyboard.dismiss();
-
-      // Defer query refinement and view state swap
       startTransition(() => {
-        setIsPendingFilter(true);
-        setViewState('search');
         refineQuery(query);
+        setViewState('search');
       });
     },
     [addSearch, refineQuery]
@@ -338,35 +309,22 @@ function DiscoverScreenInner() {
   }, []);
 
   const handleClearCategory = useCallback(() => {
-    setSelectedCategory(null);
-
-    // Defer the view state swap to make the chip state change instant
+    controllerClearSearch();
     startTransition(() => {
-      setIsPendingFilter(true);
-      const hasSearch = searchQuery.trim().length > 0;
-      setViewState(hasSearch ? 'search' : 'default');
+      setViewState(searchQuery ? 'search' : 'default');
     });
-  }, [searchQuery]);
+  }, [controllerClearSearch, searchQuery]);
 
   const insets = useSafeAreaInsets();
 
   // Whether user is actively typing (show instant results instead of recent searches)
   const hasTypedQuery = searchQuery.trim().length > 0;
 
-  const computedFilters =
-    selectedCategory
-      ? languageCode
-        ? `language = ${languageCode} AND top_level_category = "${selectedCategory}"`
-        : `top_level_category = "${selectedCategory}"`
-      : languageCode
-        ? `language = ${languageCode}`
-        : undefined;
-
-  console.log('[banana] Configure filters computed:', {
-    selectedCategory,
-    languageCode,
-    computedFilters,
-  });
+  // Language filter for Configure — applied as raw Meilisearch filter
+  const languageFilter =
+    selectedLanguage && selectedLanguage !== 'all'
+      ? `language = ${languageCode || 'en'}`
+      : undefined;
 
   return (
     <View
@@ -375,7 +333,7 @@ function DiscoverScreenInner() {
       <Configure
         hitsPerPage={20}
         attributesToHighlight={['title', 'description']}
-        filters={computedFilters}
+        filters={languageFilter}
       />
       <TouchableWithoutFeedback onPress={handleOutsidePress}>
         <View className="flex-1">
@@ -481,7 +439,7 @@ function DiscoverScreenInner() {
               /* Search/Category Results */
               <SearchResults
                 showSearchSkeleton={showSearchSkeleton}
-                hits={hits as any}
+                hits={displayFeeds}
                 contentPaddingBottom={contentPaddingBottom}
                 selectedCategory={selectedCategory}
                 categoriesRow1={categoriesRow1}
@@ -490,7 +448,7 @@ function DiscoverScreenInner() {
                 onClearCategory={handleClearCategory}
                 categoryScrollRef={categoryScrollRef}
                 searchQuery={searchQuery}
-                showCategoriesList={viewState === 'category' || selectedCategory !== null}
+                showCategoriesList={selectedCategory !== null}
                 hasMore={!isLastPage}
                 onLoadMore={showMore}
               />

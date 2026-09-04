@@ -2,6 +2,7 @@ import { CLOUD_CONFIG } from '@lib/constants/config';
 import { resolveHostname } from '@lib/utils/network';
 import { instantMeiliSearch } from '@meilisearch/instant-meilisearch';
 import type { HybridSearchConfig } from '@readspace/shared';
+import { POPULAR_CATEGORIES } from '@readspace/shared';
 import { getSettings } from '@stores/settings';
 import { MeiliSearch } from 'meilisearch';
 import { Platform } from 'react-native';
@@ -69,48 +70,44 @@ function hasCategoryFilter(filters: Array<string | string[]>): boolean {
 }
 
 /**
- * Strip 'popular' category filter from requests so Meilisearch queries all categories by popularity_score.
+ * Transform 'popular' category filter to only include News, Tech, and Business categories.
  */
-function stripPopularCategoryFilter(request: SearchRequest): SearchRequest {
+function transformPopularCategoryFilter(request: SearchRequest): SearchRequest {
   if (!request.params) return request;
 
-  const cleanFilter = (filters: any) => {
+  const transformFilter = (filters: any) => {
     if (!filters) return filters;
     if (Array.isArray(filters)) {
-      return filters
-        .map((f) => {
-          if (typeof f === 'string') {
-            return f.includes('popular') ? null : f;
-          }
-          if (Array.isArray(f)) {
-            const cleaned = f.filter(
-              (item: string) => typeof item === 'string' && !item.includes('popular')
+      return filters.map((f) => {
+        if (typeof f === 'string') {
+          if (f.includes('popular')) {
+            // Replace "popular" with OR filter for News, Tech, Business
+            const popularCategoryFilters = POPULAR_CATEGORIES.map(
+              (cat) => `top_level_category = "${cat}"`
             );
-            return cleaned.length > 0 ? cleaned : null;
+            return popularCategoryFilters.join(' OR ');
           }
           return f;
-        })
-        .filter(Boolean);
+        }
+        if (Array.isArray(f)) {
+          return f.map((item: string) => {
+            if (typeof item === 'string' && item.includes('popular')) {
+              const popularCategoryFilters = POPULAR_CATEGORIES.map(
+                (cat) => `top_level_category = "${cat}"`
+              );
+              return `(${popularCategoryFilters.join(' OR ')})`;
+            }
+            return item;
+          });
+        }
+        return f;
+      });
     }
     return filters;
   };
 
-  const beforeFacetFilters = request.params.facetFilters;
-  const beforeFilter = request.params.filter;
-  const afterFacetFilters = cleanFilter(request.params.facetFilters);
-  const afterFilter = cleanFilter(request.params.filter);
-
-  if (
-    JSON.stringify(beforeFacetFilters) !== JSON.stringify(afterFacetFilters) ||
-    JSON.stringify(beforeFilter) !== JSON.stringify(afterFilter)
-  ) {
-    console.log('[banana] stripPopularCategoryFilter triggered', {
-      beforeFacetFilters,
-      afterFacetFilters,
-      beforeFilter,
-      afterFilter,
-    });
-  }
+  const afterFacetFilters = transformFilter(request.params.facetFilters);
+  const afterFilter = transformFilter(request.params.filter);
 
   return {
     ...request,
@@ -134,7 +131,6 @@ function hasMeaningfulCriteria(params?: SearchParams): boolean {
   // Check for filters in the string format (from Configure component)
   if (params.filters && typeof params.filters === 'string') {
     if (params.filters.includes('top_level_category')) {
-      console.log('[banana] Found category filter in params.filters (string):', params.filters);
       return true;
     }
   }
@@ -183,8 +179,6 @@ export function createSearchClient(getHybridConfig?: () => HybridSearchConfig | 
 
   const searchClientObject = {
     search(requests: SearchRequest[]) {
-      console.log('[banana] search() called with requests:', requests);
-
       const { host, apiKey } = getMeiliSearchConfig();
       const baseClient = instantMeiliSearch(host, apiKey, config);
 
@@ -197,54 +191,32 @@ export function createSearchClient(getHybridConfig?: () => HybridSearchConfig | 
         );
       }
 
-      // Strip popular category filter so Meilisearch queries all categories by popularity_score
-      processedRequests = processedRequests.map((r) => stripPopularCategoryFilter(r));
-      console.log('[banana] after stripPopularCategoryFilter:', processedRequests);
+      // Check if at least ONE request has meaningful search criteria
+      const hasAnyMeaningfulSearch = processedRequests.some(
+        ({ params }) => hasMeaningfulCriteria(params)
+      );
 
-      // Ensure sort parameter is always included for consistent popularity_score sorting
-      processedRequests = processedRequests.map((r) => {
-        if (!r.params) return r;
-        // Only add sort if it's not already specified
-        if (!r.params.sort && !r.params.sortBy) {
-          console.log('[banana] Adding explicit sort parameter to request');
-          return {
-            ...r,
-            params: {
-              ...r.params,
-              sort: ['popularity_score:desc'],
-            },
-          };
-        }
-        return r;
-      });
-      console.log('[banana] after ensuring sort parameter:', processedRequests);
-
-      const hasAnyMeaningfulSearch = processedRequests.some(({ params }) => {
-        const meaningful = hasMeaningfulCriteria(params);
-        console.log('[banana] hasMeaningfulCriteria for params', params, '=', meaningful);
-        return meaningful;
-      });
-
-      console.log('[banana] hasAnyMeaningfulSearch:', hasAnyMeaningfulSearch);
-
+      // Skip search only if NO request has meaningful criteria
       if (!hasAnyMeaningfulSearch) {
-        console.log('[banana] No meaningful search, returning empty results');
         return Promise.resolve({
           results: requests.map(() => createEmptyResult()),
         });
       }
 
-      console.log('[banana] Sending to baseClient.searchClient.search:', processedRequests);
+      // Transform popular category filter to only include News, Tech, Business
+      const meiliRequests = processedRequests.map((r) =>
+        transformPopularCategoryFilter(r)
+      );
 
-      // Log what instant-meilisearch is about to send to Meilisearch
-      const result = baseClient.searchClient.search(processedRequests as any);
-      result.then((res: any) => {
-        console.log('[banana] Meilisearch response:', res);
-      }).catch((err: any) => {
-        console.log('[banana] Meilisearch error:', err);
-      });
+      // ⚠️ CRITICAL: instant-meilisearch doesn't pass sort parameters through!
+      // Must add stable sort AFTER instant-meilisearch creates the query, not before
+      // Inject sort with stable tiebreaker (id) so results are consistent
+      const sortedRequests = meiliRequests.map((r) => ({
+        ...r,
+        sort: ['frontend_rank_override:asc', 'popularity_score:desc', 'id:asc'],
+      }));
 
-      return result;
+      return baseClient.searchClient.search(sortedRequests as any);
     },
   };
 

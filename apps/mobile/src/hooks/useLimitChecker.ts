@@ -32,7 +32,7 @@ export function useLimitChecker() {
   const checkAndTriggerUpgrade = (type: 'feed' | 'ai') => {
     if (type === 'feed' && !canAddFeed()) {
       open({
-        title: 'Feed Subscription Limit Reached',
+        title: 'Subscription Limit Reached',
         description: `You have subscribed to ${limitData?.usage.subscriptions} of your ${limitData?.limits.max_subscriptions} maximum feeds. Upgrade to Pro for up to 1000 feeds!`,
       });
       return false;

@@ -4,7 +4,7 @@ import {
   interleaveOnboardingFeeds,
   mapHitToOnboardingFeed,
   type OnboardingFeed,
-} from '@readspace/shared/search/onboarding-feeds';
+} from '@readspace/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { InteractionManager } from 'react-native';
