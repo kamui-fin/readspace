@@ -13,7 +13,7 @@ then
 fi
 
 echo "Stopping and removing all containers..."
-docker compose -f "$SCRIPT_DIR/docker-compose.yml" -f "$SCRIPT_DIR/docker-compose.dev.yml" down -v --remove-orphans
+docker compose -f "$SCRIPT_DIR/docker-compose.yml" -f "$SCRIPT_DIR/docker-compose.dev.yml" --project-name readspace down -v --remove-orphans
 
 echo "Cleaning up bind-mounted directories..."
 BIND_MOUNTS=(

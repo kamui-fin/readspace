@@ -285,7 +285,15 @@ fi
 
 # --- Start Meilisearch to generate search key ---
 echo "🚀 Starting Meilisearch container with the generated master key..."
-docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/.env" \
+# Include supabase/docker-compose.yml here too (with .env.example as a placeholder —
+# docker/supabase/.env doesn't exist yet at this point in the script, and we're not
+# starting any supabase service so its real values don't matter). This is needed
+# purely so Compose picks up that file's `networks: default: name: readspace_shared_net`
+# override — without it, this narrower invocation falls back to Compose's implicit
+# default network name ("readspace_default"), which conflicts with launch.sh's later
+# full-stack invocation and breaks with "network readspace_default not found".
+docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" -f "$SCRIPT_DIR/docker-compose.yml" \
+    --env-file "$SCRIPT_DIR/supabase/.env.example" --env-file "$SCRIPT_DIR/.env" \
     --project-name "readspace" up -d meilisearch
 
 # Wait for Meilisearch to be ready

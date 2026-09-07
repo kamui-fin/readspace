@@ -37,7 +37,7 @@ echo "🔍 Checking if user exists..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Check if user exists and get their ID
-USER_ID=$(docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" exec -T db psql -U postgres -d postgres -t -c \
+USER_ID=$(docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" --project-name readspace exec -T db psql -U postgres -d postgres -t -c \
     "SELECT id FROM auth.users WHERE email = '$EMAIL' LIMIT 1;" | xargs)
 
 if [ -z "$USER_ID" ]; then
@@ -54,7 +54,7 @@ echo ""
 echo "👑 Promoting user to admin..."
 
 # Update user's role to admin
-docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" exec -T db psql -U postgres -d postgres -c \
+docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" --project-name readspace exec -T db psql -U postgres -d postgres -c \
     "UPDATE profiles SET role = 'ADMIN' WHERE id = '$USER_ID';"
 
 echo ""
