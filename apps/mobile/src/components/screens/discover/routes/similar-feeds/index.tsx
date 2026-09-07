@@ -14,6 +14,7 @@ import { COLORS } from '@lib/constants/colors';
 import { FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import { ApiClient, useCreateFeed } from '@readspace/shared';
 import { ArrowLeftIcon, DocumentTextIcon } from '@solar-icons/react-native/linear';
+import { discoverLanguageToCode, useDiscoverPreferences } from '@stores/discover-preferences';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -48,6 +49,10 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
   const createFeed = useCreateFeed();
   const router = useRouter();
 
+  // Carry the discover screen's language filter into similar-feeds results.
+  const language = useDiscoverPreferences((s) => s.language);
+  const languageCode = discoverLanguageToCode(language);
+
   // Fetch the feed details to get the title
   const { data: feedData } = useQuery({
     queryKey: ['feed', feedId],
@@ -64,7 +69,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
     hasNextPage,
     error,
   } = useInfiniteQuery({
-    queryKey: ['similar-feeds-full', feedId],
+    queryKey: ['similar-feeds-full', feedId, languageCode],
     queryFn: async ({ pageParam = 0 }) => {
       const index = meilisearchClient.index(FEEDS_INDEX_NAME);
       const results = await index.searchSimilarDocuments({
@@ -73,6 +78,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
         offset: pageParam,
         embedder: 'default',
         showRankingScore: true,
+        filter: languageCode ? `language = "${languageCode}"` : undefined,
       });
       return { hits: results.hits, offset: pageParam };
     },

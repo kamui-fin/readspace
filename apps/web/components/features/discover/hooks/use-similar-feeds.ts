@@ -1,4 +1,5 @@
 import { FEEDS_INDEX_NAME, meilisearchClient } from "@/lib/meilisearch-client"
+import { usePersistentState } from "@/hooks/use-persistent-state"
 import { useQuery } from "@tanstack/react-query"
 import { type FeedSummary } from "@readspace/shared"
 
@@ -35,12 +36,23 @@ function convertHitToFeed(hit: MeilisearchHit): FeedSummary {
 }
 
 export function useSimilarFeeds(feedId: string) {
+    // Carry the discover screen's persisted language preference into similar-feeds
+    // results. The similar page opens in a new tab, so localStorage (shared by
+    // `usePersistentState`) is the only channel that survives — props/context don't.
+    // `"all"` (or an empty value) means no language filter, matching discover.
+    const [language, , isLanguageReady] = usePersistentState(
+        "discover-language",
+        "en"
+    )
+    const languageFilter =
+        language && language !== "all" ? `language = "${language}"` : undefined
+
     const {
         data: similarResults,
         error,
         isLoading,
     } = useQuery({
-        queryKey: ["similarFeeds", feedId],
+        queryKey: ["similarFeeds", feedId, languageFilter ?? "all"],
         queryFn: async () => {
             const index = meilisearchClient.index(FEEDS_INDEX_NAME)
             const results = await index.searchSimilarDocuments({
@@ -48,12 +60,15 @@ export function useSimilarFeeds(feedId: string) {
                 limit: 50,
                 embedder: "default",
                 showRankingScore: true,
+                ...(languageFilter ? { filter: languageFilter } : {}),
             })
             return results
         },
         staleTime: 5 * 60 * 1000, // 5 minutes
         retry: 2,
-        enabled: !!feedId,
+        // Wait for localStorage to be read so the first fetch already carries the
+        // correct filter instead of firing with the "en" default then refetching.
+        enabled: !!feedId && isLanguageReady,
     })
 
     const similarFeeds = (similarResults?.hits || []).map((hit) =>
@@ -63,6 +78,8 @@ export function useSimilarFeeds(feedId: string) {
     return {
         similarFeeds,
         error,
-        isLoading,
+        // Keep the skeleton up while the query is disabled waiting on localStorage,
+        // so the empty state doesn't flash before the first fetch starts.
+        isLoading: isLoading || !isLanguageReady,
     }
 }

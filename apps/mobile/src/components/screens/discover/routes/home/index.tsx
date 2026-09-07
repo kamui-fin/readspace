@@ -15,8 +15,8 @@ import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useDiscoverController } from '@hooks/useDiscoverController';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import {
   BOTTOM_TABBAR_BASE_HEIGHT,
   MAX_TRENDING_ITEMS,
@@ -26,16 +26,12 @@ import { COLORS } from '@lib/constants/colors';
 import { createSearchClient, FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import type { FeedSummary } from '@readspace/shared';
 import { MOBILE_CATEGORY_NAMES, POPULAR_CATEGORIES, useCreateFeed } from '@readspace/shared';
+import { discoverLanguageToCode, useDiscoverPreferences } from '@stores/discover-preferences';
 import { useSearchHistory } from '@stores/search-history';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { MotiView } from 'moti';
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import {
-  Configure,
-  InstantSearch,
-  useInfiniteHits,
-  useInstantSearch,
-} from 'react-instantsearch';
+import { Configure, InstantSearch, useInfiniteHits, useInstantSearch } from 'react-instantsearch';
 import type { TextInput as RNTextInput } from 'react-native';
 import {
   DeviceEventEmitter,
@@ -71,7 +67,8 @@ export function DiscoverScreen() {
 }
 
 function DiscoverScreenInner() {
-  const [selectedLanguage, setSelectedLanguage] = useState<Language>('english');
+  const selectedLanguage = useDiscoverPreferences((s) => s.language);
+  const setSelectedLanguage = useDiscoverPreferences((s) => s.setLanguage);
   const [_isSearchFocused, setIsSearchFocused] = useState(false);
   const [viewState, setViewState] = useState<ViewState>('default');
   const [_, startTransition] = useTransition();
@@ -113,15 +110,9 @@ function DiscoverScreenInner() {
   const trendingScrollRef = useRef<ScrollView>(null);
 
   // Language filter for both trending + live search. Default is always English;
-  // 'all' means no language filter at all.
-  const languageCode =
-    selectedLanguage === 'all'
-      ? null
-      : selectedLanguage === 'chinese'
-        ? 'zh'
-        : selectedLanguage === 'japanese'
-          ? 'ja'
-          : 'en';
+  // 'all' means no language filter at all. Shared with the similar-feeds queries
+  // via the persisted discover-preferences store.
+  const languageCode = discoverLanguageToCode(selectedLanguage);
 
   // Fetch trending feeds using Meilisearch directly — infinite paginated, capped at MAX_TRENDING_ITEMS
   // Trending shows popular feeds from News, Tech, and Business categories only
@@ -135,9 +126,9 @@ function DiscoverScreenInner() {
   } = useInfiniteQuery({
     queryKey: ['trending', languageCode],
     queryFn: async ({ pageParam = 0 }) => {
-      const categoryFilter = POPULAR_CATEGORIES.map(
-        (cat) => `top_level_category = "${cat}"`
-      ).join(' OR ');
+      const categoryFilter = POPULAR_CATEGORIES.map((cat) => `top_level_category = "${cat}"`).join(
+        ' OR '
+      );
       const filter = languageCode
         ? [`language = ${languageCode} AND (${categoryFilter})`]
         : [categoryFilter];

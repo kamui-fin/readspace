@@ -20,6 +20,7 @@ import {
   useDeleteFeed,
   useFeed,
 } from '@readspace/shared';
+import { discoverLanguageToCode, useDiscoverPreferences } from '@stores/discover-preferences';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -61,6 +62,10 @@ export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPre
   const createFeed = useCreateFeed();
   const deleteFeed = useDeleteFeed();
 
+  // Carry the discover screen's language filter into the "you might also like" list.
+  const language = useDiscoverPreferences((s) => s.language);
+  const languageCode = discoverLanguageToCode(language);
+
   // Fetch preview articles for the feed
   const { data: articlesData, isLoading: isArticlesLoading } = useQuery({
     queryKey: ['feed-articles', feedId],
@@ -76,7 +81,7 @@ export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPre
 
   // Fetch similar feeds (top 4 for preview)
   const { data: similarData, isLoading: isSimilarLoading } = useQuery({
-    queryKey: ['similar-feeds-preview', feedId, 4],
+    queryKey: ['similar-feeds-preview', feedId, 4, languageCode],
     queryFn: async () => {
       const index = meilisearchClient.index(FEEDS_INDEX_NAME);
       const results = await index.searchSimilarDocuments({
@@ -84,6 +89,7 @@ export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPre
         limit: 4,
         embedder: 'default',
         showRankingScore: true,
+        filter: languageCode ? `language = "${languageCode}"` : undefined,
       });
       return results;
     },
