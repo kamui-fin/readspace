@@ -1,8 +1,13 @@
 import { useSession } from '@contexts/auth-context';
+import { useSettingsStore } from '@stores/settings';
 import { Redirect } from 'expo-router';
 
 export default function Index() {
-  const { session, isLoading, isOnboarded } = useSession();
+  const { session, isLoading, isOnboarded: serverIsOnboarded } = useSession();
+  const instanceType = useSettingsStore((state) => state.settings.instance_type);
+  // Onboarding is a cloud-only flow — self-hosted instances are always treated as
+  // already onboarded.
+  const isOnboarded = instanceType === 'cloud' ? serverIsOnboarded : true;
 
   console.log(
     '[Index Route] Rendering. isLoading:',

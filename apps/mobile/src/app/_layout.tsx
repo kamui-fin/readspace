@@ -38,6 +38,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { ApiError } from '@readspace/shared';
 import * as Sentry from '@sentry/react-native';
+import { useSettingsStore } from '@stores/settings';
 import { useThemeStore } from '@stores/theme';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import clsx from 'clsx';
@@ -121,7 +122,11 @@ function RootLayout() {
 }
 
 function RootNavigator() {
-  const { session, isLoading: isAuthLoading, isOnboarded } = useSession();
+  const { session, isLoading: isAuthLoading, isOnboarded: serverIsOnboarded } = useSession();
+  const instanceType = useSettingsStore((state) => state.settings.instance_type);
+  // Onboarding is a cloud-only flow — self-hosted instances are always treated as
+  // already onboarded, so no branch below ever routes into it.
+  const isOnboarded = instanceType === 'cloud' ? serverIsOnboarded : true;
   const segments = useSegments();
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [fontError, setFontError] = useState<Error | null>(null);

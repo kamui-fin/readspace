@@ -71,11 +71,14 @@ done
 
 # Print the command being executed (useful for debugging and documentation)
 echo "🐳 Docker Compose command:"
-echo "docker compose ${COMPOSE_FILES[@]} ${ENV_FILES[@]} ${PROJECT_FLAGS[@]} ${PROFILE_FLAGS[@]} up -d"
+echo "docker compose ${COMPOSE_FILES[@]} ${ENV_FILES[@]} ${PROJECT_FLAGS[@]} ${PROFILE_FLAGS[@]} up -d --build"
 echo ""
 
-# Execute the unified docker compose command
-if ! docker compose "${COMPOSE_FILES[@]}" "${ENV_FILES[@]}" "${PROJECT_FLAGS[@]}" "${PROFILE_FLAGS[@]}" up -d; then
+# --build: web/api/worker/scheduler are built from source (build: context:), not pulled
+# from a registry. Without this, `up -d` reuses whatever image was last built, silently
+# ignoring source changes from a `git pull` — Docker's layer cache makes this a no-op
+# when nothing actually changed, so there's no real cost to always including it.
+if ! docker compose "${COMPOSE_FILES[@]}" "${ENV_FILES[@]}" "${PROJECT_FLAGS[@]}" "${PROFILE_FLAGS[@]}" up -d --build; then
     print_error "Failed to start services. Check Docker and the logs."
     exit 1
 fi

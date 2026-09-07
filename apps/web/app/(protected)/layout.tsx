@@ -4,6 +4,7 @@ import ClientLayout from "@/components/layout/ClientLayout"
 import { AppSidebar } from "@/components/features/navigation/AppSidebar"
 import { SidebarInset } from "@/components/ui/sidebar"
 import { useUserRole } from "@/hooks/use-user-role"
+import { isCloudProd } from "@/lib/is-cloud-prod"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { Loader } from "@/components/ui/loader"
@@ -15,12 +16,15 @@ export default function ProtectedLayout({
 }) {
     const { profile, isLoading } = useUserRole()
     const router = useRouter()
+    // Onboarding is a cloud-only flow — never gate self-hosted instances on it.
+    const needsOnboarding =
+        isCloudProd() && !!profile && !profile.is_onboarded
 
     useEffect(() => {
-        if (!isLoading && profile && !profile.is_onboarded) {
+        if (!isLoading && needsOnboarding) {
             router.replace("/onboarding")
         }
-    }, [profile, isLoading, router])
+    }, [needsOnboarding, isLoading, router])
 
     if (isLoading) {
         return (
@@ -34,7 +38,7 @@ export default function ProtectedLayout({
         )
     }
 
-    if (profile && !profile.is_onboarded) {
+    if (needsOnboarding) {
         return null
     }
 

@@ -1,3 +1,4 @@
+import { isCloudProd } from "@/lib/is-cloud-prod"
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
@@ -18,8 +19,9 @@ export async function GET(request: Request) {
             } = await supabase.auth.getSession()
 
             let redirectPath = next
+            const isCloud = isCloudProd(new URL(request.url).hostname)
 
-            if (session?.access_token) {
+            if (isCloud && session?.access_token) {
                 try {
                     const apiBase =
                         process.env.NEXT_PUBLIC_API_URL ||

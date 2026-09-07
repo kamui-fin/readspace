@@ -1,4 +1,5 @@
 import { env } from "@/env"
+import { isCloudProd } from "@/lib/is-cloud-prod"
 import { createServerClient, type CookieOptions } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
@@ -67,10 +68,22 @@ export async function updateSession(request: NextRequest) {
         !request.nextUrl.pathname.startsWith("/auth") &&
         !request.nextUrl.pathname.startsWith("/api/webhook")
     ) {
-        const cookieName = `is_onboarded_${user.id}`
-        const isOnboardedCookie = request.cookies.get(cookieName)?.value
         const isOnboardingRoute =
             request.nextUrl.pathname.startsWith("/onboarding")
+
+        if (!isCloudProd(request.nextUrl.hostname)) {
+            // Onboarding is a cloud-only flow. Self-hosted instances never route
+            // into it, and bounce away if landed on it directly (stale link, etc).
+            if (isOnboardingRoute) {
+                const url = request.nextUrl.clone()
+                url.pathname = "/today"
+                return NextResponse.redirect(url)
+            }
+            return supabaseResponse
+        }
+
+        const cookieName = `is_onboarded_${user.id}`
+        const isOnboardedCookie = request.cookies.get(cookieName)?.value
 
         if (isOnboardedCookie === "true") {
             if (isOnboardingRoute) {
