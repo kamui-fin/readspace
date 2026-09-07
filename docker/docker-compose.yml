@@ -73,6 +73,8 @@ services:
         condition: service_healthy
       meilisearch:
         condition: service_healthy
+      db:
+        condition: service_healthy
     volumes:
       - ${PROJECT_ROOT}/server:/app
     extra_hosts:
@@ -91,6 +93,10 @@ services:
       - MEILISEARCH_INDEX_NAME=feeds
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
+      # Required: CORSMiddleware combines this with allow_credentials=True, and a
+      # wildcard origin (the app default) is invalid for credentialed requests per
+      # the CORS spec — browsers reject it client-side regardless of server intent.
+      - CORS_ORIGIN=${WEB_URL}
     logging:
       driver: json-file
       options:
@@ -111,6 +117,8 @@ services:
       redis:
         condition: service_healthy
       meilisearch:
+        condition: service_healthy
+      db:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -139,6 +147,8 @@ services:
       - ${PROJECT_ROOT}/server:/app
     depends_on:
       redis:
+        condition: service_healthy
+      db:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
