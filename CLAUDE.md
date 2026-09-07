@@ -98,7 +98,10 @@ Key service patterns:
 #   web localhost:18042, api localhost:18008, Supabase Studio localhost:18000
 ./docker/setup.sh && ./docker/launch.sh
 
-# Reset the local Supabase DB (wipes all data)
+# Reset the entire local deployment (wipes Postgres, Meilisearch, Redis; keeps secrets)
+./docker/reset.sh          # counterpart to launch.sh — pass --dev to match a --dev deployment
+
+# Reset only the local Supabase DB (wipes Postgres data)
 ./docker/supabase/reset.sh
 ```
 
