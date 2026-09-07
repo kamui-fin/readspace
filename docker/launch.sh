@@ -27,6 +27,14 @@ print_error() {
 # Build the docker compose command
 COMPOSE_FILES=("-f" "$SCRIPT_DIR/supabase/docker-compose.yml" "-f" "$SCRIPT_DIR/docker-compose.yml")
 ENV_FILES=("--env-file" "$SCRIPT_DIR/supabase/.env" "--env-file" "$SCRIPT_DIR/.env")
+# Compose resolves relative build contexts (e.g. docker-compose.yml's `context: ../server`)
+# against the directory of the FIRST -f file, not each file's own directory — without this,
+# they resolve to the nonexistent docker/server instead of <repo>/server. --project-name is
+# pinned explicitly (rather than left to Compose's default, which is derived from the first
+# -f file's directory) so image tags and volume names read "readspace_*", not "supabase_*".
+# Changing this value requires docker/reset.sh + relaunch on any existing deployment, or its
+# volumes are orphaned under the old project name.
+PROJECT_FLAGS=("--project-directory" "$SCRIPT_DIR" "--project-name" "readspace")
 PROFILES=()
 
 # Load RSSHUB_MODE from docker/.env to determine if we should enable RSSHub profile
@@ -57,11 +65,11 @@ done
 
 # Print the command being executed (useful for debugging and documentation)
 echo "🐳 Docker Compose command:"
-echo "docker compose ${COMPOSE_FILES[@]} ${ENV_FILES[@]} ${PROFILE_FLAGS[@]} up -d"
+echo "docker compose ${COMPOSE_FILES[@]} ${ENV_FILES[@]} ${PROJECT_FLAGS[@]} ${PROFILE_FLAGS[@]} up -d"
 echo ""
 
 # Execute the unified docker compose command
-if ! docker compose "${COMPOSE_FILES[@]}" "${ENV_FILES[@]}" "${PROFILE_FLAGS[@]}" up -d; then
+if ! docker compose "${COMPOSE_FILES[@]}" "${ENV_FILES[@]}" "${PROJECT_FLAGS[@]}" "${PROFILE_FLAGS[@]}" up -d; then
     print_error "Failed to start services. Check Docker and the logs."
     exit 1
 fi

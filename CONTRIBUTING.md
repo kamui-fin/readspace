@@ -10,7 +10,7 @@ First off, thank you for considering contributing to Readspace! It's people like
     - [Prerequisites](#prerequisites)
     - [Initial Setup](#initial-setup)
   - [Development Environment Setup](#development-environment-setup)
-    - [1. Start Core Infrastructure](#1-start-core-infrastructure)
+    - [Resetting Your Environment](#resetting-your-environment)
     - [2. Run Application Services](#2-run-application-services)
       - [Web Client (Next.js)](#web-client-nextjs)
       - [Backend Server (FastAPI)](#backend-server-fastapi)
@@ -52,6 +52,8 @@ First off, thank you for considering contributing to Readspace! It's people like
 
     This will create `.env` files in `docker/supabase/`, `docker/.env` (Meilisearch keys), `apps/web/`, `apps/mobile/`, and `server/`.
 
+    This script is safe to re-run whenever you want to change deployment config (access URL, RSSHub mode, AI settings) — it detects existing secrets (Postgres password, JWT signing key, Meilisearch master key) in `docker/supabase/.env` / `docker/.env` and reuses them rather than regenerating, so it won't silently break a database you already initialized. See [Resetting Your Environment](#resetting-your-environment) if you actually want a clean slate or to rotate secrets.
+
 3.  **Install Dependencies**
 
     Install all workspace dependencies using Bun:
@@ -91,13 +93,29 @@ _Note: Application containers (Web, API, Taskiq worker, Taskiq scheduler) are as
 
 Wait a minute for the services to initialize. You can check their status with `docker ps`.
 
-**Resetting Supabase:** If you need to completely reset your local Supabase database:
+### Resetting Your Environment
+
+There are two reset scripts, scoped differently:
+
+- **`./docker/reset.sh`** — the counterpart to `launch.sh`. Wipes everything: Postgres, Meilisearch's search index, and Redis. Use this for "start over completely." Add `--dev` if your last `launch.sh` used it, so it tears down the matching compose profile.
+- **`./docker/supabase/reset.sh`** — wipes only the Supabase/Postgres database. Use this if you just want a clean database but don't need to touch Meilisearch or Redis.
+
+Both scripts prompt for confirmation and, importantly, **leave `docker/supabase/.env` and `docker/.env` untouched** — your secrets are preserved, so `./docker/launch.sh --dev` immediately reinitializes a clean instance without needing to re-run `setup.sh`.
 
 ```bash
-./docker/supabase/reset.sh
+./docker/reset.sh --dev
+./docker/launch.sh --dev
 ```
 
-This will wipe all data and reinitialize the database. You can run this from any directory.
+**Rotating secrets** (e.g. after a suspected leak) is a separate, deliberate step — reset first, then pass `--regenerate-secrets` to `setup.sh`:
+
+```bash
+./docker/reset.sh --dev
+./docker/setup.sh --dev --regenerate-secrets
+./docker/launch.sh --dev
+```
+
+`setup.sh --regenerate-secrets` will refuse to run while a `supabase-db` container still exists, since generating a new Postgres password against a database that already has the old one baked in breaks authentication for every Supabase service. Reset first, then rotate.
 
 ### 2. Run Application Services
 
@@ -254,13 +272,20 @@ bun run check-types
 If you prefer to use Docker Compose directly:
 
 ```bash
+# --project-directory/--project-name pin Compose's path resolution and project identity
+# to match the wrapper scripts — needed if you ever add --profile app to build the app
+# images this way, and keeps volume names consistent with launch.sh/reset.sh either way.
+
 # Start development infrastructure (database, cache, search)
-docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml -f docker/supabase/docker-compose.dev.yml --env-file docker/supabase/.env --env-file docker/.env up -d
+docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml -f docker/supabase/docker-compose.dev.yml \
+  --env-file docker/supabase/.env --env-file docker/.env \
+  --project-directory docker --project-name readspace up -d
 
 # Then start services on your host machine (see "Run Application Services" section above)
 
 # To stop:
-docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml -f docker/supabase/docker-compose.dev.yml down
+docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml -f docker/supabase/docker-compose.dev.yml \
+  --project-directory docker --project-name readspace down
 ```
 
 **Stopping Services:**

@@ -94,6 +94,8 @@ Readspace is designed for easy self-hosting, giving you complete control over yo
     ./setup.sh
     ```
 
+    > Safe to re-run any time you want to change your access URL, RSSHub mode, or AI settings — existing secrets (database password, JWT signing key, Meilisearch key) are detected and reused automatically, so a running instance won't break. See [Resetting & Rotating Secrets](#resetting--rotating-secrets) below for a completely fresh start.
+
 3.  **Launch services**
 
     ```bash
@@ -117,19 +119,26 @@ Readspace is designed for easy self-hosting, giving you complete control over yo
 If you prefer to run Docker directly instead of using the wrapper scripts, you can use:
 
 ```bash
+# --project-directory/--project-name are required: without them Compose resolves the
+# app/web images' relative build contexts (../server, ..) against the wrong directory
+# and fails with "unable to prepare context: path ... not found".
+
 # After running ./setup.sh to generate .env files, start the full stack with:
 docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml \
   --env-file docker/supabase/.env --env-file docker/.env \
+  --project-directory docker --project-name readspace \
   --profile app --profile rsshub up -d
 
 # If you configured RSSHub as external, omit the --profile rsshub flag:
 docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml \
   --env-file docker/supabase/.env --env-file docker/.env \
+  --project-directory docker --project-name readspace \
   --profile app up -d
 
 # To stop:
 docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml \
-  --env-file docker/supabase/.env --env-file docker/.env down
+  --env-file docker/supabase/.env --env-file docker/.env \
+  --project-directory docker --project-name readspace down
 ```
 
 6.  **Configure Browser Extension** (Optional)
@@ -146,6 +155,25 @@ If you want to access Readspace via your own domain (e.g., `https://app.example.
 1. Run `./setup.sh` and select option 2 (Custom domain)
 2. Configure your reverse proxy (Traefik, nginx, Caddy, etc.)
 3. See [docs/reverse-proxy-examples.md](docs/reverse-proxy-examples.md) for detailed configuration examples
+
+#### Resetting & Rotating Secrets
+
+**To wipe your instance and start over** — this permanently deletes every article, feed, and user, along with the search index and cache, but keeps your existing secrets so nothing needs reconfiguring:
+
+```bash
+./docker/reset.sh       # add --dev if you launched with --dev
+./docker/launch.sh
+```
+
+**To rotate secrets** (e.g. you suspect the database password or JWT signing key leaked), reset first, then regenerate:
+
+```bash
+./docker/reset.sh
+./docker/setup.sh --regenerate-secrets
+./docker/launch.sh
+```
+
+`setup.sh --regenerate-secrets` refuses to run while a database container still exists — rotating secrets against a live database corrupts Postgres authentication for every service, so a reset is required first.
 
 ## Contributing
 

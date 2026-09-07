@@ -52,6 +52,9 @@ fi
 # what was started, including the RSSHub/app profiles)
 COMPOSE_FILES=("-f" "$SCRIPT_DIR/supabase/docker-compose.yml" "-f" "$SCRIPT_DIR/docker-compose.yml")
 ENV_FILES=("--env-file" "$SCRIPT_DIR/supabase/.env" "--env-file" "$SCRIPT_DIR/.env")
+# Must match launch.sh's project name/directory pinning, or this targets a different
+# (empty) Compose project and silently does nothing.
+PROJECT_FLAGS=("--project-directory" "$SCRIPT_DIR" "--project-name" "readspace")
 PROFILES=()
 
 # Load RSSHUB_MODE from docker/.env to determine if we should include RSSHub profile
@@ -80,7 +83,7 @@ for profile in "${PROFILES[@]}"; do
 done
 
 echo "Stopping containers and removing all volumes..."
-if ! docker compose "${COMPOSE_FILES[@]}" "${ENV_FILES[@]}" "${PROFILE_FLAGS[@]}" down -v --remove-orphans; then
+if ! docker compose "${COMPOSE_FILES[@]}" "${ENV_FILES[@]}" "${PROJECT_FLAGS[@]}" "${PROFILE_FLAGS[@]}" down -v --remove-orphans; then
     print_error "Failed to tear down services."
     exit 1
 fi

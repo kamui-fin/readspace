@@ -26,6 +26,9 @@ print_error() {
 # Build the docker compose command (mirrors launch.sh logic)
 COMPOSE_FILES=("-f" "$SCRIPT_DIR/supabase/docker-compose.yml" "-f" "$SCRIPT_DIR/docker-compose.yml")
 ENV_FILES=("--env-file" "$SCRIPT_DIR/supabase/.env" "--env-file" "$SCRIPT_DIR/.env")
+# Must match launch.sh's project name/directory pinning, or this targets a different
+# (empty) Compose project and silently does nothing.
+PROJECT_FLAGS=("--project-directory" "$SCRIPT_DIR" "--project-name" "readspace")
 PROFILES=()
 
 # Load RSSHUB_MODE from docker/.env to determine if we should include RSSHub profile
@@ -54,7 +57,7 @@ for profile in "${PROFILES[@]}"; do
 done
 
 # Stop the main services (supabase + readspace app + optionally rsshub)
-if ! docker compose "${COMPOSE_FILES[@]}" "${ENV_FILES[@]}" "${PROFILE_FLAGS[@]}" down; then
+if ! docker compose "${COMPOSE_FILES[@]}" "${ENV_FILES[@]}" "${PROJECT_FLAGS[@]}" "${PROFILE_FLAGS[@]}" down; then
     print_error "Failed to stop services."
     exit 1
 fi

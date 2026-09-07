@@ -199,7 +199,9 @@ else
     echo ""
     echo "📡 RSSHub Configuration"
     echo "RSSHub generates RSS feeds for websites that don't natively provide them."
-    echo "You can use a local instance (included with setup) or an external one."
+    echo "You can use a local instance (included with setup, but pulls a headless-browser"
+    echo "image and adds ~1.5GB of disk usage) or an external one (defaults to the public"
+    echo "instance at https://rsshub.app if you don't have your own)."
     echo ""
     read -p "Use local RSSHub instance? [Y/n]: " USE_LOCAL_RSSHUB_INPUT
     USE_LOCAL_RSSHUB_INPUT=${USE_LOCAL_RSSHUB_INPUT:-"Y"}
@@ -216,19 +218,9 @@ else
     else
         RSSHUB_MODE="external"
         echo ""
-        read -p "Enter your external RSSHub URL: " EXTERNAL_RSSHUB_URL
-        if [ -n "$EXTERNAL_RSSHUB_URL" ]; then
-            RSSHUB_URL="$EXTERNAL_RSSHUB_URL"
-            echo "✅ External RSSHub configured: ${RSSHUB_URL}"
-        else
-            if [ "$ACCESS_TYPE" = "2" ]; then
-                RSSHUB_URL="http://rsshub:1200"
-            else
-                RSSHUB_URL="http://${API_HOST}:1200"
-            fi
-            echo "⚠️  No URL provided, defaulting to local instance: ${RSSHUB_URL}"
-            RSSHUB_MODE="local"
-        fi
+        read -p "Enter your external RSSHub URL [https://rsshub.app]: " EXTERNAL_RSSHUB_URL
+        RSSHUB_URL=${EXTERNAL_RSSHUB_URL:-"https://rsshub.app"}
+        echo "✅ External RSSHub configured: ${RSSHUB_URL}"
     fi
 fi
 
@@ -292,7 +284,8 @@ fi
 
 # --- Start Meilisearch to generate search key ---
 echo "🚀 Starting Meilisearch container with the generated master key..."
-docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/.env" up -d meilisearch
+docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/.env" \
+    --project-directory "$SCRIPT_DIR" --project-name "readspace" up -d meilisearch
 
 # Wait for Meilisearch to be ready
 echo "⏳ Waiting for Meilisearch to be ready..."

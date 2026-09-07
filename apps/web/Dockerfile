@@ -8,6 +8,7 @@ COPY bun.lock package.json turbo.json ./
 # Copy package.json files for all workspaces (bun needs complete workspace structure)
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/design-tokens/package.json ./packages/design-tokens/
 COPY packages/typescript-config/package.json ./packages/typescript-config/
 COPY packages/eslint-config/package.json ./packages/eslint-config/
 
@@ -33,8 +34,10 @@ ENV PATH="/app/node_modules/.bin:$PATH"
 RUN turbo run build
 
 # Create non-root user
-RUN addgroup --system --gid 1001 nodejs \
-  && adduser --system --uid 1001 nextjs
+# Note: addgroup/adduser (the Debian `adduser` package) aren't installed in oven/bun's
+# base image; use shadow-utils' groupadd/useradd instead, which are.
+RUN groupadd --system --gid 1001 nodejs \
+  && useradd --system --uid 1001 --gid 1001 --no-create-home nextjs
 
 # Create cache directories and set proper permissions
 RUN mkdir -p /app/apps/web/.next/cache/images \
