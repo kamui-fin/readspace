@@ -38,7 +38,7 @@ services:
   web:
     profiles: ["app"]
     build:
-      context: ..
+      context: ${PROJECT_ROOT}
       dockerfile: apps/web/Dockerfile
     container_name: readspace_web
     extra_hosts:
@@ -59,7 +59,7 @@ services:
   api:
     profiles: ["app"]
     build:
-      context: ../server
+      context: ${PROJECT_ROOT}/server
       dockerfile: Dockerfile
     container_name: readspace_api
     command: >
@@ -74,7 +74,7 @@ services:
       meilisearch:
         condition: service_healthy
     volumes:
-      - ../server:/app
+      - ${PROJECT_ROOT}/server:/app
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -101,12 +101,12 @@ services:
   worker:
     profiles: ["app"]
     build:
-      context: ../server
+      context: ${PROJECT_ROOT}/server
       dockerfile: Dockerfile.taskiq
     container_name: readspace_worker
     command: taskiq worker app.core.taskiq_app:broker app.workers.registry --max-async-tasks 200
     volumes:
-      - ../server:/app
+      - ${PROJECT_ROOT}/server:/app
     depends_on:
       redis:
         condition: service_healthy
@@ -131,12 +131,12 @@ services:
   scheduler:
     profiles: ["app"]
     build:
-      context: ../server
+      context: ${PROJECT_ROOT}/server
       dockerfile: Dockerfile.taskiq
     container_name: readspace_scheduler
     command: taskiq scheduler app.core.taskiq_app:scheduler app.workers.registry
     volumes:
-      - ../server:/app
+      - ${PROJECT_ROOT}/server:/app
     depends_on:
       redis:
         condition: service_healthy

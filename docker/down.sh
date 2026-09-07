@@ -3,6 +3,8 @@
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+export PROJECT_ROOT  # used by docker-compose.yml's build.context / bind-mount interpolation
 
 # Check for dev mode flag
 DEV_MODE=false
@@ -26,9 +28,10 @@ print_error() {
 # Build the docker compose command (mirrors launch.sh logic)
 COMPOSE_FILES=("-f" "$SCRIPT_DIR/supabase/docker-compose.yml" "-f" "$SCRIPT_DIR/docker-compose.yml")
 ENV_FILES=("--env-file" "$SCRIPT_DIR/supabase/.env" "--env-file" "$SCRIPT_DIR/.env")
-# Must match launch.sh's project name/directory pinning, or this targets a different
-# (empty) Compose project and silently does nothing.
-PROJECT_FLAGS=("--project-directory" "$SCRIPT_DIR" "--project-name" "readspace")
+# Must match launch.sh's --project-name, or this targets a different (empty) Compose
+# project and silently does nothing. Deliberately no --project-directory — see launch.sh
+# for why (it breaks docker/supabase/docker-compose.yml's own relative volume paths).
+PROJECT_FLAGS=("--project-name" "readspace")
 PROFILES=()
 
 # Load RSSHUB_MODE from docker/.env to determine if we should include RSSHub profile

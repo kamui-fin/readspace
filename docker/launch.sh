@@ -4,6 +4,7 @@
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+export PROJECT_ROOT  # used by docker-compose.yml's build.context / bind-mount interpolation
 
 # Check for dev mode flag
 DEV_MODE=false
@@ -27,14 +28,19 @@ print_error() {
 # Build the docker compose command
 COMPOSE_FILES=("-f" "$SCRIPT_DIR/supabase/docker-compose.yml" "-f" "$SCRIPT_DIR/docker-compose.yml")
 ENV_FILES=("--env-file" "$SCRIPT_DIR/supabase/.env" "--env-file" "$SCRIPT_DIR/.env")
-# Compose resolves relative build contexts (e.g. docker-compose.yml's `context: ../server`)
-# against the directory of the FIRST -f file, not each file's own directory — without this,
-# they resolve to the nonexistent docker/server instead of <repo>/server. --project-name is
-# pinned explicitly (rather than left to Compose's default, which is derived from the first
-# -f file's directory) so image tags and volume names read "readspace_*", not "supabase_*".
-# Changing this value requires docker/reset.sh + relaunch on any existing deployment, or its
-# volumes are orphaned under the old project name.
-PROJECT_FLAGS=("--project-directory" "$SCRIPT_DIR" "--project-name" "readspace")
+# --project-name is pinned explicitly (rather than left to Compose's default, which is
+# derived from the first -f file's directory) so image tags and volume names read
+# "readspace_*", not "supabase_*". Changing this value requires docker/reset.sh + relaunch
+# on any existing deployment, or its volumes are orphaned under the old project name.
+#
+# Deliberately NOT using --project-directory here: it forces every relative path in BOTH
+# merged compose files to resolve against one shared base directory, which breaks whichever
+# file's paths weren't written assuming that base (we hit this — it silently pointed
+# docker/supabase/docker-compose.yml's own volume mounts at nonexistent paths, since those
+# are written relative to docker/supabase/, not docker/). docker-compose.yml's build
+# contexts and bind mounts instead use ${PROJECT_ROOT} (exported above) to resolve
+# absolutely, so no shared base directory is needed at all.
+PROJECT_FLAGS=("--project-name" "readspace")
 PROFILES=()
 
 # Load RSSHUB_MODE from docker/.env to determine if we should enable RSSHub profile

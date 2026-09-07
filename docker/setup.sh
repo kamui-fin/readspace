@@ -35,6 +35,7 @@ set -e # Exit immediately if a command exits with a non-zero status.
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+export PROJECT_ROOT  # used by docker-compose.yml's build.context / bind-mount interpolation
 
 # Helper function: Set environment variable in a file safely
 set_env_var() {
@@ -285,7 +286,7 @@ fi
 # --- Start Meilisearch to generate search key ---
 echo "🚀 Starting Meilisearch container with the generated master key..."
 docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/.env" \
-    --project-directory "$SCRIPT_DIR" --project-name "readspace" up -d meilisearch
+    --project-name "readspace" up -d meilisearch
 
 # Wait for Meilisearch to be ready
 echo "⏳ Waiting for Meilisearch to be ready..."

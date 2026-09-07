@@ -143,10 +143,21 @@ services:
     ports:
       - 127.0.0.1:54322:5432
     volumes:
+      # Mounted as individual files, deliberately NOT as whole directories: the
+      # supabase/postgres image ships its own baked-in files at these same container
+      # paths (e.g. init-scripts/00000000000001-auth-schema.sql creates the
+      # `authenticator`/`supabase_auth_admin`/etc. roles that roles.sql below only
+      # ALTERs). A directory-level bind mount replaces the entire directory's
+      # contents, silently hiding all of the image's own files — we hit this
+      # directly (roles.sql failed with "role authenticator does not exist" because
+      # the file that creates it was hidden). Individual file mounts only overlay
+      # that one filename, leaving every sibling — image-provided or ours — intact.
       - ./volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
       # Must be superuser to create event trigger
       - ./volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
-      # Must be superuser to alter reserved role
+      # Must be superuser to alter reserved role. Numbered 99- (not before the image's
+      # own 0000...-prefixed files) so the roles this ALTERs already exist by the time
+      # it runs.
       - ./volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
       # Initialize the database settings with JWT_SECRET and JWT_EXP
       - ./volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
