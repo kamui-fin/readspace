@@ -130,12 +130,27 @@ AppState.addEventListener('change', (state) => {
   }
 });
 
-// Reset the Supabase client when settings change
+// Reset the Supabase client only when instance_type actually changes
 if (typeof useSettingsStore !== 'undefined') {
-  useSettingsStore.subscribe(() => {
-    resetSupabaseClient().catch((e) => {
-      console.error('[Supabase] Error resetting client:', e);
-    });
+  let previousInstanceType: string | undefined = undefined;
+  useSettingsStore.subscribe((state) => {
+    const currentInstanceType = state.settings.instance_type;
+
+    // Skip reset on first subscription call (initialization)
+    if (previousInstanceType === undefined) {
+      previousInstanceType = currentInstanceType;
+      return;
+    }
+
+    // Only reset if instance_type actually changed
+    if (previousInstanceType !== currentInstanceType) {
+      previousInstanceType = currentInstanceType;
+      resetSupabaseClient().catch((e) => {
+        console.error('[Supabase] Error resetting client:', e);
+      });
+    } else {
+      previousInstanceType = currentInstanceType;
+    }
   });
 }
 
