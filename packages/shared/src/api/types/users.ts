@@ -33,11 +33,13 @@ export interface UserLimits {
   limits: {
     max_subscriptions: number;
     max_daily_ai_calls: number;
+    max_daily_scrapes: number;
     semantic_search: boolean;
     read_later_retention_days: number;
   };
   usage: {
     subscriptions: number;
     daily_ai_calls: number;
+    daily_scrapes: number;
   };
 }

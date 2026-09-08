@@ -14,7 +14,11 @@ from app.services.articles.scrape import extract_full_content
 from app.services.articles.service import get_article_details
 from app.services.feeds.service import SessionFactory
 from app.services.user.auth import get_current_user
-from app.services.user.resource_limits import enforce_daily_ai_limit
+from app.services.user.resource_limits import (
+    check_daily_scrape_limit,
+    enforce_daily_ai_limit,
+    enforce_daily_scrape_limit,
+)
 from app.typing.enhancements import (
     ExtractionResponse,
     SummarizeRequest,
@@ -36,13 +40,20 @@ async def get_article_or_404(
     user_id: UUID,
     is_clipped: bool = False,
 ) -> Any:
-    """Retrieves article details or raises NotFoundError."""
+    """
+    Retrieves article details or raises NotFoundError.
+
+    Implicit auto-extraction is disabled here: enhancement endpoints run their own
+    quota-checked extraction, so letting the fetch scrape too would double-charge
+    the daily scrape quota.
+    """
     article = await get_article_details(
         db_factory=db_factory,
         article_id=article_id,
         user_id=user_id,
         allow_preview=True,
         is_clipped=is_clipped,
+        auto_extract=False,
     )
 
     # Fallback: If not found and we weren't explicitly looking for a clipped article,
@@ -54,6 +65,7 @@ async def get_article_or_404(
             user_id=user_id,
             allow_preview=True,
             is_clipped=True,
+            auto_extract=False,
         )
 
     if not article:
@@ -89,13 +101,17 @@ async def extract_full_text(
     """
     logger.bind(article_id=str(article_id), user_id=user.sub)
 
-    # 1. Verify Article
+    # 1. Enforce daily scrape quota (free tier: 5/day, pro/admin: unlimited)
+    async with db_factory() as db:
+        await enforce_daily_scrape_limit(db, UUID(user.sub))
+
+    # 2. Verify Article
     article = await get_article_or_404(db_factory, article_id, UUID(user.sub), is_clipped=clipped)
 
     if not article.link:
         raise ValidationError(message="Article has no source URL available")
 
-    # 2. Extract (Service handles errors/exceptions)
+    # 3. Extract (Service handles errors/exceptions)
     content, error = await extract_full_content(str(article.link), article.title)
 
     if error:
@@ -129,12 +145,18 @@ async def summarize_article(
     article = await get_article_or_404(db_factory, article_id, UUID(user.sub), is_clipped=clipped)
     content_to_use = resolve_content(request.content, article)
 
-    # 1.5. Auto-extract if content is short/incomplete
+    # 1.5. Auto-extract if content is short/incomplete (subject to the daily scrape quota;
+    # if exhausted we summarize whatever content we already have rather than failing).
     if not is_content_complete(content_to_use) and article.link:
-        logger.info("Auto-extracting for summary", article_id=str(article_id))
-        extracted, error = await extract_full_content(str(article.link), article.title)
-        if extracted and not error:
-            content_to_use = extracted
+        async with db_factory() as db:
+            can_scrape = await check_daily_scrape_limit(db, UUID(user.sub))
+        if can_scrape:
+            logger.info("Auto-extracting for summary", article_id=str(article_id))
+            extracted, error = await extract_full_content(str(article.link), article.title)
+            if extracted and not error:
+                content_to_use = extracted
+        else:
+            logger.info("Skipping summary auto-extract: daily scrape quota reached", article_id=str(article_id))
 
     # 2. Generate Summary
     summary = await generate_summary(
@@ -180,6 +202,19 @@ async def translate_article(
     if article.link and str(article.link).startswith("newsletter://"):
         raise ValidationError(message="Translation is not available for newsletter emails")
     content_to_use = resolve_content(request.content, article)
+
+    # 1.5. Auto-extract if content is short/incomplete (subject to the daily scrape quota;
+    # if exhausted we translate whatever content we already have rather than failing).
+    if not request.content and not is_content_complete(content_to_use) and article.link:
+        async with db_factory() as db:
+            can_scrape = await check_daily_scrape_limit(db, UUID(user.sub))
+        if can_scrape:
+            logger.info("Auto-extracting for translation", article_id=str(article_id))
+            extracted, error = await extract_full_content(str(article.link), article.title)
+            if extracted and not error:
+                content_to_use = extracted
+        else:
+            logger.info("Skipping translation auto-extract: daily scrape quota reached", article_id=str(article_id))
 
     # 2. Translate in parallel
     target_lang_str = (

@@ -312,5 +312,3 @@ def _cleanup_gcs(storage_client: storage.Client, bucket_name: str, local_path: s
             logger.info("Cleaned GCS files for batch job", prefix=gcs_job_prefix)
         except Exception as e:
             logger.debug("Failed to delete GCS files", prefix=gcs_job_prefix, error=str(e))
-
-

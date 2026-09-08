@@ -1,10 +1,15 @@
-import { RSSIcon, Sparkle } from '@components/icons/svg';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { useRevenueCat } from '@contexts/revenuecat-context';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { RocketIcon } from '@solar-icons/react-native/bold';
+import {
+  Book2Icon,
+  FeedIcon,
+  MagicWandIcon,
+  RocketIcon,
+  SunIcon,
+} from '@solar-icons/react-native/bold';
 import { useUpgradeDialog } from '@stores/upgrade-dialog';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
@@ -13,12 +18,6 @@ import { SvgXml } from 'react-native-svg';
 
 // Custom X (Close) Icon SVG XML
 const CLOSE_XML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 6L6 18M6 6l12 12"/></svg>`;
-
-// Custom Search/AI discovery Icon SVG XML
-const SEARCH_XML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>`;
-
-// Custom Book/Reading Library Icon SVG XML
-const BOOK_XML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.03a6 6 0 00-6-2.25 6 6 0 00-6 2.25v13.5a6 6 0 016-2.25 6 6 0 016 2.25M12 6.03a6 6 0 016-2.25 6 6 0 016 2.25v13.5a6 6 0 00-6-2.25 6 6 0 00-6 2.25M12 6.03v13.5"/></svg>`;
 
 export function UpgradePaywallModal() {
   const isDark = useIsDarkMode();
@@ -39,16 +38,16 @@ export function UpgradePaywallModal() {
   }, [currentOffering]);
 
   // Pricing display strings (with RevenueCat live price strings as source of truth, fallbacks for local dev)
-  const monthlyPriceStr = monthlyPackage?.product.priceString ?? '$9.99';
-  const yearlyPriceStr = yearlyPackage?.product.priceString ?? '$79.99';
+  const monthlyPriceStr = monthlyPackage?.product.priceString ?? '$5.99';
+  const yearlyPriceStr = yearlyPackage?.product.priceString ?? '$49.99';
 
-  // Calculate yearly monthly-equivalent price ($79.99 / 12 = $6.66)
+  // Calculate yearly monthly-equivalent price ($49.99 / 12 = $4.17)
   const yearlyMonthlyEquivalentStr = useMemo(() => {
     if (yearlyPackage?.product.price) {
       const perMonth = yearlyPackage.product.price / 12;
       return `${yearlyPackage.product.currencyCode === 'USD' ? '$' : ''}${perMonth.toFixed(2)}`;
     }
-    return '$6.66';
+    return '$4.17';
   }, [yearlyPackage]);
 
   const displayDescription =
@@ -128,12 +127,33 @@ export function UpgradePaywallModal() {
             </Text>
 
             <View className="gap-6">
-              {/* Benefit 1: Feed capacity */}
+              {/* Benefit 1: Morning digest */}
               <View className="flex-row items-start">
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <RSSIcon width={20} height={20} color={colors.primary} />
+                  <SunIcon size={20} color={colors.primary} />
+                </View>
+                <View className="flex-1 justify-center">
+                  <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
+                    Your day, in one read
+                  </Text>
+                  <Text
+                    size="xs"
+                    fontFamily="geist"
+                    className="mt-0.5"
+                    style={{ color: colors.grey }}>
+                    One morning digest. Everything that matters, nothing to scroll.
+                  </Text>
+                </View>
+              </View>
+
+              {/* Benefit 2: Unlimited feeds & newsletters */}
+              <View className="flex-row items-start">
+                <View
+                  className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
+                  style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
+                  <FeedIcon size={20} color={colors.primary} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
@@ -144,73 +164,49 @@ export function UpgradePaywallModal() {
                     fontFamily="geist"
                     className="mt-0.5"
                     style={{ color: colors.grey }}>
-                    Infinite folders and a custom @readspace.ai address to receive newsletters
-                    directly.
+                    No caps. Newsletters land right in your feed.
                   </Text>
                 </View>
               </View>
 
-              {/* Benefit 2: AI Labs */}
+              {/* Benefit 3: AI that reads ahead */}
               <View className="flex-row items-start">
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <SvgXml xml={SEARCH_XML} width={18} height={18} color={colors.primary} />
+                  <MagicWandIcon size={20} color={colors.primary} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
-                    Early AI features
+                    AI that reads ahead
                   </Text>
                   <Text
                     size="xs"
                     fontFamily="geist"
                     className="mt-0.5"
                     style={{ color: colors.grey }}>
-                    Try out new tools in development, including daily briefings and conversational
-                    search.
+                    Unlimited summaries, translations, key sentences highlighted.
                   </Text>
                 </View>
               </View>
 
-              {/* Benefit 3: AI Summaries */}
+              {/* Benefit 4: Full articles, saved forever */}
               <View className="flex-row items-start">
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <Sparkle width={20} height={20} color={colors.primary} />
+                  <Book2Icon size={20} color={colors.primary} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
-                    Generous AI limits
+                    Full articles, saved forever
                   </Text>
                   <Text
                     size="xs"
                     fontFamily="geist"
                     className="mt-0.5"
                     style={{ color: colors.grey }}>
-                    More daily usage of our summarize, key takeaway, and translation tools.
-                  </Text>
-                </View>
-              </View>
-
-              {/* Benefit 4: Priority Speed & Storage */}
-              <View className="flex-row items-start">
-                <View
-                  className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
-                  style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <SvgXml xml={BOOK_XML} width={18} height={18} color={colors.primary} />
-                </View>
-                <View className="flex-1 justify-center">
-                  <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
-                    Save articles forever
-                  </Text>
-                  <Text
-                    size="xs"
-                    fontFamily="geist"
-                    className="mt-0.5"
-                    style={{ color: colors.grey }}>
-                    Articles in your library never expire, and feeds update faster. (Free items
-                    expire in 30 days).
+                    Full text from the original website. Saved articles never expire.
                   </Text>
                 </View>
               </View>
@@ -282,7 +278,7 @@ export function UpgradePaywallModal() {
                     size="xs"
                     fontFamily="geist-bold"
                     className="text-[9px] uppercase tracking-wider text-white">
-                    Save 25%
+                    Save 30%
                   </Text>
                 </View>
 

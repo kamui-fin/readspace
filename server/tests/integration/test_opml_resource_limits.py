@@ -95,7 +95,7 @@ class TestOPMLImportLimits:
         """
         import asyncio
 
-        # Basic users have 1000 limit by default, importing 5 feeds should work
+        # Basic users have a 10-subscription limit by default, importing 5 feeds should work
         opml_content = """<?xml version="1.0" encoding="UTF-8"?>
 <opml version="2.0">
     <head>

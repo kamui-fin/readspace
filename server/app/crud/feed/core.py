@@ -10,7 +10,6 @@ Handles:
 
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from urllib.parse import urlparse, urlunparse
 from uuid import UUID
 
 import structlog
@@ -20,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.article import FeedArticle
 from app.models.feed import Feed, FeedCategory
 from app.typing.feeds import FeedBase
+from app.utils.urls import normalize_feed_url
 
 logger = structlog.get_logger(__name__)
 
@@ -34,15 +34,23 @@ MAX_BACKOFF_MINUTES = 720  # 12 hours
 
 
 def normalize_url(url: str) -> str:
-    """Canonicalize URL to prevent duplicates (functional version)."""
-    try:
-        parsed = urlparse(url)
-        scheme = "https" if parsed.scheme in ("http", "https") else parsed.scheme
-        netloc = parsed.netloc.lower()
-        path = parsed.path.rstrip("/") if parsed.path else ""
-        return urlunparse((scheme, netloc, path, parsed.params, parsed.query, parsed.fragment))
-    except Exception:
-        return url
+    """Canonicalize a feed URL to prevent duplicate rows.
+
+    Delegates to :func:`normalize_feed_url` so the existence check
+    (:func:`get_feed_by_url`) and the stored value (:func:`create_feed`) always
+    canonicalize identically. Historically this used a hand-rolled variant that
+    stripped a leading ``/`` before the query string, letting
+    ``https://host/?token=x`` and ``https://host?token=x`` create two rows for
+    the same feed.
+
+    Virtual schemes (``newsletter://``, ``rsshub:``) are passed through: they are
+    not real HTTP URLs and ``url_normalize`` would corrupt them.
+    """
+    if not url:
+        return ""
+    if url.startswith(("newsletter://", "rsshub:", "rsshub://")):
+        return url.strip()
+    return normalize_feed_url(url)
 
 
 def calculate_next_fetch(feed: Feed, ttl: int | None = None) -> datetime:

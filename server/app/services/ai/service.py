@@ -14,7 +14,12 @@ from google.genai import types
 
 from app.core import redis_cache
 from app.core.config import get_settings
-from app.core.constants import AI_CACHE_TTL, MAX_AI_INPUT_CHARS
+from app.core.constants import (
+    AI_CACHE_TTL,
+    MAX_AI_INPUT_CHARS,
+    SUMMARY_MAX_OUTPUT_TOKENS,
+    SUMMARY_TEMPERATURE,
+)
 from app.services.ai.prompts import SUMMARY_SYSTEM_PROMPT, get_translation_system_prompt
 from app.typing.common import LanguageCode
 from app.utils.text import clean_html_text
@@ -70,8 +75,8 @@ async def generate_summary(title: str, content: str, article_id: str, language_k
         client,
         prompt=user_prompt,
         system_instruction=SUMMARY_SYSTEM_PROMPT,
-        max_tokens=4000,
-        temperature=0.3,
+        max_tokens=SUMMARY_MAX_OUTPUT_TOKENS,
+        temperature=SUMMARY_TEMPERATURE,
     )
 
     if result:

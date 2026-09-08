@@ -47,7 +47,9 @@ AI_CACHE_TTL = 86400  # 24 hours for AI results
 OPML_TASK_CACHE_TTL = 86400  # 24 hours for OPML import tasks
 
 # User Agent — realistic modern Chrome UA to avoid 403 blocks from bot detection
-BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+BROWSER_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+)
 
 # HTTP Client Configuration
 HTTP_CLIENT_POOL_LIMITS = 200  # Maximum number of connections to pool
@@ -78,12 +80,20 @@ AUTO_EXTRACT_ON_FETCH = True  # Extract content automatically when fetching arti
 CONTENT_EXTRACTION_TIMEOUT = 5  # seconds - timeout for fetching and extracting content
 FAVICON_FETCH_TIMEOUT = 10  # seconds - timeout for fetching canonical URL and favicon
 
+# Daily Usage Counters (Redis)
+USAGE_COUNTER_TTL_SECONDS = 36 * 3600  # 36h - safe across timezone day boundaries
+SCRAPE_USAGE_KEY_PREFIX = "scrape_usage"  # scrape_usage:{user_id}:{YYYY-MM-DD}
+
 # AI Service
 DEFAULT_AI_MAX_TOKENS = 1000  # Default maximum tokens for AI responses
 MAX_COMPOSITE_TEXT_LENGTH = 1000  # Maximum length for composite text in AI processing
 MAX_AI_SUMMARIZATION_CONTENT_BYTES = 100 * 1024  # Maximum content size for summarization (100KB)
 MAX_AI_TRANSLATION_CONTENT_BYTES = 50 * 1024  # Maximum content size for translation (50KB)
 MAX_AI_INPUT_CHARS = 15000  # Maximum characters for AI input
+
+# Article Summarization ("The Gist")
+SUMMARY_TEMPERATURE = 0.2  # Lower than the generic default; extraction wants determinism
+SUMMARY_MAX_OUTPUT_TOKENS = 4000  # Headroom for long features / CJK; not the bottleneck
 
 
 # Common Error Messages

@@ -11,7 +11,13 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { env } from "@/env"
 import { useUpgradeDialog } from "@/stores/upgrade-dialog"
-import { Check, Rss, Sparkles, Search, BookOpen, Rocket, X } from "lucide-react"
+import { Check, Rocket, X } from "lucide-react"
+import {
+    SunIcon,
+    FeedIcon,
+    MagicWandIcon,
+    Book2Icon,
+} from "@solar-icons/react/bold"
 import { useState } from "react"
 import { SubscribeButton } from "./billing/SubscribeButton"
 
@@ -54,62 +60,62 @@ export default function UpgradeDialog() {
                             Readspace Pro benefits
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Benefit 1: Feed capacity */}
+                            {/* Benefit 1: Morning digest */}
                             <div className="flex items-start">
                                 <div className="mr-3 h-5 w-5 flex-shrink-0 text-primary mt-0.5">
-                                    <Rss className="h-5 w-5" />
+                                    <SunIcon className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <span className="font-semibold text-sm sm:text-base text-foreground">
+                                        Your day, in one read
+                                    </span>
+                                    <p className="text-sm text-muted-foreground mt-0.5">
+                                        One morning digest. Everything that matters, nothing to scroll.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Benefit 2: Unlimited feeds & newsletters */}
+                            <div className="flex items-start">
+                                <div className="mr-3 h-5 w-5 flex-shrink-0 text-primary mt-0.5">
+                                    <FeedIcon className="h-5 w-5" />
                                 </div>
                                 <div>
                                     <span className="font-semibold text-sm sm:text-base text-foreground">
                                         Unlimited feeds & newsletters
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Infinite folders and a custom @readspace.ai address to receive newsletters directly.
+                                        No caps. Newsletters land right in your feed.
                                     </p>
                                 </div>
                             </div>
 
-                            {/* Benefit 2: AI Labs */}
+                            {/* Benefit 3: AI that reads ahead */}
                             <div className="flex items-start">
                                 <div className="mr-3 h-5 w-5 flex-shrink-0 text-primary mt-0.5">
-                                    <Search className="h-5 w-5" />
+                                    <MagicWandIcon className="h-5 w-5" />
                                 </div>
                                 <div>
                                     <span className="font-semibold text-sm sm:text-base text-foreground">
-                                        Early AI features
+                                        AI that reads ahead
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Try out new tools in development, including daily briefings and conversational search.
+                                        Unlimited summaries, translations, key sentences highlighted.
                                     </p>
                                 </div>
                             </div>
 
-                            {/* Benefit 3: AI Summaries & Translations */}
+                            {/* Benefit 4: Full articles, saved forever */}
                             <div className="flex items-start">
                                 <div className="mr-3 h-5 w-5 flex-shrink-0 text-primary mt-0.5">
-                                    <Sparkles className="h-5 w-5" />
+                                    <Book2Icon className="h-5 w-5" />
                                 </div>
                                 <div>
                                     <span className="font-semibold text-sm sm:text-base text-foreground">
-                                        Generous AI limits
+                                        Full articles, saved forever
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        More daily usage of our summarize, key takeaway, and translation tools.
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Benefit 4: Priority Speed & Storage */}
-                            <div className="flex items-start">
-                                <div className="mr-3 h-5 w-5 flex-shrink-0 text-primary mt-0.5">
-                                    <BookOpen className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <span className="font-semibold text-sm sm:text-base text-foreground">
-                                        Save articles forever
-                                    </span>
-                                    <p className="text-sm text-muted-foreground mt-0.5">
-                                        Articles in your library never expire, and feeds update faster. (Free items expire in 30 days).
+                                        Full text from the original website. Saved articles never expire.
                                     </p>
                                 </div>
                             </div>
@@ -151,7 +157,7 @@ export default function UpgradeDialog() {
                                     <CardContent className="px-4 pb-4 sm:px-5 sm:pb-5">
                                         <div className="flex items-baseline">
                                             <span className="text-2xl sm:text-3xl font-extrabold text-foreground">
-                                                $9.99
+                                                $5.99
                                             </span>
                                             <span className="text-muted-foreground text-xs sm:text-sm ml-1">
                                                 /month
@@ -165,7 +171,7 @@ export default function UpgradeDialog() {
                             <div className="relative">
                                 <div className="absolute left-0 right-0 flex justify-center -top-3 z-20">
                                     <Badge className="rounded-full px-3 bg-primary text-primary-foreground hover:bg-primary/95 text-[10px] sm:text-xs font-semibold shadow-xs">
-                                        Save 25%
+                                        Save 30%
                                     </Badge>
                                 </div>
                                 <Card
@@ -188,7 +194,7 @@ export default function UpgradeDialog() {
                                                 Pro Yearly
                                             </CardTitle>
                                             <CardDescription className="text-xs sm:text-sm text-muted-foreground">
-                                                Billed annually ($79.99/yr)
+                                                Billed annually ($49.99/yr)
                                             </CardDescription>
                                         </div>
                                     </CardHeader>
@@ -196,7 +202,7 @@ export default function UpgradeDialog() {
                                     <CardContent className="px-4 pb-4 sm:px-5 sm:pb-5">
                                         <div className="flex items-baseline">
                                             <span className="text-2xl sm:text-3xl font-extrabold text-foreground">
-                                                $6.66
+                                                $4.17
                                             </span>
                                             <span className="text-muted-foreground text-xs sm:text-sm ml-1">
                                                 /month

@@ -14,7 +14,6 @@ async def get_unread_counts_per_feed(
     db: AsyncSession,
     *,
     user_id: UUID,
-    published_until: datetime | None = None,
 ) -> dict[UUID, int]:
     """
     Get unread article counts for each feed subscription.
@@ -52,9 +51,6 @@ async def get_unread_counts_per_feed(
         )
     )
 
-    if published_until:
-        stmt = stmt.where(FeedArticle.published_at <= published_until)
-
     stmt = stmt.group_by(FeedArticle.feed_id)
 
     result = await db.execute(stmt)
@@ -80,7 +76,6 @@ async def count_today_articles(
     db: AsyncSession,
     *,
     user_id: UUID,
-    published_until: datetime | None = None,
 ) -> int:
     """Count articles published today in user's feeds."""
     today_start = datetime.now(timezone.utc) - timedelta(hours=24)
@@ -112,9 +107,6 @@ async def count_today_articles(
         )
     )
 
-    if published_until:
-        stmt = stmt.filter(FeedArticle.published_at <= published_until)
-
     result = await db.execute(stmt)
     return result.scalar() or 0
 
@@ -123,7 +115,6 @@ async def count_total_unread_articles(
     db: AsyncSession,
     *,
     user_id: UUID,
-    published_until: datetime | None = None,
 ) -> int:
     """
     Count total unread articles across all feeds.
@@ -141,20 +132,12 @@ async def count_total_unread_articles(
         )
     )
 
-    if published_until:
-        total_stmt = total_stmt.filter(FeedArticle.published_at <= published_until)
-
     # Articles explicitly marked as read
     read_stmt = select(func.count(UserEntry.id)).filter(
         UserEntry.user_id == user_id,
         UserEntry.is_read,
         UserEntry.feed_article_id.isnot(None),
     )
-
-    if published_until:
-        read_stmt = read_stmt.join(FeedArticle, UserEntry.feed_article_id == FeedArticle.id).filter(
-            FeedArticle.published_at <= published_until
-        )
 
     total_result = await db.execute(total_stmt)
     read_result = await db.execute(read_stmt)
