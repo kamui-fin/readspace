@@ -41,9 +41,11 @@ import { estimateReadingTime } from "@readspace/shared"
 function NewsletterIframe({
     content,
     isDark,
+    highlightsEnabled = false,
 }: {
     content: string
     isDark: boolean
+    highlightsEnabled?: boolean
 }) {
     const iframeRef = useRef<HTMLIFrameElement>(null)
 
@@ -128,7 +130,7 @@ function NewsletterIframe({
                   background-color: #ededed !important; /* Inverts to #121212 */
                 }
                 
-                img, video, svg, .no-invert {
+                img, video, svg, .no-invert, mark.rs-highlight {
                   filter: invert(1) hue-rotate(180deg) !important;
                 }
               `
@@ -151,10 +153,44 @@ function NewsletterIframe({
                   color: #010101 !important;
                 }
               }
+
+              /* AI Highlights (Skim Mode) — brand green tint, invisible until toggled on */
+              mark.rs-highlight {
+                background-color: transparent;
+                background-image: none;
+                color: inherit;
+                padding: 0;
+                border-radius: 3px;
+                box-decoration-break: clone;
+                -webkit-box-decoration-break: clone;
+              }
+              .rs-highlights-enabled mark.rs-highlight {
+                --rs-highlight-color: color-mix(in srgb, #6a994e ${isDark ? "58%" : "45%"}, transparent);
+                background-image: linear-gradient(90deg, var(--rs-highlight-color) 0%, var(--rs-highlight-color) 100%);
+                background-repeat: no-repeat;
+                background-size: 0% 100%;
+                background-position: left center;
+                padding: 0 1px;
+                animation: rs-highlight-sweep 320ms ease-out forwards;
+                animation-delay: calc(var(--rs-highlight-index, 0) * 30ms);
+              }
+              .rs-highlights-enabled mark.rs-highlight[data-rank="2"] {
+                --rs-highlight-color: color-mix(in srgb, #6a994e ${isDark ? "36%" : "26%"}, transparent);
+              }
+              @keyframes rs-highlight-sweep {
+                from { background-size: 0% 100%; }
+                to   { background-size: 100% 100%; }
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .rs-highlights-enabled mark.rs-highlight {
+                  animation: none;
+                  background-size: 100% 100%;
+                }
+              }
             </style>
           </head>
           <body>
-            <div id="mail-content-root" style="display: flow-root;">
+            <div id="mail-content-root" class="${highlightsEnabled ? "rs-highlights-enabled" : ""}" style="display: flow-root;">
               ${content}
             </div>
           </body>
@@ -268,12 +304,15 @@ export function ArticleContent({
         displayContent,
         translatedContent,
         translatedLanguage,
+        highlightsEnabled,
         isExtracting,
         isSummarizing,
         isTranslating,
+        isHighlighting,
         handleExtractContent,
         handleSummarize,
         handleTranslate,
+        handleToggleHighlights,
     } = useArticleAI({
         article,
         contentView,
@@ -302,6 +341,21 @@ export function ArticleContent({
         onMarkAsRead: () =>
             handleScrollMarkAsRead(contentRef.current?.scrollTop || 0),
     })
+
+    // Stagger the highlight sweep animation across marks in reading order on first reveal
+    // (capped so a long article doesn't take seconds to finish "painting" in)
+    useEffect(() => {
+        if (!highlightsEnabled) return
+        const root = isZenMode ? zenScrollRef.current : contentRef.current
+        if (!root) return
+        const marks = root.querySelectorAll<HTMLElement>(".rs-highlight")
+        marks.forEach((mark, i) => {
+            mark.style.setProperty(
+                "--rs-highlight-index",
+                String(Math.min(i, 20))
+            )
+        })
+    }, [highlightsEnabled, isZenMode, displayContent])
 
     // Client-side read time calculation
     const [clientReadTime, setClientReadTime] = useState(0)
@@ -418,9 +472,12 @@ export function ArticleContent({
                 }
             }}
             handleTranslate={handleTranslate}
+            handleToggleHighlights={handleToggleHighlights}
             isExtracting={isExtracting}
             isSummarizing={isSummarizing}
             isTranslating={isTranslating}
+            isHighlighting={isHighlighting}
+            highlightsEnabled={highlightsEnabled}
             onBack={onBack}
             isReadLaterMode={isReadLaterMode}
             translatedContent={translatedContent}
@@ -507,10 +564,15 @@ export function ArticleContent({
                                     <NewsletterIframe
                                         content={displayContent}
                                         isDark={isDark}
+                                        highlightsEnabled={highlightsEnabled}
                                     />
                                 ) : (
                                     <div
-                                        className="text-xl leading-relaxed"
+                                        className={
+                                            highlightsEnabled
+                                                ? "text-xl leading-relaxed rs-highlights-enabled"
+                                                : "text-xl leading-relaxed"
+                                        }
                                         style={{
                                             fontFamily:
                                                 "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
@@ -612,10 +674,17 @@ export function ArticleContent({
                                         <NewsletterIframe
                                             content={displayContent}
                                             isDark={isDark}
+                                            highlightsEnabled={
+                                                highlightsEnabled
+                                            }
                                         />
                                     ) : (
                                         <div
-                                            className="text-xl leading-relaxed mt-8"
+                                            className={
+                                                highlightsEnabled
+                                                    ? "text-xl leading-relaxed mt-8 rs-highlights-enabled"
+                                                    : "text-xl leading-relaxed mt-8"
+                                            }
                                             style={{
                                                 fontFamily:
                                                     "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",

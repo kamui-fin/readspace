@@ -4,10 +4,10 @@ import { Text } from '@components/ui/text';
 import { type BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { DocumentTextIcon, GlobalIcon } from '@solar-icons/react-native/bold';
+import { DocumentTextIcon, GlobalIcon, TextSelectionIcon } from '@solar-icons/react-native/bold';
 import clsx from 'clsx';
 import { forwardRef, useMemo } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, Switch, View } from 'react-native';
 
 export type ArticleViewMode = 'original' | 'extracted' | 'translated';
 
@@ -22,6 +22,11 @@ interface ArticleOptionsBottomSheetProps {
   canExtractContent: boolean;
   isClipped: boolean;
   isNewsletter?: boolean;
+  hasHighlightedContent: boolean;
+  highlightsEnabled: boolean;
+  isGeneratingHighlights: boolean;
+  onGenerateHighlights: () => void;
+  onToggleHighlights: (enabled: boolean) => void;
 }
 
 export const ArticleOptionsBottomSheet = forwardRef<
@@ -40,6 +45,11 @@ export const ArticleOptionsBottomSheet = forwardRef<
       canExtractContent,
       isClipped,
       isNewsletter = false,
+      hasHighlightedContent,
+      highlightsEnabled,
+      isGeneratingHighlights,
+      onGenerateHighlights,
+      onToggleHighlights,
     },
     ref
   ) => {
@@ -122,6 +132,16 @@ export const ArticleOptionsBottomSheet = forwardRef<
                 onTranslate
               )}
 
+            {!hasHighlightedContent &&
+              renderOption(
+                <TextSelectionIcon size={22} color={greyColor} />,
+                'AI Highlights',
+                isGeneratingHighlights ? 'Generating...' : 'Skim the key points',
+                onGenerateHighlights,
+                undefined,
+                isGeneratingHighlights
+              )}
+
             {!isNewsletter &&
               onOpenInBrowser &&
               renderOption(
@@ -131,6 +151,35 @@ export const ArticleOptionsBottomSheet = forwardRef<
                 onOpenInBrowser
               )}
           </View>
+
+          {/* AI Highlights toggle — only shown once generated; flips CSS visibility, no re-fetch */}
+          {hasHighlightedContent && (
+            <View className="mb-4 flex-row items-center justify-between rounded-xl py-3">
+              <View className="flex-row items-center gap-3">
+                <View
+                  className="items-center justify-center rounded-lg"
+                  style={{ width: 40, height: 40, backgroundColor: colors.grey6 }}>
+                  <TextSelectionIcon
+                    size={22}
+                    color={highlightsEnabled ? activeColor : greyColor}
+                  />
+                </View>
+                <Text
+                  size="base"
+                  fontFamily="geist-medium"
+                  className={clsx(
+                    highlightsEnabled ? 'text-secondary' : 'text-primary-foreground'
+                  )}>
+                  AI Highlights
+                </Text>
+              </View>
+              <Switch
+                value={highlightsEnabled}
+                onValueChange={onToggleHighlights}
+                trackColor={{ true: colors.secondary, false: colors.grey4 }}
+              />
+            </View>
+          )}
 
           {/* View Mode Section */}
           {!isNewsletter && (

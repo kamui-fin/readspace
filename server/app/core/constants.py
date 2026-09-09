@@ -47,7 +47,9 @@ AI_CACHE_TTL = 86400  # 24 hours for AI results
 OPML_TASK_CACHE_TTL = 86400  # 24 hours for OPML import tasks
 
 # User Agent — realistic modern Chrome UA to avoid 403 blocks from bot detection
-BROWSER_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+BROWSER_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+)
 
 # HTTP Client Configuration
 HTTP_CLIENT_POOL_LIMITS = 200  # Maximum number of connections to pool
@@ -83,7 +85,11 @@ DEFAULT_AI_MAX_TOKENS = 1000  # Default maximum tokens for AI responses
 MAX_COMPOSITE_TEXT_LENGTH = 1000  # Maximum length for composite text in AI processing
 MAX_AI_SUMMARIZATION_CONTENT_BYTES = 100 * 1024  # Maximum content size for summarization (100KB)
 MAX_AI_TRANSLATION_CONTENT_BYTES = 50 * 1024  # Maximum content size for translation (50KB)
+MAX_AI_HIGHLIGHT_CONTENT_BYTES = 50 * 1024  # Maximum content size for AI highlights (50KB)
 MAX_AI_INPUT_CHARS = 15000  # Maximum characters for AI input
+
+# AI Highlights (Skim Mode)
+HIGHLIGHT_TEXT_INTEGRITY_MIN_SIMILARITY = 0.85  # Min word-level similarity to accept AI highlight output
 
 
 # Common Error Messages

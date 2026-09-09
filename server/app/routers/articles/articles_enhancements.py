@@ -9,7 +9,7 @@ from fastapi import APIRouter, Body, Depends, Query
 
 from app.core.custom_exceptions import NotFoundError, ValidationError
 from app.db.session import get_db_factory
-from app.services.ai.service import generate_summary, translate_content, translate_metadata
+from app.services.ai.service import generate_highlights, generate_summary, translate_content, translate_metadata
 from app.services.articles.scrape import extract_full_content
 from app.services.articles.service import get_article_details
 from app.services.feeds.service import SessionFactory
@@ -17,6 +17,8 @@ from app.services.user.auth import get_current_user
 from app.services.user.resource_limits import enforce_daily_ai_limit
 from app.typing.enhancements import (
     ExtractionResponse,
+    HighlightRequest,
+    HighlightResponse,
     SummarizeRequest,
     SummarizeResponse,
     TranslateRequest,
@@ -213,4 +215,48 @@ async def translate_article(
         translated_title=translated_meta.get("title"),
         translated_description=translated_meta.get("description"),
         translated_tags=translated_meta.get("tags"),
+    )
+
+
+@router.post(
+    "/{article_id}/highlight",
+    response_model=HighlightResponse,
+    summary="Generate AI Highlights (skim mode)",
+)
+async def highlight_article(
+    article_id: UUID,
+    user: Annotated[TokenData, Depends(get_current_user)],
+    db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
+    request: HighlightRequest = Body(default_factory=lambda: HighlightRequest()),
+    clipped: bool = Query(False, description="Whether the article is a clipped article"),
+) -> HighlightResponse:
+    """
+    Generate AI Highlights for the article: the same content with <mark> tags inserted
+    around the key skimmable sentences/phrases. Available on newsletters too, unlike
+    Translate — a highlight budget makes long digest emails easier to skim, not harder.
+    """
+    logger.bind(article_id=str(article_id), user_id=user.sub)
+
+    async with db_factory() as db:
+        await enforce_daily_ai_limit(db, UUID(user.sub))
+
+    # 1. Fetch & Resolve Content
+    article = await get_article_or_404(db_factory, article_id, UUID(user.sub), is_clipped=clipped)
+    content_to_use = resolve_content(request.content, article)
+
+    # 2. Generate Highlights
+    highlighted_content = await generate_highlights(
+        content=content_to_use,
+        article_id=str(article_id),
+        language_key=request.language_key or "original",
+    )
+
+    if not highlighted_content:
+        raise ValidationError(message="Failed to generate highlights")
+
+    highlight_count = highlighted_content.count("<mark")
+    logger.info("Successfully generated highlights", highlight_count=highlight_count)
+    return HighlightResponse(
+        highlighted_content=highlighted_content,
+        highlight_count=highlight_count,
     )

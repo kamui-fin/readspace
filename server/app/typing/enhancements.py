@@ -4,6 +4,7 @@ Schemas for AI and scraping enhancements.
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.constants import MAX_AI_HIGHLIGHT_CONTENT_BYTES
 from app.typing.common import LanguageCode
 
 # Constants (Move these to app/core/constants.py in a real app)
@@ -94,3 +95,35 @@ class TranslateResponse(BaseModel):
     translated_title: str | None = None
     translated_description: str | None = None
     translated_tags: list[str] | None = None
+
+
+# ================= AI Highlights (Skim Mode) =================
+
+
+class HighlightRequest(BaseModel):
+    content: str | None = Field(
+        None,
+        description="Override content to highlight. If None, uses article content.",
+    )
+    language_key: str | None = Field(
+        None,
+        description="Cache variant key (e.g. a target language if highlighting translated content).",
+    )
+
+    @field_validator("content")
+    @classmethod
+    def validate_size(cls, v: str | None) -> str | None:
+        if not v:
+            return v
+
+        size = len(v.encode("utf-8"))
+        if size > MAX_AI_HIGHLIGHT_CONTENT_BYTES:
+            raise ValueError(
+                f"Content too large ({size / 1024:.1f}KB). Max allowed is {MAX_AI_HIGHLIGHT_CONTENT_BYTES / 1024}KB."
+            )
+        return v
+
+
+class HighlightResponse(BaseModel):
+    highlighted_content: str
+    highlight_count: int
