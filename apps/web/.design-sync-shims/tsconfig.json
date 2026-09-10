@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "baseUrl": "..",
+    "paths": {
+      "@/lib/utils": [".design-sync-shims/utils.ts"],
+      "@/env": [".design-sync-shims/env.ts"],
+      "@/*": ["./*"]
+    }
+  }
+}
