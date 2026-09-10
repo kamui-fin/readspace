@@ -11,7 +11,6 @@ import { AnimatedGradientText } from "../magicui/animated-gradient-text"
 
 const MotionButton = motion(Button)
 
-
 export function AnimatedReadButton() {
     return (
         <MotionButton
@@ -47,12 +46,21 @@ export default function HeroSection({ className }: { className?: string }) {
                         <div className="text-center sm:mx-auto lg:mr-auto lg:mt-0 z-100">
                             <h1 className="text-balance text-black font-semibold text-5xl md:text-7xl mt-4 xl:text-[5.25rem] tracking-[-0.02em] max-w-[80rem] mx-auto">
                                 One{" "}
-                                <AnimatedGradientText speed={1} colorFrom="#6A994E" colorTo="#386641" className="font-semibold tracking-tight">feed</AnimatedGradientText>
-                                {" "}for everything you read online.
+                                <AnimatedGradientText
+                                    speed={1}
+                                    colorFrom="#6A994E"
+                                    colorTo="#386641"
+                                    className="font-semibold tracking-tight"
+                                >
+                                    feed
+                                </AnimatedGradientText>{" "}
+                                for everything you read online.
                             </h1>
                             <p className="px-2 mx-auto mt-4 md:mt-4 mb-4 max-w-3xl text-pretty text-sm sm:text-lg text-[#7a7a7a]">
                                 <span className="backdrop-blur-lg bg-opacity-10">
-                                    Readspace pulls in your favorite news sites, magazines, and blogs — no algorithm, no doomscrolling, just what you chose to read.
+                                    Readspace pulls in your favorite news sites,
+                                    magazines, and blogs — no algorithm, no
+                                    doomscrolling, just what you chose to read.
                                 </span>
                             </p>
 
@@ -76,7 +84,10 @@ export default function HeroSection({ className }: { className?: string }) {
                 <div className="relative mt-8 mb-12 mx-auto max-w-7xl px-2 md:px-6 xl:mt-16 z-10">
                     <div className="relative w-full aspect-[16/9]">
                         <MacWindow>
-                            <div className="w-full h-full" style={{ clipPath: "inset(1px 1px 1px 1px)" }}>
+                            <div
+                                className="w-full h-full"
+                                style={{ clipPath: "inset(1px 1px 1px 1px)" }}
+                            >
                                 <img
                                     src="https://github.com/kamui-fin/readspace/raw/main/docs/screenshots/readspace-desktop.png"
                                     alt="Readspace demo"

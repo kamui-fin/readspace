@@ -1,4 +1,4 @@
-"""Codex Digest model - one row per user per local day per edition."""
+"""Codex Digest models - the generated digest rows, plus per-user digest preferences."""
 
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, SmallInteger, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
@@ -11,12 +11,14 @@ from app.models.enums import CodexDigestStatus
 
 
 class CodexDigest(Base):
-    """A generated daily digest for a single user, covering a rolling 24h window.
+    """A generated daily digest for a single user, covering a rolling 24h *content* window.
 
-    ``digest_date`` is the reader's *local* calendar day (supplied by the client on
-    generate), used purely as the quota bucket - the content window is always the last
-    ``window_hours`` from ``requested_at``. ``edition`` (1-based) lets a user hold more
-    than one digest for the same local day (Pro: 2, Basic: 1).
+    ``digest_date`` is the reader's *local* calendar day (client-supplied on generate) and is
+    a display label only ("which day's news is this") - it plays no part in the quota, which
+    is a server-clock rolling window keyed on ``requested_at`` (see
+    ``app.services.user.resource_limits.enforce_codex_quota``). The content window is always
+    the last ``window_hours`` from ``requested_at``. ``edition`` (1-based) lets a user hold
+    more than one digest with the same ``digest_date``.
     """
 
     __tablename__ = "codex_digests"
@@ -59,3 +61,25 @@ class CodexDigest(Base):
     user = relationship("Profile")
 
     __table_args__ = (UniqueConstraint("user_id", "digest_date", "edition", name="uq_codex_digest_user_date_edition"),)
+
+
+class CodexPreferences(Base):
+    """Per-user knobs for how the daily digest is built. One row per user, lazily created on
+    first save - a user with no row uses the defaults (nothing excluded).
+    """
+
+    __tablename__ = "codex_preferences"
+
+    user_id = Column(
+        SQLUUID(as_uuid=True),
+        ForeignKey("profiles.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    # Folder ids whose feeds the user does NOT want folded into the digest. Stored as a JSONB
+    # array of UUID strings; validated against the user's own folders before it's written.
+    excluded_folder_ids = Column(JSONB, nullable=False, server_default="[]")
+
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("Profile")

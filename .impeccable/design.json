@@ -156,23 +156,68 @@
       }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "Article <h1> in the reader and page titles. The ceiling of the type scale (text-4xl, ~2.25rem) — Readspace has no hero headline." },
-      "headline": { "displayName": "Headline", "purpose": "Codex masthead scale-setter, section headers, CardTitle. Geist 600." },
-      "title": { "displayName": "Title", "purpose": "Development card headlines, dialog titles, list-group headings. Geist 600, ~1.125rem." },
-      "reading": { "displayName": "Reading", "purpose": "Article body and blockquotes. EB Garamond with the Noto Serif SC/JP/TC stack for CJK. User-adjustable via the reader slider; ~1.65 line-height." },
-      "body": { "displayName": "Body", "purpose": "All UI text — buttons, fields, menus, descriptions, Codex synthesis bullets. Geist 400, text-sm." },
-      "label": { "displayName": "Label", "purpose": "Feed source names, timestamps, byline metadata, badges, kbd hints. Geist Mono 500, text-xs, frequently uppercase with tracking-wider." },
-      "logo": { "displayName": "Logo", "purpose": "The Readspace wordmark only (font-logo / Figtree). Never body or UI text." }
+      "display": {
+        "displayName": "Display",
+        "purpose": "Article <h1> in the reader and page titles. The ceiling of the type scale (text-4xl, ~2.25rem) — Readspace has no hero headline."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Codex masthead scale-setter, section headers, CardTitle. Geist 600."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Development card headlines, dialog titles, list-group headings. Geist 600, ~1.125rem."
+      },
+      "reading": {
+        "displayName": "Reading",
+        "purpose": "Article body and blockquotes. EB Garamond with the Noto Serif SC/JP/TC stack for CJK. User-adjustable via the reader slider; ~1.65 line-height."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All UI text — buttons, fields, menus, descriptions, Codex synthesis bullets. Geist 400, text-sm."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Feed source names, timestamps, byline metadata, badges, kbd hints. Geist Mono 500, text-xs, frequently uppercase with tracking-wider."
+      },
+      "logo": {
+        "displayName": "Logo",
+        "purpose": "The Readspace wordmark only (font-logo / Figtree). Never body or UI text."
+      }
     },
     "shadows": [
-      { "name": "resting-card", "value": "0 1px 2px 0 rgb(0 0 0 / 0.04)", "purpose": "Near-invisible lift on Card and Input (shadow-xs). Present only so the hairline border doesn't feel inert." },
-      { "name": "menu-popover", "value": "0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.08)", "purpose": "Dropdowns, selects, popovers (shadow-md). Soft ambient shadow that reads as 'above the page'." },
-      { "name": "dialog-overlay", "value": "0 10px 15px -3px rgb(0 0 0 / 0.10), 0 4px 6px -4px rgb(0 0 0 / 0.10)", "purpose": "Modals and toasts (shadow-lg), over a dim backdrop." }
+      {
+        "name": "resting-card",
+        "value": "0 1px 2px 0 rgb(0 0 0 / 0.04)",
+        "purpose": "Near-invisible lift on Card and Input (shadow-xs). Present only so the hairline border doesn't feel inert."
+      },
+      {
+        "name": "menu-popover",
+        "value": "0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.08)",
+        "purpose": "Dropdowns, selects, popovers (shadow-md). Soft ambient shadow that reads as 'above the page'."
+      },
+      {
+        "name": "dialog-overlay",
+        "value": "0 10px 15px -3px rgb(0 0 0 / 0.10), 0 4px 6px -4px rgb(0 0 0 / 0.10)",
+        "purpose": "Modals and toasts (shadow-lg), over a dim backdrop."
+      }
     ],
     "motion": [
-      { "name": "ease-emphasized", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "The transition-transform-medium utility (0.4s) — card flips and larger reveals." },
-      { "name": "accordion", "value": "ease-out 0.2s", "purpose": "Accordion open/close (--animate-accordion-down / -up)." },
-      { "name": "field-transition", "value": "transition-[color,box-shadow] ~150ms", "purpose": "Scoped input/select focus transition — border and ring only, nothing else animates." }
+      {
+        "name": "ease-emphasized",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The transition-transform-medium utility (0.4s) — card flips and larger reveals."
+      },
+      {
+        "name": "accordion",
+        "value": "ease-out 0.2s",
+        "purpose": "Accordion open/close (--animate-accordion-down / -up)."
+      },
+      {
+        "name": "field-transition",
+        "value": "transition-[color,box-shadow] ~150ms",
+        "purpose": "Scoped input/select focus transition — border and ring only, nothing else animates."
+      }
     ],
     "breakpoints": [
       { "name": "sm", "value": "640px" },
@@ -297,14 +342,46 @@
       "Light and dark are equal citizens; every component is defined for both, on every surface."
     ],
     "rules": [
-      { "name": "The Rationed Green Rule", "body": "Saturated Forest Green appears on at most one primary action per view, plus active nav, links, and the Codex mark. If a second green button competes for attention on the same screen, one of them is wrong. Its scarcity is what makes it read as 'this matters.'", "section": "colors" },
-      { "name": "The No-Pure-Neutral Rule", "body": "Web/extension only. No #ffffff, no #000000, no pure gray — the canvas is green-warm white, ink is faint-cool near-black, muted-foreground sits at hue 97. Mobile deliberately uses near-pure white/black neutrals and its own grey ramp; do not apply this rule there.", "section": "colors" },
-      { "name": "The Border-Not-Shadow Rule", "body": "Separation is a 1px border and a tonal fill, not a shadow. On web/extension, shadows are reserved for genuinely floating layers (popover, dropdown, dialog) and stay soft and small. On mobile the only shadowed element is the floating blurred bottom tab bar.", "section": "colors" },
-      { "name": "The Serif-Reads Rule", "body": "If the text is something a person wrote to be read (article body, pull quote, the synthesized Codex through-line), it is serif. If it is something the app is telling you (labels, buttons, counts, nav), it is sans. Mono is only for machine metadata — times, slugs, keys. Don't mix the roles.", "section": "typography" },
-      { "name": "The One-Ceiling Rule", "body": "Display type stops at text-4xl (~2.25rem). Readspace has no hero headline; the biggest words on any screen are an article title, and they stay modest.", "section": "typography" },
-      { "name": "The Flat-Room Rule", "body": "If a surface is part of the page (card, row, panel, nav), it is flat with a hairline border and a tonal fill. On web/extension, only things that pop over the page (menu, dialog, toast) get a shadow, and that shadow is always soft, offset-down, and uncolored. On mobile the sole exception is the floating blurred bottom tab bar.", "section": "elevation" },
-      { "name": "The Serif-Reads Rule", "body": "If the text is something a person wrote to be read (article body, pull quote, the synthesized Codex through-line), it is serif. If it is something the app is telling you (labels, buttons, counts, nav), it is sans. Mono is only for machine metadata — times, slugs, keys. Applies to all three surfaces.", "section": "typography" },
-      { "name": "The One-Ceiling Rule", "body": "Display type stops at text-4xl (~2.25rem web / ~32px mobile). Readspace has no hero headline; the biggest words on any screen are an article title, and they stay modest.", "section": "typography" }
+      {
+        "name": "The Rationed Green Rule",
+        "body": "Saturated Forest Green appears on at most one primary action per view, plus active nav, links, and the Codex mark. If a second green button competes for attention on the same screen, one of them is wrong. Its scarcity is what makes it read as 'this matters.'",
+        "section": "colors"
+      },
+      {
+        "name": "The No-Pure-Neutral Rule",
+        "body": "Web/extension only. No #ffffff, no #000000, no pure gray — the canvas is green-warm white, ink is faint-cool near-black, muted-foreground sits at hue 97. Mobile deliberately uses near-pure white/black neutrals and its own grey ramp; do not apply this rule there.",
+        "section": "colors"
+      },
+      {
+        "name": "The Border-Not-Shadow Rule",
+        "body": "Separation is a 1px border and a tonal fill, not a shadow. On web/extension, shadows are reserved for genuinely floating layers (popover, dropdown, dialog) and stay soft and small. On mobile the only shadowed element is the floating blurred bottom tab bar.",
+        "section": "colors"
+      },
+      {
+        "name": "The Serif-Reads Rule",
+        "body": "If the text is something a person wrote to be read (article body, pull quote, the synthesized Codex through-line), it is serif. If it is something the app is telling you (labels, buttons, counts, nav), it is sans. Mono is only for machine metadata — times, slugs, keys. Don't mix the roles.",
+        "section": "typography"
+      },
+      {
+        "name": "The One-Ceiling Rule",
+        "body": "Display type stops at text-4xl (~2.25rem). Readspace has no hero headline; the biggest words on any screen are an article title, and they stay modest.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-Room Rule",
+        "body": "If a surface is part of the page (card, row, panel, nav), it is flat with a hairline border and a tonal fill. On web/extension, only things that pop over the page (menu, dialog, toast) get a shadow, and that shadow is always soft, offset-down, and uncolored. On mobile the sole exception is the floating blurred bottom tab bar.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Serif-Reads Rule",
+        "body": "If the text is something a person wrote to be read (article body, pull quote, the synthesized Codex through-line), it is serif. If it is something the app is telling you (labels, buttons, counts, nav), it is sans. Mono is only for machine metadata — times, slugs, keys. Applies to all three surfaces.",
+        "section": "typography"
+      },
+      {
+        "name": "The One-Ceiling Rule",
+        "body": "Display type stops at text-4xl (~2.25rem web / ~32px mobile). Readspace has no hero headline; the biggest words on any screen are an article title, and they stay modest.",
+        "section": "typography"
+      }
     ],
     "dos": [
       "Do keep every screen mostly neutral space and ration saturated Forest Green to one primary action plus active nav, links, and the Codex mark (the Rationed Green Rule).",

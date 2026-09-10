@@ -1,15 +1,23 @@
 """Resource limits configuration for different user roles."""
 
 # Codex Digest allowance - metered per user, not drawn from the shared ai_usage counter.
-# The "day" is the reader's LOCAL calendar day (client-supplied), so quota resets at the
-# user's own midnight.
-#   Basic: 1 generation per local day AND at most `per_month` COMPLETED digests per calendar
-#          month (only COMPLETED rows burn the monthly cap; a SKIPPED/FAILED retry does not).
-#   Pro:   `per_day` generations ("editions") per local day, no monthly cap.
+#
+# The generation cap is a ROLLING WINDOW keyed on the server clock (a digest's requested_at),
+# NOT on any client-supplied date - so it can't be gamed by changing the device timezone or
+# clock, and it resets continuously (the oldest generation ages out CODEX_QUOTA_WINDOW_HOURS
+# after it was requested). CODEX_QUOTA_WINDOW_HOURS is a little under 24 so a "late tonight +
+# tomorrow morning" pattern still works while >2/day stays impossible.
+#
+#   Basic: `per_window` generation in any CODEX_QUOTA_WINDOW_HOURS, AND at most `per_month`
+#          COMPLETED digests per calendar month (server clock). Only COMPLETED rows burn the
+#          monthly cap; a SKIPPED/FAILED retry does not.
+#   Pro:   `per_window` generations in any CODEX_QUOTA_WINDOW_HOURS, no monthly cap.
 #   Admin: unlimited - enforce_codex_quota short-circuits on ADMIN.
+CODEX_QUOTA_WINDOW_HOURS = 22
+
 CODEX_LIMITS = {
-    "basic": {"per_day": 1, "per_month": 3},
-    "pro": {"per_day": 2},
+    "basic": {"per_window": 1, "per_month": 3},
+    "pro": {"per_window": 2},
     "admin": {},
 }
 

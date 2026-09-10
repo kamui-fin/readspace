@@ -13,8 +13,7 @@
  * 6. Copy the Client ID and paste it below
  */
 
-export const GOOGLE_WEB_CLIENT_ID =
-  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
+export const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
 
 /**
  * Cloud Configuration

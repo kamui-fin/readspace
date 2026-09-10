@@ -240,7 +240,7 @@ export const SAMPLE_CODEX_DIGEST_QUIET: CodexDigestResponse = {
   clusters_found: 0,
   payload: {
     headline: 'A quiet news day',
-    gist: "A quiet day — nothing your sources covered crossed more than one of them.",
+    gist: 'A quiet day — nothing your sources covered crossed more than one of them.',
     scale_setter: '9 pieces · 5 sources · 0 developments',
     themes: ['Postgres 18'],
     // Quiet day: no developments, so nothing was condensed.

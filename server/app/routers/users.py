@@ -63,7 +63,7 @@ async def get_limits(
     current_user: Annotated[TokenData, Depends(get_current_user)],
     local_date: Annotated[
         date | None,
-        Query(description="Caller's local calendar day - scopes the Codex per-day usage count."),
+        Query(description="Accepted for backwards compatibility; no longer affects the Codex usage figures."),
     ] = None,
 ) -> UserLimitsResponse:
     """

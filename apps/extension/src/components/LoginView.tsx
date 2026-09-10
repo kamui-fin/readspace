@@ -32,9 +32,7 @@ export function LoginView({ currentView, onViewChange }: LoginViewProps) {
           </div>
 
           {/* Embedded Login Form */}
-          <LoginForm
-            onShowSelfHosted={() => onViewChange('self-hosted')}
-          />
+          <LoginForm onShowSelfHosted={() => onViewChange('self-hosted')} />
 
           {/* New to Readspace link */}
           <div className="text-center">

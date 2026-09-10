@@ -14,7 +14,9 @@ import {
     Link,
 } from "@react-email/components"
 
-export const VerificationTemplate = ({ verificationUrl = "https://readspace.ai/verify?token=example-token" }) => {
+export const VerificationTemplate = ({
+    verificationUrl = "https://readspace.ai/verify?token=example-token",
+}) => {
     return (
         <Html>
             <Head />
@@ -38,15 +40,16 @@ export const VerificationTemplate = ({ verificationUrl = "https://readspace.ai/v
                             </Heading>
 
                             <Text className="text-[16px] text-gray-700 mb-[16px]">
-                                Thanks for signing up for Readspace! To complete your
-                                registration and secure your account, please verify
-                                your email address by clicking the button below.
+                                Thanks for signing up for Readspace! To complete
+                                your registration and secure your account,
+                                please verify your email address by clicking the
+                                button below.
                             </Text>
 
                             <Text className="text-[16px] text-gray-700 mb-[24px]">
-                                This verification link will expire in 24 hours. If you
-                                didn&apos;t create an account with Readspace, you can
-                                safely ignore this email.
+                                This verification link will expire in 24 hours.
+                                If you didn&apos;t create an account with
+                                Readspace, you can safely ignore this email.
                             </Text>
 
                             <Text className="text-[16px] text-gray-700 mb-[8px]">
@@ -67,10 +70,14 @@ export const VerificationTemplate = ({ verificationUrl = "https://readspace.ai/v
 
                             {/* Fallback text */}
                             <Text className="text-[14px] text-gray-600 mb-[16px] text-center">
-                                If the button doesn&apos;t work, copy and paste this link into your browser:
+                                If the button doesn&apos;t work, copy and paste
+                                this link into your browser:
                             </Text>
                             <Text className="text-[14px] text-gray-600 mb-[24px] text-center">
-                                <Link href={verificationUrl} className="text-[#386641] underline">
+                                <Link
+                                    href={verificationUrl}
+                                    className="text-[#386641] underline"
+                                >
                                     {verificationUrl}
                                 </Link>
                             </Text>

@@ -2,7 +2,7 @@
 Resource limit enforcement logic.
 """
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -10,11 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import redis_cache
 from app.core.custom_exceptions import NotFoundError, ResourceLimitError
-from app.core.resource_limits import CODEX_LIMITS, RESOURCE_LIMITS
+from app.core.resource_limits import CODEX_LIMITS, CODEX_QUOTA_WINDOW_HOURS, RESOURCE_LIMITS
 from app.crud import codex as crud_codex
 from app.crud.profile import get_current_usage, get_profile_by_id
 from app.models.codex import CodexDigest
-from app.models.enums import CodexDigestStatus, UserRole
+from app.models.enums import UserRole
 
 
 def _get_limit_for_role(role: str, resource: str) -> Any:
@@ -91,99 +91,91 @@ async def enforce_daily_ai_limit(db: AsyncSession, user_id: UUID) -> None:
         )
 
 
-def _codex_local_today(local_date: date | None) -> date:
-    """The reader's local calendar day (client-supplied); UTC today as a safe fallback."""
-    return local_date or datetime.now(timezone.utc).date()
-
-
-def _latest_is_retryable(latest: CodexDigest | None) -> bool:
-    """A SKIPPED/FAILED latest edition can be re-run in place without spending a new slot."""
-    return latest is not None and latest.status in (
-        CodexDigestStatus.SKIPPED.value,
-        CodexDigestStatus.FAILED.value,
-    )
+def _codex_quota_window() -> timedelta:
+    return timedelta(hours=CODEX_QUOTA_WINDOW_HOURS)
 
 
 async def enforce_codex_quota(db: AsyncSession, user_id: UUID, local_date: date | None = None) -> CodexDigest | None:
-    """
-    Check whether the user may request a new Codex digest for their local ``local_date``.
+    """Decide whether the user may start a new Codex digest generation right now.
 
-    Returns an existing digest row when the request should be served from it (an in-flight or
-    completed edition that isn't a retry). Returns None when the caller should create the next
-    PENDING edition. Raises ResourceLimitError when the day's / month's allowance is spent.
+    Returns:
+      - an existing CodexDigest row  -> serve it back, don't spend a slot (an in-flight
+        generation is still running, or the cap is hit and this is the row to keep polling);
+      - None                          -> the caller should create the next PENDING digest.
+    Raises ResourceLimitError when the allowance is spent and there's no row to fall back to.
 
-    Allowance (the "day" is the client's local calendar day):
+    Allowance (all server-clock, ``local_date`` plays no part):
       - Admin: unlimited.
-      - Pro:   up to CODEX_LIMITS["pro"]["per_day"] editions per local day.
-      - Basic: 1 edition per local day AND <= CODEX_LIMITS["basic"]["per_month"] COMPLETED
-               digests per calendar month.
-    A SKIPPED/FAILED latest edition is always retryable and doesn't count against either cap.
+      - Pro:   at most CODEX_LIMITS["pro"]["per_window"] generations whose ``requested_at`` is
+               within the trailing CODEX_QUOTA_WINDOW_HOURS.
+      - Basic: at most CODEX_LIMITS["basic"]["per_window"] in that same window, AND
+               <= CODEX_LIMITS["basic"]["per_month"] COMPLETED digests this calendar month.
+    A SKIPPED / FAILED latest generation is always retryable in place and counts against
+    nothing.
     """
     profile = await get_profile_by_id(db, user_id=user_id)
     if not profile:
         raise NotFoundError(message="User profile not found", error_code="USER_PROFILE_NOT_FOUND")
 
     role = str(profile.role).upper().split(".")[-1]
-    today = _codex_local_today(local_date)
-    latest = await crud_codex.get_latest_edition_for_date(db, user_id, today)
+    now = datetime.now(timezone.utc)
+    window = _codex_quota_window()
+    window_h = CODEX_QUOTA_WINDOW_HOURS
+
+    # (1) A retryable (SKIPPED/FAILED) most-recent generation is re-run in place - no slot
+    #     spent, no cap consulted. Checked first for every role, before the in-flight check
+    #     (a retryable row is never in-flight).
+    if await crud_codex.get_latest_retryable(db, user_id) is not None:
+        return None
 
     if role == UserRole.ADMIN.value:
-        return None if _latest_is_retryable(latest) else latest
+        return None
 
-    # An active (PENDING/IN_PROGRESS/COMPLETED) latest edition: only dedupe to it while there's
-    # still day-budget spent on it; a fresh generate past the cap is rejected below.
-    active_editions = await crud_codex.count_editions_for_date(db, user_id, today)
+    tier = "pro" if role == UserRole.PRO.value else "basic"
+    per_window = CODEX_LIMITS[tier]["per_window"]
+    recent = await crud_codex.count_recent_generations(db, user_id, window=window, now=now)
 
-    if role == UserRole.PRO.value:
-        per_day = CODEX_LIMITS["pro"]["per_day"]
-        if _latest_is_retryable(latest):
+    # (2) Still under the per-window cap: for BASIC also check the monthly COMPLETED cap, then
+    #     allow a fresh generation. PRO has no monthly cap.
+    if recent < per_window:
+        if tier == "pro":
             return None
-        if active_editions >= per_day:
-            # The most recent active edition is what the client should keep seeing.
-            if latest is not None:
-                return latest
+        per_month = CODEX_LIMITS["basic"]["per_month"]
+        month_start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+        used_month = await crud_codex.count_completed_since(db, user_id, since=month_start)
+        if used_month >= per_month:
             raise ResourceLimitError(
-                message=f"You've generated {per_day} Codex digests today. Try again tomorrow.",
+                message=f"You've used all {per_month} Daily Digests for this month. Upgrade to Pro for more.",
                 error_code="CODEX_LIMIT_EXCEEDED",
-                details={"current_usage": active_editions, "limit": per_day, "period": "day"},
+                details={"current_usage": used_month, "limit": per_month, "period": "month"},
             )
         return None
 
-    # BASIC (and any other role): 1 per local day, plus a monthly COMPLETED cap.
-    per_day = CODEX_LIMITS["basic"]["per_day"]
-    per_month = CODEX_LIMITS["basic"]["per_month"]
-    month_cap_msg = f"You've used all {per_month} Codex digests for this month. Upgrade to Pro for more."
+    # (3) At/over the per-window cap. If one of those generations is still running, hand it
+    #     back so the client keeps polling it (no duplicate, no extra slot). Otherwise refuse.
+    in_flight = await crud_codex.get_latest_in_flight(db, user_id)
+    if in_flight is not None:
+        return in_flight
 
-    # Already have today's (non-retryable) edition: just serve it, regardless of month state.
-    if not _latest_is_retryable(latest) and active_editions >= per_day and latest is not None:
-        return latest
-
-    used_month = await crud_codex.count_ready_digests_in_month(db, user_id, today=today)
-    if used_month >= per_month:
-        raise ResourceLimitError(
-            message=month_cap_msg,
-            error_code="CODEX_LIMIT_EXCEEDED",
-            details={"current_usage": used_month, "limit": per_month, "period": "month"},
-        )
-
-    if _latest_is_retryable(latest):
-        return None  # retry today's failed/skipped edition (fits under the month cap)
-
-    if active_editions >= per_day:
-        raise ResourceLimitError(
-            message="You've already generated today's Codex digest. Come back tomorrow.",
-            error_code="CODEX_LIMIT_EXCEEDED",
-            details={"current_usage": active_editions, "limit": per_day, "period": "day"},
-        )
-    return None
+    hours_msg = f"{window_h} hours"
+    if per_window == 1:
+        message = f"You've already built a Daily Digest in the last {hours_msg}. Come back later."
+    else:
+        message = f"You've built {per_window} Daily Digests in the last {hours_msg}. Try again later."
+    raise ResourceLimitError(
+        message=message,
+        error_code="CODEX_LIMIT_EXCEEDED",
+        details={"current_usage": recent, "limit": per_window, "period": "window", "window_hours": window_h},
+    )
 
 
 async def get_user_limits_and_usage(db: AsyncSession, user_id: UUID, local_date: date | None = None) -> dict[str, Any]:
     """
     Get user limits configuration and current usage stats.
 
-    ``local_date`` is the caller's local calendar day (from the client); it scopes the Codex
-    per-day usage so the "used today" count resets at the user's own midnight.
+    ``local_date`` is accepted for backwards compatibility but no longer affects the Codex
+    usage figures - the generation cap is a server-clock rolling window (see
+    ``CODEX_QUOTA_WINDOW_HOURS``).
     """
     profile = await get_profile_by_id(db, user_id=user_id)
     if not profile:
@@ -220,24 +212,33 @@ async def _get_codex_usage(
 ) -> dict[str, Any]:
     """Build the Codex usage summary shown in /users/limits.
 
-    Pro -> {period: "day", limit, used} where ``used`` is today's active-edition count.
-    Basic -> {period: "month", limit, used, used_today} - the monthly COMPLETED count plus
-             whether today's one local-day digest is already spent.
+    The generation cap is a rolling window (see ``CODEX_QUOTA_WINDOW_HOURS``):
+      Pro   -> {period: "window", window_hours, limit, used}
+      Basic -> {period: "month", limit, used, used_in_window, window_hours} - the monthly
+               COMPLETED count plus whether this window's generation is already spent.
+    ``local_date`` is ignored (kept in the signature for callers that still pass it).
     """
-    today = _codex_local_today(local_date)
-
     if role_lower == "admin":
         return {"unlimited": True}
 
-    used_today = await crud_codex.count_editions_for_date(db, user_id, today)
+    now = datetime.now(timezone.utc)
+    window = timedelta(hours=CODEX_QUOTA_WINDOW_HOURS)
+    used_in_window = await crud_codex.count_recent_generations(db, user_id, window=window, now=now)
 
     if role_lower == "pro":
-        return {"period": "day", "limit": CODEX_LIMITS["pro"]["per_day"], "used": used_today}
+        return {
+            "period": "window",
+            "window_hours": CODEX_QUOTA_WINDOW_HOURS,
+            "limit": CODEX_LIMITS["pro"]["per_window"],
+            "used": used_in_window,
+        }
 
-    used_this_month = await crud_codex.count_ready_digests_in_month(db, user_id, today=today)
+    month_start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+    used_this_month = await crud_codex.count_completed_since(db, user_id, since=month_start)
     return {
         "period": "month",
         "limit": CODEX_LIMITS["basic"]["per_month"],
         "used": used_this_month,
-        "used_today": min(used_today, CODEX_LIMITS["basic"]["per_day"]),
+        "used_in_window": min(used_in_window, CODEX_LIMITS["basic"]["per_window"]),
+        "window_hours": CODEX_QUOTA_WINDOW_HOURS,
     }

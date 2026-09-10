@@ -54,10 +54,8 @@ export const feeds = {
 
   adminDeleteFeed: (id: string) => ApiClient.delete(`/api/feeds/${id}/admin`),
 
-  adminUpdateFeed: (
-    id: string,
-    data: AdminFeedUpdate
-  ) => ApiClient.put<FeedDetail>(`/api/feeds/${id}/admin`, data),
+  adminUpdateFeed: (id: string, data: AdminFeedUpdate) =>
+    ApiClient.put<FeedDetail>(`/api/feeds/${id}/admin`, data),
 
   markFeedAllRead: (feed_id: string) =>
     ApiClient.put<{

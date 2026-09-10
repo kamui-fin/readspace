@@ -7,7 +7,13 @@ import {
 } from '@tanstack/react-query';
 import { ApiClient } from '../client';
 import { RSS_QUERY_KEYS, mutationKeys, queryKeys } from '../query-keys';
-import type { FeedDetail, Subscription, FeedDiscoveryResult, FeedsResponse, AdminFeedUpdate } from '../types';
+import type {
+  FeedDetail,
+  Subscription,
+  FeedDiscoveryResult,
+  FeedsResponse,
+  AdminFeedUpdate,
+} from '../types';
 
 export function useFeeds(
   params?: {

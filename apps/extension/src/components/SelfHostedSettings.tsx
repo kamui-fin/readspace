@@ -45,7 +45,9 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
       try {
         new URL(trimmedUrl)
       } catch {
-        throw new Error('Please enter a valid URL (e.g., http://localhost:8008)')
+        throw new Error(
+          'Please enter a valid URL (e.g., http://localhost:8008)'
+        )
       }
 
       // Fetch config from server
@@ -56,7 +58,9 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
 
       if (!configResponse.ok) {
         if (configResponse.status === 404) {
-          throw new Error('Server endpoint not found (404). Verify the server URL is correct.')
+          throw new Error(
+            'Server endpoint not found (404). Verify the server URL is correct.'
+          )
         } else if (configResponse.status >= 500) {
           throw new Error(
             `Server error (${configResponse.status}). The Readspace server may be down.`
@@ -68,7 +72,9 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
       const config: ConfigResponse = await configResponse.json()
 
       if (!config.supabase_url || !config.supabase_anon_key) {
-        throw new Error('Server configuration is incomplete (missing Supabase credentials).')
+        throw new Error(
+          'Server configuration is incomplete (missing Supabase credentials).'
+        )
       }
 
       // Update settings with fetched config
@@ -81,7 +87,8 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
       toast.success('Connected successfully!', { id: toastId })
       onBack()
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to connect to server'
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to connect to server'
       setError(errorMessage)
       toast.error(errorMessage, { id: toastId })
     } finally {
@@ -100,7 +107,12 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
     <div className="space-y-6 max-w-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={onBack} className="h-8 w-8 p-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          className="h-8 w-8 p-0"
+        >
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <h2 className="text-xl font-semibold">Server connection</h2>
@@ -110,9 +122,16 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
       <div className="p-3 bg-muted rounded-lg text-sm">
         <p className="text-muted-foreground">
           {isUsingProduction ? (
-            <>Connected to <span className="font-medium">Readspace Cloud</span></>
+            <>
+              Connected to <span className="font-medium">Readspace Cloud</span>
+            </>
           ) : (
-            <>Self-hosted: <span className="font-mono text-xs break-all">{settings.readspace_url}</span></>
+            <>
+              Self-hosted:{' '}
+              <span className="font-mono text-xs break-all">
+                {settings.readspace_url}
+              </span>
+            </>
           )}
         </p>
       </div>
@@ -120,7 +139,9 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
       {/* Form */}
       <div className="space-y-4 px-1">
         <div className="space-y-2">
-          <Label htmlFor="apiUrl">{isUsingProduction ? 'Self-host URL' : 'Server URL'}</Label>
+          <Label htmlFor="apiUrl">
+            {isUsingProduction ? 'Self-host URL' : 'Server URL'}
+          </Label>
           <Input
             id="apiUrl"
             type="url"
@@ -133,7 +154,9 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
             disabled={isValidating}
             className={error ? 'border-red-500' : ''}
           />
-          {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+          {error && (
+            <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+          )}
         </div>
       </div>
 

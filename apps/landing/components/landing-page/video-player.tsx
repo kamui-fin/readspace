@@ -19,7 +19,14 @@ const VideoPlayerFallback = () => {
     )
 }
 
-const VideoContent = ({ src, className, autoPlay = true, muted = true, loop = true, controls = false }: VideoPlayerProps) => {
+const VideoContent = ({
+    src,
+    className,
+    autoPlay = true,
+    muted = true,
+    loop = true,
+    controls = false,
+}: VideoPlayerProps) => {
     return (
         <video
             className={className}

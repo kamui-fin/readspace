@@ -1,10 +1,10 @@
 # Codex Digest Pipeline — Technical Design (v1 / MLP)
 
 **Status:** Draft for build · **Owner:** Abhay · **Date:** 2026-09-09
-**Companion to:** the PRD *"Readspace Codex — Product Requirements."*
+**Companion to:** the PRD _"Readspace Codex — Product Requirements."_
 **Rendered version:** https://claude.ai/code/artifact/1a2c3854-5bc3-46d8-8b66-bfab077872c6
 
-Codex answers one question — *"what did I miss?"* — for a reader who follows more sources
+Codex answers one question — _"what did I miss?"_ — for a reader who follows more sources
 than any feed view can still make sense of. This document specifies the **generation
 pipeline only**: how a `user_id` becomes one stored `codex_digests` row. Continuity
 (day-over-day memory) is a future phase, not v1.
@@ -18,22 +18,28 @@ Two layers:
 - **Developments** (the product) — articles from several of the reader's sources covering the
   same event, compressed into one synthesized entry that carries its own provenance
   (`12 articles · 8 sources`) and expands to the five best write-ups, strongest first.
-- **Worth Reading** (bonus strip) — 2–4 standalone pieces that never clustered because nothing
-  else covered them.
+  When _nothing_ clusters (≥2 sources) but a genuine top story ran, Phase 1 may promote that
+  lone story to a `source_count: 1` development so the main column isn't empty on a
+  low-overlap day. This is editorial, not wire-news-only: a landmark essay or a defining
+  analysis piece can lead on a quiet news day. Reserved for stories that clearly warrant the
+  lead — not quiet-day padding.
+- **Worth Reading** (bonus strip) — 2–6 standalone runner-up reads: the next most valuable
+  pieces after the Developments, decisively above the rest of the reader's feed, that just
+  missed the main column.
 
 A story has exactly one home — it is either a Development or a Worth Reading entry, never both
-(Worth Reading only draws from content outside every cluster).
+(Worth Reading only draws from content outside every development).
 
 ### Locked decisions
 
-| Decision | Value |
-|---|---|
-| Ingest window | 24h, fixed for v1 |
-| Ingest cap | 1000 articles |
-| LLM calls | 2 (Gemini, existing provider) |
-| Execution | On-demand only — no cron, no fan-out |
-| Access | Metered per user: **Basic 3 / calendar month, Pro 1 / day, Admin unlimited** |
-| Continuity | Future phase (§16) |
+| Decision      | Value                                                                        |
+| ------------- | ---------------------------------------------------------------------------- |
+| Ingest window | 24h, fixed for v1                                                            |
+| Ingest cap    | 1000 articles                                                                |
+| LLM calls     | 2 (Gemini, existing provider)                                                |
+| Execution     | On-demand only — no cron, no fan-out                                         |
+| Access        | Metered per user: **Basic 3 / calendar month, Pro 1 / day, Admin unlimited** |
+| Continuity    | Future phase (§16)                                                           |
 
 ---
 
@@ -124,11 +130,16 @@ One call. Big input (whole catalog as TOON), small structured output.
 - Catalog as TOON — uniform table of `{id, source, age, title, snippet}`, ~100K tokens for a
   full 1000-row day.
 - The two counts.
-- System prompt `get_codex_triage_system_prompt()`: group articles covering the same
-  event/release (a cluster needs ≥2 articles from ≥2 distinct sources); order each cluster's
-  `article_ids` strongest-write-up-first; rank clusters by distinct source count; separately
-  list standalone stand-outs *not* in any cluster; write a 1–2 sentence plain-language gist;
-  be honest about a quiet day.
+- System prompt `get_codex_triage_system_prompt()`: act as the reader's section editor over a
+  catalog that is often _not_ a newswire. Build the developments in priority order —
+  (1) multi-source clusters (≥2 articles from ≥2 distinct sources), ranked by distinct source
+  count; (2) a single high-priority story as a `source_count: 1` development when nothing
+  clustered around it and it clearly warrants the lead; (3) a standout long-form piece as a
+  single-source development on a quiet news day. Order each development's `article_ids`
+  strongest-write-up-first. `worth_reading_ids` is the runner-up tier — best standalone reads
+  after the developments, _not_ in any development, best-first. Write a short `headline` + a
+  1–2 sentence `gist`; be honest about a quiet day and never manufacture a front-page tone.
+  `themes` is `[]` unless a topic genuinely recurred across multiple pieces.
 
 ### Output — `CodexTriageOutput` via `response.parsed`
 
@@ -136,19 +147,37 @@ One call. Big input (whole catalog as TOON), small structured output.
 {
   "gist": "A heavy day for AI infrastructure — three separate stories on inference cost, a model release, and a datacenter financing round. Quiet elsewhere.",
   "clusters": [
-    { "label": "Anthropic ships Claude Opus 4.5 with a 1M-token context window",
+    {
+      "label": "Anthropic ships Claude Opus 4.5 with a 1M-token context window",
       "article_ids": [45, 12, 89, 7, 30, 61],
-      "source_count": 8, "article_count": 12 },
-    { "label": "CoreWeave raises a $9B debt facility for GPU buildout",
-      "article_ids": [22, 5, 71], "source_count": 5, "article_count": 6 }
+      "source_count": 8,
+      "article_count": 12
+    },
+    {
+      "label": "CoreWeave raises a $9B debt facility for GPU buildout",
+      "article_ids": [22, 5, 71],
+      "source_count": 5,
+      "article_count": 6
+    },
+    {
+      "label": "Stratechery's teardown of the new inference cost curve",
+      "article_ids": [3],
+      "source_count": 1,
+      "article_count": 1
+    }
   ],
   "worth_reading_ids": [213, 77, 140]
 }
 ```
 
-Backend then trims to the top `CODEX_MAX_DEVELOPMENTS` (5) clusters by `source_count`, keeps
-`len(clusters)` as `clusters_found` for the closing line ("31 developments found, 3 shown"),
-caps `worth_reading_ids` at `CODEX_MAX_WORTH_READING` (4).
+The third entry is the single-source case: nothing else covered it, but it's a genuine lead,
+so it's a development rather than a Worth Reading item.
+
+Backend then trims to the top `CODEX_MAX_DEVELOPMENTS` (5) developments by `source_count`
+(single-source ones naturally sort last), keeps `len(clusters)` as `clusters_found` for the
+closing line ("31 developments found, 3 shown"), and caps `worth_reading_ids` at
+`CODEX_MAX_WORTH_READING` (4), or `CODEX_MAX_WORTH_READING_FALLBACK` (6) only when the
+developments list came back empty.
 
 ---
 
@@ -190,14 +219,19 @@ on why it stands alone; write the scale-setter and closing line; never inflate a
 {
   "scale_setter": "143 new pieces from 31 sources — a busy day for AI infrastructure, quiet everywhere else.",
   "developments": [
-    { "title": "Anthropic ships Claude Opus 4.5 with a 1M-token context window",
+    {
+      "title": "Anthropic ships Claude Opus 4.5 with a 1M-token context window",
       "synthesis": "Opus 4.5 lands with a 1M-token window and lower per-token pricing than 4.1. TechCrunch and The Information both read it as a direct answer to Gemini's long-context lead; Simon Willison's hands-on says recall past ~400K tokens is still uneven. No independent benchmarks yet.",
-      "source_count": 8, "article_count": 12,
-      "article_ids": [45, 12, 89, 7, 30] }
+      "source_count": 8,
+      "article_count": 12,
+      "article_ids": [45, 12, 89, 7, 30]
+    }
   ],
   "worth_reading": [
-    { "article_id": 213,
-      "reason": "The only source on this, and an unusually thorough teardown of the new pricing math." }
+    {
+      "article_id": 213,
+      "reason": "The only source on this, and an unusually thorough teardown of the new pricing math."
+    }
   ],
   "closing_line": "31 developments found, 3 shown above — 143 pieces total, still in your reader."
 }
@@ -213,11 +247,11 @@ component.
 
 ## 7. Why two calls — not one, or four
 
-| Shape | Why not |
-|---|---|
-| **1 call** | Can't choose which bodies to fetch until something clustered; real compression + picking the best write-up needs body text, not a 280-char snippet. A one-shot digest is a digest of summaries. |
-| **2 calls** | **Chosen.** Phase 1 decides what matters over the whole day at low fidelity; Phase 2 writes over the chosen few at full fidelity. One job per prompt → promptable and testable. |
-| **3+ calls** | A pre-filter pass is tempting but 1000 snippet rows (~100K TOON tokens) fit a 1M-context model. Premature. Kept as an *optional* Phase 0.5 on the fast model, only if catalogs routinely exceed the cap. |
+| Shape        | Why not                                                                                                                                                                                                  |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1 call**   | Can't choose which bodies to fetch until something clustered; real compression + picking the best write-up needs body text, not a 280-char snippet. A one-shot digest is a digest of summaries.          |
+| **2 calls**  | **Chosen.** Phase 1 decides what matters over the whole day at low fidelity; Phase 2 writes over the chosen few at full fidelity. One job per prompt → promptable and testable.                          |
+| **3+ calls** | A pre-filter pass is tempting but 1000 snippet rows (~100K TOON tokens) fit a 1M-context model. Premature. Kept as an _optional_ Phase 0.5 on the fast model, only if catalogs routinely exceed the cap. |
 
 **Design principle — let the long context do the work.** No embeddings, no vector store, no
 similarity pre-clustering. The problem is not retrieval; it is context budgeting.
@@ -283,18 +317,18 @@ the SDK `response_schema` variant — same feature, different surface.
 
 New `# Codex Digest` block in `server/app/core/constants.py`, next to the `MAX_AI_*` group.
 
-| Constant | Value | Purpose |
-|---|---|---|
-| `CODEX_INGEST_WINDOW_HOURS` | 24 | Fixed window for v1 |
-| `CODEX_MAX_ARTICLES` | 1000 | Phase 1 catalog cap — cost/context safety valve |
-| `CODEX_MAX_PER_FEED` | 30 | Stops one hyperactive feed dominating |
-| `CODEX_MAX_DEVELOPMENTS` | 5 | Clusters synthesised & shown (model may *find* more) |
-| `CODEX_MAX_ARTICLES_PER_DEVELOPMENT_FULLTEXT` | 3 | Bodies fetched per cluster for Phase 2 |
-| `CODEX_MAX_ARTICLES_PER_DEVELOPMENT_DISPLAY` | 5 | Article refs shown under a Development card |
-| `CODEX_MAX_WORTH_READING` | 4 | Standalone strip size |
-| `CODEX_FULLTEXT_CHAR_CAP` | 12000 | Per-article body truncation for Phase 2 |
-| `CODEX_FULLTEXT_FETCH_CONCURRENCY` | 6 | `asyncio.Semaphore` bound on Phase 1.5 |
-| `CODEX_SNIPPET_CHAR_CAP` | 280 | Phase 1 snippet length |
+| Constant                                      | Value | Purpose                                              |
+| --------------------------------------------- | ----- | ---------------------------------------------------- |
+| `CODEX_INGEST_WINDOW_HOURS`                   | 24    | Fixed window for v1                                  |
+| `CODEX_MAX_ARTICLES`                          | 1000  | Phase 1 catalog cap — cost/context safety valve      |
+| `CODEX_MAX_PER_FEED`                          | 30    | Stops one hyperactive feed dominating                |
+| `CODEX_MAX_DEVELOPMENTS`                      | 5     | Clusters synthesised & shown (model may _find_ more) |
+| `CODEX_MAX_ARTICLES_PER_DEVELOPMENT_FULLTEXT` | 3     | Bodies fetched per cluster for Phase 2               |
+| `CODEX_MAX_ARTICLES_PER_DEVELOPMENT_DISPLAY`  | 5     | Article refs shown under a Development card          |
+| `CODEX_MAX_WORTH_READING`                     | 4     | Standalone strip size                                |
+| `CODEX_FULLTEXT_CHAR_CAP`                     | 12000 | Per-article body truncation for Phase 2              |
+| `CODEX_FULLTEXT_FETCH_CONCURRENCY`            | 6     | `asyncio.Semaphore` bound on Phase 1.5               |
+| `CODEX_SNIPPET_CHAR_CAP`                      | 280   | Phase 1 snippet length                               |
 
 **Budget per digest:** 2 flash-tier calls; ~100K tokens into Phase 1, ~65K into Phase 2, ~8K
 out total. Cost-model against current Gemini flash pricing before launch — should land well
@@ -308,18 +342,18 @@ Also new: `server/app/core/config.py` → `ENABLE_CODEX: bool = False`.
 
 New model `server/app/models/codex.py` + Alembic migration. One row per user per UTC day.
 
-| Column | Notes |
-|---|---|
-| `id` | uuid, pk |
-| `user_id` | uuid, fk `profiles(id)` on delete cascade |
-| `digest_date` | date — UTC day covered; `UNIQUE (user_id, digest_date)` |
-| `status` | reuse `app.typing.common.ImportStatus` (`PENDING/IN_PROGRESS/COMPLETED/FAILED/CANCELLED/UNKNOWN` — already generic); rename it `TaskStatus` with `ImportStatus` kept as a deprecated alias. Fallback: dedicated `CodexDigestStatus` in `models/enums.py`. |
-| `requested_at` / `generated_at` | timestamptz |
-| `model` / `window_hours` | provenance |
-| `input_article_count` / `input_source_count` / `clusters_found` | int — feed the scale-setter, closing line, audit |
-| `payload` | jsonb — Phase 2 output with every id resolved to `EntryListItem` |
-| `error` | text, on failure |
-| `created_at` / `updated_at` | timestamptz |
+| Column                                                          | Notes                                                                                                                                                                                                                                                     |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                                                            | uuid, pk                                                                                                                                                                                                                                                  |
+| `user_id`                                                       | uuid, fk `profiles(id)` on delete cascade                                                                                                                                                                                                                 |
+| `digest_date`                                                   | date — UTC day covered; `UNIQUE (user_id, digest_date)`                                                                                                                                                                                                   |
+| `status`                                                        | reuse `app.typing.common.ImportStatus` (`PENDING/IN_PROGRESS/COMPLETED/FAILED/CANCELLED/UNKNOWN` — already generic); rename it `TaskStatus` with `ImportStatus` kept as a deprecated alias. Fallback: dedicated `CodexDigestStatus` in `models/enums.py`. |
+| `requested_at` / `generated_at`                                 | timestamptz                                                                                                                                                                                                                                               |
+| `model` / `window_hours`                                        | provenance                                                                                                                                                                                                                                                |
+| `input_article_count` / `input_source_count` / `clusters_found` | int — feed the scale-setter, closing line, audit                                                                                                                                                                                                          |
+| `payload`                                                       | jsonb — Phase 2 output with every id resolved to `EntryListItem`                                                                                                                                                                                          |
+| `error`                                                         | text, on failure                                                                                                                                                                                                                                          |
+| `created_at` / `updated_at`                                     | timestamptz                                                                                                                                                                                                                                               |
 
 CRUD `server/app/crud/codex.py`: `get_digest_for_date`, `create_pending_digest`,
 `finalize_digest(status, payload|error)`, `count_ready_digests_in_month`, `has_digest_for_day`.
@@ -332,12 +366,12 @@ Metered per user, not tier-gated, not from the shared `ai_usage` counter. Enforc
 row count — exact, durable, mirrors `enforce_subscription_limit`. Numbers in a new
 `CODEX_LIMITS` map in `server/app/core/resource_limits.py`.
 
-| Role | Rule |
-|---|---|
-| `ADMIN` | Always allowed. |
-| `PRO` | Allowed if no `COMPLETED/PENDING/IN_PROGRESS` row for `(user_id, today_utc)`. A repeat request the same day returns the existing row → 1/day. |
-| `BASIC` | Allowed if `count_ready_digests_in_month(user_id) < 3`. Only `COMPLETED` rows count — `SKIPPED`/`FAILED` never burn an allowance. |
-| otherwise | `raise ResourceLimitError("CODEX_LIMIT_EXCEEDED")` — Pro → daily reset, Basic → upgrade. |
+| Role      | Rule                                                                                                                                          |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ADMIN`   | Always allowed.                                                                                                                               |
+| `PRO`     | Allowed if no `COMPLETED/PENDING/IN_PROGRESS` row for `(user_id, today_utc)`. A repeat request the same day returns the existing row → 1/day. |
+| `BASIC`   | Allowed if `count_ready_digests_in_month(user_id) < 3`. Only `COMPLETED` rows count — `SKIPPED`/`FAILED` never burn an allowance.             |
+| otherwise | `raise ResourceLimitError("CODEX_LIMIT_EXCEEDED")` — Pro → daily reset, Basic → upgrade.                                                      |
 
 Extend `get_user_limits_and_usage` + `UserLimitsResponse` with the Codex allowance so both
 clients can show "2 of 3 digests left this month" / "next digest tomorrow".
@@ -368,7 +402,7 @@ render per status.
 **Deliberately NOT reused from OPML:** the `OpmlImportTracker` Redis tracker and the
 `TaskRepository` ownership map. OPML needs them because an import has no durable home row and
 fans out to N per-feed subtasks aggregated in Redis. A digest has a durable home
-(`codex_digests`, unique per user per day) and is a single task — so the `status` column *is*
+(`codex_digests`, unique per user per day) and is a single task — so the `status` column _is_
 the progress state and the auth-scoped endpoint gives ownership for free. A generic
 `SimpleTaskTracker` is worth extracting later if sub-step progress
 ("clustering… synthesising…") is ever wanted — OPML could adopt it then too.
@@ -386,9 +420,9 @@ HTTP: `CodexDigestResponse` (`status` + resolved `payload` with
 
 ## 14. Surfaces
 
-| Client | Where | Treatment |
-|---|---|---|
-| web | `SidebarMain.tsx` → `mainNavItems` | **Codex**, `Sparkles` icon, first item — above "Today". |
+| Client | Where                               | Treatment                                                                                                                                                                                                                                                                                              |
+| ------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| web    | `SidebarMain.tsx` → `mainNavItems`  | **Codex**, `Sparkles` icon, first item — above "Today".                                                                                                                                                                                                                                                |
 | mobile | `header-tabs.tsx` → `buttonConfigs` | **Daily Digest**, existing `Sparkle` SVG, 4th segment — after "Saved". "Saved" is a header segment on the Following screen (not a bottom tab); that screen branches to render `<CodexView>` when the segment is active. Alternative: a real 4th bottom tab if the digest view feels too unlike a list. |
 
 Both clients share one hook (`packages/shared/src/api/hooks/use-codex.ts`) and one fixture
@@ -412,14 +446,15 @@ human review.
 
 ## 15. Failure modes
 
-| Condition | Behaviour |
-|---|---|
-| Zero candidate articles | `SKIPPED`, quiet-day state, no spend, no allowance consumed. |
-| Phase 1 finds no valid clusters | Everything flows to Worth Reading (raise its cap to ~6 for this case); Developments empty with an honest line. |
-| A cluster's top article won't extract | Fall back to feed HTML, then `description`. If every fetch in a cluster fails, synthesise from snippets and tell the prompt confidence is lower. |
-| Malformed model output after retries | `FAILED`, error stored, one task retry, then a "couldn't build your digest, try again" state that does *not* consume the allowance. |
-| `ENABLE_AI` / `ENABLE_CODEX` false | Endpoint returns a disabled response; task no-ops. |
-| Prompt injection in article text | Outputs are plain text rendered as text — no model HTML passthrough. Article HTML already `nh3`-sanitised by `extract_full_content`. |
+| Condition                                                         | Behaviour                                                                                                                                                                  |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Zero candidate articles                                           | `SKIPPED`, quiet-day state, no spend, no allowance consumed.                                                                                                               |
+| Phase 1 finds no multi-source cluster but a genuine top story ran | That story leads as a `source_count: 1` development; Worth Reading cap stays at 4.                                                                                         |
+| Phase 1 finds no cluster _and_ no story worth leading             | `clusters` empty, everything flows to Worth Reading (cap raised to `CODEX_MAX_WORTH_READING_FALLBACK` ≈ 6), Developments empty with an honest headline/gist, `themes: []`. |
+| A cluster's top article won't extract                             | Fall back to feed HTML, then `description`. If every fetch in a cluster fails, synthesise from snippets and tell the prompt confidence is lower.                           |
+| Malformed model output after retries                              | `FAILED`, error stored, one task retry, then a "couldn't build your digest, try again" state that does _not_ consume the allowance.                                        |
+| `ENABLE_AI` / `ENABLE_CODEX` false                                | Endpoint returns a disabled response; task no-ops.                                                                                                                         |
+| Prompt injection in article text                                  | Outputs are plain text rendered as text — no model HTML passthrough. Article HTML already `nh3`-sanitised by `extract_full_content`.                                       |
 
 ---
 
@@ -484,7 +519,7 @@ prompt builders in `services/ai/prompts.py` · `tests/unit/test_codex_{gather,pa
 2. **Traceability** — every PRD requirement maps to a stage: Developments (Phase 1 cluster +
    Phase 2 synthesis + expandable article list, best first), Worth Reading (Phase 1
    `worth_reading_ids`, non-overlapping by construction), scale-setter + closing line (Phase 2
-   + `clusters_found`), visible provenance (`source_count`/`article_count`), finite output.
+   - `clusters_found`), visible provenance (`source_count`/`article_count`), finite output.
 3. **Backend end-to-end** — `poe trigger codex-generate <user_id>` → inspect the
    `codex_digests` row; `GET /api/codex/today` with a Pro token returns the payload;
    `poe test-integration -k codex`.

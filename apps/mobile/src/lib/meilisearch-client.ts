@@ -61,9 +61,7 @@ function hasCategoryFilter(filters: Array<string | string[]>): boolean {
       return filter.includes('top_level_category');
     }
     if (Array.isArray(filter)) {
-      return filter.some(
-        (f: string) => typeof f === 'string' && f.includes('top_level_category')
-      );
+      return filter.some((f: string) => typeof f === 'string' && f.includes('top_level_category'));
     }
     return false;
   });
@@ -186,8 +184,8 @@ export function createSearchClient(getHybridConfig?: () => HybridSearchConfig | 
       }
 
       // Check if at least ONE request has meaningful search criteria
-      const hasAnyMeaningfulSearch = processedRequests.some(
-        ({ params }) => hasMeaningfulCriteria(params)
+      const hasAnyMeaningfulSearch = processedRequests.some(({ params }) =>
+        hasMeaningfulCriteria(params)
       );
 
       // Skip search only if NO request has meaningful criteria
@@ -198,9 +196,7 @@ export function createSearchClient(getHybridConfig?: () => HybridSearchConfig | 
       }
 
       // Transform popular category filter to only include News, Tech, Business
-      const meiliRequests = processedRequests.map((r) =>
-        transformPopularCategoryFilter(r)
-      );
+      const meiliRequests = processedRequests.map((r) => transformPopularCategoryFilter(r));
 
       // ⚠️ CRITICAL: instant-meilisearch doesn't pass sort parameters through!
       // Must add stable sort AFTER instant-meilisearch creates the query, not before

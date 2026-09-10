@@ -37,9 +37,11 @@ export function CodexView({ digest }: CodexViewProps) {
     // standfirst. Older digests have no `headline` — fall back to the gist as the <h1> and
     // drop the standfirst line so it isn't printed twice. Magnitude lives in the issue
     // colophon in the rail, never the headline.
-    const headline = payload.headline?.trim() || payload.gist || payload.scale_setter
+    const headline =
+        payload.headline?.trim() || payload.gist || payload.scale_setter
     const standfirst =
-        payload.headline?.trim() && payload.gist?.trim() !== payload.headline.trim()
+        payload.headline?.trim() &&
+        payload.gist?.trim() !== payload.headline.trim()
             ? payload.gist
             : null
 
@@ -53,7 +55,9 @@ export function CodexView({ digest }: CodexViewProps) {
                         : "mx-auto max-w-2xl border-b border-border pb-6"
                 }
             >
-                <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-secondary">
+                {/* Right padding leaves room for the settings gear that CodexScreen
+                    anchors over this masthead. */}
+                <div className="flex items-center gap-2 pr-10 font-mono text-xs uppercase tracking-wider text-secondary">
                     <StarsIcon className="size-4" />
                     Daily Digest
                     <span aria-hidden className="text-muted-foreground/40">
@@ -180,8 +184,8 @@ function FirstTimeExplainer({
 
     return (
         <p className="mt-3 max-w-2xl font-serif text-[15px] leading-relaxed text-muted-foreground">
-            Your Daily Digest read {detail} and grouped what two or more of
-            them covered into the developments below.
+            Your Daily Digest read {detail} and grouped what two or more of them
+            covered into the developments below.
         </p>
     )
 }

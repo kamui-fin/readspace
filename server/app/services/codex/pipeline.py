@@ -68,7 +68,8 @@ async def generate_digest_for_user(user_id: UUID, digest_id: UUID) -> None:
             await crud_codex.mark_in_progress(db, digest_id, CodexDigestPhase.GATHERING)
 
         async with worker_db() as db:
-            gathered = await gather_catalog(db, user_id, now=now)
+            excluded_feed_ids = await crud_codex.get_excluded_feed_ids(db, user_id)
+            gathered = await gather_catalog(db, user_id, now=now, excluded_feed_ids=excluded_feed_ids)
 
         if not gathered.catalog:
             async with worker_db() as db:

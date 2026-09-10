@@ -142,6 +142,7 @@ Load fonts via Expo recommended pattern (`expo-font` + `useFonts`) at app entry.
    - Import and use: `import { ExpandVertical } from '@components/icons/svg'`
 
 **Icon Styling & Theme Support**:
+
 - All custom SVG components accept a `color` prop for theming
 - In React Native, icons must receive explicit color values (not `currentColor` like web CSS)
 - Use the `useIconColor()` hook to get the current theme's foreground color
@@ -150,13 +151,14 @@ Load fonts via Expo recommended pattern (`expo-font` + `useFonts`) at app entry.
 - Always test icons in both light and dark theme — icons should be legible in both
 
 **Usage Pattern**:
+
 ```tsx
 import { useIconColor } from '@hooks/useIconColor';
 import { Sparkle, Language } from '@components/icons/svg';
 
 export function MyComponent() {
   const iconColor = useIconColor();
-  
+
   return (
     <>
       <Sparkle color={iconColor} width={20} height={20} />
@@ -167,11 +169,13 @@ export function MyComponent() {
 ```
 
 **Icon Size Guidelines**:
+
 - Inline/inline-text icons: 16-20px (in headers, search bars, buttons)
 - Standard UI icons: 24-32px (in lists, cards, tab bars)
 - Large/prominent icons: 40-48px (hero sections, empty states)
 
 **Known Custom Icons**:
+
 - `ExpandVertical`, `ExpandVerticalAlt` — for expand/collapse interactions
 - `Language` — for language/translate actions (use this, not Solar.Globe)
 - `ReadspaceLogo` — Readspace branding

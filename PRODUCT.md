@@ -96,10 +96,13 @@ Confirmed functionality across surfaces:
 - **Daily Digest** — on-demand only (no cron). Answers "what did I miss?" over a fixed 24h
   window: clusters articles covering the same event across ≥2 sources into synthesized
   "Developments" (each expands to the 5 best write-ups, strongest first, with provenance like
-  "12 articles · 8 sources"), plus a "Worth Reading" strip of 2–4 standalone pieces. Metered
-  access: Basic 3 / calendar month, Pro 1 / day, Admin unlimited. A story has exactly one home
-  — Development or Worth Reading, never both. Continuity (day-over-day memory) is a future
-  phase. Web surfaces: `/codex` and `/codex/preview`; mobile: a bottom-tab Digest screen and
+  "12 articles · 8 sources") — or, when nothing clusters, promotes the single
+  highest-priority story of the day as a lone Development (`1 source · 1 article`). Plus a
+  "Worth Reading" strip of 2–6 standalone runner-up reads — the next most valuable pieces
+  after the Developments. The digest is editorial, not wire-news-only: a landmark essay or
+  analysis can lead on a quiet news day. Metered access: Basic 3 / calendar month, Pro 1 /
+  day, Admin unlimited. A story has exactly one home — Development or Worth Reading, never
+  both. Continuity (day-over-day memory) is a future phase. Web surfaces: `/codex` and `/codex/preview`; mobile: a bottom-tab Digest screen and
   `/codex-preview` (routes keep the internal `codex` codename). Full spec:
   `server/docs/codex-digest-design.md`, tracker: `server/docs/CODEX_TODO.md`.
 - OPML import / export; RSSHub support.

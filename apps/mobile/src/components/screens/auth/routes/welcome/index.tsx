@@ -146,9 +146,7 @@ export function WelcomeScreen() {
           onPress={handleGoogleSignIn}
           disabled={isLoading}
           leftIcon={
-            !isLoading ? (
-              <Google width={20} height={20} color={COLORS.white} />
-            ) : undefined
+            !isLoading ? <Google width={20} height={20} color={COLORS.white} /> : undefined
           }>
           {isLoading ? (
             <ThreeDotsAnimation
@@ -164,7 +162,12 @@ export function WelcomeScreen() {
           variant="secondary"
           size="large"
           onPress={() => router.push('/(auth)/login')}
-          leftIcon={<LetterIcon size={20} color={isDark ? COLORS.dark.primary_foreground : COLORS.light.primary_foreground} />}>
+          leftIcon={
+            <LetterIcon
+              size={20}
+              color={isDark ? COLORS.dark.primary_foreground : COLORS.light.primary_foreground}
+            />
+          }>
           Continue with Email
         </Button>
       </View>

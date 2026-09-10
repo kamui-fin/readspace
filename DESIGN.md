@@ -2,175 +2,175 @@
 name: Readspace
 description: A calm, borderless reading room — forest green on a faintly green-tinted canvas, serif for the writing, sans for the tools.
 colors:
-  primary: "hsl(131.74 29.11% 30.98%)"
-  primary-foreground: "hsl(0 0% 100%)"
-  secondary: "hsl(97.6 32.47% 45.29%)"
-  secondary-foreground: "hsl(132 33.33% 97.06%)"
-  accent: "hsl(96.92 26.53% 90.39%)"
-  accent-foreground: "hsl(210 25% 23%)"
-  destructive: "hsl(8 93% 44%)"
-  destructive-foreground: "hsl(0 0% 100%)"
-  background: "hsl(120 100% 99.41%)"
-  foreground: "hsl(200 4.76% 24.71%)"
-  card: "hsl(132 33.33% 97.06%)"
-  card-foreground: "hsl(240 3% 7%)"
-  popover: "hsl(132 33.33% 97.06%)"
-  muted: "hsl(132 33.3% 97.1%)"
-  muted-foreground: "hsl(97 6% 57%)"
-  border: "hsl(210 15% 93%)"
-  input: "hsl(130 9.86% 86.35%)"
-  ring: "hsl(131.74 29.11% 30.98%)"
-  sidebar: "hsl(108 28.3% 97.1%)"
-  dark-background: "hsl(0 0% 7%)"
-  dark-foreground: "hsl(0 0% 83%)"
-  dark-card: "hsl(200 0% 10.77%)"
-  dark-muted: "hsl(240 2.47% 13.51%)"
-  dark-muted-foreground: "hsl(240 2% 60%)"
-  dark-border: "hsl(210 0% 13.03%)"
-  dark-destructive: "hsl(359.18 58.76% 46%)"
-  mobile-primary: "#386641"
-  mobile-primary-dark: "#6A994E"
-  mobile-secondary: "#6A994E"
-  mobile-background: "rgb(255, 255, 255)"
-  mobile-foreground: "#232222"
-  mobile-root: "rgb(245, 246, 245)"
-  mobile-card: "rgb(245, 246, 245)"
-  mobile-muted: "rgb(228, 236, 223)"
-  mobile-muted-foreground: "rgb(72, 96, 57)"
-  mobile-muted-green: "#D1DBCD"
-  mobile-grey: "rgb(159, 162, 160)"
-  mobile-grey4: "rgb(226, 227, 227)"
-  mobile-grey6: "rgb(243, 243, 243)"
-  mobile-tab-border: "#E0E0E0"
-  mobile-dark-background: "rgb(25, 25, 25)"
-  mobile-dark-card: "rgb(32, 32, 32)"
-  mobile-dark-surface: "rgb(46, 46, 46)"
-  mobile-dark-border: "rgb(60, 60, 60)"
+  primary: 'hsl(131.74 29.11% 30.98%)'
+  primary-foreground: 'hsl(0 0% 100%)'
+  secondary: 'hsl(97.6 32.47% 45.29%)'
+  secondary-foreground: 'hsl(132 33.33% 97.06%)'
+  accent: 'hsl(96.92 26.53% 90.39%)'
+  accent-foreground: 'hsl(210 25% 23%)'
+  destructive: 'hsl(8 93% 44%)'
+  destructive-foreground: 'hsl(0 0% 100%)'
+  background: 'hsl(120 100% 99.41%)'
+  foreground: 'hsl(200 4.76% 24.71%)'
+  card: 'hsl(132 33.33% 97.06%)'
+  card-foreground: 'hsl(240 3% 7%)'
+  popover: 'hsl(132 33.33% 97.06%)'
+  muted: 'hsl(132 33.3% 97.1%)'
+  muted-foreground: 'hsl(97 6% 57%)'
+  border: 'hsl(210 15% 93%)'
+  input: 'hsl(130 9.86% 86.35%)'
+  ring: 'hsl(131.74 29.11% 30.98%)'
+  sidebar: 'hsl(108 28.3% 97.1%)'
+  dark-background: 'hsl(0 0% 7%)'
+  dark-foreground: 'hsl(0 0% 83%)'
+  dark-card: 'hsl(200 0% 10.77%)'
+  dark-muted: 'hsl(240 2.47% 13.51%)'
+  dark-muted-foreground: 'hsl(240 2% 60%)'
+  dark-border: 'hsl(210 0% 13.03%)'
+  dark-destructive: 'hsl(359.18 58.76% 46%)'
+  mobile-primary: '#386641'
+  mobile-primary-dark: '#6A994E'
+  mobile-secondary: '#6A994E'
+  mobile-background: 'rgb(255, 255, 255)'
+  mobile-foreground: '#232222'
+  mobile-root: 'rgb(245, 246, 245)'
+  mobile-card: 'rgb(245, 246, 245)'
+  mobile-muted: 'rgb(228, 236, 223)'
+  mobile-muted-foreground: 'rgb(72, 96, 57)'
+  mobile-muted-green: '#D1DBCD'
+  mobile-grey: 'rgb(159, 162, 160)'
+  mobile-grey4: 'rgb(226, 227, 227)'
+  mobile-grey6: 'rgb(243, 243, 243)'
+  mobile-tab-border: '#E0E0E0'
+  mobile-dark-background: 'rgb(25, 25, 25)'
+  mobile-dark-card: 'rgb(32, 32, 32)'
+  mobile-dark-surface: 'rgb(46, 46, 46)'
+  mobile-dark-border: 'rgb(60, 60, 60)'
 typography:
   display:
-    fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "2.25rem"
+    fontFamily: 'Geist, ui-sans-serif, system-ui, sans-serif'
+    fontSize: '2.25rem'
     fontWeight: 700
     lineHeight: 1.1
-    letterSpacing: "-0.02em"
+    letterSpacing: '-0.02em'
   headline:
-    fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1.75rem"
+    fontFamily: 'Geist, ui-sans-serif, system-ui, sans-serif'
+    fontSize: '1.75rem'
     fontWeight: 600
     lineHeight: 1.2
-    letterSpacing: "-0.01em"
+    letterSpacing: '-0.01em'
   title:
-    fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1.125rem"
+    fontFamily: 'Geist, ui-sans-serif, system-ui, sans-serif'
+    fontSize: '1.125rem'
     fontWeight: 600
     lineHeight: 1.35
-    letterSpacing: "normal"
+    letterSpacing: 'normal'
   reading:
-    fontFamily: "EB Garamond, var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc), ui-serif, Georgia, serif"
-    fontSize: "1.25rem"
+    fontFamily: 'EB Garamond, var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc), ui-serif, Georgia, serif'
+    fontSize: '1.25rem'
     fontWeight: 400
     lineHeight: 1.65
-    letterSpacing: "normal"
+    letterSpacing: 'normal'
   body:
-    fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "0.875rem"
+    fontFamily: 'Geist, ui-sans-serif, system-ui, sans-serif'
+    fontSize: '0.875rem'
     fontWeight: 400
     lineHeight: 1.5
-    letterSpacing: "normal"
+    letterSpacing: 'normal'
   label:
-    fontFamily: "Geist Mono, ui-monospace, SFMono-Regular, monospace"
-    fontSize: "0.75rem"
+    fontFamily: 'Geist Mono, ui-monospace, SFMono-Regular, monospace'
+    fontSize: '0.75rem'
     fontWeight: 500
     lineHeight: 1.4
-    letterSpacing: "0.02em"
+    letterSpacing: '0.02em'
   logo:
-    fontFamily: "Figtree, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1rem"
+    fontFamily: 'Figtree, ui-sans-serif, system-ui, sans-serif'
+    fontSize: '1rem'
     fontWeight: 500
     lineHeight: 1
-    letterSpacing: "normal"
+    letterSpacing: 'normal'
 rounded:
-  sm: "4px"
-  md: "6px"
-  lg: "8px"
-  full: "9999px"
-  mobile-base: "8px"
-  mobile-md: "10px"
-  mobile-lg: "12px"
-  mobile-2xl: "16px"
-  mobile-button: "9999px"
+  sm: '4px'
+  md: '6px'
+  lg: '8px'
+  full: '9999px'
+  mobile-base: '8px'
+  mobile-md: '10px'
+  mobile-lg: '12px'
+  mobile-2xl: '16px'
+  mobile-button: '9999px'
 spacing:
-  xs: "4px"
-  sm: "8px"
-  md: "16px"
-  lg: "24px"
-  xl: "40px"
+  xs: '4px'
+  sm: '8px'
+  md: '16px'
+  lg: '24px'
+  xl: '40px'
 components:
   button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.primary-foreground}"
-    rounded: "{rounded.md}"
-    padding: "8px 16px"
-    height: "40px"
-    typography: "{typography.body}"
+    backgroundColor: '{colors.primary}'
+    textColor: '{colors.primary-foreground}'
+    rounded: '{rounded.md}'
+    padding: '8px 16px'
+    height: '40px'
+    typography: '{typography.body}'
   button-primary-hover:
-    backgroundColor: "hsl(131.74 29.11% 30.98% / 0.9)"
-    textColor: "{colors.primary-foreground}"
+    backgroundColor: 'hsl(131.74 29.11% 30.98% / 0.9)'
+    textColor: '{colors.primary-foreground}'
   button-secondary:
-    backgroundColor: "{colors.secondary}"
-    textColor: "{colors.secondary-foreground}"
-    rounded: "{rounded.md}"
-    padding: "8px 16px"
-    height: "40px"
+    backgroundColor: '{colors.secondary}'
+    textColor: '{colors.secondary-foreground}'
+    rounded: '{rounded.md}'
+    padding: '8px 16px'
+    height: '40px'
   button-outline:
-    backgroundColor: "{colors.background}"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.md}"
-    padding: "8px 16px"
-    height: "40px"
+    backgroundColor: '{colors.background}'
+    textColor: '{colors.foreground}'
+    rounded: '{rounded.md}'
+    padding: '8px 16px'
+    height: '40px'
   button-ghost:
-    backgroundColor: "transparent"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.md}"
-    padding: "8px 16px"
-    height: "40px"
+    backgroundColor: 'transparent'
+    textColor: '{colors.foreground}'
+    rounded: '{rounded.md}'
+    padding: '8px 16px'
+    height: '40px'
   button-ghost-hover:
-    backgroundColor: "{colors.accent}"
-    textColor: "{colors.accent-foreground}"
+    backgroundColor: '{colors.accent}'
+    textColor: '{colors.accent-foreground}'
   card:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.card-foreground}"
-    rounded: "{rounded.lg}"
-    padding: "24px"
+    backgroundColor: '{colors.card}'
+    textColor: '{colors.card-foreground}'
+    rounded: '{rounded.lg}'
+    padding: '24px'
   input:
-    backgroundColor: "transparent"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.md}"
-    padding: "4px 12px"
-    height: "36px"
-    typography: "{typography.body}"
+    backgroundColor: 'transparent'
+    textColor: '{colors.foreground}'
+    rounded: '{rounded.md}'
+    padding: '4px 12px'
+    height: '36px'
+    typography: '{typography.body}'
   badge-default:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.primary-foreground}"
-    rounded: "{rounded.full}"
-    padding: "2px 10px"
-    typography: "{typography.label}"
+    backgroundColor: '{colors.primary}'
+    textColor: '{colors.primary-foreground}'
+    rounded: '{rounded.full}'
+    padding: '2px 10px'
+    typography: '{typography.label}'
   badge-accent:
-    backgroundColor: "{colors.sidebar}"
-    textColor: "{colors.muted-foreground}"
-    rounded: "{rounded.full}"
-    padding: "2px 10px"
+    backgroundColor: '{colors.sidebar}'
+    textColor: '{colors.muted-foreground}'
+    rounded: '{rounded.full}'
+    padding: '2px 10px'
   tabs-list:
-    backgroundColor: "{colors.muted}"
-    textColor: "{colors.muted-foreground}"
-    rounded: "{rounded.md}"
-    padding: "4px"
-    height: "40px"
+    backgroundColor: '{colors.muted}'
+    textColor: '{colors.muted-foreground}'
+    rounded: '{rounded.md}'
+    padding: '4px'
+    height: '40px'
   tab-active:
-    backgroundColor: "{colors.background}"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.sm}"
-    padding: "6px 12px"
+    backgroundColor: '{colors.background}'
+    textColor: '{colors.foreground}'
+    rounded: '{rounded.sm}'
+    padding: '6px 12px'
 ---
 
 # Design System: Readspace
@@ -183,7 +183,7 @@ structure (mastheads, source provenance, columns) and the notebook's plainness (
 mono metadata, nothing decorative), all inside a room whose walls are a barely-perceptible
 green.
 
-Readspace is an anti-engagement product, and the design has to *look* like one. Every screen
+Readspace is an anti-engagement product, and the design has to _look_ like one. Every screen
 is mostly calm neutral space. The single warm color is a muted forest green, and it is
 structural in two senses: it tints the entire canvas to a faint green-warm white
 (`hsl(120 100% 99.41%)` — not a pure white anywhere), and in its saturated form it is
@@ -195,8 +195,8 @@ when you sit down, then it disappears and the writing is all that's left.
 The type system carries most of the brand. **Serif reads, sans operates, mono labels.**
 Article bodies and long-form reading are EB Garamond (with Noto Serif SC/JP/TC picking up CJK
 runs in the same slot); everything you click or navigate is Geist sans; timestamps, feed
-slugs, and byline metadata are Geist Mono. A reader can tell at a glance which text is *the
-writing* and which is *the app*.
+slugs, and byline metadata are Geist Mono. A reader can tell at a glance which text is _the
+writing_ and which is _the app_.
 
 Components are quiet but tactile: the same restraint everywhere, but hovers and focus states
 have real life — a soft accent-green wash on hover, a 3px focus ring in the brand green, a
@@ -212,23 +212,23 @@ since it is a capture popup, not a reader). Treat "web" below as covering both.
 **`apps/mobile` (Expo / React Native, uniwind) holds the same identity but is not the same
 implementation, and the differences are deliberate — do not "fix" mobile to match web:**
 
-| Axis | Web / Extension | Mobile |
-|---|---|---|
-| Neutral base | Green-warm white (`hsl(120 100% 99.41%)`), faint-cool ink | **Plain** near-white `rgb(255 255 255)` / `rgb(252 255 252)` and ink `#232222` — no green tint on the canvas in either theme |
-| Dark theme | Near-black `hsl(0 0% 7%)`, green cast dropped | **Notion greys** — page `#191919`, panel/card `#202020`, hover `#2E2E2E` |
-| Color tokens | shadcn semantic set (`--card`, `--muted`, `--accent`, `--border`…) | A `grey`→`grey6` numeric ramp plus `primary` / `secondary` / `root` / `card` / `unified` / `muted-green`; **primary swaps to `secondary` (`#6A994E`) in dark mode** for text and primary buttons |
-| Button radius | 6px (`rounded-md`) | **Fully round** (`rounded-full`) for every filled/ghost/icon variant; `text` variant is unstyled |
-| Button sizes | 40 / 36 / 44px (`h-10` / `h-9` / `h-11`) | 40 / 48 / 56px (`h-10` / `h-12` / `h-14`), full-width by default |
-| Container radius | 8px cards | `rounded-2xl` (16px) on cards like the Daily Digest development card; `rounded-lg`/`xl` common |
-| Focus ring | 3px brand-green ring on every control | No focus rings — touch, not keyboard; press feedback is opacity / `Pressable` + haptics |
-| Elevation | Flat + hairline border everywhere | Same flat intent, but the **bottom tab bar floats**: `expo-blur` `BlurView`, an animated `borderRadius`, and a real shadow (`shadowRadius: 20`, Android `elevation: 15`) — the one lifted chrome element |
-| Type in UI | Geist sans; serif reserved for the reader | Geist sans; **Garamond is wired as a `Text` `fontFamily` option** (`garamond`, `-medium`, `-semibold`, `-bold`) but in practice used only inside the WebView reader — no `-webkit`/Noto CJK stack, just `'EB Garamond', Georgia, Cambria, serif` |
-| Heading tracking | `-0.02em` via per-role tokens | Global `--tracking-heading: -0.02em` + a `tracking-heading` utility; header titles `text-3xl font-geist-bold` |
-| Tabs | shadcn pill `TabsList` | Native `@react-native-segmented-control` + a custom animated bottom tab bar |
-| Toasts | Radix `Toast`, `shadow-lg` | `burnt` (native) with themed bg/border/text helpers |
+| Axis             | Web / Extension                                                    | Mobile                                                                                                                                                                                                                                           |
+| ---------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Neutral base     | Green-warm white (`hsl(120 100% 99.41%)`), faint-cool ink          | **Plain** near-white `rgb(255 255 255)` / `rgb(252 255 252)` and ink `#232222` — no green tint on the canvas in either theme                                                                                                                     |
+| Dark theme       | Near-black `hsl(0 0% 7%)`, green cast dropped                      | **Notion greys** — page `#191919`, panel/card `#202020`, hover `#2E2E2E`                                                                                                                                                                         |
+| Color tokens     | shadcn semantic set (`--card`, `--muted`, `--accent`, `--border`…) | A `grey`→`grey6` numeric ramp plus `primary` / `secondary` / `root` / `card` / `unified` / `muted-green`; **primary swaps to `secondary` (`#6A994E`) in dark mode** for text and primary buttons                                                 |
+| Button radius    | 6px (`rounded-md`)                                                 | **Fully round** (`rounded-full`) for every filled/ghost/icon variant; `text` variant is unstyled                                                                                                                                                 |
+| Button sizes     | 40 / 36 / 44px (`h-10` / `h-9` / `h-11`)                           | 40 / 48 / 56px (`h-10` / `h-12` / `h-14`), full-width by default                                                                                                                                                                                 |
+| Container radius | 8px cards                                                          | `rounded-2xl` (16px) on cards like the Daily Digest development card; `rounded-lg`/`xl` common                                                                                                                                                   |
+| Focus ring       | 3px brand-green ring on every control                              | No focus rings — touch, not keyboard; press feedback is opacity / `Pressable` + haptics                                                                                                                                                          |
+| Elevation        | Flat + hairline border everywhere                                  | Same flat intent, but the **bottom tab bar floats**: `expo-blur` `BlurView`, an animated `borderRadius`, and a real shadow (`shadowRadius: 20`, Android `elevation: 15`) — the one lifted chrome element                                         |
+| Type in UI       | Geist sans; serif reserved for the reader                          | Geist sans; **Garamond is wired as a `Text` `fontFamily` option** (`garamond`, `-medium`, `-semibold`, `-bold`) but in practice used only inside the WebView reader — no `-webkit`/Noto CJK stack, just `'EB Garamond', Georgia, Cambria, serif` |
+| Heading tracking | `-0.02em` via per-role tokens                                      | Global `--tracking-heading: -0.02em` + a `tracking-heading` utility; header titles `text-3xl font-geist-bold`                                                                                                                                    |
+| Tabs             | shadcn pill `TabsList`                                             | Native `@react-native-segmented-control` + a custom animated bottom tab bar                                                                                                                                                                      |
+| Toasts           | Radix `Toast`, `shadow-lg`                                         | `burnt` (native) with themed bg/border/text helpers                                                                                                                                                                                              |
 
 **What is identical across all three:** the two greens (`#386641` primary, `#6A994E`
-secondary), the 8px base radius as the *starting* step, EB Garamond as the reading face,
+secondary), the 8px base radius as the _starting_ step, EB Garamond as the reading face,
 Geist for UI, Geist Mono for metadata, Figtree for the wordmark, dark mode as a first-class
 theme, the "rationed green / anti-engagement / finite lists" doctrine, and the Daily Digest
 newspaper metaphor (masthead → Developments → Worth Reading → closing line). ("Codex" is the
@@ -242,7 +242,7 @@ but it never appears in the UI.)
 - **Feedly / enterprise-SaaS dashboards** — not busy, not chart-heavy, no dense toolbars or
   power-user control panels crowding the reading.
 - **AI-app neon / gradient maximalism** — no purple "AI" gradients, glow effects, or sci-fi
-  treatment, *including on the Daily Digest*, which is the AI feature and still uses the plain green
+  treatment, _including on the Daily Digest_, which is the AI feature and still uses the plain green
   identity.
 - **An untouched shadcn starter** — the primitives are shadcn, but the green identity and the
   serif/sans/mono split must always carry through.
@@ -448,7 +448,7 @@ is the only place mobile spends a real shadow; everything else is border + tonal
 ### Named Rules
 
 **The Flat-Room Rule.** If a surface is part of the page (card, row, panel, nav), it is flat
-with a hairline border. Only things that pop *over* the page (menu, dialog, toast) get a
+with a hairline border. Only things that pop _over_ the page (menu, dialog, toast) get a
 shadow, and that shadow is always soft, offset-down, and uncolored.
 
 ## Shapes
@@ -500,7 +500,7 @@ silhouettes — the form language is plain rectangles with rounded corners.
   (40/48/56).
 - **Primary:** Forest Green fill (`#386641`), white text — **flips to Meadow Green (`#6A994E`)
   fill in dark mode**. `medium` = `text-base font-geist-medium`, `large` = `text-lg
-  font-geist-semibold`.
+font-geist-semibold`.
 - **Secondary:** `grey6` fill (light `rgb(243 243 243)` / dark `rgb(32 32 32)`), `grey` text.
 - **Ghost:** transparent with a 1px `grey4` border, `primary-foreground` text.
 - **Icon:** `grey5` fill, no border.
@@ -599,7 +599,7 @@ The digest surface. (Internally codenamed "Codex" — routes and component names
 Newspaper metaphor executed literally: a **masthead** — a mono nameplate
 (`Stars` mark + "Daily Digest" · date, `font-mono text-xs uppercase tracking-wider` secondary), then
 the **standfirst** (`<h1>`, the through-line sentence, `font-serif text-[28px] font-bold
-tracking-tight` — the one line here a person *reads*), then, only when it adds something the
+tracking-tight` — the one line here a person _reads_), then, only when it adds something the
 standfirst didn't, a mono magnitude line (`font-mono text-xs` — `"143 pieces · 31 sources · 7
 developments"`), then a once-shown serif first-run line explaining what the digest did. Section
 heads are mono (`text-xs uppercase tracking-wider text-muted-foreground`), not sans — they
@@ -650,7 +650,7 @@ Rules marked **[web/ext]** are the web + extension system; **[mobile]** notes wh
   primary action plus active nav, links, and the Daily Digest mark (the Rationed Green Rule).
 - **Do** keep the two greens exact — `#386641` primary, `#6A994E` secondary — across all
   three surfaces. **[mobile]** it is correct for `text-primary` and primary buttons to
-  resolve to the *secondary* green in dark mode.
+  resolve to the _secondary_ green in dark mode.
 - **[web/ext] Do** use the green-warm canvas (`hsl(120 100% 99.41%)`) and faint-cool ink —
   never `#fff`, `#000`, or a pure gray (the No-Pure-Neutral Rule). **[mobile] Do** use the
   plain white/`#232222` base and the `grey`→`grey6` ramp, with the Notion-grey dark palette

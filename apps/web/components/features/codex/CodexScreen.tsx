@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useState, type ReactNode } from "react"
 import { toast } from "react-hot-toast"
 import {
     CodexDigestStatus,
@@ -10,6 +10,7 @@ import {
 } from "@readspace/shared"
 import { CodexView } from "./CodexView"
 import { CodexGenerating } from "./CodexGenerating"
+import { CodexSettingsDialog } from "./CodexSettingsDialog"
 import { CodexSkeleton } from "./CodexSkeleton"
 import {
     CodexEmptyState,
@@ -21,6 +22,10 @@ import {
 /**
  * Live Daily Digest route. Fetches the latest digest, polls while it generates (the hook stops on a
  * terminal status), and renders per state. Generation is idempotent server-side.
+ *
+ * The folder-scope settings gear is anchored at this level, above the per-state content, so it's
+ * reachable on every state — including the first-run empty state, before a digest has ever been
+ * built.
  */
 export function CodexScreen() {
     const { data: digest, isLoading, error } = useCodexToday()
@@ -46,77 +51,83 @@ export function CodexScreen() {
         }
     }, [generate])
 
+    let content: ReactNode
     if (isLoading) {
-        return <CodexSkeleton />
-    }
-
-    if (notEntitled) {
-        return (
+        content = <CodexSkeleton />
+    } else if (notEntitled) {
+        content = (
             <CodexNotEntitledState
                 reason={notEntitled.reason}
                 errorCode={notEntitled.errorCode}
             />
         )
-    }
-
-    // A hard error on the poll itself (not a 404 — the hook maps that to null).
-    if (error) {
-        return (
+    } else if (error) {
+        // A hard error on the poll itself (not a 404 — the hook maps that to null).
+        content = (
             <CodexFailedState
                 onGenerate={handleGenerate}
                 isGenerating={generate.isPending}
                 connectionLost
             />
         )
-    }
-
-    if (!digest) {
-        return (
+    } else if (!digest) {
+        content = (
             <CodexEmptyState
                 onGenerate={handleGenerate}
                 isGenerating={generate.isPending}
             />
         )
+    } else if (
+        digest.status === CodexDigestStatus.PENDING ||
+        digest.status === CodexDigestStatus.IN_PROGRESS
+    ) {
+        content = (
+            <CodexGenerating
+                phase={digest.progress_phase}
+                requestedAt={digest.requested_at}
+            />
+        )
+    } else if (digest.status === CodexDigestStatus.SKIPPED) {
+        content = (
+            <CodexQuietDayState
+                onGenerate={handleGenerate}
+                isGenerating={generate.isPending}
+            />
+        )
+    } else if (digest.status === CodexDigestStatus.FAILED) {
+        content = (
+            <CodexFailedState
+                onGenerate={handleGenerate}
+                isGenerating={generate.isPending}
+            />
+        )
+    } else if (digest.status === CodexDigestStatus.COMPLETED) {
+        content = digest.payload ? (
+            <CodexView digest={digest} />
+        ) : (
+            <CodexQuietDayState
+                onGenerate={handleGenerate}
+                isGenerating={generate.isPending}
+            />
+        )
+    } else {
+        content = (
+            <CodexNotEntitledState
+                reason="This digest is in an unexpected state."
+                errorCode="UNKNOWN"
+            />
+        )
     }
 
-    switch (digest.status) {
-        case CodexDigestStatus.PENDING:
-        case CodexDigestStatus.IN_PROGRESS:
-            return (
-                <CodexGenerating
-                    phase={digest.progress_phase}
-                    requestedAt={digest.requested_at}
-                />
-            )
-        case CodexDigestStatus.SKIPPED:
-            return (
-                <CodexQuietDayState
-                    onGenerate={handleGenerate}
-                    isGenerating={generate.isPending}
-                />
-            )
-        case CodexDigestStatus.FAILED:
-            return (
-                <CodexFailedState
-                    onGenerate={handleGenerate}
-                    isGenerating={generate.isPending}
-                />
-            )
-        case CodexDigestStatus.COMPLETED:
-            return digest.payload ? (
-                <CodexView digest={digest} />
-            ) : (
-                <CodexQuietDayState
-                    onGenerate={handleGenerate}
-                    isGenerating={generate.isPending}
-                />
-            )
-        default:
-            return (
-                <CodexNotEntitledState
-                    reason="This digest is in an unexpected state."
-                    errorCode="UNKNOWN"
-                />
-            )
-    }
+    return (
+        <div className="relative">
+            {/* The gear is a small fixed-size control pinned to the top-right corner; it only
+                overlaps the masthead's own right padding, so nothing underneath needs to stay
+                clickable through it. Offsets mirror the digest's horizontal gutters. */}
+            <div className="absolute right-4 top-4 z-10 sm:right-6 lg:right-8">
+                <CodexSettingsDialog />
+            </div>
+            {content}
+        </div>
+    )
 }

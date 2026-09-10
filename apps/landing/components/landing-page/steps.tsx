@@ -69,47 +69,47 @@ export const StepOne = () => (
 )
 
 export const StepTwo = () => (
-  <div>
-    <StepHeader
-      num={2}
-      title="Active recall built into your reading flow"
-      description="Readspace periodically quizzes you in different formats so that you and your book stay on the same page—literally."
-    />
-    <div className="max-w-[1300px] mx-auto mb-10">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 justify-items-center">
-        <BentoCard
-          image={bento21}
-          title="Teach it to learn it"
-          description="Prove you understand by explaining it simply—no jargon, no fluff, just clarity."
-          className="md:col-span-2 lg:col-span-3"
+    <div>
+        <StepHeader
+            num={2}
+            title="Active recall built into your reading flow"
+            description="Readspace periodically quizzes you in different formats so that you and your book stay on the same page—literally."
         />
-        <BentoCard
-          image={bento26}
-          title="Guided discovery"
-          description="AI nudges you toward answers with hints, and follow-up questions—not just solutions."
-          className="lg:col-span-3"
-        />
-        <BentoCard
-          image={bento24}
-          title="Apply it"
-          description="Turn theory into action by solving real-world scenarios tailored to your life."
-          className="lg:col-span-2"
-        />
-        <BentoCard
-          image={bento25}
-          title="Socratic discussion"
-          description='Pressure-test ideas by debating the AI on ethics, contradictions, or "what-ifs."'
-          className="lg:col-span-2"
-        />
-        <BentoCard
-          image={bento22}
-          title="Quizzes"
-          description="Traditional and simple, but brutally effective."
-          className="lg:col-span-2"
-        />
-      </div>
+        <div className="max-w-[1300px] mx-auto mb-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 justify-items-center">
+                <BentoCard
+                    image={bento21}
+                    title="Teach it to learn it"
+                    description="Prove you understand by explaining it simply—no jargon, no fluff, just clarity."
+                    className="md:col-span-2 lg:col-span-3"
+                />
+                <BentoCard
+                    image={bento26}
+                    title="Guided discovery"
+                    description="AI nudges you toward answers with hints, and follow-up questions—not just solutions."
+                    className="lg:col-span-3"
+                />
+                <BentoCard
+                    image={bento24}
+                    title="Apply it"
+                    description="Turn theory into action by solving real-world scenarios tailored to your life."
+                    className="lg:col-span-2"
+                />
+                <BentoCard
+                    image={bento25}
+                    title="Socratic discussion"
+                    description='Pressure-test ideas by debating the AI on ethics, contradictions, or "what-ifs."'
+                    className="lg:col-span-2"
+                />
+                <BentoCard
+                    image={bento22}
+                    title="Quizzes"
+                    description="Traditional and simple, but brutally effective."
+                    className="lg:col-span-2"
+                />
+            </div>
+        </div>
     </div>
-  </div>
 )
 
 export const StepThree = () => (

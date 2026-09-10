@@ -1,28 +1,20 @@
-import { useRef, useState, useMemo, useEffect } from "react"
+import { useRef, useState, useEffect } from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { type Article, ContentView } from "@readspace/shared"
-import { Skeleton } from "@/components/ui/skeleton"
+import type { Article } from "@readspace/shared"
 import { useTheme } from "next-themes"
 
-import { AiSummaryCard } from "./AiSummaryCard"
-import { AnimatedContent } from "./AnimatedContent"
-import { ArticleHeader } from "./ArticleHeader"
+import { ArticleReaderBody } from "./ArticleReaderBody"
 import { ArticleToolbar } from "./ArticleToolbar"
-import { ProseContainer } from "./ProseContainer"
-import { useArticleAI } from "./hooks/use-article-ai"
-import { useArticleInteractions } from "./hooks/use-article-interactions"
+import { useArticleReader } from "./hooks/use-article-reader"
 import { useArticleReading } from "./hooks/use-article-reading"
 
-import { Maximize2, Minimize2, Check } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Maximize2, Minimize2 } from "lucide-react"
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Button } from "@/components/ui/button"
-import { formatDistanceToNow, parseISO } from "date-fns"
 
 interface ArticleContentProps {
     article: Article
@@ -34,150 +26,6 @@ interface ArticleContentProps {
     onArticleRemoved?: () => void
     onBack?: () => void
     isLoading?: boolean
-}
-
-import { estimateReadingTime } from "@readspace/shared"
-
-function NewsletterIframe({
-    content,
-    isDark,
-}: {
-    content: string
-    isDark: boolean
-}) {
-    const iframeRef = useRef<HTMLIFrameElement>(null)
-
-    useEffect(() => {
-        const iframe = iframeRef.current
-        if (!iframe) return
-
-        let observer: ResizeObserver | null = null
-
-        const setupObserver = () => {
-            try {
-                const doc =
-                    iframe.contentDocument ||
-                    (iframe.contentWindow
-                        ? iframe.contentWindow.document
-                        : null)
-                if (doc && doc.body) {
-                    const updateHeight = () => {
-                        const height = Math.max(
-                            doc.body.scrollHeight,
-                            doc.body.offsetHeight,
-                            doc.documentElement.scrollHeight,
-                            doc.documentElement.offsetHeight
-                        )
-                        if (height > 0) {
-                            iframe.style.height = `${height}px`
-                        }
-                    }
-
-                    // Initial height set
-                    updateHeight()
-
-                    if (window.ResizeObserver) {
-                        if (observer) {
-                            observer.disconnect()
-                        }
-                        observer = new ResizeObserver(updateHeight)
-                        observer.observe(doc.body)
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to setup resize observer", e)
-            }
-        }
-
-        iframe.addEventListener("load", setupObserver)
-        setupObserver()
-
-        return () => {
-            if (observer) {
-                observer.disconnect()
-            }
-            iframe.removeEventListener("load", setupObserver)
-        }
-    }, [content, isDark])
-
-    const srcDoc = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <style>
-              html, body {
-                margin: 0;
-                padding: 16px;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                background-color: transparent;
-                color: ${isDark ? "#e2e8f0" : "#1a202c"};
-              }
-
-              html, body, .document, [class*="document"], [class*="body"] {
-                height: auto !important;
-                min-height: auto !important;
-                overflow: visible !important;
-              }
-
-              ${
-                  isDark
-                      ? `
-                html {
-                  filter: invert(1) hue-rotate(180deg);
-                  background-color: #ededed !important; /* Inverts to #121212 */
-                }
-                
-                img, video, svg, .no-invert {
-                  filter: invert(1) hue-rotate(180deg) !important;
-                }
-              `
-                      : ""
-              }
-
-              img {
-                max-width: 100% !important;
-                height: auto !important;
-              }
-              table {
-                max-width: 100% !important;
-                width: 100% !important;
-              }
-
-              /* Prevent email internal dark styles from causing double-inversion grey looks */
-              @media (prefers-color-scheme: dark) {
-                body, p, td, tr, .body, table, h1, h2, h3, h4, h5, h6, div, span, .document, [class*="document"], [class*="body"] {
-                  background-color: #FEFEFE !important;
-                  color: #010101 !important;
-                }
-              }
-            </style>
-          </head>
-          <body>
-            <div id="mail-content-root" style="display: flow-root;">
-              ${content}
-            </div>
-          </body>
-        </html>
-    `
-
-    return (
-        <iframe
-            ref={iframeRef}
-            srcDoc={srcDoc}
-            className="newsletter-iframe w-full"
-            sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-            scrolling="no"
-            loading="lazy"
-            style={{
-                width: "100%",
-                border: "none",
-                background: "transparent",
-                overflow: "hidden",
-                minHeight: "500px",
-            }}
-        />
-    )
 }
 
 export function ArticleContent({
@@ -201,6 +49,23 @@ export function ArticleContent({
     const [scrollRatio, setScrollRatio] = useState(0)
     const [readingProgress, setReadingProgress] = useState(0)
     const zenScrollRef = useRef<HTMLDivElement>(null)
+
+    const reader = useArticleReader({
+        article,
+        isRecentlyReadMode,
+        isReadLaterMode,
+        shouldShowPreviewBanner,
+        isMobile: !!isMobile,
+        onMarkAsRead,
+        onArticleRemoved,
+        isLoading,
+    })
+
+    const { handleScroll } = useArticleReading({
+        article,
+        onMarkAsRead: () =>
+            reader.handleScrollMarkAsRead(contentRef.current?.scrollTop || 0),
+    })
 
     const handleEnterZenMode = () => {
         if (contentRef.current) {
@@ -236,87 +101,6 @@ export function ArticleContent({
             setIsZenMode(false)
         }
     }
-
-    const publishedAtString = article.published_at
-    const readAtString = article.read_at
-
-    const publishedAtDisplay = publishedAtString
-        ? isRecentlyReadMode && readAtString
-            ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
-            : formatDistanceToNow(parseISO(publishedAtString), {
-                  addSuffix: true,
-              })
-        : "Date unknown"
-
-    // Local state for content view
-    const [contentView, setContentView] = useState<ContentView>(
-        article.extracted_content ? ContentView.Extracted : ContentView.Original
-    )
-
-    // Auto-switch to extracted view when content becomes available
-    const prevExtractedContentRef = useRef(article.extracted_content)
-    useEffect(() => {
-        if (article.extracted_content && !prevExtractedContentRef.current) {
-            setContentView(ContentView.Extracted)
-        }
-        prevExtractedContentRef.current = article.extracted_content
-    }, [article.extracted_content])
-
-    // Hooks
-    const {
-        aiSummary,
-        displayContent,
-        translatedContent,
-        translatedLanguage,
-        isExtracting,
-        isSummarizing,
-        isTranslating,
-        handleExtractContent,
-        handleSummarize,
-        handleTranslate,
-    } = useArticleAI({
-        article,
-        contentView,
-        setContentView,
-    })
-
-    const {
-        handleMarkAsRead: markAsReadInteraction,
-        handleToggleReadLater,
-        handleScrollMarkAsRead,
-        handleContentClickMarkAsRead,
-        optimisticReadLater,
-        optimisticIsRead,
-    } = useArticleInteractions({
-        article,
-        isRecentlyReadMode,
-        isReadLaterMode,
-        shouldShowPreviewBanner,
-        isMobile: !!isMobile,
-        onMarkAsRead,
-        onArticleRemoved,
-    })
-
-    const { handleScroll } = useArticleReading({
-        article,
-        onMarkAsRead: () =>
-            handleScrollMarkAsRead(contentRef.current?.scrollTop || 0),
-    })
-
-    // Client-side read time calculation
-    const [clientReadTime, setClientReadTime] = useState(0)
-
-    useEffect(() => {
-        if (displayContent) {
-            setClientReadTime(
-                estimateReadingTime(displayContent.replace(/<[^>]*>/g, ""))
-            )
-        } else if (article.description) {
-            setClientReadTime(
-                estimateReadingTime(article.description.replace(/<[^>]*>/g, ""))
-            )
-        }
-    }, [displayContent, article.description])
 
     // Body scroll lock
     useEffect(() => {
@@ -366,7 +150,7 @@ export function ArticleContent({
             }, 50)
             return () => clearTimeout(timer)
         }
-    }, [isZenMode, scrollRatio, displayContent])
+    }, [isZenMode, scrollRatio, reader.displayContent])
 
     const handleZenScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const scrollTop = e.currentTarget.scrollTop
@@ -381,52 +165,38 @@ export function ArticleContent({
         }
     }
 
-    // Local state for AI summary dismissal
-    const [isAiSummaryDismissed, setIsAiSummaryDismissed] = useState(false)
-
     // Combine scroll handlers
     const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const target = e.currentTarget
         handleScroll(target.scrollTop, target.scrollHeight, target.clientHeight)
-        handleScrollMarkAsRead(target.scrollTop)
+        reader.handleScrollMarkAsRead(target.scrollTop)
     }
-
-    // Derive content key for animation
-    const contentKey = useMemo(() => {
-        if (contentView === ContentView.Translated && translatedLanguage) {
-            return `translated-${translatedLanguage}-${article.id}`
-        }
-        return `${contentView}-${article.id}`
-    }, [contentView, article.id, translatedLanguage])
-
-    const activeTab =
-        isLoading || isExtracting ? ContentView.Extracted : contentView
 
     const toolbar = (
         <ArticleToolbar
             hideBackground={true}
             article={article}
-            contentView={activeTab}
-            setContentView={setContentView}
-            handleMarkAsRead={markAsReadInteraction}
-            handleToggleReadLater={handleToggleReadLater}
-            handleExtractContent={handleExtractContent}
+            contentView={reader.activeTab}
+            setContentView={reader.setContentView}
+            handleMarkAsRead={reader.handleMarkAsRead}
+            handleToggleReadLater={reader.handleToggleReadLater}
+            handleExtractContent={reader.handleExtractContent}
             handleSummarize={async () => {
-                setIsAiSummaryDismissed(false)
-                if (!aiSummary) {
-                    await handleSummarize()
+                reader.resetAiSummaryDismissed()
+                if (!reader.aiSummary) {
+                    await reader.handleSummarize()
                 }
             }}
-            handleTranslate={handleTranslate}
-            isExtracting={isExtracting}
-            isSummarizing={isSummarizing}
-            isTranslating={isTranslating}
+            handleTranslate={reader.handleTranslate}
+            isExtracting={reader.isExtracting}
+            isSummarizing={reader.isSummarizing}
+            isTranslating={reader.isTranslating}
             onBack={onBack}
             isReadLaterMode={isReadLaterMode}
-            translatedContent={translatedContent}
-            translatedLanguage={translatedLanguage}
-            isSaved={optimisticReadLater}
-            isRead={optimisticIsRead}
+            translatedContent={reader.translatedContent}
+            translatedLanguage={reader.translatedLanguage}
+            isSaved={reader.optimisticReadLater}
+            isRead={reader.optimisticIsRead}
             isPreviewMode={shouldShowPreviewBanner}
         />
     )
@@ -434,7 +204,7 @@ export function ArticleContent({
     return (
         <div className="flex-1 overflow-hidden flex flex-col h-full relative group/zen">
             {/* Zen Mode Trigger Button - Absolutely positioned in top-right */}
-            {!isLoading && displayContent && (
+            {!isLoading && reader.displayContent && (
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -466,89 +236,25 @@ export function ArticleContent({
                 ref={contentRef}
                 className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth"
                 style={{ scrollbarGutter: "stable" }}
-                onClick={handleContentClickMarkAsRead}
+                onClick={reader.handleContentClickMarkAsRead}
                 onScroll={onScroll}
             >
                 <div className="mx-auto max-w-4xl px-4 md:px-8">
-                    <ProseContainer>
-                        <ArticleHeader
-                            article={article}
-                            currentReadTime={clientReadTime}
-                            shouldShowFeedBadge={shouldShowFeedBadge}
-                            isMobile={!!isMobile}
-                            isRecentlyReadMode={isRecentlyReadMode}
-                            shouldShowPreviewBanner={shouldShowPreviewBanner}
-                            toolbar={toolbar}
-                        />
-
-                        {aiSummary && !isAiSummaryDismissed && (
-                            <AiSummaryCard
-                                summary={aiSummary}
-                                className="mt-4"
-                                onDismiss={() => setIsAiSummaryDismissed(true)}
-                            />
-                        )}
-
-                        {isLoading || isExtracting || isTranslating ? (
-                            <div className="space-y-4 mt-8">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-[90%]" />
-                                <Skeleton className="h-4 w-[95%]" />
-                                <Skeleton className="h-4 w-[80%]" />
-                                <Skeleton className="h-4 w-[85%]" />
-                                <Skeleton className="h-4 w-[60%]" />
-                            </div>
-                        ) : displayContent ? (
-                            <AnimatedContent
-                                contentKey={contentKey}
-                                className="mt-8"
-                            >
-                                {article.link?.startsWith("newsletter://") ? (
-                                    <NewsletterIframe
-                                        content={displayContent}
-                                        isDark={isDark}
-                                    />
-                                ) : (
-                                    <div
-                                        className="text-xl leading-relaxed"
-                                        style={{
-                                            fontFamily:
-                                                "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
-                                        }}
-                                    >
-                                        <div
-                                            dangerouslySetInnerHTML={{
-                                                __html: displayContent,
-                                            }}
-                                        />
-                                    </div>
-                                )}
-                            </AnimatedContent>
-                        ) : (
-                            <div className="space-y-6 mt-8">
-                                {(article.description || article.user_note) && (
-                                    <blockquote className="border-l-4 border-primary/30 bg-muted/30 pl-4 italic text-muted-foreground prose prose-sm max-w-none">
-                                        <div
-                                            dangerouslySetInnerHTML={{
-                                                __html:
-                                                    article.user_note ||
-                                                    article.description ||
-                                                    "",
-                                            }}
-                                        />
-                                    </blockquote>
-                                )}
-                                <div className="flex flex-col items-center justify-center py-12 text-center not-prose">
-                                    <div className="mx-auto max-w-xs">
-                                        <p className="text-sm text-muted-foreground/60">
-                                            This article doesn&apos;t have any
-                                            content available.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </ProseContainer>
+                    <ArticleReaderBody
+                        article={article}
+                        isDark={isDark}
+                        displayContent={reader.displayContent}
+                        contentKey={reader.contentKey}
+                        clientReadTime={reader.clientReadTime}
+                        shouldShowFeedBadge={shouldShowFeedBadge}
+                        isMobile={!!isMobile}
+                        isRecentlyReadMode={isRecentlyReadMode}
+                        shouldShowPreviewBanner={shouldShowPreviewBanner}
+                        toolbar={toolbar}
+                        aiSummary={reader.aiSummary}
+                        onDismissAiSummary={reader.dismissAiSummary}
+                        isBusy={reader.isBusy}
+                    />
                 </div>
             </div>
 
@@ -592,69 +298,20 @@ export function ArticleContent({
                         onScroll={handleZenScroll}
                     >
                         <div className="mx-auto max-w-4xl px-4 md:px-8 pt-4 pb-16 md:pt-6 md:pb-24">
-                            <ProseContainer>
-                                <ArticleHeader
-                                    article={article}
-                                    currentReadTime={clientReadTime}
-                                    shouldShowFeedBadge={shouldShowFeedBadge}
-                                    isMobile={!!isMobile}
-                                    isRecentlyReadMode={isRecentlyReadMode}
-                                    shouldShowPreviewBanner={
-                                        shouldShowPreviewBanner
-                                    }
-                                    toolbar={null}
-                                />
-
-                                {displayContent ? (
-                                    article.link?.startsWith(
-                                        "newsletter://"
-                                    ) ? (
-                                        <NewsletterIframe
-                                            content={displayContent}
-                                            isDark={isDark}
-                                        />
-                                    ) : (
-                                        <div
-                                            className="text-xl leading-relaxed mt-8"
-                                            style={{
-                                                fontFamily:
-                                                    "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
-                                            }}
-                                        >
-                                            <div
-                                                dangerouslySetInnerHTML={{
-                                                    __html:
-                                                        displayContent || "",
-                                                }}
-                                            />
-                                        </div>
-                                    )
-                                ) : (
-                                    <div className="space-y-6 mt-8">
-                                        {(article.description ||
-                                            article.user_note) && (
-                                            <blockquote className="border-l-4 border-primary/30 bg-muted/30 pl-4 italic text-muted-foreground prose prose-sm max-w-none">
-                                                <div
-                                                    dangerouslySetInnerHTML={{
-                                                        __html:
-                                                            article.user_note ||
-                                                            article.description ||
-                                                            "",
-                                                    }}
-                                                />
-                                            </blockquote>
-                                        )}
-                                        <div className="flex flex-col items-center justify-center py-12 text-center not-prose">
-                                            <div className="mx-auto max-w-xs">
-                                                <p className="text-sm text-muted-foreground/60">
-                                                    This article doesn&apos;t
-                                                    have any content available.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </ProseContainer>
+                            <ArticleReaderBody
+                                article={article}
+                                isDark={isDark}
+                                displayContent={reader.displayContent}
+                                contentKey={reader.contentKey}
+                                clientReadTime={reader.clientReadTime}
+                                shouldShowFeedBadge={shouldShowFeedBadge}
+                                isMobile={!!isMobile}
+                                isRecentlyReadMode={isRecentlyReadMode}
+                                shouldShowPreviewBanner={
+                                    shouldShowPreviewBanner
+                                }
+                                toolbar={null}
+                            />
                         </div>
                     </div>
                 </div>

@@ -59,18 +59,28 @@ def _relative_age(published_at: datetime, now: datetime) -> str:
     return f"{seconds // 86400}d"
 
 
-async def gather_catalog(db: AsyncSession, user_id: UUID, *, now: datetime | None = None) -> GatherResult:
+async def gather_catalog(
+    db: AsyncSession,
+    user_id: UUID,
+    *,
+    now: datetime | None = None,
+    excluded_feed_ids: set[UUID] | None = None,
+) -> GatherResult:
     """Phase 0: pull the last CODEX_INGEST_WINDOW_HOURS of published articles, cap and dedupe,
     and build the thin catalog Phase 1 reads.
 
     Deliberately does NOT filter by is_read - Codex covers everything published in the window,
     read or not. It's a digest of the day's coverage, not just an unread inbox.
 
+    ``excluded_feed_ids`` are dropped before capping/dedupe - these are the feeds in the
+    folders the user opted out of via their digest preferences.
+
     Calls get_articles directly (not through the router) so the full 24h window applies
     regardless of the Basic-tier sync cutoff.
     """
     now = now or datetime.now(timezone.utc)
     window_start = now - timedelta(hours=CODEX_INGEST_WINDOW_HOURS)
+    excluded_feed_ids = excluded_feed_ids or set()
 
     raw_items: list[EntryListItem] = []
     cursor: str | None = None
@@ -87,6 +97,9 @@ async def gather_catalog(db: AsyncSession, user_id: UUID, *, now: datetime | Non
         if not page.has_more or not page.next_cursor:
             break
         cursor = page.next_cursor
+
+    if excluded_feed_ids:
+        raw_items = [item for item in raw_items if item.feed_id not in excluded_feed_ids]
 
     survivors = _cap_and_dedupe(raw_items)
 

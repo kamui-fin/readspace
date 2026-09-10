@@ -155,7 +155,7 @@ export function VerificationStep({ email, isActive }: VerificationStepProps) {
           }}
           keyboardShouldPersistTaps="handled">
           {/* Top Content */}
-          <View className="pt-4 px-6">
+          <View className="px-6 pt-4">
             {/* Icon with Circle Wrapper */}
             <View
               className="mb-6 h-14 w-14 items-center justify-center rounded-full"
@@ -225,7 +225,7 @@ export function VerificationStep({ email, isActive }: VerificationStepProps) {
               onPress={handleResendCode}
               disabled={resendCooldown > 0 || isLoading}
               activeOpacity={0.7}
-              className="self-start mt-6 mb-4">
+              className="mb-4 mt-6 self-start">
               <Text
                 size="base"
                 fontFamily="geist-semibold"
@@ -237,7 +237,7 @@ export function VerificationStep({ email, isActive }: VerificationStepProps) {
           </View>
 
           {/* Floating Next Button at Bottom */}
-          <View className="px-6 mb-2">
+          <View className="mb-2 px-6">
             <Button
               variant="primary"
               size="large"

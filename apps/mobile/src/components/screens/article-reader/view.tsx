@@ -88,7 +88,13 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
       default:
         return article?.content;
     }
-  }, [contentSource, article?.content, article?.extracted_content, article?.description, extractedData?.content]);
+  }, [
+    contentSource,
+    article?.content,
+    article?.extracted_content,
+    article?.description,
+    extractedData?.content,
+  ]);
 
   const activeContent =
     contentSource === 'translated' && translateData?.translated_content

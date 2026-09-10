@@ -9,8 +9,7 @@ import { type ReactNode, useMemo } from 'react';
 import { ActivityIndicator, Pressable, type PressableProps, StyleSheet, View } from 'react-native';
 
 export interface ButtonProps
-  extends Omit<PressableProps, 'children'>,
-    VariantProps<typeof buttonVariants> {
+  extends Omit<PressableProps, 'children'>, VariantProps<typeof buttonVariants> {
   children: ReactNode;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;

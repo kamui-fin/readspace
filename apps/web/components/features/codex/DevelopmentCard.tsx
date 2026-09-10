@@ -104,7 +104,8 @@ export function DevelopmentCard({
                             "mt-4 grid gap-1.5",
                             stripUrls.length === 2 && "grid-cols-2",
                             stripUrls.length === 3 && "grid-cols-3",
-                            stripUrls.length >= 4 && "grid-cols-2 sm:grid-cols-4"
+                            stripUrls.length >= 4 &&
+                                "grid-cols-2 sm:grid-cols-4"
                         )}
                     >
                         {stripUrls.map((url) => (

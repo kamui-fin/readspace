@@ -28,19 +28,19 @@ Style your own layout glue with Tailwind utility classes bound to the **semantic
 classes** below. Do **not** invent hex values or use raw Tailwind color classes
 (`bg-green-700`) for brand color — always the semantic name.
 
-| Purpose | Classes |
-|---|---|
-| Brand action / identity | `bg-primary` `text-primary-foreground` `border-primary` `text-primary` (forest green — ration to ONE primary action per view, plus active nav, links) |
-| Secondary green | `bg-secondary` `text-secondary-foreground` `text-secondary` (meadow green) |
-| Hover / rest surface | `bg-accent` `text-accent-foreground` (pale sage in light, neutral in dark — it is "the hover surface", not "a green") |
-| Page / canvas | `bg-background` `text-foreground` |
-| Raised surface (cards, popovers) | `bg-card` `text-card-foreground` `bg-muted` |
-| Secondary text / metadata | `text-muted-foreground` |
-| Hairline separators | `border-border` (1px — this carries structure; do not reach for shadows) |
-| Field strokes | `border-input` |
-| Errors / destructive | `bg-destructive` `text-destructive-foreground` `text-destructive` `border-destructive` |
-| Nav column tint | `bg-sidebar` |
-| Radius | `rounded-sm` (4px) · `rounded-md` (6px, controls) · `rounded-lg` (8px, cards) · `rounded-full` (badges, avatars) — all derive from `--radius: 0.5rem` |
+| Purpose                          | Classes                                                                                                                                               |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Brand action / identity          | `bg-primary` `text-primary-foreground` `border-primary` `text-primary` (forest green — ration to ONE primary action per view, plus active nav, links) |
+| Secondary green                  | `bg-secondary` `text-secondary-foreground` `text-secondary` (meadow green)                                                                            |
+| Hover / rest surface             | `bg-accent` `text-accent-foreground` (pale sage in light, neutral in dark — it is "the hover surface", not "a green")                                 |
+| Page / canvas                    | `bg-background` `text-foreground`                                                                                                                     |
+| Raised surface (cards, popovers) | `bg-card` `text-card-foreground` `bg-muted`                                                                                                           |
+| Secondary text / metadata        | `text-muted-foreground`                                                                                                                               |
+| Hairline separators              | `border-border` (1px — this carries structure; do not reach for shadows)                                                                              |
+| Field strokes                    | `border-input`                                                                                                                                        |
+| Errors / destructive             | `bg-destructive` `text-destructive-foreground` `text-destructive` `border-destructive`                                                                |
+| Nav column tint                  | `bg-sidebar`                                                                                                                                          |
+| Radius                           | `rounded-sm` (4px) · `rounded-md` (6px, controls) · `rounded-lg` (8px, cards) · `rounded-full` (badges, avatars) — all derive from `--radius: 0.5rem` |
 
 Depth: surfaces are **flat with a 1px `border-border`**. Reserve shadows (`shadow-xs` on cards,
 `shadow-md` on menus) for genuinely floating layers. Never a colored `border-left`/`-right`
@@ -59,7 +59,15 @@ above 1px except the 4px `border-l-primary` on article blockquotes.
 ## One idiomatic snippet
 
 ```tsx
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button } from "@readspace/web"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+  Button,
+} from '@readspace/web';
 
 function SimilarFeeds() {
   return (
@@ -77,7 +85,7 @@ function SimilarFeeds() {
         <Button size="sm">Follow all</Button>
       </CardFooter>
     </Card>
-  )
+  );
 }
 ```
 

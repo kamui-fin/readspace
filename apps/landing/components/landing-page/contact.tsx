@@ -27,7 +27,9 @@ export default function ContactSection() {
                         Contact us
                     </h1>
                     <p className="mt-4 text-center">
-                        Questions, feedback, or press inquiries? Email us at support@readspace.ai — we read and respond to every message.
+                        Questions, feedback, or press inquiries? Email us at
+                        support@readspace.ai — we read and respond to every
+                        message.
                     </p>
 
                     <Card className="mx-auto mt-12 max-w-lg p-8 shadow-md sm:p-16">
@@ -36,7 +38,8 @@ export default function ContactSection() {
                                 ✓ Message sent successfully!
                             </div>
                             <p className="text-gray-600">
-                                Thanks for reaching out. We'll get back to you as soon as possible.
+                                Thanks for reaching out. We'll get back to you
+                                as soon as possible.
                             </p>
                         </div>
                     </Card>
@@ -52,19 +55,15 @@ export default function ContactSection() {
                     Contact us
                 </h1>
                 <p className="mt-4 text-center">
-                    Questions, feedback, or press inquiries? Email us at support@readspace.ai — we read and respond to every message.
+                    Questions, feedback, or press inquiries? Email us at
+                    support@readspace.ai — we read and respond to every message.
                 </p>
 
                 <Card className="mx-auto mt-12 max-w-lg p-8 shadow-md sm:p-16">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
                             <Label htmlFor="name">Name</Label>
-                            <Input
-                                type="text"
-                                id="name"
-                                name="name"
-                                required
-                            />
+                            <Input type="text" id="name" name="name" required />
                             <ValidationError
                                 field="name"
                                 errors={state.errors}
@@ -111,16 +110,10 @@ export default function ContactSection() {
                                     <SelectItem value="Newsletter">
                                         Newsletter
                                     </SelectItem>
-                                    <SelectItem value="Other">
-                                        Other
-                                    </SelectItem>
+                                    <SelectItem value="Other">Other</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <input
-                                type="hidden"
-                                name="source"
-                                value={source}
-                            />
+                            <input type="hidden" name="source" value={source} />
                             <ValidationError
                                 field="source"
                                 errors={state.errors}

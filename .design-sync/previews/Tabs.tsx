@@ -1,4 +1,4 @@
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@readspace/web"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@readspace/web';
 
 /** The canonical tab group: a muted-track pill list, the active tab a
  *  background-filled pill with a faint lift. */
@@ -22,7 +22,7 @@ export function Default() {
         <p style={{ fontSize: 14, lineHeight: 1.5 }}>Articles you saved to read later.</p>
       </TabsContent>
     </Tabs>
-  )
+  );
 }
 
 /** Two-tab reader toolbar variant — a tighter list used inline above content. */
@@ -40,5 +40,5 @@ export function Compact() {
         <p style={{ fontSize: 14 }}>Extracted article text in the reading serif.</p>
       </TabsContent>
     </Tabs>
-  )
+  );
 }

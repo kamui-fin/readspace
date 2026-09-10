@@ -16,6 +16,7 @@ export const RSS_QUERY_KEYS = {
 
 export const CODEX_QUERY_KEYS = {
   TODAY: 'codex-today',
+  PREFERENCES: 'codex-preferences',
 } as const;
 
 export const ARTICLE_ENHANCEMENT_QUERY_KEYS = {
@@ -97,6 +98,7 @@ export const queryKeys = {
 
   // Codex
   codexToday: () => [CODEX_QUERY_KEYS.TODAY] as const,
+  codexPreferences: () => [CODEX_QUERY_KEYS.PREFERENCES] as const,
 } as const;
 
 export const MUTATION_KEYS = {

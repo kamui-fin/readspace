@@ -24,7 +24,12 @@ export default function MacWindow({
             </div>
 
             {/* Content area */}
-            <div className="overflow-hidden" style={{ backgroundColor: "#e5ede0" }}>{children}</div>
+            <div
+                className="overflow-hidden"
+                style={{ backgroundColor: "#e5ede0" }}
+            >
+                {children}
+            </div>
         </div>
     )
 }

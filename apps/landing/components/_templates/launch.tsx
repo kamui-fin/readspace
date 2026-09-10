@@ -43,15 +43,18 @@ export const LaunchTemplate = () => {
                             </Text>
 
                             <Text className="text-[16px] text-gray-700 mb-[16px]">
-                                We&apos;re thrilled to let you know that your spot on our waitlist
-                                has opened—and you now have exclusive access to the Readspace
-                                beta! Our goal is to make reading smarter, faster, and more
-                                engaging, and we can&apos;t wait for you to try it out.
+                                We&apos;re thrilled to let you know that your
+                                spot on our waitlist has opened—and you now have
+                                exclusive access to the Readspace beta! Our goal
+                                is to make reading smarter, faster, and more
+                                engaging, and we can&apos;t wait for you to try
+                                it out.
                             </Text>
 
                             <Text className="text-[16px] text-gray-700 mb-[24px]">
-                                Click the button below to jump right in. No special code
-                                required—just log in with the email you used to sign up.
+                                Click the button below to jump right in. No
+                                special code required—just log in with the email
+                                you used to sign up.
                             </Text>
 
                             {/* Beta CTA */}
@@ -63,9 +66,10 @@ export const LaunchTemplate = () => {
                             </Button>
 
                             <Text className="text-[16px] text-gray-700 mb-[16px]">
-                                As you explore, we&apos;d love your feedback: any quirks you spot,
-                                features you love, or ideas for improvement. Your insights
-                                will directly shape the final Readspace experience.
+                                As you explore, we&apos;d love your feedback:
+                                any quirks you spot, features you love, or ideas
+                                for improvement. Your insights will directly
+                                shape the final Readspace experience.
                             </Text>
 
                             <Text className="text-[16px] text-gray-700 mb-[8px]">
@@ -82,13 +86,12 @@ export const LaunchTemplate = () => {
                         {/* Footer */}
                         <Section className="mt-[24px] text-center text-gray-500 text-[12px]">
                             <Text className="m-0 mt-[8px]">
-                                &copy; {new Date().getFullYear()} Readspace. All rights
-                                reserved.
+                                &copy; {new Date().getFullYear()} Readspace. All
+                                rights reserved.
                             </Text>
                             <Text className="m-0 mt-[8px]">
-                                You&apos;re receiving this because you signed up at{" "}
-
-                                . To unsubscribe, please{" "}
+                                You&apos;re receiving this because you signed up
+                                at . To unsubscribe, please{" "}
                                 <Link
                                     href="{{{RESEND_UNSUBSCRIBE_URL}}}"
                                     className="underline"
@@ -106,4 +109,3 @@ export const LaunchTemplate = () => {
 }
 
 export default LaunchTemplate
-

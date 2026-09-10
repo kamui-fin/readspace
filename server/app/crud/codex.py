@@ -1,20 +1,34 @@
-"""CRUD for codex_digests - one row per user per local day per edition."""
+"""CRUD for codex_digests.
 
-from datetime import date, datetime, timezone
+Quota is enforced on a **rolling time window keyed on the server clock** (``requested_at``),
+never on a client-supplied calendar date - see ``count_recent_generations``. ``digest_date``
+is kept only as a human-facing label ("which day's news is this") and plays no part in the
+allowance.
+"""
+
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.codex import CodexDigest
+from app.models.codex import CodexDigest, CodexPreferences
 from app.models.enums import CodexDigestPhase, CodexDigestStatus
+from app.models.feed import FeedSubscription
 
 # Statuses that count as "a digest already exists" for dedupe / quota purposes.
 _ACTIVE_STATUSES = (
     CodexDigestStatus.PENDING.value,
     CodexDigestStatus.IN_PROGRESS.value,
     CodexDigestStatus.COMPLETED.value,
+)
+
+# In-flight statuses - a row in one of these is a generation still running, so a repeat
+# request is served from it rather than spending a fresh slot.
+_IN_FLIGHT_STATUSES = (
+    CodexDigestStatus.PENDING.value,
+    CodexDigestStatus.IN_PROGRESS.value,
 )
 
 
@@ -32,79 +46,123 @@ async def get_latest_edition_for_date(db: AsyncSession, user_id: UUID, digest_da
     return result.scalar_one_or_none()
 
 
-async def count_editions_for_date(db: AsyncSession, user_id: UUID, digest_date: date) -> int:
-    """Count how many active (PENDING/IN_PROGRESS/COMPLETED) editions exist for this local day.
+async def count_recent_generations(
+    db: AsyncSession, user_id: UUID, *, window: timedelta, now: datetime | None = None
+) -> int:
+    """Count the user's active (PENDING/IN_PROGRESS/COMPLETED) generations whose ``requested_at``
+    falls inside the trailing ``window`` from ``now`` (server clock, UTC).
 
-    A SKIPPED / FAILED edition doesn't count - it can be retried in place without spending a
-    new per-day slot.
+    This is the quota primitive: it can't be gamed by changing the device clock or the
+    client-supplied local date, and it resets continuously (the oldest generation ages out of
+    the window ``window`` after it was requested). SKIPPED / FAILED rows never count - they're
+    retried in place.
     """
+    now = now or datetime.now(timezone.utc)
+    cutoff = now - window
     result = await db.execute(
         select(func.count(CodexDigest.id)).where(
             CodexDigest.user_id == user_id,
-            CodexDigest.digest_date == digest_date,
             CodexDigest.status.in_(_ACTIVE_STATUSES),
+            CodexDigest.requested_at > cutoff,
         )
     )
     return result.scalar_one() or 0
 
 
-async def get_latest_digest(db: AsyncSession, user_id: UUID) -> CodexDigest | None:
-    """Fetch the most recent digest row for a user - latest edition of the latest day."""
+async def get_latest_in_flight(db: AsyncSession, user_id: UUID) -> CodexDigest | None:
+    """The user's most recent still-running (PENDING/IN_PROGRESS) generation, if any.
+
+    A repeat request while one of these exists is served from it - the client just keeps
+    polling the same row instead of spending another slot.
+    """
     result = await db.execute(
         select(CodexDigest)
-        .where(CodexDigest.user_id == user_id)
-        .order_by(CodexDigest.digest_date.desc(), CodexDigest.edition.desc())
+        .where(
+            CodexDigest.user_id == user_id,
+            CodexDigest.status.in_(_IN_FLIGHT_STATUSES),
+        )
+        .order_by(CodexDigest.requested_at.desc(), CodexDigest.edition.desc())
         .limit(1)
     )
     return result.scalar_one_or_none()
 
 
-async def count_ready_digests_in_month(db: AsyncSession, user_id: UUID, today: date | None = None) -> int:
-    """Count COMPLETED digests for the user in the current calendar month.
+async def get_latest_retryable(db: AsyncSession, user_id: UUID) -> CodexDigest | None:
+    """The user's most recent SKIPPED / FAILED generation, if that's also their most recent
+    generation overall. Such a row can be re-run in place without spending a fresh slot.
 
-    Only COMPLETED rows count toward the Basic monthly allowance - a SKIPPED or FAILED
-    run never burns it.
+    Returns None when the latest generation is active (in-flight or completed) or there is
+    none at all.
     """
-    today = today or datetime.now(timezone.utc).date()
-    month_start = today.replace(day=1)
+    latest = await get_latest_digest(db, user_id)
+    if latest is None:
+        return None
+    if latest.status in (CodexDigestStatus.SKIPPED.value, CodexDigestStatus.FAILED.value):
+        return latest
+    return None
+
+
+async def get_latest_digest(db: AsyncSession, user_id: UUID) -> CodexDigest | None:
+    """Fetch the user's most recent digest row, ordered by when it was requested (server
+    clock). A SKIPPED/FAILED row that is later retried keeps its id but has ``requested_at``
+    bumped, so ordering by ``requested_at`` reflects true recency."""
+    result = await db.execute(
+        select(CodexDigest)
+        .where(CodexDigest.user_id == user_id)
+        .order_by(CodexDigest.requested_at.desc(), CodexDigest.edition.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def count_completed_since(db: AsyncSession, user_id: UUID, *, since: datetime) -> int:
+    """Count the user's COMPLETED digests requested at/after ``since`` (server clock, UTC).
+
+    Only COMPLETED rows count toward the Basic monthly allowance - a SKIPPED or FAILED run
+    never burns it. Keyed on ``requested_at`` so a spoofed local date can't dodge the cap.
+    """
     result = await db.execute(
         select(func.count(CodexDigest.id)).where(
             CodexDigest.user_id == user_id,
             CodexDigest.status == CodexDigestStatus.COMPLETED.value,
-            CodexDigest.digest_date >= month_start,
-            CodexDigest.digest_date <= today,
+            CodexDigest.requested_at >= since,
         )
     )
     return result.scalar_one() or 0
 
 
 async def create_pending_digest(db: AsyncSession, user_id: UUID, digest_date: date) -> CodexDigest:
-    """Get a PENDING digest row for this local day: recycle a retryable latest edition, else
-    insert the next edition.
+    """Get a PENDING digest row: recycle the user's most recent generation if it's a
+    retryable SKIPPED / FAILED, otherwise insert a fresh row.
 
-    If the latest edition for the day is SKIPPED / FAILED, it's reset to PENDING in place - a
-    retry, not a new slot. Otherwise a fresh row is inserted at ``edition = <highest> + 1``.
-    Per-day / per-month allowance is caller-gated upstream (``enforce_codex_quota``); an active
-    (PENDING/IN_PROGRESS/COMPLETED) latest edition is left untouched here and returned as-is.
+    ``digest_date`` is a display label only (the local day the digest is "for"). The unique
+    constraint is ``(user_id, digest_date, edition)``, so a fresh row takes
+    ``edition = <highest edition already on that date> + 1``.
+
+    Per-generation / monthly allowance is caller-gated upstream (``enforce_codex_quota``); an
+    in-flight or completed latest generation is left untouched here (the router serves it back
+    without calling this).
     """
-    latest = await get_latest_edition_for_date(db, user_id, digest_date)
-    if latest is not None:
-        if latest.status in (CodexDigestStatus.SKIPPED.value, CodexDigestStatus.FAILED.value):
-            latest.status = CodexDigestStatus.PENDING.value
-            latest.progress_phase = None
-            latest.error = None
-            latest.payload = None
-            latest.generated_at = None
-            latest.clusters_found = None
-            latest.input_article_count = None
-            latest.input_source_count = None
-            latest.requested_at = datetime.now(timezone.utc)
-            await db.flush()
-            await db.refresh(latest)
-            return latest
-        next_edition = int(latest.edition) + 1
-    else:
-        next_edition = 1
+    retryable = await get_latest_retryable(db, user_id)
+    if retryable is not None:
+        retryable.status = CodexDigestStatus.PENDING.value
+        retryable.progress_phase = None
+        retryable.error = None
+        retryable.payload = None
+        retryable.generated_at = None
+        retryable.clusters_found = None
+        retryable.input_article_count = None
+        retryable.input_source_count = None
+        retryable.requested_at = datetime.now(timezone.utc)
+        # digest_date (the display label) is left as-is: it's the day this digest was first
+        # requested for, and re-homing it risks colliding with the (user, date, edition)
+        # unique constraint. The quota window keys on requested_at, which we just bumped.
+        await db.flush()
+        await db.refresh(retryable)
+        return retryable
+
+    latest_for_date = await get_latest_edition_for_date(db, user_id, digest_date)
+    next_edition = int(latest_for_date.edition) + 1 if latest_for_date is not None else 1
 
     digest = CodexDigest(
         user_id=user_id,
@@ -176,3 +234,47 @@ async def finalize_digest(
     await db.flush()
     await db.refresh(digest)
     return digest
+
+
+# ================= Preferences =================
+
+
+async def get_preferences(db: AsyncSession, user_id: UUID) -> CodexPreferences | None:
+    """Fetch the user's digest preferences row, or None if they've never saved any."""
+    return await db.get(CodexPreferences, user_id)
+
+
+async def upsert_preferences(db: AsyncSession, user_id: UUID, *, excluded_folder_ids: list[UUID]) -> CodexPreferences:
+    """Create or update the user's digest preferences row.
+
+    ``excluded_folder_ids`` is stored as a JSONB array of UUID strings; the caller is
+    responsible for validating the ids belong to the user's own folders.
+    """
+    prefs = await db.get(CodexPreferences, user_id)
+    stored = [str(fid) for fid in excluded_folder_ids]
+    if prefs is None:
+        prefs = CodexPreferences(user_id=user_id, excluded_folder_ids=stored)
+        db.add(prefs)
+    else:
+        prefs.excluded_folder_ids = stored
+    await db.flush()
+    await db.refresh(prefs)
+    return prefs
+
+
+async def get_excluded_feed_ids(db: AsyncSession, user_id: UUID) -> set[UUID]:
+    """Resolve the user's excluded-folder preference to the concrete feed ids to drop from the
+    digest catalog. Empty set when the user has no preferences row or has excluded nothing.
+    """
+    prefs = await db.get(CodexPreferences, user_id)
+    if not prefs or not prefs.excluded_folder_ids:
+        return set()
+
+    excluded_folder_ids = [UUID(fid) for fid in prefs.excluded_folder_ids]
+    result = await db.execute(
+        select(FeedSubscription.feed_id).where(
+            FeedSubscription.user_id == user_id,
+            FeedSubscription.folder_id.in_(excluded_folder_ids),
+        )
+    )
+    return {row[0] for row in result.all()}

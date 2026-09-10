@@ -164,9 +164,10 @@ class CodexGenerateRequest(BaseModel):
     local_date: date | None = Field(
         default=None,
         description=(
-            "The caller's local calendar day (e.g. from `new Date()` client-side). Used as "
-            "the quota bucket so the per-day allowance resets at the user's own midnight. "
-            "Clamped server-side to +/-1 day of UTC today."
+            "The caller's local calendar day (e.g. from `new Date()` client-side). Used only "
+            "as the digest's display label ('which day's news is this'); it does NOT affect "
+            "the quota, which is a server-clock rolling window. Clamped server-side to "
+            "+/-1 day of UTC today."
         ),
     )
 
@@ -202,3 +203,23 @@ class CodexNotEntitledResponse(BaseModel):
     entitled: bool = False
     reason: str
     error_code: str
+
+
+class CodexPreferencesResponse(BaseModel):
+    """GET/PUT /codex/preferences response - the user's digest knobs."""
+
+    model_config = response_config
+
+    excluded_folder_ids: list[UUID] = Field(
+        default_factory=list,
+        description="Folder ids whose feeds are left out of the daily digest. Empty = every folder is included.",
+    )
+
+
+class CodexPreferencesUpdate(BaseModel):
+    """PUT /codex/preferences body. Replaces the excluded-folder set wholesale."""
+
+    excluded_folder_ids: list[UUID] = Field(
+        default_factory=list,
+        description="The full set of folder ids to exclude. Ids not belonging to the caller are rejected.",
+    )

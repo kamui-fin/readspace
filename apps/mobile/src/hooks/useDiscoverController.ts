@@ -1,5 +1,10 @@
 import { useCallback, useState } from 'react';
-import { useClearRefinements, useCurrentRefinements, useMenu, useSearchBox } from 'react-instantsearch';
+import {
+  useClearRefinements,
+  useCurrentRefinements,
+  useMenu,
+  useSearchBox,
+} from 'react-instantsearch';
 
 export function useDiscoverController() {
   const { query, refine: refineQuery } = useSearchBox();

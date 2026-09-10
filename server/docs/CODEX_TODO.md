@@ -41,14 +41,13 @@ path — see the second e2e run logged below.
 ## Deviations from the design doc (intentional, per user instruction)
 
 - **No `ENABLE_CODEX` flag.** The doc's §9/§10/§15 proposed gating on `settings.ENABLE_AI`
-  *and* a new `settings.ENABLE_CODEX` (default `False`). Skipped — gate on `ENABLE_AI` only.
+  _and_ a new `settings.ENABLE_CODEX` (default `False`). Skipped — gate on `ENABLE_AI` only.
 - **Catalog row carries `published_at` (ISO) alongside `age`.** The doc's §3 catalog row
   only had a relative `age` string. Added the real timestamp too since the payload persists
   and clients may want to render/sort by actual date, not just "2h".
 - **Raised fulltext-fetch/display caps** so `article_ids` shown isn't stuck far below
   `article_count`. Doc had fetch=3, display=5 while `article_count` in examples was 12 —
-  meaning at most 5/12 articles were ever citable even though the model could re-rank up to
-  5. Bumped `CODEX_MAX_ARTICLES_PER_DEVELOPMENT_FULLTEXT` to 5 and
+  meaning at most 5/12 articles were ever citable even though the model could re-rank up to 5. Bumped `CODEX_MAX_ARTICLES_PER_DEVELOPMENT_FULLTEXT` to 5 and
   `CODEX_MAX_ARTICLES_PER_DEVELOPMENT_DISPLAY` to 8, so a 12-article cluster can surface up
   to 8 citations instead of 5, and more of the "which are the best write-ups" judgment is
   made with full text rather than snippets.
@@ -80,11 +79,11 @@ path — see the second e2e run logged below.
   whenever `is_read=False` was passed (`app/crud/article/reader.py`, the `is_read=False`
   branch). SQL `published_at > NULL` evaluates to unknown, so any subscription without a
   cutoff set (234/238 on the test account) had 100% of its unread articles filtered out.
-  Fixed by treating a NULL cutoff as "no cutoff" (`or_(last_read_cutoff IS NULL, published_at
+  Fixed by treating a NULL cutoff as "no cutoff" (`or\_(last_read_cutoff IS NULL, published_at
   > last_read_cutoff)`). This affects the live unread views too, not just Codex — found via a
-  real end-to-end pipeline run against the local dev DB (see Verification below), not a
-  hypothetical. Codex itself no longer calls `get_articles` with `is_read=False` at all (see
-  above), but the underlying bug was real and worth fixing regardless.
+real end-to-end pipeline run against the local dev DB (see Verification below), not a
+hypothetical. Codex itself no longer calls `get_articles`with`is_read=False` at all (see
+  > above), but the underlying bug was real and worth fixing regardless.
 - **`worker_db` import-binding gap for integration tests.** `services/codex/pipeline.py` does
   `from app.workers.common import worker_db`, which binds a local name in `pipeline`'s own
   module namespace at import time — `tests/integration/conftest.py`'s existing
@@ -147,47 +146,37 @@ path — see the second e2e run logged below.
       (initial `codex_digests` table, then the `progress_phase` column add), confirmed schema
       matches spec both times
 - [x] **Real end-to-end pipeline runs via `trigger_task.py`** (worker-level, bypasses HTTP)
-      with a live Gemini key:
-      1. First run (139-unread-article account) — gather → triage → full-text fetch →
-         synthesis → persist all completed; confirmed `article_count` matches `len(articles)`
-         in both resulting developments (4/4, 4/4) — the caps fix works as intended.
-      2. Second run, after capping ingestion to 100 and switching to the designated e2e
-         account (`codex@gmail.com`) — exercised the **zero-cluster fallback path** (§15): 0
-         clusters found, all 8 candidates fed into Worth Reading (capped at
-         `CODEX_MAX_WORTH_READING_FALLBACK`=6, 5 resolved), an honest quiet-day gist/closing
-         line, no fabricated developments.
+      with a live Gemini key: 1. First run (139-unread-article account) — gather → triage → full-text fetch →
+      synthesis → persist all completed; confirmed `article_count` matches `len(articles)`
+      in both resulting developments (4/4, 4/4) — the caps fix works as intended. 2. Second run, after capping ingestion to 100 and switching to the designated e2e
+      account (`codex@gmail.com`) — exercised the **zero-cluster fallback path** (§15): 0
+      clusters found, all 8 candidates fed into Worth Reading (capped at
+      `CODEX_MAX_WORTH_READING_FALLBACK`=6, 5 resolved), an honest quiet-day gist/closing
+      line, no fabricated developments.
 - [x] **Real end-to-end verification through the live FastAPI + Taskiq stack** (not the
       trigger script) — the actual `poe start` API process and a `poe worker` Taskiq process,
-      driven entirely over HTTP with a real Supabase-issued JWT for `codex@gmail.com`:
-      1. `GET /users/limits` → confirmed `limits.codex` / `usage.codex` extension renders for
-         a BASIC user (`{"period": "month", "limit": 3, "used": 0}`).
-      2. `POST /codex/generate` → `202` + PENDING row → Taskiq picked up
-         `codex_tasks.generate_codex_digest` → `GET /codex/today` polled through
-         `pending → in_progress` and (after the `progress_phase` feature landed)
-         `triaging → reading → synthesizing` → `completed`, live, over real HTTP polling.
-      3. Hit and diagnosed a transient "Max client connections reached" Postgres error caused
-         by restarting a long-lived Taskiq worker into a large backlog of overdue scheduled
-         feed-refresh tasks that all fired concurrently (each opening its own connection under
-         `NullPool`) — environmental contention from the restart itself, not a Codex defect;
-         the pipeline's own FAILED-then-retry handling worked correctly through it, and a
-         second attempt after the backlog drained completed cleanly. Not a discovered
-         priority-queueing bug in the product; Taskiq has no built-in per-task-type priority
-         today, which is a fair scalability question for later but out of scope here.
-      4. Along the way, found and fixed the `worker_db` import-binding gap (see Bugs above)
-         that was silently making `progress_phase` never populate under test.
+      driven entirely over HTTP with a real Supabase-issued JWT for `codex@gmail.com`: 1. `GET /users/limits` → confirmed `limits.codex` / `usage.codex` extension renders for
+      a BASIC user (`{"period": "month", "limit": 3, "used": 0}`). 2. `POST /codex/generate` → `202` + PENDING row → Taskiq picked up
+      `codex_tasks.generate_codex_digest` → `GET /codex/today` polled through
+      `pending → in_progress` and (after the `progress_phase` feature landed)
+      `triaging → reading → synthesizing` → `completed`, live, over real HTTP polling. 3. Hit and diagnosed a transient "Max client connections reached" Postgres error caused
+      by restarting a long-lived Taskiq worker into a large backlog of overdue scheduled
+      feed-refresh tasks that all fired concurrently (each opening its own connection under
+      `NullPool`) — environmental contention from the restart itself, not a Codex defect;
+      the pipeline's own FAILED-then-retry handling worked correctly through it, and a
+      second attempt after the backlog drained completed cleanly. Not a discovered
+      priority-queueing bug in the product; Taskiq has no built-in per-task-type priority
+      today, which is a fair scalability question for later but out of scope here. 4. Along the way, found and fixed the `worker_db` import-binding gap (see Bugs above)
+      that was silently making `progress_phase` never populate under test.
       All test rows deleted after each inspection; dev DB confirmed empty of `codex_digests`
       rows at session end.
-- [x] **Cost-model Phase 1/2 token budget** (doc §10 flag). Token estimate from the *current*
+- [x] **Cost-model Phase 1/2 token budget** (doc §10 flag). Token estimate from the _current_
       constants (`CODEX_MAX_ARTICLES=100`, `CODEX_SNIPPET_CHAR_CAP=280`,
       `CODEX_MAX_DEVELOPMENTS=5`, `CODEX_MAX_ARTICLES_PER_DEVELOPMENT_FULLTEXT=5`,
-      `CODEX_FULLTEXT_CHAR_CAP=12000`):
-      - **Phase 1 (triage):** 100 TOON rows × ~110 tok (id/source/age/title + 280-char snippet)
-        + ~600 tok system prompt ≈ **~12K in**; structured output (≤5 clusters + worth-reading
-        ids + gist) ≈ **~1K out**.
-      - **Phase 2 (synthesis):** typical 2–3 surviving clusters × ~5 bodies × ~3.2K tok
-        ≈ **~48K in**; worst case all 5 clusters × 5 bodies at the 12K-char cap ≈ **~82K in**.
-        Output (5 developments + worth-reading + two lines) ≈ **~2–3K out**.
-      - **Per digest, typical ~63K in / ~3K out; worst ~96K in / ~4K out.**
+      `CODEX_FULLTEXT_CHAR_CAP=12000`): - **Phase 1 (triage):** 100 TOON rows × ~110 tok (id/source/age/title + 280-char snippet) + ~600 tok system prompt ≈ **~12K in**; structured output (≤5 clusters + worth-reading
+      ids + gist) ≈ **~1K out**. - **Phase 2 (synthesis):** typical 2–3 surviving clusters × ~5 bodies × ~3.2K tok
+      ≈ **~48K in**; worst case all 5 clusters × 5 bodies at the 12K-char cap ≈ **~82K in**.
+      Output (5 developments + worth-reading + two lines) ≈ **~2–3K out**. - **Per digest, typical ~63K in / ~3K out; worst ~96K in / ~4K out.**
 
       Cost depends entirely on which flash tier `GEMINI_SMART_MODEL` resolves to (config
       currently names `gemini-3.6-flash`, for which public per-token pricing isn't yet
@@ -302,7 +291,7 @@ breakage called out below. No further backend work is needed.
       — the feed-enrichment prompt, not Codex — are still there; wrap those lines if you want
       backend CI green, separate from this feature.)
 - [x] **BASIC `max_daily_ai_calls` reverted 5 → 3** (`app/core/resource_limits.py`). This is the
-      *separate* daily summary/translation limit (Redis `ai_usage` counter), unrelated to the
+      _separate_ daily summary/translation limit (Redis `ai_usage` counter), unrelated to the
       Codex quota (which is a `codex_digests` row count, `CODEX_LIMITS`, and stays 3/month for
       BASIC). Commit `0dcf923c` had bumped it to 5 without updating
       `test_enforce_daily_ai_limit_exceeded`; it's now back to the intended 3 and all 63 backend
@@ -376,12 +365,12 @@ study Google/Apple News newspaper layout.
 - **`CodexView.tsx`** — rewritten newspaper-style. Masthead (sentence-case `scale_setter`, no
   ALL-CAPS, Solar `StarsIcon`, secondary accent). Busy day → `max-w-6xl` two-column grid:
   main Developments column + sticky right rail ("The day" numbers card + `SourceAvatarGroup`
-  + Worth Reading). Quiet day (0 developments) → single centred `max-w-2xl` column with Worth
-  Reading front-and-centre (fixes the wasted rail). Kills the big desktop side margins.
+  - Worth Reading). Quiet day (0 developments) → single centred `max-w-2xl` column with Worth
+    Reading front-and-centre (fixes the wasted rail). Kills the big desktop side margins.
 - **`DevelopmentCard.tsx`** — `rounded-lg` (was `xl`), sentence-case title, secondary hover.
   `synthesis` now rendered through the shared `<Markdown>` component (bullets). Lead (rank-0)
   card is `featured`: 16/7 hero image from the best write-up (with `bg-muted` placeholder) +
-  a restrained thumbnail strip from the *other* write-ups' images. Non-featured card has no
+  a restrained thumbnail strip from the _other_ write-ups' images. Non-featured card has no
   hero — the coverage images become a `grid-cols-3` `16/10` gallery (the visual anchor). Hero
   image is de-duped against the lead write-up's row thumbnail.
 - **`CodexArticleRow.tsx`** — newspaper row: source favicon + name + `·` + strict relative
@@ -433,7 +422,7 @@ unless noted):
   mid-generation — `CodexGenerating` takes a `requestedAt` prop, wired from
   `digest.requested_at` in `CodexScreen`). `motion-reduce` respected throughout.
 - **Adaptive `DevelopmentCard`.** Image layout is chosen from `(imageCount, widest usable
-  image)` — a capped `16/9`–`2/1` hero only when the lead image measures ≥760px (`onLoad`
+image)` — a capped `16/9`–`2/1` hero only when the lead image measures ≥760px (`onLoad`
   rejects smaller ones so it can't upscale), else a side-by-side pair, a `grid` mosaic, or
   text-only. `priority` dropped, responsive `sizes` added, `next/image` switched to `fill`.
   Fixes the stretched low-res hero and the phone-width thumbnail-row overflow.
@@ -445,7 +434,7 @@ unless noted):
   quiet-day copy de-duplicated. **The real fix is the prompt split — see Round 2 below.**
 - **Provenance row.** `SourceAvatarGroup` `+N` chip gains a `title`/`aria-label` naming the
   hidden sources and `text-xs` (was `text-[10px]`); the article count moved to `ml-auto`
-  `font-mono`, the `·` crutch removed. Worth Reading `reason` moved *inside* `CodexArticleRow`
+  `font-mono`, the `·` crutch removed. Worth Reading `reason` moved _inside_ `CodexArticleRow`
   (a `reason` prop) so it's in the row's own rhythm — fixes the orphaned ~12px title→reason
   gap from the leaked `dense` `py-2.5`.
 - **States.** `CodexStates` shell tightened (`max-w-xs`, `mt-5`/`mt-1.5`/`mt-6`, `size-11`
@@ -475,8 +464,8 @@ Second full critique (`/impeccable critique`, dual-agent) + owner feedback on pa
 
 - **Synthesis bullet marker** (owner's actual ask) — the fragile hand-offset green flex-dot
   (`mt-[0.7em] size-1 bg-secondary/70`) is now a real CSS hanging bullet: `<ul list-disc
-  marker:text-muted-foreground/50 pl-[1.1em]>`, browser-aligned to the first line. **Size
-  stays `text-[15px]`, `**bold**` anchors stay `text-secondary` green** — owner reverted an
+marker:text-muted-foreground/50 pl-[1.1em]>`, browser-aligned to the first line. **Size
+  stays `text-[15px]`, `**bold**`anchors stay`text-secondary` green** — owner reverted an
   over-correction that had bumped both. It's EB Garamond (`font-serif` → `--font-garamond-serif`),
   same face as the article reader.
 - **Standfirst is now `<h1>`** (was a `<p>` — the completed view had no `<h1>` at all), flat
@@ -488,7 +477,7 @@ Second full critique (`/impeccable critique`, dual-agent) + owner feedback on pa
   mobile** (below the standfirst) so the counts don't vanish with the rail. Rows: Pieces /
   Sources / Developments (`"2 of 7"` when found ≠ shown).
 - **Section heads** ("Developments" / "This issue") are now `font-mono text-xs uppercase
-  tracking-wider text-muted-foreground` — rules on the page, not three identical sans panel
+tracking-wider text-muted-foreground` — rules on the page, not three identical sans panel
   titles.
 - **Footer** is now just the `closing_line` with its trailing "…in your reader" **linked to
   `/today`** (woven into the sentence, `linkifyReader()` — matches "…still in your reader",
@@ -507,10 +496,10 @@ Second full critique (`/impeccable critique`, dual-agent) + owner feedback on pa
 - **`CodexSynthesis` font** — owner reported it "still not EB Garamond" twice. The chain was
   correct (`font-serif` → `--font-serif` → `--font-garamond-serif`, loaded on `<body>`), but
   switched to an explicit inline `style={{ fontFamily: "var(--font-garamond-serif), <CJK
-  serif fallbacks>, ui-serif, Georgia, serif" }}` on the `<ul>` and each `<strong>` — byte-
+serif fallbacks>, ui-serif, Georgia, serif" }}` on the `<ul>` and each `<strong>` — byte-
   identical to how `ArticleContent.tsx` applies the reader serif — so nothing can shadow it.
   If it still renders wrong it's dev-server HMR staleness (a hard refresh fixes it); `next
-  build` CSS has the correct `@font-face` (`font-weight: 400 800` variable) and utility.
+build` CSS has the correct `@font-face` (`font-weight: 400 800` variable) and utility.
 - **DevelopmentCard title** `font-bold` → `font-semibold` (owner: "slightly less bold").
 - **`SourceAvatarGroup` `+N` chip** — was `-ml-1.5 px-1.5 ring-2` (cramped, tucked under the
   last avatar). Now `ml-1 px-2 min-w-5 inline-flex`, no ring — reads as its own pill with
@@ -555,7 +544,7 @@ browser tool this session.
 - [x] `TheDayCard` → `IssueColophon` — justified `<dl>` ledger under a "This issue" mono head,
       feed icons dropped, renders inline on mobile so counts don't vanish with the rail.
 - [x] Section heads ("Developments", "This issue") → `font-mono text-xs uppercase
-      tracking-wider text-muted-foreground` (rules, not identical sans panel titles).
+    tracking-wider text-muted-foreground` (rules, not identical sans panel titles).
 - [x] Footer collapsed to the `closing_line` alone, its trailing "…in your reader" linked to
       `/today` (`linkifyReader()`); dropped the separate "Read all N" CTA and "About Codex".
 - [x] Footer link colour `text-secondary` → `text-primary` (Rationed Green + the 3.17:1 AA
@@ -593,7 +582,7 @@ elapsed timer, pre-compute the dashboard layout / add a skeleton.
   `notFound()` when `process.env.NODE_ENV === "production"` (guard in the default export, inner
   component holds the hooks). `next build` still emits the route as a static shell but it 404s
   at runtime in prod. Mobile parity: `app/(protected)/codex-preview/index.tsx` `<Redirect
-  href="/codex" />` when `!__DEV__`.
+href="/codex" />` when `!__DEV__`.
 - **Hero-image selection — decided: backend.** Owner picked backend over the client-side
   measure-before-render approach (which needed hidden `new Image()` probes, a settle timeout,
   and double-fetched every image). New module `app/services/codex/imagery.py`:
@@ -706,7 +695,7 @@ line shouldn't sit in the masthead — it's a card. What changed:
   `synthesis` values rewritten as tight ≤16-word bullets.
 - **`apps/web/components/features/codex/CodexView.tsx`** — the `<h1>` is now `payload.headline`
   (falls back to `gist` then `scale_setter`); `gist` renders as a `text-[15px]
-  text-muted-foreground` standfirst `<p>` under it, suppressed when there's no headline or it
+text-muted-foreground` standfirst `<p>` under it, suppressed when there's no headline or it
   equals the gist. **`overlaps()` deleted.** `scale_setter` no longer appears in the masthead
   at all — it's the "This issue" colophon in the rail (see UI note below).
 - **`apps/web/components/features/codex/DevelopmentCard.tsx`** — renders `development.summary`
@@ -742,3 +731,67 @@ the standfirst carries the long sentence, the colophon reads as a ledger.
       counts, serif synthesis with the hanging marker (tracked under Round 1d "still open").
 - [ ] Pre-existing `ruff` E501s in `app/services/ai/prompts.py:130-156` (feed-enrichment
       prompt, untouched) — wrap if you want backend CI fully green. Not Codex.
+
+### Round 2b — Codex API / functionality (prompt-only, done)
+
+Owner review of real digests: (1) on a low-overlap day (many readers follow blogs / news-
+letters / magazines, not overlapping wire news) `clusters` came back `[]`, the Developments
+column rendered empty, and a genuinely important lone story was buried in Worth Reading with
+everything else; (2) the triage prompt was implicitly wire-news-shaped — it didn't tell the
+model a Readspace catalog is often essays/analysis/features, or that the _editorially_ most
+important piece still deserves the lead on a quiet news day; (3) Worth Reading read as
+"leftovers", not "the runner-up reads that just missed the main column"; (4) `themes` still
+came back populated on days nothing recurred.
+
+**Prompt-only — no schema, no migration, no pipeline change.** `CodexCluster.source_count` /
+`article_count` were already plain `int` with no ≥2 validation; `pipeline.py` re-sorts
+`clusters` by `source_count` desc (so a single-source development naturally sorts _below_
+real multi-source clusters); the web `DevelopmentCard` already renders "1 source · 1 article"
+correctly. What changed:
+
+- **`services/ai/prompts.py` — `CODEX_TRIAGE_SYSTEM_PROMPT`** rewritten §1–§2:
+  - Reframed the model as the reader's **section editor** over a catalog that is often _not_
+    a newswire.
+  - **Developments priority order:** (1) multi-source clusters first (≥2 articles / ≥2
+    sources, ranked by `source_count` desc — unchanged); (2) a single high-priority story as
+    a `source_count: 1` development _only_ when nothing clustered around it and it clearly
+    warrants the lead (major launch/announcement/result, decisive policy or market move, a
+    landmark essay that is itself the event) — a deliberate exception, **not** quiet-day
+    padding; (3) news-first fallback — a standout long-form piece may lead as a single-source
+    development on a quiet news day, but event stories win on a normal day.
+  - Empty `clusters` + an honest headline/gist is called out as a **correct, common** answer.
+  - **Worth Reading** reframed as the runner-up tier — best standalone reads after the
+    developments, decisively above the rest of the noisy feed, best-first, high bar.
+  - **`themes`** — strengthened: return `[]` unless a topic genuinely recurred across
+    multiple pieces; a single big story is not a theme; don't invent themes to fill the list.
+  - **`gist`** — added "say a quiet day plainly, never manufacture a front-page tone".
+  - Rules block: "one story one home" now says _developments_ (not _clusters_);
+    `source_count`/`article_count` "must be the real counts — 1 and 1 for a lone story".
+- **`services/ai/prompts.py` — `CODEX_SYNTHESIS_SYSTEM_PROMPT`**:
+  - Split the `synthesis` guidance into **multi-source** (compress the through-line across
+    sources — unchanged) vs **single-source** (write from the one piece; first bullet frames,
+    rest carry that article's substance; do NOT invent cross-source agreement/divergence; 3
+    bullets is fine, don't stretch to 5).
+  - Added "echo the `source_count`/`article_count` you were given unchanged — the backend
+    trusts them; a single-source development stays 1 and 1".
+  - Worth-reading `reason` reframed to "why this is a top runner-up read — what it delivers
+    that the rest of the feed doesn't". `scale_setter`/`closing_line` unchanged (already
+    count-based, no multi-source assumption).
+- **`PRODUCT.md`** Daily Digest bullet + **`server/docs/codex-digest-design.md`** §1, §4, §15
+  updated to describe single-source developments and the runner-up framing.
+- **`tests/unit/test_codex_parsing.py`** — +1 test: `_resolve_payload` preserves a
+  `source_count: 1` / one-article development (guards the pipeline never silently "fixes" a
+  solo development away). Integration tests use fake outputs, unaffected.
+
+**Verified:** `poe test-unit` green incl. the new test; `poe format` / `poe lint` clean on
+`prompts.py` + `test_codex_parsing.py` (the 9 `prompts.py:130-156` E501s are the untouched
+feed-enrichment prompt). Real generation TBD by owner — see open items below.
+
+**Still open:**
+
+- [ ] Eyeball a few **real quiet-day digests** (e2e account
+      `52c91642-16ab-49d9-bf3e-068c762ba2b5`, ~8 articles) — confirm a single-source
+      development only fires for a genuine top story, not as filler, and that a truly empty
+      day still returns `developments: []` + `themes: []` + an honest gist.
+- [ ] Confirm on a **heavier account** that multi-source clusters still lead and sort above
+      any single-source development.

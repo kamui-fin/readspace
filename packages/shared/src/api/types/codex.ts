@@ -86,9 +86,9 @@ export interface CodexDigestPayload {
 /** GET /codex/today and POST /codex/generate response — the latest digest edition, any status. */
 export interface CodexDigestResponse {
   id: string;
-  /** The reader's local calendar day this digest belongs to (quota bucket). */
+  /** The reader's local calendar day this digest is labelled for — display only, not a quota key. */
   digest_date: string;
-  /** 1-based edition within `digest_date` — Pro can hold 2, Basic 1. */
+  /** 1-based edition within `digest_date`. */
   edition: number;
   status: CodexDigestStatus;
   progress_phase: CodexDigestPhase | null;
@@ -118,19 +118,34 @@ export function isCodexNotEntitled(
   return (result as CodexNotEntitledResponse).entitled === false;
 }
 
+/**
+ * GET/PUT /codex/preferences — the user's digest knobs. `excluded_folder_ids` are the folders
+ * whose feeds are left out of the daily digest; an empty array means every folder is included.
+ * Changes take effect on the next digest generation, not retroactively.
+ */
+export interface CodexPreferences {
+  excluded_folder_ids: string[];
+}
+
 // ── /users/limits codex allowance ────────────────────────────────────────────
-// Shape differs by role (see server/app/services/user/resource_limits.py):
-//   Basic → { period: "month", limit, used, used_today }  (1 digest/local-day, `limit` COMPLETED/month)
-//   Pro   → { period: "day",   limit, used }              (`used` = today's edition count, of `limit`)
+// The generation cap is a SERVER-CLOCK ROLLING WINDOW (`window_hours`, a little under a day),
+// not a calendar day — it can't be moved by changing the device clock/timezone, and it resets
+// continuously as old generations age out of the window. Shape differs by role
+// (server/app/services/user/resource_limits.py):
+//   Basic → { period: "month", limit, used, used_in_window, window_hours }
+//           (`used` = COMPLETED this calendar month of `limit`; `used_in_window` = 0 or 1)
+//   Pro   → { period: "window", window_hours, limit, used }
+//           (`used` = generations in the trailing `window_hours`, of `limit`)
 //   Admin → { unlimited: true }
-// Pass ?local_date=YYYY-MM-DD to /users/limits so `used`/`used_today` reset at the user's midnight.
 
 export interface CodexMeteredUsage {
-  period: 'month' | 'day';
+  period: 'month' | 'window';
   limit: number;
   used: number;
-  /** Basic only: whether today's single local-day digest is already spent (0 or 1). */
-  used_today?: number;
+  /** Length of the rolling generation window, in hours. */
+  window_hours?: number;
+  /** Basic only: whether this window's single generation is already spent (0 or 1). */
+  used_in_window?: number;
 }
 
 export interface CodexUnlimitedUsage {
@@ -139,9 +154,9 @@ export interface CodexUnlimitedUsage {
 
 export type CodexUsage = CodexMeteredUsage | CodexUnlimitedUsage;
 
-/** Basic gets { per_day, per_month }; Pro gets { per_day }; Admin gets {}. */
+/** Basic gets { per_window, per_month }; Pro gets { per_window }; Admin gets {}. */
 export interface CodexAllowance {
-  per_day?: number;
+  per_window?: number;
   per_month?: number;
 }
 

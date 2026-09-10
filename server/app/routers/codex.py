@@ -9,8 +9,9 @@ from fastapi import APIRouter, Body, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.custom_exceptions import NotFoundError, ResourceLimitError
+from app.core.custom_exceptions import NotFoundError, ResourceLimitError, ValidationError
 from app.crud import codex as crud_codex
+from app.crud import folder as crud_folder
 from app.db.session import get_db
 from app.services.user.auth import get_current_user
 from app.services.user.resource_limits import enforce_codex_quota
@@ -19,6 +20,8 @@ from app.typing.codex import (
     CodexGenerateRequest,
     CodexGenerateResponse,
     CodexNotEntitledResponse,
+    CodexPreferencesResponse,
+    CodexPreferencesUpdate,
 )
 from app.typing.user import TokenData
 from app.workers.codex_tasks import generate_codex_digest_task
@@ -28,8 +31,12 @@ router = APIRouter()
 
 
 def _resolve_local_date(body: CodexGenerateRequest | None) -> date:
-    """The reader's local calendar day (client-supplied), clamped to +/-1 day of UTC today so
-    a spoofed value can't unlock more than a timezone's worth of extra budget."""
+    """The reader's local calendar day (client-supplied), clamped to +/-1 day of UTC today.
+
+    This is used ONLY as the digest's human-facing ``digest_date`` label ("which day's news
+    is this"). It has NO effect on the quota, which is a server-clock rolling window - so a
+    spoofed value can at most mislabel a digest by a day, never unlock extra generations.
+    """
     utc_today = datetime.now(timezone.utc).date()
     if body is None or body.local_date is None:
         return utc_today
@@ -45,10 +52,10 @@ def _resolve_local_date(body: CodexGenerateRequest | None) -> date:
     "/generate",
     response_model=CodexGenerateResponse | CodexNotEntitledResponse,
     status_code=status.HTTP_202_ACCEPTED,
-    summary="Generate (or fetch today's) Codex digest",
-    description="Enqueues a digest generation for the caller's local day. Idempotent within "
-    "that day up to the tier's per-day edition cap: a repeat request past the cap returns the "
-    "existing row rather than re-spending.",
+    summary="Generate (or fetch) the caller's Codex digest",
+    description="Enqueues a digest generation. The allowance is a rolling server-clock window "
+    "(a little under 24h) - a repeat request while one is in flight, or once the window cap is "
+    "hit, returns the existing row rather than re-spending.",
 )
 async def generate_digest(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -63,10 +70,10 @@ async def generate_digest(
     if not settings.ENABLE_AI:
         return CodexNotEntitledResponse(reason="AI features are disabled on this instance.", error_code="AI_DISABLED")
 
-    local_date = _resolve_local_date(body)
+    label_date = _resolve_local_date(body)  # display label only - not a quota input
 
     try:
-        existing = await enforce_codex_quota(db, user_id, local_date=local_date)
+        existing = await enforce_codex_quota(db, user_id)
     except ResourceLimitError as e:
         return CodexNotEntitledResponse(reason=e.message, error_code=e.error_code or "CODEX_LIMIT_EXCEEDED")
 
@@ -74,14 +81,14 @@ async def generate_digest(
         logger.info("Codex digest request served from existing row", digest_id=str(existing.id))
         return existing
 
-    digest = await crud_codex.create_pending_digest(db, user_id, local_date)
+    digest = await crud_codex.create_pending_digest(db, user_id, label_date)
     await db.commit()
 
     await generate_codex_digest_task.kiq(str(user_id), str(digest.id))
     logger.info(
         "Codex digest generation enqueued",
         digest_id=str(digest.id),
-        digest_date=local_date.isoformat(),
+        digest_date=label_date.isoformat(),
         edition=digest.edition,
     )
 
@@ -103,3 +110,52 @@ async def get_today_digest(
     if not digest:
         raise NotFoundError(message="No Codex digest found yet", error_code="CODEX_DIGEST_NOT_FOUND")
     return digest
+
+
+@router.get(
+    "/preferences",
+    response_model=CodexPreferencesResponse,
+    summary="Get the caller's digest preferences",
+)
+async def get_preferences(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[TokenData, Depends(get_current_user)],
+) -> CodexPreferencesResponse:
+    """Return the user's digest knobs. A user who has never saved any gets the defaults
+    (no folder excluded)."""
+    user_id = UUID(current_user.sub)
+    prefs = await crud_codex.get_preferences(db, user_id)
+    excluded = [UUID(fid) for fid in prefs.excluded_folder_ids] if prefs else []
+    return CodexPreferencesResponse(excluded_folder_ids=excluded)
+
+
+@router.put(
+    "/preferences",
+    response_model=CodexPreferencesResponse,
+    summary="Update the caller's digest preferences",
+    description="Replaces the excluded-folder set wholesale. Takes effect on the next digest "
+    "generation, not retroactively. Folder ids that don't belong to the caller are rejected.",
+)
+async def update_preferences(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[TokenData, Depends(get_current_user)],
+    body: CodexPreferencesUpdate,
+) -> CodexPreferencesResponse:
+    """Validate the excluded folder ids against the user's own folders, then upsert."""
+    user_id = UUID(current_user.sub)
+    requested = list(dict.fromkeys(body.excluded_folder_ids))  # de-dupe, keep order
+
+    if requested:
+        owned = await crud_folder.filter_owned_ids(db, user_id, requested)
+        unknown = [str(fid) for fid in requested if fid not in owned]
+        if unknown:
+            raise ValidationError(
+                message="One or more folders don't belong to you.",
+                error_code="CODEX_UNKNOWN_FOLDER",
+                details={"unknown_folder_ids": unknown},
+            )
+
+    prefs = await crud_codex.upsert_preferences(db, user_id, excluded_folder_ids=requested)
+    await db.commit()
+    logger.info("Codex preferences updated", user_id=current_user.sub, excluded_count=len(requested))
+    return CodexPreferencesResponse(excluded_folder_ids=[UUID(fid) for fid in prefs.excluded_folder_ids])

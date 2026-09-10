@@ -126,6 +126,43 @@ class TestResolvePayload:
         assert len(payload["worth_reading"]) == 1
         assert payload["worth_reading"][0]["article"]["link"] == items_by_id[3].link
 
+    def test_single_source_development_is_preserved(self):
+        """A lone high-priority story (source_count=1, one article) must survive resolution
+        with its counts intact - the pipeline never silently 'fixes' a solo development away."""
+        items_by_id = {1: _make_item(1)}
+        triage = CodexTriageOutput(
+            gist="One story worth leading with, nothing else converged.",
+            clusters=[CodexCluster(label="Solo Story", article_ids=[1], source_count=1, article_count=1)],
+            worth_reading_ids=[],
+        )
+        synthesis = CodexSynthesisOutput(
+            scale_setter="1 piece from 1 source.",
+            developments=[
+                CodexDevelopment(
+                    title="A lone but major release",
+                    synthesis="- The one source lays out what shipped and why it matters.",
+                    source_count=1,
+                    article_count=1,
+                    article_ids=[1],
+                )
+            ],
+            worth_reading=[],
+            closing_line="1 development shown.",
+        )
+
+        payload = _resolve_payload(
+            triage=triage,
+            synthesis=synthesis,
+            items_by_id=items_by_id,
+            full_text_by_catalog_id={},
+        )
+
+        assert len(payload["developments"]) == 1
+        dev = payload["developments"][0]
+        assert dev["source_count"] == 1
+        assert dev["article_count"] == 1
+        assert len(dev["articles"]) == 1
+
     def test_article_count_matches_resolved_articles_length(self):
         """Regression guard: article_count must equal len(articles) in the persisted payload."""
         items_by_id = {i: _make_item(i) for i in range(1, 9)}

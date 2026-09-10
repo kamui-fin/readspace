@@ -1,5 +1,5 @@
 from app.models.article import ArticleContent, FeedArticle, UserEntry
-from app.models.codex import CodexDigest
+from app.models.codex import CodexDigest, CodexPreferences
 from app.models.enums import ArticlePriority, CodexDigestStatus, FeedCategory, UserRole
 from app.models.feed import Feed, FeedSubscription
 from app.models.folder import Folder
@@ -17,6 +17,7 @@ __all__ = [
     "FeedSubscription",
     "Folder",
     "CodexDigest",
+    "CodexPreferences",
     "AuthUser",
     "Profile",
 ]

@@ -30,6 +30,19 @@ async def list_by_user(db: AsyncSession, user_id: UUID, skip: int = 0, limit: in
     return list(result.scalars().all())
 
 
+async def filter_owned_ids(db: AsyncSession, user_id: UUID, folder_ids: list[UUID]) -> set[UUID]:
+    """Given a list of folder ids, return the subset the user actually owns.
+
+    Bounded by the input size (not the user's total folder count), so it's safe to call for
+    membership checks regardless of how many folders a user has.
+    """
+    if not folder_ids:
+        return set()
+    stmt = select(Folder.id).where(Folder.user_id == user_id, Folder.id.in_(folder_ids))
+    result = await db.execute(stmt)
+    return {row[0] for row in result.all()}
+
+
 async def create(db: AsyncSession, obj_in: FolderCreate, user_id: UUID) -> Folder:
     """Create a new folder."""
     db_obj = Folder(**obj_in.model_dump(), user_id=user_id)

@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { formatDistanceToNowStrict, parseISO } from "date-fns"
-import { ArrowRightUpIcon } from "@solar-icons/react/bold"
+import { ArrowRightIcon } from "@solar-icons/react/bold"
 import type { ArticleSummary } from "@readspace/shared"
 import { FeedIcon } from "@/components/features/feeds/FeedIcon"
 import { cn } from "@/lib/utils"
@@ -23,7 +24,8 @@ interface CodexArticleRowProps {
 /**
  * One article under a Development or in the Worth Reading list. Newspaper row: a mono
  * dateline (source · relative time), then the headline. The lead (rank 0) is heavier and
- * carries a thumbnail when the article has an image. Opens in a new tab.
+ * carries a thumbnail when the article has an image. Opens the piece in the Readspace
+ * reader at `/articles/[id]`.
  */
 export function CodexArticleRow({
     article,
@@ -45,10 +47,8 @@ export function CodexArticleRow({
         isLead && !dense && !hideThumb && !!article.image_url && !imgError
 
     return (
-        <a
-            href={article.link}
-            target="_blank"
-            rel="noopener noreferrer"
+        <Link
+            href={`/articles/${article.id}`}
             className={cn(
                 "group flex items-start gap-3 rounded-lg px-3 outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50",
                 dense ? "py-2" : "py-2.5",
@@ -90,7 +90,7 @@ export function CodexArticleRow({
                     )}
                 >
                     {article.title || "Untitled"}
-                    <ArrowRightUpIcon
+                    <ArrowRightIcon
                         aria-hidden
                         className="ml-0.5 inline size-3.5 -translate-y-px opacity-0 transition-opacity group-hover:opacity-60 group-focus-visible:opacity-60"
                     />
@@ -114,6 +114,6 @@ export function CodexArticleRow({
                     />
                 </div>
             )}
-        </a>
+        </Link>
     )
 }
