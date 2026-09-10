@@ -327,7 +327,10 @@ async def get_articles(
         else:
             query = query.where(
                 or_(~UserEntry.is_read, UserEntry.is_read.is_(None)),
-                FeedArticle.published_at > FeedSubscription.last_read_cutoff,
+                or_(
+                    FeedSubscription.last_read_cutoff.is_(None),
+                    FeedArticle.published_at > FeedSubscription.last_read_cutoff,
+                ),
             )
 
     # Cursor pagination

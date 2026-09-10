@@ -8,16 +8,19 @@ Usage:
     python scripts/trigger_task.py refresh-all    # Schedule all feeds needing refresh
     python scripts/trigger_task.py compact-unread  # Compact unread articles
     python scripts/trigger_task.py compact-old     # Delete old articles
+    python scripts/trigger_task.py codex-generate <user_id>  # Generate a Codex digest
 
 Or using poethepoet:
     poe trigger refresh-all
     poe trigger compact-unread
     poe trigger compact-old
+    poe trigger codex-generate <user_id>
 """
 
 import asyncio
 import sys
 from pathlib import Path
+from uuid import UUID
 
 import structlog
 
@@ -63,19 +66,37 @@ async def trigger_batch_enrich() -> None:
     logger.info("Task queued: Batch enrich feeds")
 
 
+async def trigger_codex_generate(user_id: str) -> None:
+    """Manually generate a Codex digest for a user, bypassing the HTTP quota check."""
+    from datetime import datetime, timezone
+
+    from app.crud import codex as crud_codex
+    from app.workers.codex_tasks import generate_codex_digest_task
+    from app.workers.common import worker_db
+
+    logger.info("Triggering: Codex digest generation", user_id=user_id)
+
+    today = datetime.now(timezone.utc).date()
+    async with worker_db() as db:
+        # Bypass the HTTP quota gate entirely - always start the next edition for today.
+        digest = await crud_codex.create_pending_digest(db, UUID(user_id), today)
+        digest_id = str(digest.id)
+
+    await generate_codex_digest_task(user_id, digest_id)
+    logger.info("Task completed: Codex digest generation", digest_id=digest_id)
+    print(f"\nSuccess: Codex digest generated - digest_id={digest_id}")
+
+
 async def trigger_reset_failed() -> None:
     """Reset all feeds that were marked as failed enrichment."""
     logger.info("Triggering: Reset failed enrichment feeds")
-    from app.workers.common import worker_db
-    from app.models.feed import Feed
     from sqlalchemy import update
 
+    from app.models.feed import Feed
+    from app.workers.common import worker_db
+
     async with worker_db() as db:
-        stmt = (
-            update(Feed)
-            .where(Feed.tags.contains(["failed-enrichment"]))
-            .values(tags=None, content_type=None)
-        )
+        stmt = update(Feed).where(Feed.tags.contains(["failed-enrichment"])).values(tags=None, content_type=None)
         res = await db.execute(stmt)
         logger.info("Failed enrichments reset successfully", count=res.rowcount)
         print(f"\nSuccess: Reset {res.rowcount} feeds from failed enrichment state!")
@@ -87,33 +108,46 @@ TASKS = {
     "compact-old": trigger_compact_old,
     "batch-enrich": trigger_batch_enrich,
     "reset-failed": trigger_reset_failed,
+    "codex-generate": trigger_codex_generate,
 }
+
+# Tasks that take a positional argument beyond the task name (e.g. a user_id).
+TASKS_WITH_ARGS = {"codex-generate"}
 
 
 def print_usage() -> None:
     """Print usage information."""
-    print("Usage: python scripts/trigger_task.py <task-name>")
+    print("Usage: python scripts/trigger_task.py <task-name> [arg]")
     print("\nAvailable tasks:")
-    print("  refresh-all    - Schedule all feeds needing refresh")
-    print("  compact-unread - Compact unread articles")
-    print("  compact-old    - Delete old articles")
-    print("  batch-enrich   - Batch enrich feeds")
-    print("  reset-failed   - Reset all feeds marked as 'failed-enrichment'")
+    print("  refresh-all             - Schedule all feeds needing refresh")
+    print("  compact-unread          - Compact unread articles")
+    print("  compact-old             - Delete old articles")
+    print("  batch-enrich            - Batch enrich feeds")
+    print("  reset-failed            - Reset all feeds marked as 'failed-enrichment'")
+    print("  codex-generate <user_id> - Generate a Codex digest for a user")
     print("\nExample:")
     print("  python scripts/trigger_task.py refresh-all")
+    print("  python scripts/trigger_task.py codex-generate 3fa85f64-5717-4562-b3fc-2c963f66afa6")
     print("  poe trigger refresh-all")
 
 
 async def main() -> None:
     """Main entry point for the script."""
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in (2, 3):
         print_usage()
         sys.exit(1)
 
     task_name = sys.argv[1]
+    extra_args = sys.argv[2:]
 
     if task_name not in TASKS:
         print(f"Error: Unknown task '{task_name}'")
+        print()
+        print_usage()
+        sys.exit(1)
+
+    if task_name in TASKS_WITH_ARGS and not extra_args:
+        print(f"Error: '{task_name}' requires an argument")
         print()
         print_usage()
         sys.exit(1)
@@ -122,11 +156,9 @@ async def main() -> None:
     await broker.startup()
 
     try:
-        await TASKS[task_name]()
+        await TASKS[task_name](*extra_args)
     except Exception as exc:
-        logger.error(
-            "Task execution failed", task=task_name, error=str(exc), exc_info=True
-        )
+        logger.error("Task execution failed", task=task_name, error=str(exc), exc_info=True)
         print(f"\nError: Task execution failed - {exc}")
         sys.exit(1)
     finally:

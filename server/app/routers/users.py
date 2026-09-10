@@ -1,10 +1,11 @@
 """User management routes."""
 
+from datetime import date
 from typing import Annotated
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.custom_exceptions import NotFoundError
@@ -60,11 +61,15 @@ async def update_profile(
 async def get_limits(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
+    local_date: Annotated[
+        date | None,
+        Query(description="Caller's local calendar day - scopes the Codex per-day usage count."),
+    ] = None,
 ) -> UserLimitsResponse:
     """
     Get the current user's resource limits and usage.
     """
     logger.bind(user_id=current_user.sub)
 
-    limits_and_usage = await get_user_limits_and_usage(db, user_id=UUID(current_user.sub))
+    limits_and_usage = await get_user_limits_and_usage(db, user_id=UUID(current_user.sub), local_date=local_date)
     return limits_and_usage

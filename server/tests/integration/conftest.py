@@ -239,6 +239,7 @@ async def db_session(db_engine: AsyncEngine, monkeypatch) -> AsyncGenerator[Asyn
         ("app.workers.feed.compaction.worker_db", _worker_db),
         ("app.workers.feed.enrichment.worker_db", _worker_db),
         ("app.workers.feed.favicon.worker_db_factory", _worker_db),
+        ("app.services.codex.pipeline.worker_db", _worker_db),
     )
     for target, replacement in patch_map:
         monkeypatch.setattr(target, replacement, raising=False)

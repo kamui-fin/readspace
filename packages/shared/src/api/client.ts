@@ -6,6 +6,7 @@ import { articles } from './endpoints/articles';
 import { discover } from './endpoints/discover';
 import { users } from './endpoints/users';
 import { newsletters } from './endpoints/newsletters';
+import { codex } from './endpoints/codex';
 
 export * from './core';
 export * from './types/common';
@@ -13,6 +14,8 @@ export * from './types/feeds';
 export * from './types/articles';
 export * from './types/folders';
 export * from './types/opml';
+export * from './types/codex';
+export { localDayString } from './endpoints/codex';
 export * from '../utils/reading-time';
 
 import { ApiClientConfig } from './core';
@@ -26,7 +29,7 @@ class BaseApiClient extends CoreApiClient {
   }
 }
 
-Object.assign(BaseApiClient, feeds, folders, opml, articles, discover, users, newsletters);
+Object.assign(BaseApiClient, feeds, folders, opml, articles, discover, users, newsletters, codex);
 
 export const ApiClient = BaseApiClient as typeof CoreApiClient &
   typeof feeds &
@@ -35,6 +38,7 @@ export const ApiClient = BaseApiClient as typeof CoreApiClient &
   typeof articles &
   typeof discover &
   typeof users &
-  typeof newsletters;
+  typeof newsletters &
+  typeof codex;
 
 export type ApiClient = InstanceType<typeof CoreApiClient>;

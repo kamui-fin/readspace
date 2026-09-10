@@ -133,7 +133,9 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
             updates.description = values.description
         if (values.language !== (currentFeed.language || ""))
             updates.language = values.language || undefined
-        if (values.top_level_category !== (currentFeed.top_level_category || "")) {
+        if (
+            values.top_level_category !== (currentFeed.top_level_category || "")
+        ) {
             updates.top_level_category = values.top_level_category || undefined
         }
         if (values.url !== currentFeed.url) updates.url = values.url
@@ -341,7 +343,8 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
                                 />
                             </FormControl>
                             <p className="text-xs text-muted-foreground">
-                                Popularity score used for ranking (typically 0-1000)
+                                Popularity score used for ranking (typically
+                                0-1000)
                             </p>
                             <FormMessage />
                         </FormItem>

@@ -1,6 +1,7 @@
 // Export query keys
 export {
   ARTICLE_ENHANCEMENT_QUERY_KEYS,
+  CODEX_QUERY_KEYS,
   RSS_QUERY_KEYS,
   USER_QUERY_KEYS,
   type QueryKey,
@@ -12,6 +13,9 @@ export * from './hooks';
 
 // Export types
 export * from './types';
+
+// Export fixtures (mock data for preview UIs / tests)
+export * from './fixtures/codex';
 
 // Export the full ApiClient with all functionality
 export {

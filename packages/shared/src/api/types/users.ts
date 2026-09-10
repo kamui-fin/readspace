@@ -1,3 +1,5 @@
+import type { CodexAllowance, CodexUsage } from './codex';
+
 export enum UserRole {
   BASIC = 'BASIC',
   PRO = 'PRO',
@@ -35,9 +37,13 @@ export interface UserLimits {
     max_daily_ai_calls: number;
     semantic_search: boolean;
     read_later_retention_days: number;
+    /** Codex allowance for this role — {} for Admin (unlimited). */
+    codex?: CodexAllowance;
   };
   usage: {
     subscriptions: number;
     daily_ai_calls: number;
+    /** Codex usage — { unlimited: true } for Admin, else { period, limit, used }. */
+    codex?: CodexUsage;
   };
 }

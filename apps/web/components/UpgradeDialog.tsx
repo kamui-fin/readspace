@@ -64,7 +64,9 @@ export default function UpgradeDialog() {
                                         Unlimited feeds & newsletters
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Infinite folders and a custom @readspace.ai address to receive newsletters directly.
+                                        Infinite folders and a custom
+                                        @readspace.ai address to receive
+                                        newsletters directly.
                                     </p>
                                 </div>
                             </div>
@@ -79,7 +81,9 @@ export default function UpgradeDialog() {
                                         Early AI features
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Try out new tools in development, including daily briefings and conversational search.
+                                        Try out new tools in development,
+                                        including daily briefings and
+                                        conversational search.
                                     </p>
                                 </div>
                             </div>
@@ -94,7 +98,8 @@ export default function UpgradeDialog() {
                                         Generous AI limits
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        More daily usage of our summarize, key takeaway, and translation tools.
+                                        More daily usage of our summarize, key
+                                        takeaway, and translation tools.
                                     </p>
                                 </div>
                             </div>
@@ -109,7 +114,9 @@ export default function UpgradeDialog() {
                                         Save articles forever
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
-                                        Articles in your library never expire, and feeds update faster. (Free items expire in 30 days).
+                                        Articles in your library never expire,
+                                        and feeds update faster. (Free items
+                                        expire in 30 days).
                                     </p>
                                 </div>
                             </div>

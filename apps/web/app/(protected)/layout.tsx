@@ -17,8 +17,7 @@ export default function ProtectedLayout({
     const { profile, isLoading } = useUserRole()
     const router = useRouter()
     // Onboarding is a cloud-only flow — never gate self-hosted instances on it.
-    const needsOnboarding =
-        isCloudProd() && !!profile && !profile.is_onboarded
+    const needsOnboarding = isCloudProd() && !!profile && !profile.is_onboarded
 
     useEffect(() => {
         if (!isLoading && needsOnboarding) {

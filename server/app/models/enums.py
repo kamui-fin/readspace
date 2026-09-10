@@ -53,3 +53,28 @@ class UserRole(str, Enum):
     BASIC = "BASIC"
     PRO = "PRO"
     ADMIN = "ADMIN"
+
+
+class CodexDigestStatus(str, Enum):
+    """Status of a codex_digests row."""
+
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
+class CodexDigestPhase(str, Enum):
+    """Which pipeline phase an IN_PROGRESS digest is currently in.
+
+    Populated only while status is IN_PROGRESS - lets the frontend show a meaningful
+    step-by-step loading state ("Reading your feeds...", "Finding patterns...") instead of a
+    generic spinner. Null before the worker picks the task up, and left at its last value once
+    a digest reaches a terminal status (informational only at that point).
+    """
+
+    GATHERING = "gathering"  # Phase 0 - pulling and deduping the day's articles
+    TRIAGING = "triaging"  # Phase 1 - the clustering/ranking LLM call
+    READING = "reading"  # Phase 1.5 - fetching full article text for the chosen few
+    SYNTHESIZING = "synthesizing"  # Phase 2 - the writing LLM call

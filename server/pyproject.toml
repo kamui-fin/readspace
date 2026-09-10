@@ -87,6 +87,7 @@ meilisearch-python-sdk = "^5.4.0"
 python-dateutil = "^2.9.0.post0"
 nh3 = "^0.3.2"
 cryptography = "^46.0.3"
+tenacity = "^9.1.2"
 sqlmodel = "^0.0.27"
 listparser = {extras = ["lxml"], version = "^0.20"}
 langcodes = "^3.5.0"
