@@ -12,7 +12,6 @@ export default function ProtectedLayout() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="onboarding/index" />
       <Stack.Screen name="articles/[id]" />
-      <Stack.Screen name="codex-preview/index" />
     </Stack>
   );
 }

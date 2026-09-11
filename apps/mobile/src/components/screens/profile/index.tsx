@@ -362,19 +362,6 @@ export function ProfileScreen() {
             />
           </SettingsGroup>
 
-          {/* Developer Tools — dev builds only; the preview route redirects to /codex in release. */}
-          {__DEV__ && (
-            <SettingsGroup title="Developer" className="mb-6">
-              <SettingsItem
-                label="Daily Digest preview"
-                variant="button"
-                leftIcon={<StarsIcon size={22} color={colors.black} />}
-                onPress={() => router.push('/(protected)/codex-preview')}
-                isLast={true}
-              />
-            </SettingsGroup>
-          )}
-
           {/* Account Section */}
           <SettingsGroup title="Account" className="mb-8">
             <SettingsItem

@@ -39,16 +39,7 @@ export function UpgradePaywallModal() {
 
   // Pricing display strings (with RevenueCat live price strings as source of truth, fallbacks for local dev)
   const monthlyPriceStr = monthlyPackage?.product.priceString ?? '$5.99';
-  const yearlyPriceStr = yearlyPackage?.product.priceString ?? '$49.99';
-
-  // Calculate yearly monthly-equivalent price ($49.99 / 12 = $4.17)
-  const yearlyMonthlyEquivalentStr = useMemo(() => {
-    if (yearlyPackage?.product.price) {
-      const perMonth = yearlyPackage.product.price / 12;
-      return `${yearlyPackage.product.currencyCode === 'USD' ? '$' : ''}${perMonth.toFixed(2)}`;
-    }
-    return '$4.17';
-  }, [yearlyPackage]);
+  const yearlyPriceStr = yearlyPackage?.product.priceString ?? '$59.99';
 
   const displayDescription =
     description !==
@@ -132,7 +123,7 @@ export function UpgradePaywallModal() {
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <SunIcon size={20} color={colors.primary} />
+                  <SunIcon size={20} color={colors.secondary} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
@@ -153,7 +144,7 @@ export function UpgradePaywallModal() {
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <FeedIcon size={20} color={colors.primary} />
+                  <FeedIcon size={20} color={colors.secondary} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
@@ -174,7 +165,7 @@ export function UpgradePaywallModal() {
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <MagicWandIcon size={20} color={colors.primary} />
+                  <MagicWandIcon size={20} color={colors.secondary} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
@@ -195,7 +186,7 @@ export function UpgradePaywallModal() {
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
                   style={{ backgroundColor: isDark ? 'rgb(46, 46, 46)' : '#ffffff' }}>
-                  <Book2Icon size={20} color={colors.primary} />
+                  <Book2Icon size={20} color={colors.secondary} />
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
@@ -223,11 +214,11 @@ export function UpgradePaywallModal() {
               Choose your plan
             </Text>
 
-            <View className="flex-row gap-4">
+            <View className="gap-4">
               {/* Monthly Card */}
               <Pressable
                 onPress={() => setSelectedPlan('monthly')}
-                className="flex-1 rounded-3xl border-2 p-4"
+                className="flex-row items-center justify-between gap-3 rounded-3xl border-2 p-4"
                 style={{
                   borderColor: selectedPlan === 'monthly' ? colors.primary : colors.grey5,
                   backgroundColor:
@@ -237,17 +228,19 @@ export function UpgradePaywallModal() {
                         : 'rgba(46, 196, 182, 0.04)'
                       : 'transparent',
                 }}>
-                <Text size="base" fontFamily="geist-bold" style={{ color: colors.black }}>
-                  Pro Monthly
-                </Text>
-                <Text
-                  size="xs"
-                  fontFamily="geist"
-                  className="mt-0.5"
-                  style={{ color: colors.grey }}>
-                  Billed monthly
-                </Text>
-                <View className="mt-5 flex-row items-baseline">
+                <View className="flex-1">
+                  <Text size="base" fontFamily="geist-bold" style={{ color: colors.black }}>
+                    Pro Monthly
+                  </Text>
+                  <Text
+                    size="xs"
+                    fontFamily="geist"
+                    className="mt-0.5"
+                    style={{ color: colors.grey }}>
+                    Billed monthly
+                  </Text>
+                </View>
+                <View className="flex-row items-baseline">
                   <Text size="2xl" fontFamily="geist-bold" style={{ color: colors.black }}>
                     {monthlyPriceStr}
                   </Text>
@@ -260,7 +253,7 @@ export function UpgradePaywallModal() {
               {/* Yearly Card */}
               <Pressable
                 onPress={() => setSelectedPlan('yearly')}
-                className="relative flex-1 rounded-3xl border-2 p-4"
+                className="relative flex-row items-center justify-between gap-3 rounded-3xl border-2 p-4"
                 style={{
                   borderColor: selectedPlan === 'yearly' ? colors.primary : colors.grey5,
                   backgroundColor:
@@ -272,36 +265,38 @@ export function UpgradePaywallModal() {
                 }}>
                 {/* Promo Badge */}
                 <View
-                  className="shadow-xs absolute -top-3 left-4 right-4 items-center justify-center rounded-full py-0.5"
+                  className="shadow-xs absolute -top-3 left-4 items-center justify-center rounded-full px-3 py-0.5"
                   style={{ backgroundColor: colors.primary }}>
                   <Text
                     size="xs"
                     fontFamily="geist-bold"
                     className="text-[9px] uppercase tracking-wider text-white">
-                    Save 30%
+                    Save 17%
                   </Text>
                 </View>
 
-                <Text
-                  size="base"
-                  fontFamily="geist-bold"
-                  className="mt-1"
-                  style={{ color: colors.black }}>
-                  Pro Yearly
-                </Text>
-                <Text
-                  size="xs"
-                  fontFamily="geist"
-                  className="mt-0.5"
-                  style={{ color: colors.grey }}>
-                  Billed annually
-                </Text>
-                <View className="mt-5 flex-row items-baseline">
+                <View className="flex-1">
+                  <Text
+                    size="base"
+                    fontFamily="geist-bold"
+                    className="mt-1"
+                    style={{ color: colors.black }}>
+                    Pro Yearly
+                  </Text>
+                  <Text
+                    size="xs"
+                    fontFamily="geist"
+                    className="mt-0.5"
+                    style={{ color: colors.grey }}>
+                    Billed annually
+                  </Text>
+                </View>
+                <View className="flex-row items-baseline">
                   <Text size="2xl" fontFamily="geist-bold" style={{ color: colors.black }}>
-                    {yearlyMonthlyEquivalentStr}
+                    {yearlyPriceStr}
                   </Text>
                   <Text size="xs" fontFamily="geist" style={{ color: colors.grey }}>
-                    /mo
+                    /yr
                   </Text>
                 </View>
               </Pressable>

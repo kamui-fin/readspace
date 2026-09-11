@@ -102,8 +102,8 @@ Confirmed functionality across surfaces:
   after the Developments. The digest is editorial, not wire-news-only: a landmark essay or
   analysis can lead on a quiet news day. Metered access: Basic 3 / calendar month, Pro 1 /
   day, Admin unlimited. A story has exactly one home — Development or Worth Reading, never
-  both. Continuity (day-over-day memory) is a future phase. Web surfaces: `/codex` and `/codex/preview`; mobile: a bottom-tab Digest screen and
-  `/codex-preview` (routes keep the internal `codex` codename). Full spec:
+  both. Continuity (day-over-day memory) is a future phase. Web surface: `/codex`; mobile: a bottom-tab Digest screen
+  (routes keep the internal `codex` codename). Full spec:
   `server/docs/codex-digest-design.md`, tracker: `server/docs/CODEX_TODO.md`.
 - OPML import / export; RSSHub support.
 - Chrome + Firefox extension: save-to-read-later, feed detection/subscribe.

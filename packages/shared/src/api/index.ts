@@ -15,7 +15,6 @@ export * from './hooks';
 export * from './types';
 
 // Export fixtures (mock data for preview UIs / tests)
-export * from './fixtures/codex';
 
 // Export the full ApiClient with all functionality
 export {

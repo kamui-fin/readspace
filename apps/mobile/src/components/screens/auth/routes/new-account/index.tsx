@@ -9,7 +9,7 @@ import { useAuthErrorHandler } from '@hooks/useAuthErrorHandler';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS, SPACING } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { EmailSchema, PasswordSchema } from '@lib/validation/auth-schemas';
+import { EmailSchema, PasswordConfirmationSchema } from '@lib/validation/auth-schemas';
 import { useSettingsStore } from '@stores/settings';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -40,6 +40,7 @@ export function SignupScreen() {
   const [currentStep, setCurrentStep] = useState(initialStepVal);
   const [email, setEmail] = useState(params.email || '');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
@@ -96,13 +97,20 @@ export function SignupScreen() {
       onEmailChange={setEmail}
       selfHostSettingsRef={selfHostSettingsRef}
     />,
-    <PasswordStep key="password" initialPassword={password} onPasswordChange={setPassword} />,
+    <PasswordStep
+      key="password"
+      initialPassword={password}
+      initialConfirmPassword={confirmPassword}
+      onPasswordChange={setPassword}
+      onConfirmPasswordChange={setConfirmPassword}
+    />,
     <VerificationStep key="verification" email={email} isActive={currentStep === 2} />,
   ];
 
   const isValid = () => {
     if (currentStep === 0) return EmailSchema.safeParse({ email }).success;
-    if (currentStep === 1) return PasswordSchema.safeParse({ password }).success;
+    if (currentStep === 1)
+      return PasswordConfirmationSchema.safeParse({ password, confirmPassword }).success;
     return true;
   };
 
@@ -113,7 +121,7 @@ export function SignupScreen() {
           EmailSchema.parse({ email });
           return true;
         case 1: // Password
-          PasswordSchema.parse({ password });
+          PasswordConfirmationSchema.parse({ password, confirmPassword });
           return true;
         case 2: // Verification (no validation needed)
           return true;

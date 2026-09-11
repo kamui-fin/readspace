@@ -2,7 +2,7 @@ import { Input, InputPressable } from '@components/ui/input';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { PasswordSchema } from '@lib/validation/auth-schemas';
+import { PasswordConfirmationSchema } from '@lib/validation/auth-schemas';
 import { EyeClosedIcon, EyeIcon } from '@solar-icons/react-native/bold';
 import { Formik, type FormikProps } from 'formik';
 import { useEffect, useState } from 'react';
@@ -11,10 +11,12 @@ import { toFormikValidationSchema } from 'zod-formik-adapter';
 
 interface PasswordStepProps {
   initialPassword?: string;
+  initialConfirmPassword?: string;
+  onConfirmPasswordChange?: (password: string) => void;
   onPasswordChange?: (password: string) => void;
 }
 
-type PasswordFormValues = { password: string };
+type PasswordFormValues = { password: string; confirmPassword: string };
 
 function PasswordFormContent({
   values,
@@ -23,21 +25,23 @@ function PasswordFormContent({
   handleChange,
   setFieldTouched,
   onPasswordChange,
-  initialPassword,
+  onConfirmPasswordChange,
 }: FormikProps<PasswordFormValues> & {
   onPasswordChange?: (password: string) => void;
-  initialPassword: string;
+  onConfirmPasswordChange?: (password: string) => void;
 }) {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
-  // Notify parent of password changes
   useEffect(() => {
-    if (onPasswordChange && values.password !== initialPassword) {
-      onPasswordChange(values.password);
-    }
-  }, [values.password, onPasswordChange, initialPassword]);
+    onPasswordChange?.(values.password);
+  }, [values.password, onPasswordChange]);
+
+  useEffect(() => {
+    onConfirmPasswordChange?.(values.confirmPassword);
+  }, [values.confirmPassword, onConfirmPasswordChange]);
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -51,7 +55,7 @@ function PasswordFormContent({
             Create a password
           </Text>
           <Text size="lg" fontFamily="geist-regular" className="text-grey dark:text-grey">
-            Must be atleast 6 characters
+            Must be at least 6 characters
           </Text>
         </View>
 
@@ -60,7 +64,7 @@ function PasswordFormContent({
           placeholder="Enter your password"
           value={values.password}
           onChangeText={handleChange('password')}
-          onBlur={() => setFieldTouched('password', true, false)}
+          onBlur={() => setFieldTouched('password', true)}
           secureTextEntry={!showPassword}
           autoCapitalize="none"
           autoComplete="password-new"
@@ -78,26 +82,58 @@ function PasswordFormContent({
             </InputPressable>
           }
         />
+        <View className="mt-4">
+          <Input
+            placeholder="Confirm your password"
+            accessibilityLabel="Confirm password"
+            value={values.confirmPassword}
+            onChangeText={handleChange('confirmPassword')}
+            onBlur={() => setFieldTouched('confirmPassword', true)}
+            secureTextEntry={!showConfirmPassword}
+            autoCapitalize="none"
+            autoComplete="password-new"
+            textContentType="newPassword"
+            type="text"
+            isInvalid={touched.confirmPassword && !!errors.confirmPassword}
+            errorText={
+              touched.confirmPassword && errors.confirmPassword ? errors.confirmPassword : undefined
+            }
+            borderRadius={12}
+            rightElement={
+              <InputPressable onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                {showConfirmPassword ? (
+                  <EyeIcon size={20} color={colors.grey} />
+                ) : (
+                  <EyeClosedIcon size={20} color={colors.grey} />
+                )}
+              </InputPressable>
+            }
+          />
+        </View>
       </View>
     </TouchableWithoutFeedback>
   );
 }
 
-export function PasswordStep({ initialPassword = '', onPasswordChange }: PasswordStepProps) {
+export function PasswordStep({
+  initialPassword = '',
+  initialConfirmPassword = '',
+  onPasswordChange,
+  onConfirmPasswordChange,
+}: PasswordStepProps) {
   return (
     <Formik
-      initialValues={{ password: initialPassword || '' }}
-      validationSchema={toFormikValidationSchema(PasswordSchema)}
+      initialValues={{ password: initialPassword, confirmPassword: initialConfirmPassword }}
+      validationSchema={toFormikValidationSchema(PasswordConfirmationSchema)}
       onSubmit={() => {}}
-      validateOnMount={false}
-      validateOnChange={false}
-      validateOnBlur={false}>
+      validateOnMount
+      validateOnChange
+      validateOnBlur>
       {(formikProps) => (
         <PasswordFormContent
           {...formikProps}
-          {...(formikProps as unknown as { setFieldTouched: any })}
           onPasswordChange={onPasswordChange}
-          initialPassword={initialPassword}
+          onConfirmPasswordChange={onConfirmPasswordChange}
         />
       )}
     </Formik>

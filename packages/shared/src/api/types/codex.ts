@@ -1,8 +1,7 @@
 import type { ArticleSummary } from './articles';
 
 // Codex Digest types — mirror server/app/typing/codex.py and server/app/models/enums.py.
-// Keep these in lockstep with the backend; the fixture (fixtures/codex.ts) is typed against
-// CodexDigestResponse so it can't silently drift.
+// Keep these in lockstep with the backend.
 
 /** Terminal + in-flight states of a codex_digests row. Mirrors CodexDigestStatus. */
 export enum CodexDigestStatus {
