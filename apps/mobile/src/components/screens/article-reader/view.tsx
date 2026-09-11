@@ -380,6 +380,8 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
 
     if (!checkAndTriggerUpgrade('ai')) return;
 
+    toast.info('Generating highlights...');
+
     highlightMutation
       .mutateAsync({
         articleId: articleId || '',

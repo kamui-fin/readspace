@@ -11,6 +11,8 @@ from app.services.ai.service import (
     _strip_mark_tags,
 )
 
+pytestmark = pytest.mark.unit
+
 
 class TestAddHighlightClass:
     """

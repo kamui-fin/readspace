@@ -160,17 +160,28 @@ export function useArticleAI({
                     ? currentTranslation.language
                     : "original"
 
-            const result = await highlightMutation.mutateAsync({
-                articleId: article.id,
-                content: activeContent || undefined,
-                languageKey,
-                articleType: article.article_type,
-            })
-            setHighlightedData({
-                content: result.highlighted_content,
-                forView: contentView,
-            })
-            setHighlightsEnabled(true)
+            try {
+                const result = await toast.promise(
+                    highlightMutation.mutateAsync({
+                        articleId: article.id,
+                        content: activeContent || undefined,
+                        languageKey,
+                        articleType: article.article_type,
+                    }),
+                    {
+                        loading: "Generating highlights...",
+                        success: "Highlights ready",
+                        error: "Failed to generate highlights",
+                    }
+                )
+                setHighlightedData({
+                    content: result.highlighted_content,
+                    forView: contentView,
+                })
+                setHighlightsEnabled(true)
+            } catch {
+                // toast.promise already surfaced the error
+            }
         },
     }
 }
