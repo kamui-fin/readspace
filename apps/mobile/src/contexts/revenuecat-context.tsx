@@ -319,7 +319,7 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
       const purchasesInstance = getPurchases();
       if (!purchasesInstance) {
         console.log('[RevenueCat] Simulating mock purchase package...');
-        toast.success('Subscription completed (mock)!');
+        toast.success('Upgraded to Pro, enjoy! (mock)');
         setIsRcPro(true);
         return true;
       }
@@ -327,7 +327,7 @@ export function RevenueCatProvider({ children }: RevenueCatProviderProps) {
       const { customerInfo: updatedInfo } = await purchasesInstance.purchasePackage(pkg);
       setCustomerInfo(updatedInfo);
       checkEntitlements(updatedInfo);
-      toast.success('Subscription completed successfully!');
+      toast.success('Upgraded to Pro, enjoy!');
       return true;
     } catch (error: any) {
       if (error.userCancelled) {
