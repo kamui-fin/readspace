@@ -241,7 +241,7 @@ export function ArticleContent({
             >
                 <div className="mx-auto max-w-4xl px-4 md:px-8">
                     <ArticleReaderBody
-                        article={article}
+                        article={reader.displayArticle}
                         isDark={isDark}
                         displayContent={reader.displayContent}
                         contentKey={reader.contentKey}
@@ -254,6 +254,7 @@ export function ArticleContent({
                         aiSummary={reader.aiSummary}
                         onDismissAiSummary={reader.dismissAiSummary}
                         isBusy={reader.isBusy}
+                        isTranslating={reader.isTranslating}
                     />
                 </div>
             </div>
@@ -299,7 +300,7 @@ export function ArticleContent({
                     >
                         <div className="mx-auto max-w-4xl px-4 md:px-8 pt-4 pb-16 md:pt-6 md:pb-24">
                             <ArticleReaderBody
-                                article={article}
+                                article={reader.displayArticle}
                                 isDark={isDark}
                                 displayContent={reader.displayContent}
                                 contentKey={reader.contentKey}
@@ -311,6 +312,8 @@ export function ArticleContent({
                                     shouldShowPreviewBanner
                                 }
                                 toolbar={null}
+                                isBusy={reader.isBusy}
+                                isTranslating={reader.isTranslating}
                             />
                         </div>
                     </div>

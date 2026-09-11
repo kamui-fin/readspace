@@ -1,77 +1,81 @@
-import { Divider } from '@components/ui/divider';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import type { CodexDevelopment } from '@readspace/shared';
-import { AltArrowDownIcon } from '@solar-icons/react-native/bold';
+import { AltArrowRightIcon } from '@solar-icons/react-native/linear';
+import { Image as ExpoImage } from 'expo-image';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { PressableScale } from '@/components/ui/pressable-scale';
-import { CodexArticleRow } from './codex-article-row';
+import { CodexSynthesis } from './codex-synthesis';
+import { SourceAvatarGroup } from './source-avatar-group';
 
 interface DevelopmentCardProps {
   development: CodexDevelopment;
-  /** Expanded on first render for the top development. */
-  defaultExpanded?: boolean;
+  /** The lead development renders larger. */
+  featured?: boolean;
+  /** Opens the write-ups bottom sheet for this development. */
+  onOpen: () => void;
 }
 
 /**
- * A synthesised development: the through-line across sources, its provenance
- * (`12 articles · 8 sources`), and an expandable list of the best write-ups, strongest first.
+ * A synthesised development as a flat block in the digest feed — no box, no outline: a
+ * rounded hero, a large serif headline, the serif synthesis, and a quiet source row. The
+ * whole block is the tap target; it opens the write-ups in a bottom sheet.
  */
-export function DevelopmentCard({ development, defaultExpanded = false }: DevelopmentCardProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+export function DevelopmentCard({ development, featured = false, onOpen }: DevelopmentCardProps) {
+  const [heroBroken, setHeroBroken] = useState(false);
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+
   const articleCount = development.article_count || development.articles.length;
+  const heroUrl = development.hero_image_url && !heroBroken ? development.hero_image_url : null;
+  const hasWriteups = development.articles.length > 0;
 
   return (
-    <View
-      className="rounded-2xl"
-      style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.grey5 }}>
-      <View className="p-4">
-        <Text size="md" fontFamily="geist-semibold" className="text-primary-foreground">
-          {development.title}
-        </Text>
-        <Text size="sm" className="text-grey mt-2 leading-5">
-          {development.synthesis}
-        </Text>
-        <View className="mt-3 flex-row items-center gap-1.5">
-          <Text size="xs" fontFamily="geist-medium" className="text-grey">
-            {articleCount} {articleCount === 1 ? 'article' : 'articles'}
-          </Text>
-          <Text size="xs" className="text-grey">
-            ·
-          </Text>
-          <Text size="xs" fontFamily="geist-medium" className="text-grey">
-            {development.source_count} {development.source_count === 1 ? 'source' : 'sources'}
-          </Text>
-        </View>
+    <PressableScale onPress={hasWriteups ? onOpen : undefined}>
+      {heroUrl ? (
+        <ExpoImage
+          source={{ uri: heroUrl }}
+          onError={() => setHeroBroken(true)}
+          contentFit="cover"
+          transition={200}
+          style={{
+            width: '100%',
+            aspectRatio: featured ? 3 / 2 : 16 / 9,
+            borderRadius: 14,
+            marginBottom: 14,
+            backgroundColor: isDark ? colors.grey5 : colors.grey6,
+          }}
+        />
+      ) : null}
+
+      <Text
+        fontFamily={featured ? 'garamond-bold' : 'garamond-semibold'}
+        className="text-primary-foreground"
+        style={{ fontSize: featured ? 26 : 22, lineHeight: featured ? 32 : 28 }}>
+        {development.title}
+      </Text>
+
+      <View style={{ marginTop: 6 }}>
+        <CodexSynthesis content={development.synthesis} featured={featured} />
       </View>
 
-      {development.articles.length > 0 && (
-        <>
-          <Divider />
-          <PressableScale
-            onPress={() => setExpanded((v) => !v)}
-            className="flex-row items-center justify-between px-4 py-3">
-            <Text size="xs" fontFamily="geist-medium" className="text-grey">
-              {expanded ? 'Hide' : 'Show'} {development.articles.length}{' '}
-              {development.articles.length === 1 ? 'write-up' : 'write-ups'}
-            </Text>
-            <View style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}>
-              <AltArrowDownIcon size={16} color={colors.grey} />
-            </View>
-          </PressableScale>
-          {expanded && (
-            <View className="px-1 pb-2">
-              {development.articles.map((article, i) => (
-                <CodexArticleRow key={article.id} article={article} rank={i} />
-              ))}
-            </View>
-          )}
-        </>
-      )}
-    </View>
+      <View
+        style={{
+          marginTop: 16,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+        <SourceAvatarGroup
+          articles={development.articles}
+          label={`${development.source_count} ${
+            development.source_count === 1 ? 'source' : 'sources'
+          } · ${articleCount} ${articleCount === 1 ? 'article' : 'articles'}`}
+        />
+        {hasWriteups ? <AltArrowRightIcon size={18} color={colors.grey} /> : null}
+      </View>
+    </PressableScale>
   );
 }

@@ -6,10 +6,10 @@ import {
     SAMPLE_CODEX_DIGEST,
     SAMPLE_CODEX_DIGEST_HERO_HEAVY,
     SAMPLE_CODEX_DIGEST_IN_PROGRESS,
-    SAMPLE_CODEX_DIGEST_LONG_RUN,
     SAMPLE_CODEX_DIGEST_QUIET,
     SAMPLE_CODEX_DIGEST_TEXT_ONLY,
     SAMPLE_CODEX_NOT_ENTITLED_AI_DISABLED,
+    SAMPLE_CODEX_NOT_ENTITLED_PRO_RATE_LIMITED,
     SAMPLE_CODEX_NOT_ENTITLED_QUOTA,
 } from "@readspace/shared"
 import { CodexView } from "@/components/features/codex/CodexView"
@@ -28,11 +28,11 @@ type PreviewKey =
     | "text-only"
     | "quiet-day"
     | "generating"
-    | "generating-long"
     | "empty"
     | "skipped"
     | "failed"
     | "paywall-quota"
+    | "paywall-pro-rate-limited"
     | "paywall-ai-off"
 
 const OPTIONS: { key: PreviewKey; label: string }[] = [
@@ -41,11 +41,11 @@ const OPTIONS: { key: PreviewKey; label: string }[] = [
     { key: "text-only", label: "No images" },
     { key: "quiet-day", label: "Quiet day (0 clusters)" },
     { key: "generating", label: "Generating" },
-    { key: "generating-long", label: "Generating (long run)" },
     { key: "empty", label: "Empty" },
     { key: "skipped", label: "Skipped (no articles)" },
     { key: "failed", label: "Failed" },
     { key: "paywall-quota", label: "Paywall · out of digests" },
+    { key: "paywall-pro-rate-limited", label: "Paywall · Pro rate limited" },
     { key: "paywall-ai-off", label: "Paywall · AI disabled" },
 ]
 
@@ -97,19 +97,7 @@ function Preview({ variant }: { variant: PreviewKey }) {
         case "quiet-day":
             return <CodexView digest={SAMPLE_CODEX_DIGEST_QUIET} />
         case "generating":
-            return (
-                <CodexGenerating
-                    phase={SAMPLE_CODEX_DIGEST_IN_PROGRESS.progress_phase}
-                    requestedAt={SAMPLE_CODEX_DIGEST_IN_PROGRESS.requested_at}
-                />
-            )
-        case "generating-long":
-            return (
-                <CodexGenerating
-                    phase={SAMPLE_CODEX_DIGEST_LONG_RUN.progress_phase}
-                    requestedAt={SAMPLE_CODEX_DIGEST_LONG_RUN.requested_at}
-                />
-            )
+            return <CodexGenerating phase={SAMPLE_CODEX_DIGEST_IN_PROGRESS.progress_phase} />
         case "empty":
             return <CodexEmptyState />
         case "skipped":
@@ -123,6 +111,13 @@ function Preview({ variant }: { variant: PreviewKey }) {
                 <CodexNotEntitledState
                     reason={SAMPLE_CODEX_NOT_ENTITLED_QUOTA.reason}
                     errorCode={SAMPLE_CODEX_NOT_ENTITLED_QUOTA.error_code}
+                />
+            )
+        case "paywall-pro-rate-limited":
+            return (
+                <CodexNotEntitledState
+                    reason={SAMPLE_CODEX_NOT_ENTITLED_PRO_RATE_LIMITED.reason}
+                    errorCode={SAMPLE_CODEX_NOT_ENTITLED_PRO_RATE_LIMITED.error_code}
                 />
             )
         case "paywall-ai-off":

@@ -23,6 +23,8 @@ export interface AppSettings {
 
 interface SettingsState {
   settings: AppSettings;
+  // Whether the store has been rehydrated from AsyncStorage
+  _hasHydrated: boolean;
 }
 
 interface SettingsActions {
@@ -35,6 +37,7 @@ interface SettingsActions {
     meilisearchUrl?: string;
     meilisearchSearchKey?: string;
   }) => void;
+  setHasHydrated: (hasHydrated: boolean) => void;
 }
 
 export type SettingsStore = SettingsState & SettingsActions;
@@ -48,6 +51,11 @@ export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
       settings: initialSettings,
+      _hasHydrated: false,
+
+      setHasHydrated: (hasHydrated) => {
+        set({ _hasHydrated: hasHydrated });
+      },
 
       updateSettings: (newSettings) => {
         set((state) => ({
@@ -86,9 +94,15 @@ export const useSettingsStore = create<SettingsStore>()(
       partialize: (state) => ({
         settings: state.settings,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
+
+// Hook to check if the settings store has been hydrated from AsyncStorage
+export const useHasSettingsHydrated = () => useSettingsStore((state) => state._hasHydrated);
 
 // Helper function to get current settings synchronously
 export const getSettings = () => useSettingsStore.getState().settings;

@@ -140,7 +140,7 @@ export default function ContactSection() {
                             {state.submitting ? "Sending..." : "Submit"}
                         </Button>
 
-                        {state.errors && state.errors.length > 0 && (
+                        {state.errors && state.errors.getFormErrors().length > 0 && (
                             <div className="text-red-500 text-sm mt-2">
                                 Something went wrong. Please try again.
                             </div>

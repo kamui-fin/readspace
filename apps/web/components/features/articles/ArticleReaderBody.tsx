@@ -170,6 +170,9 @@ interface ArticleReaderBodyProps {
     onDismissAiSummary?: () => void
     /** True while the article body is loading / being extracted / translated. */
     isBusy?: boolean
+    /** True while a translation is in flight — skeletons the title (which changes on translate,
+     *  unlike extraction/loading). */
+    isTranslating?: boolean
 }
 
 /**
@@ -193,6 +196,7 @@ export function ArticleReaderBody({
     aiSummary,
     onDismissAiSummary,
     isBusy = false,
+    isTranslating = false,
 }: ArticleReaderBodyProps) {
     return (
         <ProseContainer>
@@ -204,6 +208,7 @@ export function ArticleReaderBody({
                 isRecentlyReadMode={isRecentlyReadMode}
                 shouldShowPreviewBanner={shouldShowPreviewBanner}
                 toolbar={toolbar}
+                isBusy={isTranslating}
             />
 
             {aiSummary && (

@@ -188,6 +188,49 @@ class TestCodexGenerateEndpoint:
         assert body["error"] is None
         assert len(dispatched) == 1
 
+    async def test_generate_recycles_stale_orphaned_in_progress_digest(
+        self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession, monkeypatch
+    ):
+        """An IN_PROGRESS row orphaned well past the task's own timeout (crashed worker, a
+        dev restart mid-task) must not be served back forever as "still generating" - it
+        should self-heal to FAILED and then be recycled fresh, exactly like a real
+        SKIPPED/FAILED retry: same row, `requested_at` reset to now, one task enqueued.
+
+        Regression: `enforce_codex_quota` used to hand an in-flight row back unconditionally,
+        so a stuck task would make every future click of "Generate" re-show that same
+        ever-more-stale digest with a timer that never resets.
+        """
+        from app.core.constants import CODEX_STALE_IN_FLIGHT_MINUTES
+        from app.crud import codex as crud_codex
+        from app.models.enums import CodexDigestPhase
+
+        today = datetime.now(timezone.utc).date()
+        stale = await crud_codex.create_pending_digest(db_session, test_user.id, today)
+        await crud_codex.mark_in_progress(db_session, stale.id, CodexDigestPhase.TRIAGING)
+        await db_session.commit()
+        await _backdate_requested_at(db_session, stale.id, hours_ago=(CODEX_STALE_IN_FLIGHT_MINUTES + 1) / 60)
+        await db_session.commit()
+
+        dispatched: list[tuple] = []
+
+        async def fake_kiq(user_id: str, digest_id: str):
+            dispatched.append((user_id, digest_id))
+            return SimpleNamespace(task_id="fake-task-id")
+
+        monkeypatch.setattr(generate_codex_digest_task, "kiq", fake_kiq, raising=False)
+
+        before = datetime.now(timezone.utc)
+        response = await async_client.post("/api/codex/generate")
+
+        assert response.status_code == 202
+        body = response.json()
+        assert body["id"] == str(stale.id)  # same row, recycled
+        assert body["status"] == CodexDigestStatus.PENDING.value
+        assert body["error"] is None
+        # requested_at reset to now, not the 2-hour-old timestamp we backdated it to.
+        assert datetime.fromisoformat(body["requested_at"]) >= before
+        assert len(dispatched) == 1
+
     async def test_generate_disabled_when_ai_off(self, async_client: AsyncClient, test_user: Profile, monkeypatch):
         """When ENABLE_AI is False, the endpoint returns a not-entitled response, no enqueue."""
         from app.routers import codex as codex_router_module
@@ -288,6 +331,52 @@ class TestCodexTodayEndpoint:
         assert body["id"] == str(digest.id)
         assert body["status"] == "completed"
         assert body["payload"]["gist"] == "Quiet day."
+
+    async def test_today_self_heals_orphaned_in_progress_digest(
+        self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
+    ):
+        """An IN_PROGRESS row far past the generation task's own timeout is orphaned - the
+        worker crashed, or something (a dev restart, an uncaught cancellation) killed it
+        mid-task without ever reaching a terminal status. GET /today should self-heal it to
+        FAILED rather than serving it back forever with a `requested_at` that only gets
+        staler, which read on the client as a "Building..." screen whose elapsed timer starts
+        from however long ago the task actually died.
+        """
+        from app.core.constants import CODEX_STALE_IN_FLIGHT_MINUTES
+        from app.crud import codex as crud_codex
+        from app.models.enums import CodexDigestPhase
+
+        today = datetime.now(timezone.utc).date()
+        digest = await crud_codex.create_pending_digest(db_session, test_user.id, today)
+        await crud_codex.mark_in_progress(db_session, digest.id, CodexDigestPhase.TRIAGING)
+        await db_session.commit()
+        await _backdate_requested_at(db_session, digest.id, hours_ago=(CODEX_STALE_IN_FLIGHT_MINUTES + 1) / 60)
+        await db_session.commit()
+
+        response = await async_client.get("/api/codex/today")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["id"] == str(digest.id)
+        assert body["status"] == "failed"
+
+    async def test_today_leaves_recent_in_progress_digest_alone(
+        self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
+    ):
+        """A digest still comfortably inside the task's own timeout is a real in-flight
+        generation, not an orphan - it must not be healed away mid-run."""
+        from app.crud import codex as crud_codex
+        from app.models.enums import CodexDigestPhase
+
+        today = datetime.now(timezone.utc).date()
+        digest = await crud_codex.create_pending_digest(db_session, test_user.id, today)
+        await crud_codex.mark_in_progress(db_session, digest.id, CodexDigestPhase.TRIAGING)
+        await db_session.commit()
+
+        response = await async_client.get("/api/codex/today")
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "in_progress"
 
 
 @pytest.mark.asyncio
@@ -655,10 +744,49 @@ class TestCodexRollingQuota:
         assert third.status_code == 202
         b3 = third.json()
         if b3.get("entitled") is False:
-            assert b3["error_code"] == "CODEX_LIMIT_EXCEEDED"
+            assert b3["error_code"] == "CODEX_PRO_RATE_LIMITED"
         else:
             assert b3["id"] == b2["id"]
         assert len(dispatched) == 2
+
+    async def test_pro_window_cap_uses_pacing_error_code_not_quota(
+        self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
+    ):
+        """Pro at the window cap (both editions already COMPLETED, so no in-flight row to hand
+        back) is refused with a distinct error_code from Basic's quota exhaustion - the client
+        renders a plain pacing explainer for Pro instead of the upgrade-to-Pro paywall."""
+        from app.crud import codex as crud_codex
+
+        test_user.role = UserRole.PRO
+        await db_session.commit()
+
+        for _ in range(2):
+            d = await crud_codex.create_pending_digest(db_session, test_user.id, datetime.now(timezone.utc).date())
+            await crud_codex.finalize_digest(db_session, d.id, CodexDigestStatus.COMPLETED, payload={})
+        await db_session.commit()
+
+        resp = await async_client.post("/api/codex/generate")
+        assert resp.status_code == 202
+        body = resp.json()
+        assert body["entitled"] is False
+        assert body["error_code"] == "CODEX_PRO_RATE_LIMITED"
+
+    async def test_basic_window_cap_keeps_quota_error_code(
+        self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
+    ):
+        """Basic at the window cap (but still under the monthly cap) keeps the upgrade-path
+        error_code - Basic always has Pro to upgrade to, unlike Pro at its own window cap."""
+        from app.crud import codex as crud_codex
+
+        d = await crud_codex.create_pending_digest(db_session, test_user.id, datetime.now(timezone.utc).date())
+        await crud_codex.finalize_digest(db_session, d.id, CodexDigestStatus.COMPLETED, payload={})
+        await db_session.commit()
+
+        resp = await async_client.post("/api/codex/generate")
+        assert resp.status_code == 202
+        body = resp.json()
+        assert body["entitled"] is False
+        assert body["error_code"] == "CODEX_LIMIT_EXCEEDED"
 
     async def test_spoofed_future_local_date_does_not_unlock_more(
         self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession, monkeypatch

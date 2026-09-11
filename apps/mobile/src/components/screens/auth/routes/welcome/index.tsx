@@ -8,20 +8,24 @@ import { useGoogleAuth } from '@hooks/useGoogleAuth';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { SPACING } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { useSettingsStore } from '@stores/settings';
 import { LetterIcon } from '@solar-icons/react-native/bold';
+import { useSettingsStore } from '@stores/settings';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { BlurView } from 'expo-blur';
+import * as Crypto from 'expo-crypto';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Text as RNText, useWindowDimensions, View } from 'react-native';
+import { Platform, Text as RNText, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isDark = useIsDarkMode();
-  const { signInWithGoogle } = useSession();
+  const { signInWithGoogle, signInWithApple } = useSession();
   const [isLoading, setIsLoading] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
+  const [isAppleAvailable, setIsAppleAvailable] = useState(Platform.OS === 'ios');
   const [hasSignedIn, setHasSignedIn] = useState(false);
   const { settings, resetToCloud } = useSettingsStore();
 
@@ -77,6 +81,14 @@ export function WelcomeScreen() {
     }
   }, [response, signInWithGoogle, hasSignedIn]);
 
+  useEffect(() => {
+    // isAvailableAsync() resolves false on Android and on iOS devices/OS
+    // versions that don't support Apple sign-in — safer than trusting
+    // Platform.OS alone, per Expo's docs on gating the button.
+    if (Platform.OS !== 'ios') return;
+    AppleAuthentication.isAvailableAsync().then(setIsAppleAvailable);
+  }, []);
+
   const widthRatio = width / 393;
   const logoSize = Math.max(Math.min(60 * widthRatio, 80), 50);
   const horizontalPadding = Math.max(
@@ -87,6 +99,51 @@ export function WelcomeScreen() {
     insets.top + SPACING.ONBOARDING_SECTION_SPACING * 2,
     SPACING.getOnboardingTopPadding(height) * 0.25
   );
+
+  const handleAppleSignIn = async () => {
+    try {
+      if (settings.instance_type === 'self-hosted') {
+        resetToCloud();
+        toast.success('Switched to cloud for Apple sign-in');
+      }
+      setIsAppleLoading(true);
+
+      // Apple requires the nonce passed to its native request to be a SHA-256
+      // hash; Supabase then verifies the raw nonce against the hash embedded
+      // in the identity token's `nonce` claim, so both values must be sent.
+      const rawNonce = Crypto.randomUUID();
+      const hashedNonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        rawNonce
+      );
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+        nonce: hashedNonce,
+      });
+
+      if (!credential.identityToken) {
+        throw new Error('No identity token returned from Apple.');
+      }
+
+      // Apple only includes the user's name on the very first authorization —
+      // every later sign-in returns null here, so we must capture it now.
+      await signInWithApple(credential.identityToken, rawNonce, credential.fullName);
+      toast.success('Successfully signed in with Apple');
+    } catch (error: any) {
+      if (error?.code === 'ERR_REQUEST_CANCELED') {
+        // User cancelled the sign-in flow — no toast needed
+      } else {
+        console.error('Apple sign in error:', error);
+        toast.error('Unable to sign in with Apple. Please try again.');
+      }
+    } finally {
+      setIsAppleLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     try {
@@ -140,6 +197,30 @@ export function WelcomeScreen() {
           paddingBottom: Math.max(insets.bottom + 20, 40),
           paddingHorizontal: horizontalPadding,
         }}>
+        {isAppleAvailable && (
+          // Apple's own ASAuthorizationAppleIDButton — required verbatim by the
+          // App Store Human Interface Guidelines (only WHITE/WHITE_OUTLINE/BLACK
+          // are approved button styles). A custom-styled button here is a real
+          // App Store rejection risk under Guideline 4.8, so this can't be
+          // restyled to match the Button component beyond buttonStyle/cornerRadius.
+          <View
+            className="w-full"
+            style={{ opacity: isAppleLoading ? 0.6 : 1 }}
+            pointerEvents={isAppleLoading ? 'none' : 'auto'}>
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+              buttonStyle={
+                isDark
+                  ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                  : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+              }
+              cornerRadius={28}
+              style={{ width: '100%', height: 56 }}
+              onPress={handleAppleSignIn}
+            />
+          </View>
+        )}
+
         <Button
           variant="primary"
           size="large"

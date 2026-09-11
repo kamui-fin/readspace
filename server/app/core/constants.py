@@ -45,6 +45,7 @@ ARTICLE_CACHE_PREFIX = "article:"
 ARTICLE_LIST_CACHE_TTL = 300  # 5 minutes for article lists
 AI_CACHE_TTL = 86400  # 24 hours for AI results
 OPML_TASK_CACHE_TTL = 86400  # 24 hours for OPML import tasks
+FEED_CACHE_TTL = 300  # 5 minutes for fetched feed content, to avoid hammering feeds
 
 # User Agent — realistic modern Chrome UA to avoid 403 blocks from bot detection
 BROWSER_USER_AGENT = (
@@ -113,6 +114,13 @@ CODEX_READING_WPM = 220  # Adult non-fiction silent reading speed (200-250 band)
 CODEX_ASSUMED_WORDS_PER_ARTICLE = 650  # Fallback when a cited article had no full text fetched
 CODEX_MAX_MINUTES_CONDENSED = 90  # Clamp — above this the stat reads as "~90+ min"
 CODEX_MAX_DAY_THEMES = 4  # Phase 1 "today's keywords" tag count
+
+# A generation task times out at 300s server-side (Taskiq `timeout=300`, `max_retries=1` on
+# generate_codex_digest_task). A PENDING/IN_PROGRESS row still around well past that is
+# orphaned - the worker crashed, was killed mid-task (e.g. a dev restart), or hit an uncaught
+# cancellation that skipped the pipeline's own FAILED-marking. Self-heal it to FAILED rather
+# than polling it (and blocking the quota) forever.
+CODEX_STALE_IN_FLIGHT_MINUTES = 12
 
 # Development card imagery. The pipeline probes each cited article's image and picks a hero +
 # a small strip, so the client renders exactly what it's told (no client-side measuring).

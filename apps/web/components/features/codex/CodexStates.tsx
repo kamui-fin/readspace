@@ -7,6 +7,7 @@ import {
     LockKeyholeIcon,
     DangerTriangleIcon,
     CloudCrossIcon,
+    ClockCircleIcon,
 } from "@solar-icons/react/bold"
 import { Button } from "@/components/ui/button"
 import { useUpgradeDialog } from "@/stores/upgrade-dialog"
@@ -139,8 +140,9 @@ export function CodexFailedState({
 
 /**
  * Not-entitled 202 — the reason branches on `errorCode`: an exhausted monthly allowance
- * (a normal Basic occurrence — name the tier and point at Pro) vs. AI turned off on a
- * self-hosted instance (tell them it's a server-config switch).
+ * (a normal Basic occurrence — name the tier and point at Pro) vs. a Pro pacing limit (Pro has
+ * no higher tier to sell, so no upgrade CTA) vs. AI turned off on a self-hosted instance (tell
+ * them it's a server-config switch).
  */
 export function CodexNotEntitledState({
     reason,
@@ -156,6 +158,20 @@ export function CodexNotEntitledState({
                 icon={LockKeyholeIcon}
                 title="This Readspace runs without AI"
                 body="The Daily Digest needs a model provider, and this instance was set up with AI features off."
+            />
+        )
+    }
+
+    if (errorCode === "CODEX_PRO_RATE_LIMITED") {
+        return (
+            <Shell
+                tone="neutral"
+                icon={ClockCircleIcon}
+                title="More Digests soon"
+                body={
+                    reason ||
+                    "You've reached your Daily Digest pace. Check back in a bit."
+                }
             />
         )
     }

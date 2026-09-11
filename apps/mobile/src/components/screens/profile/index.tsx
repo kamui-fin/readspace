@@ -1,3 +1,11 @@
+import {
+  CodexSettingsBottomSheet,
+  type CodexSettingsBottomSheetRef,
+} from '@components/bottom-sheets/codex-settings.bottom-sheet';
+import {
+  DeleteAccountModal,
+  type DeleteAccountModalRef,
+} from '@components/bottom-sheets/delete-account';
 import { Discord, Github } from '@components/icons/svg';
 import { Header } from '@components/navigation/header';
 import { SettingsGroup } from '@components/screens/profile/ui/settings-group';
@@ -17,8 +25,8 @@ import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useSession } from '@contexts/auth-context';
 import { useRevenueCat } from '@contexts/revenuecat-context';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useIconColor } from '@hooks/useIconColor';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { CLOUD_CONFIG } from '@lib/constants/config';
@@ -32,6 +40,8 @@ import {
   LinkIcon,
   Logout2Icon,
   PaletteIcon,
+  StarsIcon,
+  TrashBinTrashIcon,
 } from '@solar-icons/react-native/linear';
 import { useSettingsStore } from '@stores/settings';
 import { type Theme, useThemeStore } from '@stores/theme';
@@ -53,6 +63,8 @@ export function ProfileScreen() {
   const iconColor = useIconColor();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const insets = useSafeAreaInsets();
+  const codexSettingsSheetRef = useRef<CodexSettingsBottomSheetRef>(null);
+  const deleteAccountSheetRef = useRef<DeleteAccountModalRef>(null);
 
   const { theme, setTheme } = useThemeStore();
   const { settings } = useSettingsStore();
@@ -296,6 +308,13 @@ export function ProfileScreen() {
             </DropdownMenuRoot>
 
             <SettingsItem
+              label="Daily Digest Settings"
+              variant="button"
+              leftIcon={<StarsIcon size={22} color={colors.black} />}
+              onPress={() => codexSettingsSheetRef.current?.present()}
+            />
+
+            <SettingsItem
               label="Reading History"
               variant="button"
               leftIcon={<HistoryIcon size={22} color={colors.black} />}
@@ -343,8 +362,18 @@ export function ProfileScreen() {
             />
           </SettingsGroup>
 
-          {/* Developer Tools */}
-          {/* <ToastTester /> */}
+          {/* Developer Tools — dev builds only; the preview route redirects to /codex in release. */}
+          {__DEV__ && (
+            <SettingsGroup title="Developer" className="mb-6">
+              <SettingsItem
+                label="Daily Digest preview"
+                variant="button"
+                leftIcon={<StarsIcon size={22} color={colors.black} />}
+                onPress={() => router.push('/(protected)/codex-preview')}
+                isLast={true}
+              />
+            </SettingsGroup>
+          )}
 
           {/* Account Section */}
           <SettingsGroup title="Account" className="mb-8">
@@ -355,11 +384,21 @@ export function ProfileScreen() {
               onPress={handleLogout}
               disabled={isLoggingOut}
               danger={true}
+            />
+            <SettingsItem
+              label="Delete Account"
+              variant="link"
+              leftIcon={<TrashBinTrashIcon size={22} color={colors.red} />}
+              onPress={() => deleteAccountSheetRef.current?.present()}
+              danger={true}
               isLast={true}
             />
           </SettingsGroup>
         </View>
       </ScrollView>
+
+      <CodexSettingsBottomSheet ref={codexSettingsSheetRef} />
+      <DeleteAccountModal ref={deleteAccountSheetRef} />
     </View>
   );
 }

@@ -5,7 +5,7 @@ import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
-import { useUpdateFolder, ApiError } from '@readspace/shared';
+import { ApiError, useUpdateFolder } from '@readspace/shared';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { Keyboard, View } from 'react-native';
 

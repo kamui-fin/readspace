@@ -82,6 +82,14 @@ function DiscoverScreenInner() {
     clearSearch: controllerClearSearch,
   } = useDiscoverController();
 
+  // Local, synchronously-updated mirror of the search text. The TextInput must
+  // always be bound to this instead of `searchQuery` — `searchQuery` only
+  // updates once the startTransition below flushes, and on Android a
+  // controlled TextInput whose `value` prop lags behind the native EditText's
+  // buffer fights the IME (dropped/duplicated characters, cursor jumps). iOS
+  // tolerates the lag; Android does not.
+  const [searchInputValue, setSearchInputValue] = useState(searchQuery);
+
   const addFeedModalRef = useRef<AddFeedBottomSheetRef>(null);
   const folderPickerModalRef = useRef<FolderPickerBottomSheetRef>(null);
   const [pendingAddFeedUrl, setPendingAddFeedUrl] = useState<string | null>(null);
@@ -202,15 +210,15 @@ function DiscoverScreenInner() {
   const categoriesRow2 = orderedCategories.slice(half);
 
   const handleSearchSubmit = useCallback(() => {
-    if (!searchQuery.trim()) return;
-    addSearch(searchQuery);
+    if (!searchInputValue.trim()) return;
+    addSearch(searchInputValue);
     setIsSearchFocused(false);
     searchBarRef.current?.blur();
     Keyboard.dismiss();
     startTransition(() => {
       setViewState('search');
     });
-  }, [searchQuery, addSearch]);
+  }, [searchInputValue, addSearch]);
 
   const handleAddFeedConfirm = useCallback((url: string) => {
     setPendingAddFeedUrl(url);
@@ -244,6 +252,7 @@ function DiscoverScreenInner() {
 
   const handleSearchChange = useCallback(
     (text: string) => {
+      setSearchInputValue(text);
       startTransition(() => {
         refineQuery(text);
       });
@@ -258,6 +267,7 @@ function DiscoverScreenInner() {
 
   const handleSearchCancel = useCallback(() => {
     setIsSearchFocused(false);
+    setSearchInputValue('');
     searchBarRef.current?.blur();
     Keyboard.dismiss();
     controllerClearSearch();
@@ -268,6 +278,7 @@ function DiscoverScreenInner() {
 
   const handleClearSearch = useCallback(() => {
     setIsSearchFocused(true);
+    setSearchInputValue('');
     searchBarRef.current?.focus();
     startTransition(() => {
       refineQuery('');
@@ -283,6 +294,7 @@ function DiscoverScreenInner() {
     (query: string) => {
       addSearch(query);
       setIsSearchFocused(false);
+      setSearchInputValue(query);
       searchBarRef.current?.blur();
       Keyboard.dismiss();
       startTransition(() => {
@@ -302,14 +314,14 @@ function DiscoverScreenInner() {
   const handleClearCategory = useCallback(() => {
     controllerClearSearch();
     startTransition(() => {
-      setViewState(searchQuery ? 'search' : 'default');
+      setViewState(searchInputValue ? 'search' : 'default');
     });
-  }, [controllerClearSearch, searchQuery]);
+  }, [controllerClearSearch, searchInputValue]);
 
   const insets = useSafeAreaInsets();
 
   // Whether user is actively typing (show instant results instead of recent searches)
-  const hasTypedQuery = searchQuery.trim().length > 0;
+  const hasTypedQuery = searchInputValue.trim().length > 0;
 
   // Language filter for Configure — applied as raw Meilisearch filter
   const languageFilter =
@@ -366,7 +378,7 @@ function DiscoverScreenInner() {
               <Pressable onPress={(e) => e.stopPropagation()}>
                 <SearchBar
                   ref={searchBarRef}
-                  value={searchQuery}
+                  value={searchInputValue}
                   onChangeText={handleSearchChange}
                   onFocus={handleSearchFocus}
                   onLanguageChange={handleLanguageChange}

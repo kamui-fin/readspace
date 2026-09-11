@@ -15,7 +15,8 @@ const radioVariants = cva(
 );
 
 export interface RadioProps
-  extends Omit<PressableProps, 'children'>, VariantProps<typeof radioVariants> {
+  extends Omit<PressableProps, 'children'>,
+    VariantProps<typeof radioVariants> {
   label: string;
   selected?: boolean;
   className?: string;

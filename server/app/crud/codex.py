@@ -13,6 +13,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.constants import CODEX_STALE_IN_FLIGHT_MINUTES
 from app.models.codex import CodexDigest, CodexPreferences
 from app.models.enums import CodexDigestPhase, CodexDigestStatus
 from app.models.feed import FeedSubscription
@@ -69,11 +70,30 @@ async def count_recent_generations(
     return result.scalar_one() or 0
 
 
+async def _expire_if_stale(db: AsyncSession, digest: CodexDigest | None) -> bool:
+    """Self-heal `digest` to FAILED if it's PENDING/IN_PROGRESS well past the generation
+    task's own timeout - see CODEX_STALE_IN_FLIGHT_MINUTES. Mutates in place and flushes (the
+    caller's request still commits it) rather than returning a new object, so callers that
+    already hold a reference to `digest` see the update too. Returns True iff it just healed.
+    """
+    if digest is None or digest.status not in _IN_FLIGHT_STATUSES:
+        return False
+    age = datetime.now(timezone.utc) - digest.requested_at
+    if age < timedelta(minutes=CODEX_STALE_IN_FLIGHT_MINUTES):
+        return False
+    digest.status = CodexDigestStatus.FAILED.value
+    digest.error = "Generation timed out."
+    await db.flush()
+    return True
+
+
 async def get_latest_in_flight(db: AsyncSession, user_id: UUID) -> CodexDigest | None:
     """The user's most recent still-running (PENDING/IN_PROGRESS) generation, if any.
 
     A repeat request while one of these exists is served from it - the client just keeps
-    polling the same row instead of spending another slot.
+    polling the same row instead of spending another slot. A row stale well past the task's
+    own timeout is self-healed to FAILED first (see `_expire_if_stale`) rather than being
+    handed back and polled forever.
     """
     result = await db.execute(
         select(CodexDigest)
@@ -84,7 +104,10 @@ async def get_latest_in_flight(db: AsyncSession, user_id: UUID) -> CodexDigest |
         .order_by(CodexDigest.requested_at.desc(), CodexDigest.edition.desc())
         .limit(1)
     )
-    return result.scalar_one_or_none()
+    digest = result.scalar_one_or_none()
+    if await _expire_if_stale(db, digest):
+        return None
+    return digest
 
 
 async def get_latest_retryable(db: AsyncSession, user_id: UUID) -> CodexDigest | None:
@@ -105,14 +128,19 @@ async def get_latest_retryable(db: AsyncSession, user_id: UUID) -> CodexDigest |
 async def get_latest_digest(db: AsyncSession, user_id: UUID) -> CodexDigest | None:
     """Fetch the user's most recent digest row, ordered by when it was requested (server
     clock). A SKIPPED/FAILED row that is later retried keeps its id but has ``requested_at``
-    bumped, so ordering by ``requested_at`` reflects true recency."""
+    bumped, so ordering by ``requested_at`` reflects true recency. Self-heals a stale
+    PENDING/IN_PROGRESS row to FAILED first (see `_expire_if_stale`) - this is what `GET
+    /codex/today` reads, so an orphaned row surfaces as retryable instead of polling forever
+    on a "Building..." screen whose elapsed timer only ever climbs from whenever it died."""
     result = await db.execute(
         select(CodexDigest)
         .where(CodexDigest.user_id == user_id)
         .order_by(CodexDigest.requested_at.desc(), CodexDigest.edition.desc())
         .limit(1)
     )
-    return result.scalar_one_or_none()
+    digest = result.scalar_one_or_none()
+    await _expire_if_stale(db, digest)
+    return digest
 
 
 async def count_completed_since(db: AsyncSession, user_id: UUID, *, since: datetime) -> int:

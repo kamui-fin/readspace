@@ -39,10 +39,10 @@ export function useLimitChecker() {
     const usage = limitData.usage.codex;
     if (!usage) return true;
     if (isCodexUnlimited(usage)) return true;
-    // Pro: `used` is today's edition count. Basic: `used` is the monthly COMPLETED count and
-    // `used_today` (0 or 1) gates the one-per-local-day allowance.
-    if (usage.period === 'day') return usage.used < usage.limit;
-    return usage.used < usage.limit && (usage.used_today ?? 0) < 1;
+    // isPro already returned above, so this only ever runs for Basic: `used` is the monthly
+    // COMPLETED count against `limit`, and `used_in_window` (0 or 1) additionally gates the
+    // one-per-rolling-window allowance.
+    return usage.used < usage.limit && (usage.used_in_window ?? 0) < 1;
   };
 
   const checkAndTriggerUpgrade = (type: 'feed' | 'ai' | 'codex') => {

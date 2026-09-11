@@ -1,32 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { parseISO } from "date-fns"
-import humanizeDuration from "humanize-duration"
 import { CheckCircleIcon, StarsIcon } from "@solar-icons/react/bold"
 import { CodexDigestPhase } from "@readspace/shared"
 import { cn } from "@/lib/utils"
-
-/**
- * Compact elapsed-time formatter: `"12s"` under a minute, `"2m 5s"` above it, `"1h 4m"` once
- * it's dragged on (a stuck job across a reload). Keeps the two largest units so it never
- * balloons to "22 minutes, 31 seconds".
- */
-const humanizeElapsed = humanizeDuration.humanizer({
-    language: "shortEn",
-    languages: {
-        shortEn: {
-            h: () => "h",
-            m: () => "m",
-            s: () => "s",
-        },
-    },
-    delimiter: " ",
-    spacer: "",
-    units: ["h", "m", "s"],
-    largest: 2,
-    round: true,
-})
 
 /**
  * Ordered phases with display copy. `gathering` is typically sub-second and easy to miss;
@@ -43,17 +19,13 @@ const PHASES: { phase: CodexDigestPhase; label: string }[] = [
 interface CodexGeneratingProps {
     /** Null before the worker picks the task up — treated as the first phase. */
     phase: CodexDigestPhase | null
-    /** ISO `requested_at` from the digest row, so the timer reflects the real wait even
-     *  across a reload. Falls back to mount time when absent. */
-    requestedAt?: string | null
 }
 
-export function CodexGenerating({ phase, requestedAt }: CodexGeneratingProps) {
+export function CodexGenerating({ phase }: CodexGeneratingProps) {
     const activeIndex = Math.max(
         0,
         PHASES.findIndex((p) => p.phase === phase)
     )
-    const elapsed = useElapsedSeconds(requestedAt)
 
     return (
         <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-16">
@@ -69,14 +41,6 @@ export function CodexGenerating({ phase, requestedAt }: CodexGeneratingProps) {
                 </h1>
                 <p className="mt-1 text-center text-sm text-muted-foreground">
                     This usually takes under a minute
-                    {elapsed >= 5 && (
-                        <>
-                            {" · "}
-                            <span className="font-mono tabular-nums">
-                                {humanizeElapsed(elapsed * 1000)}
-                            </span>
-                        </>
-                    )}
                 </p>
 
                 {/* Centered as a block; items keep a single left edge so the checklist reads
@@ -126,26 +90,4 @@ export function CodexGenerating({ phase, requestedAt }: CodexGeneratingProps) {
             </div>
         </div>
     )
-}
-
-/**
- * Wall-clock seconds since the job was requested (from the persisted `requested_at`), so a
- * reload mid-generation still shows the true wait. Falls back to mount time if the timestamp
- * is missing or clock skew puts it in the future.
- */
-function useElapsedSeconds(requestedAt?: string | null): number {
-    const [seconds, setSeconds] = useState(0)
-    useEffect(() => {
-        let start = Date.now()
-        if (requestedAt) {
-            const parsed = parseISO(requestedAt).getTime()
-            if (Number.isFinite(parsed) && parsed <= Date.now()) start = parsed
-        }
-        const tick = () =>
-            setSeconds(Math.max(0, Math.floor((Date.now() - start) / 1000)))
-        tick()
-        const id = setInterval(tick, 1000)
-        return () => clearInterval(id)
-    }, [requestedAt])
-    return seconds
 }

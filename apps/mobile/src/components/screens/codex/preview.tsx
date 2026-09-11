@@ -1,4 +1,3 @@
-import { Header } from '@components/navigation/header';
 import { Tab } from '@components/navigation/tab';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
@@ -7,10 +6,13 @@ import {
   SAMPLE_CODEX_DIGEST_IN_PROGRESS,
   SAMPLE_CODEX_DIGEST_QUIET,
   SAMPLE_CODEX_NOT_ENTITLED_AI_DISABLED,
+  SAMPLE_CODEX_NOT_ENTITLED_PRO_RATE_LIMITED,
   SAMPLE_CODEX_NOT_ENTITLED_QUOTA,
 } from '@readspace/shared';
+import Constants from 'expo-constants';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CodexGenerating } from './components/codex-generating';
 import {
   CodexEmptyState,
@@ -28,6 +30,7 @@ type PreviewKey =
   | 'skipped'
   | 'failed'
   | 'paywall-quota'
+  | 'paywall-pro-rate-limited'
   | 'paywall-ai-off';
 
 const OPTIONS: { key: PreviewKey; label: string }[] = [
@@ -38,6 +41,7 @@ const OPTIONS: { key: PreviewKey; label: string }[] = [
   { key: 'skipped', label: 'Skipped' },
   { key: 'failed', label: 'Failed' },
   { key: 'paywall-quota', label: 'Paywall · quota' },
+  { key: 'paywall-pro-rate-limited', label: 'Paywall · Pro rate limited' },
   { key: 'paywall-ai-off', label: 'Paywall · AI off' },
 ];
 
@@ -48,15 +52,24 @@ const OPTIONS: { key: PreviewKey; label: string }[] = [
 export function CodexPreviewScreen() {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+  const insets = useSafeAreaInsets();
+  const safeAreaTop = insets.top > 0 ? insets.top : Constants.statusBarHeight;
   const [key, setKey] = useState<PreviewKey>('busy');
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Header variant="static" title="Daily Digest preview" subtitle="Mock states, no network" />
+      {/* Just the state switcher — no Header. Production shows no header bar once a digest
+          renders, so this dev tool shouldn't fake one either; the switcher clears the status
+          bar/notch itself instead of borrowing that from a Header. */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 6 }}
+        contentContainerStyle={{
+          paddingHorizontal: 12,
+          paddingTop: safeAreaTop + 8,
+          paddingBottom: 8,
+          gap: 6,
+        }}
         style={{ flexGrow: 0, backgroundColor: colors.card }}>
         {OPTIONS.map((o) => (
           <Tab key={o.key} label={o.label} active={key === o.key} onPress={() => setKey(o.key)} />
@@ -84,9 +97,26 @@ function Preview({ variant }: { variant: PreviewKey }) {
     case 'failed':
       return <CodexFailedState />;
     case 'paywall-quota':
-      return <CodexNotEntitledState reason={SAMPLE_CODEX_NOT_ENTITLED_QUOTA.reason} />;
+      return (
+        <CodexNotEntitledState
+          reason={SAMPLE_CODEX_NOT_ENTITLED_QUOTA.reason}
+          errorCode={SAMPLE_CODEX_NOT_ENTITLED_QUOTA.error_code}
+        />
+      );
+    case 'paywall-pro-rate-limited':
+      return (
+        <CodexNotEntitledState
+          reason={SAMPLE_CODEX_NOT_ENTITLED_PRO_RATE_LIMITED.reason}
+          errorCode={SAMPLE_CODEX_NOT_ENTITLED_PRO_RATE_LIMITED.error_code}
+        />
+      );
     case 'paywall-ai-off':
-      return <CodexNotEntitledState reason={SAMPLE_CODEX_NOT_ENTITLED_AI_DISABLED.reason} />;
+      return (
+        <CodexNotEntitledState
+          reason={SAMPLE_CODEX_NOT_ENTITLED_AI_DISABLED.reason}
+          errorCode={SAMPLE_CODEX_NOT_ENTITLED_AI_DISABLED.error_code}
+        />
+      );
     default:
       return null;
   }

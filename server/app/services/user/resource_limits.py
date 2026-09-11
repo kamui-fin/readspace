@@ -162,9 +162,13 @@ async def enforce_codex_quota(db: AsyncSession, user_id: UUID, local_date: date 
         message = f"You've already built a Daily Digest in the last {hours_msg}. Come back later."
     else:
         message = f"You've built {per_window} Daily Digests in the last {hours_msg}. Try again later."
+    # Pro has no monthly cap and nothing above it to sell - a window-cap refusal here is a
+    # pacing limit, not an entitlement gap, so it gets its own code. The client renders a plain
+    # "come back later" explainer for it instead of the Basic upgrade-to-Pro paywall.
+    error_code = "CODEX_PRO_RATE_LIMITED" if tier == "pro" else "CODEX_LIMIT_EXCEEDED"
     raise ResourceLimitError(
         message=message,
-        error_code="CODEX_LIMIT_EXCEEDED",
+        error_code=error_code,
         details={"current_usage": recent, "limit": per_window, "period": "window", "window_hours": window_h},
     )
 

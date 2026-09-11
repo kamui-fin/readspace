@@ -187,6 +187,20 @@ services:
       GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID}
       GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOTRUE_EXTERNAL_GOOGLE_SECRET}
       GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${SUPABASE_PUBLIC_URL}/auth/v1/callback
+
+      # Apple Provider Config — id_token flow only (both web and iOS call
+      # supabase.auth.signInWithIdToken(), never signInWithOAuth(), so GoTrue
+      # never does a server-side code exchange with Apple: no client secret
+      # or redirect URI needed here, unlike Google above. GoTrue just verifies
+      # the token's signature and checks its audience against CLIENT_ID.
+      # CLIENT_ID: comma-separated list of every accepted audience, order
+      # doesn't matter — web Services ID + every native bundle ID you sign
+      # in from, e.g. com.readspace.rss.web,com.readspace.rss,com.readspace.rss.dev,com.readspace.rss.preview
+      GOTRUE_EXTERNAL_APPLE_ENABLED: ${GOTRUE_EXTERNAL_APPLE_ENABLED:-false}
+      GOTRUE_EXTERNAL_APPLE_CLIENT_ID: ${GOTRUE_EXTERNAL_APPLE_CLIENT_ID}
+
+      # Bypass nonce check in ID Token flow. Required for native Google/Apple
+      # Sign In on mobile (applies to all external ID-token providers, not just Google).
       GOTRUE_EXTERNAL_SKIP_NONCE_CHECK: "true"
 
   rest:

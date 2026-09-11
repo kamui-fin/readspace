@@ -220,8 +220,7 @@ export const SAMPLE_CODEX_DIGEST: CodexDigestResponse = {
   },
 };
 
-/** An in-flight digest, for exercising the loading UI keyed off progress_phase. The
- *  `requested_at` is a few seconds back so the preview shows a live elapsed timer. */
+/** An in-flight digest, for exercising the loading UI keyed off progress_phase. */
 export const SAMPLE_CODEX_DIGEST_IN_PROGRESS: CodexDigestResponse = {
   ...SAMPLE_CODEX_DIGEST,
   status: CodexDigestStatus.IN_PROGRESS,
@@ -263,14 +262,6 @@ export const SAMPLE_CODEX_DIGEST_SKIPPED: CodexDigestResponse = {
   payload: null,
 };
 
-/** A job that's been running long enough to exercise the `Nm Ns` elapsed formatting (a stuck
- *  worker, or the tab reopened much later). `requested_at` is ~22.5 min back. */
-export const SAMPLE_CODEX_DIGEST_LONG_RUN: CodexDigestResponse = {
-  ...SAMPLE_CODEX_DIGEST_IN_PROGRESS,
-  progress_phase: CodexDigestPhase.SYNTHESIZING,
-  requested_at: new Date(Date.now() - 1_350_000).toISOString(),
-};
-
 // ── Not-entitled ("paywall") responses ──────────────────────────────────────
 // POST /codex/generate returns a 202 with this shape instead of a digest when the user can't
 // generate. Copy mirrors server/app/routers/codex.py + resource_limits.py so the preview and
@@ -288,6 +279,14 @@ export const SAMPLE_CODEX_NOT_ENTITLED_AI_DISABLED: CodexNotEntitledResponse = {
   entitled: false,
   reason: 'AI features are disabled on this instance.',
   error_code: 'AI_DISABLED',
+};
+
+/** Pro tier, window-cap pacing limit — CodexNotEntitledState shows a plain "come back later"
+ *  explainer, no upgrade dialog (Pro has no higher tier to sell against here). */
+export const SAMPLE_CODEX_NOT_ENTITLED_PRO_RATE_LIMITED: CodexNotEntitledResponse = {
+  entitled: false,
+  reason: "You've built 2 Daily Digests in the last 22 hours. Try again later.",
+  error_code: 'CODEX_PRO_RATE_LIMITED',
 };
 
 // ── Development-card imagery fixtures ────────────────────────────────────────

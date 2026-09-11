@@ -183,7 +183,7 @@ function ReaderInner({
             >
                 <div className="mx-auto w-full max-w-[46rem] px-4 pb-16 pt-6 md:px-8 md:pb-24 lg:max-w-[52rem]">
                     <ArticleReaderBody
-                        article={article}
+                        article={reader.displayArticle}
                         isDark={isDark}
                         displayContent={reader.displayContent}
                         contentKey={reader.contentKey}
@@ -196,6 +196,7 @@ function ReaderInner({
                         aiSummary={reader.aiSummary}
                         onDismissAiSummary={reader.dismissAiSummary}
                         isBusy={reader.isBusy}
+                        isTranslating={reader.isTranslating}
                     />
                 </div>
             </div>

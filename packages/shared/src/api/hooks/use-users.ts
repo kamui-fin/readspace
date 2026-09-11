@@ -34,6 +34,17 @@ export function useUpdateProfile(options?: UseMutationOptions<UserProfile, Error
   });
 }
 
+export function useDeleteAccount(options?: UseMutationOptions<void, Error, void>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => ApiClient.deleteAccount(),
+    onSuccess: () => {
+      queryClient.clear();
+    },
+    ...options,
+  });
+}
+
 export function useUserLimits(
   options?: Omit<
     UseQueryOptions<UserLimits, Error, UserLimits, ReturnType<typeof queryKeys.userLimits>>,

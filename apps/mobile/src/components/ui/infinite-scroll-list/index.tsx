@@ -3,10 +3,8 @@ import { LegendList, type LegendListProps, type LegendListRenderItemProps } from
 import type { ReactElement } from 'react';
 import { forwardRef, useCallback, useMemo } from 'react';
 
-export interface InfiniteScrollListProps<T> extends Omit<
-  LegendListProps<T>,
-  'data' | 'renderItem' | 'onEndReached' | 'children'
-> {
+export interface InfiniteScrollListProps<T>
+  extends Omit<LegendListProps<T>, 'data' | 'renderItem' | 'onEndReached' | 'children'> {
   data: T[];
   renderItem: (item: T, index: number) => ReactElement;
   keyExtractor?: (item: T, index: number) => string;

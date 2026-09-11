@@ -32,7 +32,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     orientation: 'portrait',
     icon,
     userInterfaceStyle: 'automatic',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#191919',
     scheme,
     updates: {
       url: 'https://u.expo.dev/e28b2485-c247-405c-829e-2b9c9c2e7733',
@@ -43,6 +43,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       supportsTablet: true,
       bundleIdentifier,
+      usesAppleSignIn: true,
       // Google Sign In requires reverse client ID scheme
       // The scheme is constructed from your Google OAuth iOS Client ID
       // Format: com.googleusercontent.apps.{CLIENT_ID_WITHOUT_SUFFIX}
@@ -90,6 +91,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-router',
       'expo-font',
       'expo-sqlite',
+      'expo-apple-authentication',
       [
         'expo-build-properties',
         {
@@ -110,6 +112,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           url: 'https://sentry.io/',
           project: 'react-native',
           organization: 'readspace',
+        },
+      ],
+      [
+        'expo-splash-screen',
+        {
+          backgroundColor: '#191919',
+          image: './assets/app/splash-icon.png',
+          imageWidth: 200,
         },
       ],
     ],

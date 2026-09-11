@@ -112,12 +112,21 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     if (!checkAndTriggerUpgrade('ai')) {
       throw new Error('AI limit reached');
     }
+    const languageKey =
+      contentSource === 'translated' && targetLanguage ? targetLanguage : 'original';
     return summarizeMutation.mutateAsync({
       articleId: articleId || '',
-      content: currentContent || undefined,
-      languageKey: contentSource,
+      content: activeContent || undefined,
+      languageKey,
     });
-  }, [articleId, currentContent, contentSource, summarizeMutation, checkAndTriggerUpgrade]);
+  }, [
+    articleId,
+    activeContent,
+    contentSource,
+    targetLanguage,
+    summarizeMutation,
+    checkAndTriggerUpgrade,
+  ]);
 
   // ============ View Mode Effects ============
   // Initialize view based on available content
