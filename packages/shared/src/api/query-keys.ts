@@ -14,6 +14,11 @@ export const RSS_QUERY_KEYS = {
   SIDEBAR_DATA: 'rss-sidebar-data',
 } as const;
 
+export const CODEX_QUERY_KEYS = {
+  TODAY: 'codex-today',
+  PREFERENCES: 'codex-preferences',
+} as const;
+
 export const ARTICLE_ENHANCEMENT_QUERY_KEYS = {
   EXTRACTED_CONTENT: 'article-extracted-content',
   SUMMARY: 'article-summary',
@@ -28,7 +33,8 @@ export const USER_QUERY_KEYS = {
 export type QueryKey =
   | (typeof RSS_QUERY_KEYS)[keyof typeof RSS_QUERY_KEYS]
   | (typeof ARTICLE_ENHANCEMENT_QUERY_KEYS)[keyof typeof ARTICLE_ENHANCEMENT_QUERY_KEYS]
-  | (typeof USER_QUERY_KEYS)[keyof typeof USER_QUERY_KEYS];
+  | (typeof USER_QUERY_KEYS)[keyof typeof USER_QUERY_KEYS]
+  | (typeof CODEX_QUERY_KEYS)[keyof typeof CODEX_QUERY_KEYS];
 
 /**
  * Helper functions to create consistent query keys
@@ -89,6 +95,10 @@ export const queryKeys = {
   // User
   userProfile: () => [USER_QUERY_KEYS.PROFILE] as const,
   userLimits: () => [USER_QUERY_KEYS.LIMITS] as const,
+
+  // Codex
+  codexToday: () => [CODEX_QUERY_KEYS.TODAY] as const,
+  codexPreferences: () => [CODEX_QUERY_KEYS.PREFERENCES] as const,
 } as const;
 
 export const MUTATION_KEYS = {

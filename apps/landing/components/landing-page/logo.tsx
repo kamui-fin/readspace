@@ -29,7 +29,9 @@ export const Logo = ({
                     alt="readspace logo"
                 />
             </div>
-            {showText && <span className={cn(textSize, "text-black")}>readspace</span>}
+            {showText && (
+                <span className={cn(textSize, "text-black")}>readspace</span>
+            )}
         </div>
     )
 }

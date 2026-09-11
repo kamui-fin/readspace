@@ -8,9 +8,10 @@ import {
 } from '@gorhom/bottom-sheet';
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
-import { forwardRef, useCallback } from 'react';
+import { forwardRef, useCallback, useRef } from 'react';
 import { Platform, View } from 'react-native';
 import { Text } from '@components/ui/text';
+import { useBottomSheetBackHandler } from '@hooks/useBottomSheetBackHandler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
@@ -51,6 +52,7 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
       snapPoints = ['90%'],
       enablePanDownToClose = false,
       backdropComponent,
+      onChange,
       ...props
     },
     ref
@@ -59,6 +61,22 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
     const isIOS = Platform.OS === 'ios';
+
+    // Merge the forwarded ref with an internal one so the back-handler hook always has an
+    // instance to dismiss, regardless of whether the consumer passed an object or callback ref.
+    const sheetRef = useRef<BottomSheetModal>(null);
+    const setRefs = useCallback(
+      (instance: BottomSheetModal | null) => {
+        sheetRef.current = instance;
+        if (typeof ref === 'function') {
+          ref(instance);
+        } else if (ref) {
+          ref.current = instance;
+        }
+      },
+      [ref]
+    );
+    const { handleSheetPositionChange } = useBottomSheetBackHandler(sheetRef);
 
     const renderBackdrop = useCallback(
       (backdropProps: BottomSheetBackdropProps) => (
@@ -72,13 +90,18 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
       []
     );
 
-    const handleSheetChanges = useCallback((index: number) => {
-      console.log('[Modal] Sheet index changed to:', index);
-    }, []);
+    const handleSheetChanges = useCallback<NonNullable<BottomSheetModalProps['onChange']>>(
+      (index, position, type) => {
+        console.log('[Modal] Sheet index changed to:', index);
+        handleSheetPositionChange(index, position, type);
+        onChange?.(index, position, type);
+      },
+      [handleSheetPositionChange, onChange]
+    );
 
     return (
       <BottomSheetModal
-        ref={ref}
+        ref={setRefs}
         snapPoints={snapPoints}
         enablePanDownToClose={enablePanDownToClose}
         enableContentPanningGesture={false}

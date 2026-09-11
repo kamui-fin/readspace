@@ -96,3 +96,10 @@ favicons/
 rss-r-us
 feeds.jsonl
 feed-quality-work/
+
+# design-sync (claude.ai/design import)
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules

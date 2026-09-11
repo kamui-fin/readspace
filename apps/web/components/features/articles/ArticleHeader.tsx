@@ -2,6 +2,7 @@ import type { Article } from "@readspace/shared"
 import { formatDistanceToNow, parseISO } from "date-fns"
 import { FeedIcon } from "@/components/features/feeds/FeedIcon"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 
 interface ArticleHeaderProps {
@@ -12,6 +13,8 @@ interface ArticleHeaderProps {
     isRecentlyReadMode: boolean
     shouldShowPreviewBanner: boolean
     toolbar?: React.ReactNode
+    /** True while the title/tags are being translated (or article is loading). */
+    isBusy?: boolean
 }
 
 export function ArticleHeader({
@@ -22,6 +25,7 @@ export function ArticleHeader({
     isRecentlyReadMode,
     shouldShowPreviewBanner,
     toolbar,
+    isBusy = false,
 }: ArticleHeaderProps) {
     const publishedAtString = article.published_at
     const readAtString = article.read_at
@@ -96,9 +100,16 @@ export function ArticleHeader({
                 </div>
             )}
 
-            <h1 className="text-4xl font-bold leading-tight text-foreground leading-tight tracking-tight">
-                {article.title}
-            </h1>
+            {isBusy ? (
+                <div className="space-y-2">
+                    <Skeleton className="h-9 w-full" />
+                    <Skeleton className="h-9 w-2/3" />
+                </div>
+            ) : (
+                <h1 className="text-4xl font-bold leading-tight text-foreground leading-tight tracking-tight">
+                    {article.title}
+                </h1>
+            )}
 
             {/* Article Meta */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-border pb-6 gap-4">

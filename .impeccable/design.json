@@ -1,0 +1,411 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-09T00:00:00Z",
+  "title": "Design System: Readspace",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Forest Green",
+        "canonical": "hsl(131.74 29.11% 30.98%)",
+        "tonalRamp": [
+          "hsl(131.74 29.11% 12%)",
+          "hsl(131.74 29.11% 19%)",
+          "hsl(131.74 29.11% 25%)",
+          "hsl(131.74 29.11% 31%)",
+          "hsl(131.74 26% 45%)",
+          "hsl(131.74 24% 62%)",
+          "hsl(131.74 22% 80%)",
+          "hsl(131.74 22% 94%)"
+        ]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Meadow Green",
+        "canonical": "hsl(97.6 32.47% 45.29%)",
+        "tonalRamp": [
+          "hsl(97.6 32% 15%)",
+          "hsl(97.6 32% 23%)",
+          "hsl(97.6 32% 34%)",
+          "hsl(97.6 32% 45%)",
+          "hsl(97.6 30% 57%)",
+          "hsl(97.6 28% 70%)",
+          "hsl(97.6 26% 84%)",
+          "hsl(97.6 26% 95%)"
+        ]
+      },
+      "accent": {
+        "role": "tertiary",
+        "displayName": "Pale Sage (hover surface)",
+        "canonical": "hsl(96.92 26.53% 90.39%)",
+        "tonalRamp": [
+          "hsl(96.92 20% 18%)",
+          "hsl(96.92 22% 30%)",
+          "hsl(96.92 24% 45%)",
+          "hsl(96.92 25% 62%)",
+          "hsl(96.92 26% 76%)",
+          "hsl(96.92 26% 86%)",
+          "hsl(96.92 27% 90%)",
+          "hsl(96.92 28% 96%)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Green-warm White",
+        "canonical": "hsl(120 100% 99.41%)",
+        "tonalRamp": [
+          "hsl(180 5% 10%)",
+          "hsl(160 5% 18%)",
+          "hsl(140 6% 32%)",
+          "hsl(120 8% 50%)",
+          "hsl(120 12% 70%)",
+          "hsl(120 20% 88%)",
+          "hsl(120 40% 96%)",
+          "hsl(120 100% 99.41%)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "hsl(200 4.76% 24.71%)",
+        "tonalRamp": [
+          "hsl(200 6% 12%)",
+          "hsl(200 5% 20%)",
+          "hsl(200 5% 25%)",
+          "hsl(200 5% 34%)",
+          "hsl(200 4% 47%)",
+          "hsl(200 4% 62%)",
+          "hsl(200 4% 80%)",
+          "hsl(200 4% 94%)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Quiet Ink",
+        "canonical": "hsl(97 6% 57%)",
+        "tonalRamp": [
+          "hsl(97 8% 16%)",
+          "hsl(97 7% 26%)",
+          "hsl(97 7% 38%)",
+          "hsl(97 6% 48%)",
+          "hsl(97 6% 57%)",
+          "hsl(97 6% 70%)",
+          "hsl(97 6% 84%)",
+          "hsl(97 6% 95%)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "hsl(210 15% 93%)",
+        "tonalRamp": [
+          "hsl(210 12% 20%)",
+          "hsl(210 12% 32%)",
+          "hsl(210 13% 48%)",
+          "hsl(210 14% 66%)",
+          "hsl(210 15% 80%)",
+          "hsl(210 15% 88%)",
+          "hsl(210 15% 93%)",
+          "hsl(210 15% 97%)"
+        ]
+      },
+      "destructive": {
+        "role": "neutral",
+        "displayName": "Signal Red",
+        "canonical": "hsl(8 93% 44%)",
+        "tonalRamp": [
+          "hsl(8 80% 16%)",
+          "hsl(8 85% 25%)",
+          "hsl(8 90% 35%)",
+          "hsl(8 93% 44%)",
+          "hsl(8 88% 55%)",
+          "hsl(8 85% 68%)",
+          "hsl(8 82% 82%)",
+          "hsl(8 80% 94%)"
+        ]
+      },
+      "mobile-background": {
+        "role": "neutral",
+        "displayName": "Mobile Plain White (apps/mobile)",
+        "canonical": "rgb(255, 255, 255)",
+        "tonalRamp": [
+          "rgb(25, 25, 25)",
+          "rgb(32, 32, 32)",
+          "rgb(46, 46, 46)",
+          "rgb(60, 60, 60)",
+          "rgb(159, 162, 160)",
+          "rgb(211, 212, 211)",
+          "rgb(237, 237, 237)",
+          "rgb(255, 255, 255)"
+        ]
+      },
+      "mobile-primary-dark": {
+        "role": "primary",
+        "displayName": "Mobile Dark-Mode Primary — Meadow Green (apps/mobile)",
+        "canonical": "#6A994E",
+        "tonalRamp": [
+          "hsl(97.6 32% 15%)",
+          "hsl(97.6 32% 23%)",
+          "hsl(97.6 32% 34%)",
+          "hsl(97.6 32% 45%)",
+          "hsl(97.6 30% 57%)",
+          "hsl(97.6 28% 70%)",
+          "hsl(97.6 26% 84%)",
+          "hsl(97.6 26% 95%)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Article <h1> in the reader and page titles. The ceiling of the type scale (text-4xl, ~2.25rem) — Readspace has no hero headline."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Codex masthead scale-setter, section headers, CardTitle. Geist 600."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Development card headlines, dialog titles, list-group headings. Geist 600, ~1.125rem."
+      },
+      "reading": {
+        "displayName": "Reading",
+        "purpose": "Article body and blockquotes. EB Garamond with the Noto Serif SC/JP/TC stack for CJK. User-adjustable via the reader slider; ~1.65 line-height."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All UI text — buttons, fields, menus, descriptions, Codex synthesis bullets. Geist 400, text-sm."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Feed source names, timestamps, byline metadata, badges, kbd hints. Geist Mono 500, text-xs, frequently uppercase with tracking-wider."
+      },
+      "logo": {
+        "displayName": "Logo",
+        "purpose": "The Readspace wordmark only (font-logo / Figtree). Never body or UI text."
+      }
+    },
+    "shadows": [
+      {
+        "name": "resting-card",
+        "value": "0 1px 2px 0 rgb(0 0 0 / 0.04)",
+        "purpose": "Near-invisible lift on Card and Input (shadow-xs). Present only so the hairline border doesn't feel inert."
+      },
+      {
+        "name": "menu-popover",
+        "value": "0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.08)",
+        "purpose": "Dropdowns, selects, popovers (shadow-md). Soft ambient shadow that reads as 'above the page'."
+      },
+      {
+        "name": "dialog-overlay",
+        "value": "0 10px 15px -3px rgb(0 0 0 / 0.10), 0 4px 6px -4px rgb(0 0 0 / 0.10)",
+        "purpose": "Modals and toasts (shadow-lg), over a dim backdrop."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-emphasized",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The transition-transform-medium utility (0.4s) — card flips and larger reveals."
+      },
+      {
+        "name": "accordion",
+        "value": "ease-out 0.2s",
+        "purpose": "Accordion open/close (--animate-accordion-down / -up)."
+      },
+      {
+        "name": "field-transition",
+        "value": "transition-[color,box-shadow] ~150ms",
+        "purpose": "Scoped input/select focus transition — border and ring only, nothing else animates."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ],
+    "surfaces": {
+      "web": "apps/web — Next.js, imports @readspace/design-tokens/theme.css. The normative token set above.",
+      "extension": "apps/extension — Vite popup, imports the same @readspace/design-tokens/theme.css and byte-identical shadcn primitives. Only deltas: fixed ~450px popup width, no reading serif.",
+      "mobile": "apps/mobile — Expo/React Native + uniwind. Same identity (both greens, EB Garamond reader, Geist UI, Figtree wordmark, dark-mode-first-class, anti-engagement doctrine, Codex newspaper metaphor) but its own implementation: plain white/#232222 neutrals with a grey→grey6 numeric ramp, Notion-grey dark mode (#191919 / #202020 / #2E2E2E), rounded-full buttons (h-10/12/14, full-width default), rounded-2xl cards, no focus rings (Pressable opacity + haptics), primary swaps to the secondary green (#6A994E) in dark mode, and a single floating blurred bottom tab bar as the only shadowed element. Do not reconcile mobile toward the web tokens — the differences are intentional."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one high-emphasis action per view. Forest Green fill, rationed.",
+      "html": "<button class=\"ds-btn-primary\">Add feed</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 8px 16px; border: none; border-radius: 6px; background: hsl(131.74 29.11% 30.98%); color: hsl(0 0% 100%); font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 500; line-height: 1.5; cursor: pointer; transition: background-color 150ms ease; } .ds-btn-primary:hover { background: hsl(131.74 29.11% 30.98% / 0.9); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-background, hsl(120 100% 99.41%)), 0 0 0 4px hsl(131.74 29.11% 30.98%); } .ds-btn-primary:disabled { opacity: 0.5; pointer-events: none; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Medium-emphasis action. Hairline border, canvas fill, washes to the sage hover surface.",
+      "html": "<button class=\"ds-btn-outline\">Mark all read</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 8px 16px; border: 1px solid hsl(130 9.86% 86.35%); border-radius: 6px; background: hsl(120 100% 99.41%); color: hsl(200 4.76% 24.71%); font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: background-color 150ms ease, color 150ms ease; } .ds-btn-outline:hover { background: hsl(96.92 26.53% 90.39%); color: hsl(210 25% 23%); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(120 100% 99.41%), 0 0 0 4px hsl(131.74 29.11% 30.98%); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Low-emphasis toolbar and menu action. Transparent until hover.",
+      "html": "<button class=\"ds-btn-ghost\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg>New folder</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 8px 16px; border: none; border-radius: 6px; background: transparent; color: hsl(200 4.76% 24.71%); font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: background-color 150ms ease, color 150ms ease; } .ds-btn-ghost svg { width: 16px; height: 16px; flex-shrink: 0; } .ds-btn-ghost:hover { background: hsl(96.92 26.53% 90.39%); color: hsl(210 25% 23%); } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(120 100% 99.41%), 0 0 0 4px hsl(131.74 29.11% 30.98%); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Transparent-background field that sits on whatever surface holds it. Soft brand-green focus ring, no offset.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Search feeds\" />",
+      "css": ".ds-input { display: flex; width: 100%; height: 36px; min-width: 0; padding: 4px 12px; border: 1px solid hsl(130 9.86% 86.35%); border-radius: 6px; background: transparent; color: hsl(200 4.76% 24.71%); font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 14px; box-shadow: 0 1px 1px 0 rgb(0 0 0 / 0.03); outline: none; transition: color 150ms, box-shadow 150ms, border-color 150ms; } .ds-input::placeholder { color: hsl(97 6% 57% / 0.7); } .ds-input:focus-visible { border-color: hsl(131.74 29.11% 30.98%); box-shadow: 0 0 0 3px hsl(131.74 29.11% 30.98% / 0.5); } .ds-input[aria-invalid=\"true\"] { border-color: hsl(8 93% 44%); box-shadow: 0 0 0 3px hsl(8 93% 44% / 0.2); } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flat paper surface separated by a 1px hairline, not a shadow. The default container.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Similar feeds</div><div class=\"ds-card-body\">Three sources cover topics close to this feed.</div></div>",
+      "css": ".ds-card { border: 1px solid hsl(210 15% 93%); border-radius: 8px; background: hsl(132 33.33% 97.06%); color: hsl(240 3% 7%); box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04); padding: 24px; } .ds-card-title { font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 18px; font-weight: 600; line-height: 1.35; color: hsl(200 4.76% 24.71%); } .ds-card-body { margin-top: 6px; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 1.5; color: hsl(97 6% 57%); }"
+    },
+    {
+      "name": "Informational Badge",
+      "kind": "chip",
+      "refersTo": "badge-accent",
+      "description": "The quiet count/status chip — sidebar-tint fill, muted text. Fully round.",
+      "html": "<span class=\"ds-badge-accent\">12 unread</span>",
+      "css": ".ds-badge-accent { display: inline-flex; align-items: center; padding: 2px 10px; border: 1px solid transparent; border-radius: 9999px; background: hsl(108 28.3% 97.1%); color: hsl(97 6% 57%); font-family: 'Geist Mono', ui-monospace, SFMono-Regular, monospace; font-size: 12px; font-weight: 500; letter-spacing: 0.02em; }"
+    },
+    {
+      "name": "Primary Badge",
+      "kind": "chip",
+      "refersTo": "badge-default",
+      "description": "Emphasis chip — Forest Green fill. Used sparingly, e.g. a plan tier or a 'New' marker.",
+      "html": "<span class=\"ds-badge-default\">Pro</span>",
+      "css": ".ds-badge-default { display: inline-flex; align-items: center; padding: 2px 10px; border: 1px solid transparent; border-radius: 9999px; background: hsl(131.74 29.11% 30.98%); color: hsl(0 0% 100%); font-family: 'Geist Mono', ui-monospace, SFMono-Regular, monospace; font-size: 12px; font-weight: 600; transition: background-color 150ms ease; } .ds-badge-default:hover { background: hsl(131.74 29.11% 30.98% / 0.8); }"
+    },
+    {
+      "name": "Tabs",
+      "kind": "nav",
+      "refersTo": "tabs-list",
+      "description": "Pill tab group on a muted track; the active tab is a canvas-filled pill with a faint lift.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab ds-tab-active\">All</button><button class=\"ds-tab\">Unread</button><button class=\"ds-tab\">Saved</button></div>",
+      "css": ".ds-tabs { display: inline-flex; height: 40px; align-items: center; justify-content: center; gap: 0; padding: 4px; border-radius: 6px; background: hsl(132 33.3% 97.1%); } .ds-tab { display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: transparent; color: hsl(97 6% 57%); font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: color 150ms ease, background-color 150ms ease; } .ds-tab:hover { color: hsl(200 4.76% 24.71%); } .ds-tab-active { background: hsl(120 100% 99.41%); color: hsl(200 4.76% 24.71%); box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04); } .ds-tab:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(132 33.3% 97.1%), 0 0 0 4px hsl(131.74 29.11% 30.98%); }"
+    },
+    {
+      "name": "Article Blockquote",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "The one place a colored left border is allowed — a 4px Forest Green rule as a typographic quotation mark inside serif article content.",
+      "html": "<blockquote class=\"ds-blockquote\">RSS is still here. Still simple. Still open. Still ours.</blockquote>",
+      "css": ".ds-blockquote { margin: 0; border-left: 4px solid hsl(131.74 29.11% 30.98% / 0.3); background: hsl(132 33.3% 97.1% / 0.3); padding: 12px 16px; font-family: 'EB Garamond', ui-serif, Georgia, serif; font-size: 20px; font-style: italic; line-height: 1.65; color: hsl(97 6% 57%); }"
+    },
+    {
+      "name": "Codex Development Card",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "A synthesized development in the Codex digest: sentence-case sans headline, serif-adjacent synthesis, source provenance. No hero shown here.",
+      "html": "<article class=\"ds-dev-card\"><h3 class=\"ds-dev-title\">Anthropic ships Claude Opus 4.5 with a 1M-token context window</h3><p class=\"ds-dev-synthesis\">Coverage converges on the context-window jump as the headline change; pricing held flat, which several write-ups read as the real signal.</p><div class=\"ds-dev-provenance\">12 articles &middot; 8 sources</div></article>",
+      "css": ".ds-dev-card { overflow: hidden; border: 1px solid hsl(210 15% 93%); border-radius: 8px; background: hsl(132 33.33% 97.06%); padding: 20px; } .ds-dev-title { margin: 0; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 18px; font-weight: 600; line-height: 1.35; color: hsl(200 4.76% 24.71%); } .ds-dev-synthesis { margin: 12px 0 0; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 1.5; color: hsl(97 6% 57%); } .ds-dev-provenance { margin-top: 16px; font-family: 'Geist Mono', ui-monospace, SFMono-Regular, monospace; font-size: 12px; color: hsl(97 6% 57%); }"
+    },
+    {
+      "name": "Mobile Primary Button (apps/mobile)",
+      "kind": "button",
+      "refersTo": null,
+      "description": "The mobile button language — a full pill, not a 6px rect. Full-width by default; fill flips to the secondary green in dark mode. Rendered here as an approximation of the RN component for the panel.",
+      "html": "<button class=\"ds-m-btn-primary\">Add feed</button>",
+      "css": ".ds-m-btn-primary { display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 48px; padding: 0 16px; border: none; border-radius: 9999px; background: #386641; color: #ffffff; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 16px; font-weight: 500; line-height: 1.25; cursor: pointer; transition: opacity 120ms ease; } .ds-m-btn-primary:active { opacity: 0.7; } @media (prefers-color-scheme: dark) { .ds-m-btn-primary { background: #6A994E; } }"
+    },
+    {
+      "name": "Mobile Ghost Button (apps/mobile)",
+      "kind": "button",
+      "refersTo": null,
+      "description": "Mobile medium-emphasis action: a full pill with a 1px grey border, no fill.",
+      "html": "<button class=\"ds-m-btn-ghost\">Mark all read</button>",
+      "css": ".ds-m-btn-ghost { display: flex; flex-direction: row; align-items: center; justify-content: center; width: 100%; height: 48px; padding: 0 16px; border: 1px solid rgb(226, 227, 227); border-radius: 9999px; background: transparent; color: #232222; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 16px; font-weight: 500; cursor: pointer; transition: opacity 120ms ease; } .ds-m-btn-ghost:active { opacity: 0.7; } @media (prefers-color-scheme: dark) { .ds-m-btn-ghost { border-color: rgb(60, 60, 60); color: #ffffff; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Reading Room",
+    "overview": "Readspace is an anti-engagement product, and the design has to look like one. Every screen is mostly calm neutral space. The single warm color is a muted forest green, rationed to the things that genuinely matter — the one primary action, the active nav item, links, and the Codex identity mark. Depth is nearly absent: surfaces sit flat and a single hairline border does the separating. The interface is furniture — you notice it for a second when you sit down, then it disappears and the writing is all that's left.\n\nThe system ships to three surfaces. apps/web and apps/extension share one shadcn/ui token set (@readspace/design-tokens) — a green-tinted canvas (never a pure white), 6px buttons, 8px cards, 3px brand-green focus rings. apps/mobile (Expo/React Native, uniwind) holds the same identity but is its own implementation: plain white/#232222 neutrals with a grey→grey6 numeric ramp, a Notion-grey dark mode (#191919 / #202020 / #2E2E2E), rounded-full buttons, rounded-2xl cards, no focus rings (press opacity + haptics), the primary green swapping to the secondary green (#6A994E) in dark mode, and one floating blurred bottom tab bar as the only shadowed element. The differences are deliberate platform choices, not drift.\n\nThe type system carries the brand on every surface. Serif reads, sans operates, mono labels. Article bodies are EB Garamond (with the Noto Serif CJK stack on web; Georgia fallback in mobile's WebView reader); everything you click or navigate is Geist sans; timestamps, feed slugs, and byline metadata are Geist Mono. A reader can tell at a glance which text is the writing and which is the app.",
+    "keyCharacteristics": [
+      "The two greens (#386641 / #6A994E), the reading serif, and the anti-engagement doctrine are constant across web, extension, and mobile.",
+      "Saturated green rationed to actions, active state, links, and the Codex mark.",
+      "Flat surfaces + hairline border + tonal fill everywhere; the only shadow is a genuinely floating layer (web menus/dialogs; mobile's blurred bottom tab bar).",
+      "Serif for reading, sans for chrome, mono for metadata — a legible three-way split.",
+      "Web/extension: green-tinted canvas, no pure white/black, 8px base radius, 6px buttons, 3px brand-green focus rings.",
+      "Mobile: plain white/#232222 neutrals with a grey→grey6 ramp, Notion-grey dark mode, rounded-full buttons, rounded-2xl cards, no focus rings, dark-mode primary→secondary green swap.",
+      "Light and dark are equal citizens; every component is defined for both, on every surface."
+    ],
+    "rules": [
+      {
+        "name": "The Rationed Green Rule",
+        "body": "Saturated Forest Green appears on at most one primary action per view, plus active nav, links, and the Codex mark. If a second green button competes for attention on the same screen, one of them is wrong. Its scarcity is what makes it read as 'this matters.'",
+        "section": "colors"
+      },
+      {
+        "name": "The No-Pure-Neutral Rule",
+        "body": "Web/extension only. No #ffffff, no #000000, no pure gray — the canvas is green-warm white, ink is faint-cool near-black, muted-foreground sits at hue 97. Mobile deliberately uses near-pure white/black neutrals and its own grey ramp; do not apply this rule there.",
+        "section": "colors"
+      },
+      {
+        "name": "The Border-Not-Shadow Rule",
+        "body": "Separation is a 1px border and a tonal fill, not a shadow. On web/extension, shadows are reserved for genuinely floating layers (popover, dropdown, dialog) and stay soft and small. On mobile the only shadowed element is the floating blurred bottom tab bar.",
+        "section": "colors"
+      },
+      {
+        "name": "The Serif-Reads Rule",
+        "body": "If the text is something a person wrote to be read (article body, pull quote, the synthesized Codex through-line), it is serif. If it is something the app is telling you (labels, buttons, counts, nav), it is sans. Mono is only for machine metadata — times, slugs, keys. Don't mix the roles.",
+        "section": "typography"
+      },
+      {
+        "name": "The One-Ceiling Rule",
+        "body": "Display type stops at text-4xl (~2.25rem). Readspace has no hero headline; the biggest words on any screen are an article title, and they stay modest.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-Room Rule",
+        "body": "If a surface is part of the page (card, row, panel, nav), it is flat with a hairline border and a tonal fill. On web/extension, only things that pop over the page (menu, dialog, toast) get a shadow, and that shadow is always soft, offset-down, and uncolored. On mobile the sole exception is the floating blurred bottom tab bar.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Serif-Reads Rule",
+        "body": "If the text is something a person wrote to be read (article body, pull quote, the synthesized Codex through-line), it is serif. If it is something the app is telling you (labels, buttons, counts, nav), it is sans. Mono is only for machine metadata — times, slugs, keys. Applies to all three surfaces.",
+        "section": "typography"
+      },
+      {
+        "name": "The One-Ceiling Rule",
+        "body": "Display type stops at text-4xl (~2.25rem web / ~32px mobile). Readspace has no hero headline; the biggest words on any screen are an article title, and they stay modest.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "Do keep every screen mostly neutral space and ration saturated Forest Green to one primary action plus active nav, links, and the Codex mark (the Rationed Green Rule).",
+      "Do keep the two greens exact — #386641 primary, #6A994E secondary — across all three surfaces. [mobile] it is correct for text-primary and primary buttons to resolve to the secondary green in dark mode.",
+      "[web/ext] Do use the green-warm canvas (hsl(120 100% 99.41%)) and faint-cool ink — never #fff, #000, or a pure gray (the No-Pure-Neutral Rule). [mobile] Do use the plain white/#232222 base and the grey→grey6 ramp, with the Notion-grey dark palette (#191919 / #202020 / #2E2E2E).",
+      "Do separate surfaces with a 1px border and a tonal fill (the Flat-Room Rule). [web/ext] reserve soft offset-down shadows for floating layers only; [mobile] the only shadowed element is the floating bottom tab bar.",
+      "Do set reading content in EB Garamond, UI chrome in Geist, and machine metadata in Geist Mono (the Serif-Reads Rule). [web] include the Noto Serif CJK stack; [mobile] the reader serif is 'EB Garamond', Georgia, Cambria, serif inside a WebView.",
+      "Do cap display type at text-4xl / ~32px; the largest words on a screen are an article title (the One-Ceiling Rule).",
+      "[web/ext] Do derive corners from --radius: 0.5rem — 8px cards, 6px controls, 4px inset bits, full-round badges. [mobile] Do use rounded-full buttons and rounded-2xl cards.",
+      "[web/ext] Do give hover and focus real life: an accent wash on hover, a 3px brand-green focus ring, a scoped [color,box-shadow] transition. [mobile] Do use Pressable opacity + haptics; no focus rings.",
+      "Do design and verify light and dark for every component on all three surfaces.",
+      "Do keep lists finite — a visible end, hard caps, no infinite scroll."
+    ],
+    "donts": [
+      "Don't add a second competing green button, or use green as a decorative fill.",
+      "Don't introduce gradients, glow, neon, or 'AI' sci-fi styling — not even on Codex, on any surface.",
+      "Don't let it read as an untouched shadcn starter (web/ext) or a default RN component kit (mobile): the green identity and the serif/sans/mono split must always show.",
+      "Don't borrow engagement patterns — infinite scroll, streak/badge hooks, unread-count dots as bait, 'for you' surfaces, density that crams more items on screen.",
+      "Don't float page-level cards on drop shadows or use a colored border-left/border-right above 1px — the only exception is the 4px border-l-primary on article blockquotes.",
+      "Don't set body reading text in a sans font, or UI labels in the reading serif.",
+      "Don't push any headline past text-4xl / ~32px or add a kicker/eyebrow above it.",
+      "[web/ext] Don't use pure #fff / #000 / neutral-gray, or an untinted gray for secondary text (tint it from the green or the foreground).",
+      "Don't crowd the reading column — content stays width-constrained and never full-bleed.",
+      "[mobile] Don't 'correct' mobile toward the web tokens — the pill buttons, plain neutrals, Notion-grey dark mode, dark-mode green swap, and blurred floating tab bar are intentional platform choices, not drift."
+    ]
+  }
+}

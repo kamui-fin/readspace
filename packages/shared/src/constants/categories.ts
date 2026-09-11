@@ -67,7 +67,10 @@ export const CATEGORY_DISPLAY_NAMES: Record<FeedCategory, string> = {
  * Mobile-friendly category name mappings, ordered from most popular to least.
  * Excludes MISCELLANEOUS.
  */
-export const MOBILE_CATEGORY_NAMES: Omit<Record<FeedCategory, string>, FeedCategory.MISCELLANEOUS> = {
+export const MOBILE_CATEGORY_NAMES: Omit<
+  Record<FeedCategory, string>,
+  FeedCategory.MISCELLANEOUS
+> = {
   [FeedCategory.NEWS_CURRENT_EVENTS]: 'News',
   [FeedCategory.SOFTWARE_ENGINEERING]: 'Software Engineering',
   [FeedCategory.CONSUMER_TECH_DIGITAL]: 'Tech',
@@ -89,4 +92,3 @@ export const MOBILE_CATEGORY_NAMES: Omit<Record<FeedCategory, string>, FeedCateg
   [FeedCategory.AUTOMOTIVE_TRANSPORT]: 'Automotive',
   [FeedCategory.REGIONAL_LOCAL]: 'Regional & Local',
 };
-

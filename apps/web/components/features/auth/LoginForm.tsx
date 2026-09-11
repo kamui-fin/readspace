@@ -17,6 +17,7 @@ import * as React from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { GoogleSignInButton } from "@/components/features/auth/GoogleSignInButton"
+import { AppleSignInButton } from "@/components/features/auth/AppleSignInButton"
 import {
     Form,
     FormControl,
@@ -119,6 +120,7 @@ export function LoginForm({
                             {isProd && (
                                 <>
                                     <div className="flex flex-col gap-4">
+                                        <AppleSignInButton className="w-full" />
                                         <GoogleSignInButton className="w-full" />
                                     </div>
                                     <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">

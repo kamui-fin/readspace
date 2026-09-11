@@ -22,6 +22,9 @@ export function useArticleAI({
     const [currentTranslation, setCurrentTranslation] = useState<{
         content: string
         language: string
+        title: string | null
+        description: string | null
+        tags: string[] | null
     } | null>(null)
     const [currentSummaryLanguage, setCurrentSummaryLanguage] =
         useState("original")
@@ -46,6 +49,20 @@ export function useArticleAI({
         return article.content || article.description || ""
     }, [contentView, article, currentTranslation, extractMutation.data])
 
+    // Overlay the translated title/description/tags onto the article when
+    // viewing a translation, same as the article body above.
+    const displayArticle = useMemo(() => {
+        if (contentView !== ContentView.Translated || !currentTranslation) {
+            return article
+        }
+        return {
+            ...article,
+            title: currentTranslation.title ?? article.title,
+            description: currentTranslation.description ?? article.description,
+            tags: currentTranslation.tags ?? article.tags,
+        }
+    }, [contentView, article, currentTranslation])
+
     // Sync summary language with content view
     useEffect(() => {
         if (!summarizeMutation.data) return
@@ -59,6 +76,12 @@ export function useArticleAI({
             setCurrentSummaryLanguage(targetLanguage)
             summarizeMutation.mutate({
                 articleId: article.id,
+                // Translated content only exists client-side (it isn't
+                // persisted), so it must be sent explicitly; original/
+                // extracted content is already on the backend.
+                ...(targetLanguage !== "original" && currentTranslation
+                    ? { content: currentTranslation.content }
+                    : {}),
                 languageKey: targetLanguage,
                 articleType: article.article_type,
             })
@@ -77,6 +100,7 @@ export function useArticleAI({
         // Data
         aiSummary: summarizeMutation.data?.summary || null,
         displayContent: activeContent,
+        displayArticle,
         translatedContent: currentTranslation?.content || null,
         translatedLanguage: currentTranslation?.language || null,
 
@@ -111,7 +135,13 @@ export function useArticleAI({
             setCurrentSummaryLanguage(languageKey)
             await summarizeMutation.mutateAsync({
                 articleId: article.id,
-                // Content is fetched by backend to save bandwidth
+                // Translated content only exists client-side (it isn't
+                // persisted), so it must be sent explicitly; for original/
+                // extracted content the backend already has it, so we omit
+                // it there to save bandwidth.
+                ...(languageKey !== "original" && currentTranslation
+                    ? { content: currentTranslation.content }
+                    : {}),
                 languageKey,
                 articleType: article.article_type,
             })
@@ -126,6 +156,9 @@ export function useArticleAI({
             setCurrentTranslation({
                 content: result.translated_content,
                 language: result.target_language,
+                title: result.translated_title ?? null,
+                description: result.translated_description ?? null,
+                tags: result.translated_tags ?? null,
             })
             setContentView(ContentView.Translated)
         },

@@ -550,12 +550,17 @@ export function useUnsaveArticle(
     void,
     unknown,
     { articleId: string; url: string },
-    { previousArticle: Article | undefined; previousReadLater: InfiniteData<{
-      items: ArticleSummary[];
-      next_cursor: string | null;
-      has_more: boolean;
-      total_count: number | null;
-    }> | undefined }
+    {
+      previousArticle: Article | undefined;
+      previousReadLater:
+        | InfiniteData<{
+            items: ArticleSummary[];
+            next_cursor: string | null;
+            has_more: boolean;
+            total_count: number | null;
+          }>
+        | undefined;
+    }
   >
 ) {
   const queryClient = useQueryClient();
@@ -573,12 +578,14 @@ export function useUnsaveArticle(
 
       // Snapshot previous state
       const previousArticle = queryClient.getQueryData<Article>(queryKeys.article(articleId));
-      const previousReadLater = queryClient.getQueryData<InfiniteData<{
-        items: ArticleSummary[];
-        next_cursor: string | null;
-        has_more: boolean;
-        total_count: number | null;
-      }>>(queryKeys.infiniteReadLater());
+      const previousReadLater = queryClient.getQueryData<
+        InfiniteData<{
+          items: ArticleSummary[];
+          next_cursor: string | null;
+          has_more: boolean;
+          total_count: number | null;
+        }>
+      >(queryKeys.infiniteReadLater());
 
       // Optimistically remove from read later list
       queryClient.setQueriesData({ queryKey: queryKeys.infiniteReadLater() }, (oldData: any) => {

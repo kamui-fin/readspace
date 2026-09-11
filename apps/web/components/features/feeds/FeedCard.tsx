@@ -161,12 +161,16 @@ export function FeedCard({
             />
 
             {/* Delete Confirmation Dialog */}
-            <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+            <AlertDialog
+                open={isDeleteConfirmOpen}
+                onOpenChange={setIsDeleteConfirmOpen}
+            >
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete Feed</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to delete "{feed.title}"? This action cannot be undone.
+                            Are you sure you want to delete "{feed.title}"? This
+                            action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

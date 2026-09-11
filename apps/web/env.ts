@@ -36,6 +36,7 @@ export const env = createEnv({
         NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY: z.string().optional(),
         NEXT_PUBLIC_POLAR_MONTHLY_CHECKOUT_URL: z.string().url().optional(),
         NEXT_PUBLIC_POLAR_YEARLY_CHECKOUT_URL: z.string().url().optional(),
+        NEXT_PUBLIC_APPLE_SERVICES_ID: z.string().optional(),
     },
 
     /**
@@ -61,5 +62,7 @@ export const env = createEnv({
             process.env.NEXT_PUBLIC_POLAR_MONTHLY_CHECKOUT_URL,
         NEXT_PUBLIC_POLAR_YEARLY_CHECKOUT_URL:
             process.env.NEXT_PUBLIC_POLAR_YEARLY_CHECKOUT_URL,
+        NEXT_PUBLIC_APPLE_SERVICES_ID:
+            process.env.NEXT_PUBLIC_APPLE_SERVICES_ID,
     },
 })

@@ -142,7 +142,9 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
             if (configResponse.status === 404) {
               throw new Error('Server endpoint not found (404). Verify the server URL is correct.');
             } else if (configResponse.status >= 500) {
-              throw new Error(`Server error (${configResponse.status}). The Readspace server may be down.`);
+              throw new Error(
+                `Server error (${configResponse.status}). The Readspace server may be down.`
+              );
             }
             throw new Error(`Server returned error status ${configResponse.status}`);
           }
@@ -229,8 +231,13 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
           if (!supabaseValidation.valid) {
             const error = supabaseValidation.error || 'Database connection failed';
             // Check if it's a network issue vs auth issue
-            if (error.toLowerCase().includes('network') || error.toLowerCase().includes('failed to fetch')) {
-              throw new Error(`Database connection failed: ${error}. Make sure your self-hosted Supabase is accessible.`);
+            if (
+              error.toLowerCase().includes('network') ||
+              error.toLowerCase().includes('failed to fetch')
+            ) {
+              throw new Error(
+                `Database connection failed: ${error}. Make sure your self-hosted Supabase is accessible.`
+              );
             }
             throw new Error(`Database connection failed: ${error}`);
           }

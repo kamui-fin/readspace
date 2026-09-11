@@ -14,6 +14,7 @@ import {
     FolderPlus,
     Search,
     Settings2,
+    Sparkles,
 } from "lucide-react"
 import Link from "next/link"
 import { FeedSearchCommand } from "./FeedSearchCommand"
@@ -184,6 +185,7 @@ export function SidebarMain() {
     const { isMobile, toggleSidebar } = useSidebarLeft()
 
     const mainNavItems: MainNavItem[] = [
+        { title: "Daily Digest", icon: Sparkles, url: "/codex" },
         { title: "Today", icon: Diamond, url: "/today" },
         { title: "Follow Sources", icon: Compass, url: "/discover" },
         { title: "Read Later", icon: BookmarkIcon, url: "/read-later" },

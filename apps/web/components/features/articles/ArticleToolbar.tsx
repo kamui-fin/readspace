@@ -312,41 +312,45 @@ export function ArticleToolbar({
                         </Tooltip>
                     )}
 
-                    {!isPreviewMode && !article.link?.startsWith("newsletter://") && (
-                        <DropdownMenu
-                            open={showLanguageSelector}
-                            onOpenChange={setShowLanguageSelector}
-                        >
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
-                                            disabled={isTranslating}
-                                        >
-                                            {isTranslating ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <Languages className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    {isTranslating
-                                        ? "Translating..."
-                                        : "Translate Article"}
-                                </TooltipContent>
-                            </Tooltip>
-                            <DropdownMenuContent align="end" className="w-56">
-                                <LanguageSelector
-                                    onSelect={handleTranslateClick}
-                                />
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
+                    {!isPreviewMode &&
+                        !article.link?.startsWith("newsletter://") && (
+                            <DropdownMenu
+                                open={showLanguageSelector}
+                                onOpenChange={setShowLanguageSelector}
+                            >
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
+                                                disabled={isTranslating}
+                                            >
+                                                {isTranslating ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Languages className="h-4 w-4" />
+                                                )}
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        {isTranslating
+                                            ? "Translating..."
+                                            : "Translate Article"}
+                                    </TooltipContent>
+                                </Tooltip>
+                                <DropdownMenuContent
+                                    align="end"
+                                    className="w-56"
+                                >
+                                    <LanguageSelector
+                                        onSelect={handleTranslateClick}
+                                    />
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
                 </TooltipProvider>
             </div>
         </div>

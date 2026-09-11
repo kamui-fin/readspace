@@ -42,6 +42,7 @@ This file does _not_ authorize any automated pushes to remote repositories. Huma
 - **One component per file.** If a file grows > 250 lines, split it into smaller components.
 - Keep components small: prefer composition over large `if/else` rendering logic.
 - Name folders with `snake-case` (note the hyphen, not underscore) for components (each component should have `index.tsx` file with implementation of component), `camelCase` for hooks/utils.
+- **Bottom sheets & Android back gesture:** every `BottomSheetModal` must dismiss on the hardware/gesture back press instead of letting it fall through to the screen underneath (which pops the whole screen, e.g. kicking the user out of an article instead of just closing its AI overview sheet). `BottomSheet` (`@components/ui/bottom-sheet`) and `Modal` (`@components/ui/modal`) already wire this up internally via `useBottomSheetBackHandler` (`@hooks/useBottomSheetBackHandler`) — building new sheets on top of those wrappers gets the fix for free, including your own `onChange` handler (it composes rather than replaces the internal one). Only wire the hook yourself if a sheet renders a raw `<BottomSheetModal>` directly (see `language-picker.dropdown.tsx` for the pattern: an internal ref merged with the forwarded ref, passed to both `ref` and the hook).
 - Exports: prefer named exports for components and hooks, default export only for `pages`/route components when required by router conventions.
 - For any API call, use hooks in `packages/shared` — do not create new fetch hooks unless strictly necessary and agreed by reviewer.
 - Imports should follow the format designated by the paths in `apps/universal/tsconfig.json` for concision and consistency, i.e., `@components/button`.
@@ -142,6 +143,7 @@ Load fonts via Expo recommended pattern (`expo-font` + `useFonts`) at app entry.
    - Import and use: `import { ExpandVertical } from '@components/icons/svg'`
 
 **Icon Styling & Theme Support**:
+
 - All custom SVG components accept a `color` prop for theming
 - In React Native, icons must receive explicit color values (not `currentColor` like web CSS)
 - Use the `useIconColor()` hook to get the current theme's foreground color
@@ -150,13 +152,14 @@ Load fonts via Expo recommended pattern (`expo-font` + `useFonts`) at app entry.
 - Always test icons in both light and dark theme — icons should be legible in both
 
 **Usage Pattern**:
+
 ```tsx
 import { useIconColor } from '@hooks/useIconColor';
 import { Sparkle, Language } from '@components/icons/svg';
 
 export function MyComponent() {
   const iconColor = useIconColor();
-  
+
   return (
     <>
       <Sparkle color={iconColor} width={20} height={20} />
@@ -167,11 +170,13 @@ export function MyComponent() {
 ```
 
 **Icon Size Guidelines**:
+
 - Inline/inline-text icons: 16-20px (in headers, search bars, buttons)
 - Standard UI icons: 24-32px (in lists, cards, tab bars)
 - Large/prominent icons: 40-48px (hero sections, empty states)
 
 **Known Custom Icons**:
+
 - `ExpandVertical`, `ExpandVerticalAlt` — for expand/collapse interactions
 - `Language` — for language/translate actions (use this, not Solar.Globe)
 - `ReadspaceLogo` — Readspace branding

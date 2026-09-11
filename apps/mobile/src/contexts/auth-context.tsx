@@ -1,13 +1,13 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { configureApiClient } from '@lib/api-client';
 import { supabase } from '@lib/supabase/client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiClient } from '@readspace/shared';
 import { useFeedSwitcherStore } from '@stores/feed-switcher';
 import { useFeedViewStore } from '@stores/feed-view';
 import { useFollowingStore } from '@stores/following';
 import { useOnboardingStore } from '@stores/onboarding';
 import { useSearchHistory } from '@stores/search-history';
-import { useSettingsStore } from '@stores/settings';
+import { useHasSettingsHydrated, useSettingsStore } from '@stores/settings';
 import type { Session, User } from '@supabase/supabase-js';
 import { useRouter, useSegments } from 'expo-router';
 import type React from 'react';
@@ -37,6 +37,11 @@ interface AuthContextType {
     credentials: SignUpCredentials
   ) => Promise<{ user: User | null; session: Session | null }>;
   signInWithGoogle: (idToken: string, accessToken: string) => Promise<void>;
+  signInWithApple: (
+    identityToken: string,
+    nonce: string,
+    fullName?: { givenName?: string | null; familyName?: string | null } | null
+  ) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -51,6 +56,7 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => {},
   signUp: async () => ({ user: null, session: null }),
   signInWithGoogle: async () => {},
+  signInWithApple: async () => {},
 });
 
 export function useSession() {
@@ -78,8 +84,19 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const isInitializing = useRef(true);
 
   const currentInstanceType = useSettingsStore((state) => state.settings.instance_type);
+  const hasSettingsHydrated = useHasSettingsHydrated();
 
   useEffect(() => {
+    // Don't touch Supabase until AsyncStorage rehydration has resolved the real
+    // instance settings — otherwise we'd check a session against the hardcoded
+    // cloud defaults, resolve "logged out", and briefly redirect to (auth)
+    // before the corrected settings land and bounce us back. isLoading stays
+    // true (its initial value) the whole time, so the splash screen holds.
+    if (!hasSettingsHydrated) {
+      console.log('[AuthContext] ⏳ Waiting for settings to hydrate before initializing...');
+      return;
+    }
+
     console.log('[AuthContext] 🚀 Starting initialization...');
 
     const initializeAuth = async () => {
@@ -176,7 +193,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [currentInstanceType]);
+  }, [currentInstanceType, hasSettingsHydrated]);
 
   // Handle explicit navigation after session state changes
   // This ensures the router properly transitions out of (auth) routes
@@ -254,6 +271,42 @@ export function SessionProvider({ children }: SessionProviderProps) {
     // check is_onboarded to determine if onboarding should be triggered
   };
 
+  const signInWithApple = async (
+    identityToken: string,
+    nonce: string,
+    fullName?: { givenName?: string | null; familyName?: string | null } | null
+  ) => {
+    // Don't set isNewSignup here — we'll determine it from the server profile
+    // after onAuthStateChange fires with SIGNED_IN event
+    const { error } = await supabase.auth.signInWithIdToken({
+      provider: 'apple',
+      token: identityToken,
+      nonce,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // Apple's identity token never carries the user's name, and Apple only
+    // hands it to us out-of-band on the very first authorization — every
+    // later sign-in (even from the same device) returns null here. Persist
+    // it to user_metadata now or it's gone for good.
+    if (fullName?.givenName || fullName?.familyName) {
+      const full_name = [fullName.givenName, fullName.familyName].filter(Boolean).join(' ');
+      await supabase.auth.updateUser({
+        data: {
+          full_name,
+          given_name: fullName.givenName,
+          family_name: fullName.familyName,
+        },
+      });
+    }
+
+    // Note: The onAuthStateChange listener will handle session updates and
+    // check is_onboarded to determine if onboarding should be triggered
+  };
+
   const value: AuthContextType = {
     user,
     session,
@@ -266,6 +319,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     signIn,
     signUp,
     signInWithGoogle,
+    signInWithApple,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

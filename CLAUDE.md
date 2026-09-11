@@ -335,6 +335,7 @@ Match CI locally before pushing: `poe lint && poe format && poe test-unit` in `s
   }
   ```
 - **Component-level mutations**: Use `.mutateAsync()` with `toast.promise()` instead of `.mutate()` with callbacks — this ensures UI feedback waits for cache to sync
+
   ```typescript
   // ✅ Correct: toast waits for invalidations
   toast.promise(updateFeed.mutateAsync({ feedId, data }), {
@@ -344,10 +345,14 @@ Match CI locally before pushing: `poe lint && poe format && poe test-unit` in `s
   });
 
   // ❌ Wrong: .mutate() doesn't await invalidations
-  updateFeed.mutate({ feedId, data }, {
-    onSuccess: () => toast.success('Updated'),
-  });
+  updateFeed.mutate(
+    { feedId, data },
+    {
+      onSuccess: () => toast.success('Updated'),
+    }
+  );
   ```
+
 - **Optimistic updates**: For mutations that modify lists (save, delete, move), add `onMutate` with rollback on `onError` for instant UI feedback
   ```typescript
   onMutate: async ({ articleId }) => {
@@ -364,6 +369,7 @@ Match CI locally before pushing: `poe lint && poe format && poe test-unit` in `s
 - **Avoid `.mutate()` with `onSuccess`**: It doesn't wait for `onSettled` invalidations, causing race conditions
 
 **Common regressions to avoid**:
+
 - Missing invalidation of dependent queries (e.g., favorite toggle missing unread count refresh)
 - Non-blocking mutations (`.mutate()` without awaiting invalidations)
 - Invalidations in components instead of hooks (spreads logic, easy to miss)

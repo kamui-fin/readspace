@@ -8,9 +8,10 @@ import {
   BottomSheetModal,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
+import { useBottomSheetBackHandler } from '@hooks/useBottomSheetBackHandler';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { forwardRef, useCallback, useEffect, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -44,6 +45,22 @@ export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
     const insets = useSafeAreaInsets();
+
+    // Merge the forwarded ref with an internal one so the back-handler hook always has an
+    // instance to dismiss, regardless of whether the consumer passed an object or callback ref.
+    const sheetRef = useRef<BottomSheetModal>(null);
+    const setRefs = useCallback(
+      (instance: BottomSheetModal | null) => {
+        sheetRef.current = instance;
+        if (typeof ref === 'function') {
+          ref(instance);
+        } else if (ref) {
+          ref.current = instance;
+        }
+      },
+      [ref]
+    );
+    const { handleSheetPositionChange } = useBottomSheetBackHandler(sheetRef);
 
     // Internal state for selection before confirming
     const [selectedLanguage, setSelectedLanguage] = useState<string | null>(
@@ -101,7 +118,8 @@ export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(
 
     return (
       <BottomSheetModal
-        ref={ref}
+        ref={setRefs}
+        onChange={handleSheetPositionChange}
         snapPoints={['50%']}
         enableDynamicSizing={false}
         enablePanDownToClose

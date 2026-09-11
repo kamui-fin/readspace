@@ -59,10 +59,19 @@ export function getSupabaseClient(supabaseUrl?: string, supabaseAnonKey?: string
 /**
  * Reset the Supabase client singleton.
  * This should be called when switching instances to force recreation with new settings.
- * Note: This will invalidate any active subscriptions!
+ * Note: With clearSessions (the default), this will invalidate any active subscriptions!
+ *
+ * clearSessions: false is used when settling into a persisted setting on cold start
+ * (e.g. AsyncStorage rehydration resolving to self-hosted) — there is no instance
+ * switch to isolate against, and wiping storage here would delete the very session
+ * we're trying to restore.
  */
-export async function resetSupabaseClient() {
-  console.log('[Supabase] Resetting client and clearing all session keys');
+export async function resetSupabaseClient({
+  clearSessions = true,
+}: {
+  clearSessions?: boolean;
+} = {}) {
+  console.log('[Supabase] Resetting client', clearSessions ? 'and clearing all session keys' : '');
   if (supabaseClient) {
     try {
       supabaseClient.auth.stopAutoRefresh();
@@ -71,6 +80,7 @@ export async function resetSupabaseClient() {
     }
     supabaseClient = null;
   }
+  if (!clearSessions) return;
   // Clear all possible session storage keys to prevent session leakage
   try {
     await AsyncStorage.multiRemove([
@@ -132,13 +142,26 @@ AppState.addEventListener('change', (state) => {
 
 // Reset the Supabase client only when instance_type actually changes
 if (typeof useSettingsStore !== 'undefined') {
-  let previousInstanceType: string | undefined = undefined;
+  let hasSeenHydration = false;
+  let previousInstanceType: string | undefined;
   useSettingsStore.subscribe((state) => {
+    // Ignore updates until AsyncStorage rehydration has resolved — the store's
+    // in-memory default is 'cloud' until then, so acting on it early would
+    // (a) permanently cache a client built from stale defaults and (b) treat
+    // the persisted value settling in as a "switch" once hydration does land.
+    if (!state._hasHydrated) return;
+
     const currentInstanceType = state.settings.instance_type;
 
-    // Skip reset on first subscription call (initialization)
-    if (previousInstanceType === undefined) {
+    if (!hasSeenHydration) {
+      // First observed post-hydration state: this is disk state catching up,
+      // not a user action. Rebuild the client against it, but don't wipe
+      // session storage — that would delete the session we're trying to restore.
+      hasSeenHydration = true;
       previousInstanceType = currentInstanceType;
+      resetSupabaseClient({ clearSessions: false }).catch((e) => {
+        console.error('[Supabase] Error resetting client after hydration:', e);
+      });
       return;
     }
 
@@ -148,8 +171,6 @@ if (typeof useSettingsStore !== 'undefined') {
       resetSupabaseClient().catch((e) => {
         console.error('[Supabase] Error resetting client:', e);
       });
-    } else {
-      previousInstanceType = currentInstanceType;
     }
   });
 }

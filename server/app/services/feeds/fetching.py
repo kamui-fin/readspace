@@ -9,6 +9,7 @@ from app.core import redis_cache
 from app.core.constants import (
     BROWSER_USER_AGENT,
     DEFAULT_RSS_TIMEOUT,
+    FEED_CACHE_TTL,
     FEED_CONTENT_CACHE_PREFIX,
     HTTP_CLIENT_POOL_LIMITS,
 )
@@ -16,8 +17,6 @@ from app.utils.urls import transform_rsshub_url
 
 logger = structlog.get_logger(__name__)
 
-# 30 minutes cache for feed content
-FEED_CACHE_TTL = 1800
 # 50MB limit for feed content
 MAX_FEED_SIZE_BYTES = 50 * 1024 * 1024
 
@@ -83,22 +82,10 @@ async def fetch_feed_content(
 ) -> FetchResult:
     """Fetch feed content with conditional headers, caching, and delta support."""
 
-    # 1. Check Cache (only if not conditional fetch, or maybe we can cache conditional too?)
-    # If we are doing a refresh (etag/last_modified provided), we probably want to hit the server
-    # to check for updates. But if we are just adding a feed, we might hit cache.
-    # User feedback: "ttl 30 min to avoid hammering feeds".
-
-    # We use a simple strategy:
-    # If it's a "fresh" fetch (no etag/last_modified), check cache.
-    # If it's a refresh (has etag/last_modified), we skip cache to ensure we get updates,
-    # BUT we could arguably respect cache if it's very fresh.
-    # For now, let's respect the user's wish to avoid hammering and check cache if available.
-
+    # Cache is only consulted on a "fresh" fetch (no etag/last_modified). A refresh
+    # always hits the server so conditional headers can pick up updates.
     cache_key = f"{FEED_CONTENT_CACHE_PREFIX}{url}"
 
-    # Only use cache if NOT doing a conditional check (or if we decide 30min is acceptable lag even for refreshes)
-    # The user said "ttl 30 min to avoid hammering feeds". This implies we should respect the cache
-    # even for refreshes, effectively rate limiting our checks to once every 30 mins per feed.
     if not etag and not last_modified:
         cached = await redis_cache.get(cache_key)
         if cached:

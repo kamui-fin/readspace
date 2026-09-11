@@ -1,0 +1,30 @@
+{
+  "projectId": "1569f9a3-0150-4f2b-a4a4-f7f9545a38e0",
+  "shape": "package",
+  "pkg": "@readspace/web",
+  "globalName": "ReadspaceUI",
+  "srcDir": "components/ui",
+  "tsconfig": ".design-sync-shims/tsconfig.json",
+  "cssEntry": ".design-sync-shims/readspace-tokens.css",
+  "componentSrcMap": {
+    "Button": "components/ui/button.tsx",
+    "Card": "components/ui/card.tsx",
+    "Input": "components/ui/input.tsx",
+    "Badge": "components/ui/badge.tsx",
+    "Tabs": "components/ui/tabs.tsx"
+  },
+  "dtsPropsFor": {
+    "Button": "/** Visual style. @default \"default\" */\n  variant?: \"default\" | \"destructive\" | \"outline\" | \"secondary\" | \"ghost\" | \"link\";\n  /** Control size. @default \"default\" */\n  size?: \"default\" | \"sm\" | \"lg\" | \"icon\";\n  /** Render as the child element (Radix Slot) instead of a <button>. @default false */\n  asChild?: boolean;\n  className?: string;\n  children?: React.ReactNode;\n  disabled?: boolean;\n  type?: \"button\" | \"submit\" | \"reset\";\n  onClick?: React.MouseEventHandler<HTMLButtonElement>;",
+    "Card": "/** Card is a compound: Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter. */\n  className?: string;\n  children?: React.ReactNode;",
+    "Input": "/** Native <input> type. `search` and `file` get extra styling. */\n  type?: React.HTMLInputTypeAttribute;\n  placeholder?: string;\n  value?: string;\n  defaultValue?: string;\n  disabled?: boolean;\n  /** Marks the field invalid; adds a destructive ring + border. */\n  \"aria-invalid\"?: boolean;\n  className?: string;\n  onChange?: React.ChangeEventHandler<HTMLInputElement>;",
+    "Badge": "/** Visual style. @default \"default\" */\n  variant?: \"default\" | \"secondary\" | \"destructive\" | \"orange\" | \"success\" | \"accent\" | \"outline\";\n  className?: string;\n  children?: React.ReactNode;",
+    "Tabs": "/** Tabs is a compound: Tabs (root), TabsList, TabsTrigger, TabsContent (Radix Tabs). */\n  /** Controlled active tab value. */\n  value?: string;\n  /** Uncontrolled initial active tab value. */\n  defaultValue?: string;\n  onValueChange?: (value: string) => void;\n  orientation?: \"horizontal\" | \"vertical\";\n  className?: string;\n  children?: React.ReactNode;"
+  },
+  "overrides": {
+    "Tabs": {
+      "cardMode": "column"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md",
+  "entry": "apps/web/.design-sync-shims/entry.ts"
+}

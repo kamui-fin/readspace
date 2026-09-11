@@ -4,7 +4,7 @@ import { Avatar } from '@components/ui/avatar';
 import { useSession } from '@contexts/auth-context';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { CompassIcon } from '@solar-icons/react-native/bold';
+import { CompassIcon, StarsIcon } from '@solar-icons/react-native/bold';
 import { NotesIcon } from '@solar-icons/react-native/bold-duotone';
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
@@ -28,6 +28,16 @@ export default function TabsLayout() {
           tabBarLabel: 'Following',
           tabBarIcon: ({ color, size, focused }) => (
             <TabBarIcon component={NotesIcon} size={size} color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="codex"
+        options={{
+          title: 'Daily Digest',
+          tabBarLabel: 'Digest',
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabBarIcon component={StarsIcon} size={size} color={color} focused={focused} />
           ),
         }}
       />

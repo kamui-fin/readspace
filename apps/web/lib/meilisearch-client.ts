@@ -16,7 +16,8 @@ import { env } from "@/env"
 // ============================================================================
 
 export const MEILISEARCH_URL = env.NEXT_PUBLIC_MEILISEARCH_URL
-export const MEILISEARCH_SEARCH_KEY = env.NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY || ""
+export const MEILISEARCH_SEARCH_KEY =
+    env.NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY || ""
 
 if (!MEILISEARCH_SEARCH_KEY) {
     console.warn(
@@ -113,14 +114,21 @@ function transformPopularCategoryFilter(request: SearchRequest): SearchRequest {
             return filters.flatMap((f) => {
                 if (typeof f === "string") {
                     if (f.includes("popular")) {
-                        return POPULAR_CATEGORIES.map((cat) => `top_level_category:${cat}`)
+                        return POPULAR_CATEGORIES.map(
+                            (cat) => `top_level_category:${cat}`
+                        )
                     }
                     return [f]
                 }
                 if (Array.isArray(f)) {
                     const transformed = f.flatMap((item: string) => {
-                        if (typeof item === "string" && item.includes("popular")) {
-                            return POPULAR_CATEGORIES.map((cat) => `top_level_category:${cat}`)
+                        if (
+                            typeof item === "string" &&
+                            item.includes("popular")
+                        ) {
+                            return POPULAR_CATEGORIES.map(
+                                (cat) => `top_level_category:${cat}`
+                            )
                         }
                         return [item]
                     })

@@ -46,20 +46,20 @@ export function buildOnboardingFeedQueries(
 ): MeilisearchQuery[] {
   return categories.map((category) => ({
     indexUid,
-    q: "",
+    q: '',
     filter: `top_level_category = "${category}" AND language = "en"`,
     limit,
-    sort: ["frontend_rank_override:asc", "popularity_score:desc"],
+    sort: ['frontend_rank_override:asc', 'popularity_score:desc'],
     attributesToRetrieve: [
-      "id",
-      "title",
-      "description",
-      "url",
-      "link",
-      "image_url",
-      "top_level_category",
-      "popularity_score",
-      "frontend_rank_override",
+      'id',
+      'title',
+      'description',
+      'url',
+      'link',
+      'image_url',
+      'top_level_category',
+      'popularity_score',
+      'frontend_rank_override',
     ],
   }));
 }

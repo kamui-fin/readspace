@@ -32,7 +32,11 @@ export default function FooterSection() {
                             aria-label="go home"
                             className="block size-fit"
                         >
-                            <Logo showText={true} iconSize={32} textSize="text-base" />
+                            <Logo
+                                showText={true}
+                                iconSize={32}
+                                textSize="text-base"
+                            />
                         </Link>
                     </div>
 

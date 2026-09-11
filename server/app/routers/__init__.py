@@ -10,6 +10,7 @@ from app.routers.articles.articles_enhancements import (
     router as articles_enhancements_router,
 )
 from app.routers.articles.articles_views import router as articles_views_router
+from app.routers.codex import router as codex_router
 
 # Top-level routers (already have prefixes)
 from app.routers.discover import router as discover_router
@@ -58,5 +59,8 @@ api_router.include_router(feeds_refresh_router, prefix="/feeds", tags=["Feeds"])
 # Include OPML routers with prefix
 api_router.include_router(opml_import_router, prefix="/opml", tags=["OPML"])
 api_router.include_router(opml_task_management_router, prefix="/opml", tags=["OPML"])
+
+# Include Codex Digest router with prefix
+api_router.include_router(codex_router, prefix="/codex", tags=["Codex"])
 
 __all__ = ["api_router"]

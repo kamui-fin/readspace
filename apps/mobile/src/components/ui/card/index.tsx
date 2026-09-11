@@ -303,7 +303,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
 
             {/* Bottom Meta Row */}
             <View className="mt-auto flex-row items-center justify-between pt-1">
-              <View className="flex-row items-center gap-1.5 flex-1 mr-2">
+              <View className="mr-2 flex-1 flex-row items-center gap-1.5">
                 {(faviconUrl || feedName) && (
                   <FeedIcon
                     url={faviconUrl}
