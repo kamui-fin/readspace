@@ -15,9 +15,9 @@ interface RailCardProps {
  * The panel shared by the digest's small stat cards ("This issue", "Condensed", "Trends") —
  * web sinks these into a sidebar rail; mobile has one scrolling column, so they render as
  * plain blocks in that column instead. No border — a hairline outline read as fussy at this
- * size. Instead: a faint secondary tint for the fill, and `boxShadow` (Fabric's cross-platform
- * CSS shadow, so this actually renders on Android too, unlike `shadow*`+`elevation`) tinted
- * the same secondary green instead of black, for a soft lift rather than a hard drop shadow.
+ * size. Just a faint secondary tint for the fill. (Previously also carried a `boxShadow` for
+ * a soft lift, but its downward offset rendered as a stray hard line along the bottom edge in
+ * dark mode, reading as an unwanted border rather than a lift — dropped instead of tuned.)
  */
 export function RailCard({ title, children, style }: RailCardProps) {
   const isDark = useIsDarkMode();
@@ -29,7 +29,6 @@ export function RailCard({ title, children, style }: RailCardProps) {
       style={[
         {
           backgroundColor: `${colors.secondary}${isDark ? '14' : '0A'}`,
-          boxShadow: `0px 2px 12px ${colors.secondary}${isDark ? '1F' : '17'}`,
         },
         style,
       ]}>
