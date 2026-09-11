@@ -154,6 +154,67 @@ pre {
     overflow-wrap: break-word;
 }
 
+/* AI Highlights (Skim Mode) — invisible until an ancestor carries .rs-highlights-enabled,
+   so the <mark> tags can be baked into the article HTML once and toggled with a class
+   flip alone (no re-render). See PRD §2.3 for the sweep-animation design. */
+.article-content mark.rs-highlight {
+    --rs-highlight-alpha: 45%;
+    --rs-highlight-color: color-mix(
+        in srgb,
+        var(--color-secondary) var(--rs-highlight-alpha),
+        transparent
+    );
+    background-color: transparent;
+    background-image: none;
+    color: inherit;
+    padding: 0;
+    border-radius: 3px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+}
+
+.article-content mark.rs-highlight[data-rank="2"] {
+    --rs-highlight-alpha: 26%;
+}
+
+.dark .article-content mark.rs-highlight {
+    --rs-highlight-alpha: 58%;
+}
+
+.dark .article-content mark.rs-highlight[data-rank="2"] {
+    --rs-highlight-alpha: 36%;
+}
+
+.rs-highlights-enabled mark.rs-highlight {
+    background-image: linear-gradient(
+        90deg,
+        var(--rs-highlight-color) 0%,
+        var(--rs-highlight-color) 100%
+    );
+    background-repeat: no-repeat;
+    background-size: 0% 100%;
+    background-position: left center;
+    padding: 0 1px;
+    animation: rs-highlight-sweep 320ms ease-out forwards;
+    animation-delay: calc(var(--rs-highlight-index, 0) * 30ms);
+}
+
+@keyframes rs-highlight-sweep {
+    from {
+        background-size: 0% 100%;
+    }
+    to {
+        background-size: 100% 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rs-highlights-enabled mark.rs-highlight {
+        animation: none;
+        background-size: 100% 100%;
+    }
+}
+
 @media (max-width: 768px) {
     .article-content {
         overflow-x: hidden !important;

@@ -5,9 +5,11 @@ Functional AI Service: Summarization and Translation.
 import hashlib
 import json
 import re
+from difflib import SequenceMatcher
 from functools import lru_cache
 from typing import Any
 
+import nh3
 import structlog
 from google import genai
 from google.genai import types
@@ -16,13 +18,63 @@ from app.core import redis_cache
 from app.core.config import get_settings
 from app.core.constants import (
     AI_CACHE_TTL,
+    HIGHLIGHT_TEXT_INTEGRITY_MIN_SIMILARITY,
     MAX_AI_INPUT_CHARS,
     SUMMARY_MAX_OUTPUT_TOKENS,
     SUMMARY_TEMPERATURE,
 )
-from app.services.ai.prompts import SUMMARY_SYSTEM_PROMPT, get_translation_system_prompt
+from app.services.ai.prompts import SUMMARY_SYSTEM_PROMPT, get_highlight_system_prompt, get_translation_system_prompt
 from app.typing.common import LanguageCode
 from app.utils.text import clean_html_text
+
+# nh3 allowlist for AI Highlights output: article HTML tags plus <mark> for highlights.
+# Kept intentionally permissive on structure (the model must not alter it) but strict on
+# attributes to close off prompt-injection attempts to emit script/style/event-handler content.
+HIGHLIGHT_ALLOWED_TAGS = {
+    "a",
+    "b",
+    "blockquote",
+    "br",
+    "code",
+    "div",
+    "em",
+    "figcaption",
+    "figure",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "hr",
+    "i",
+    "img",
+    "li",
+    "mark",
+    "ol",
+    "p",
+    "pre",
+    "span",
+    "strong",
+    "sub",
+    "sup",
+    "table",
+    "tbody",
+    "td",
+    "tfoot",
+    "th",
+    "thead",
+    "tr",
+    "u",
+    "ul",
+}
+
+HIGHLIGHT_ALLOWED_ATTRIBUTES = {
+    "a": {"href", "title", "target"},
+    "img": {"src", "alt", "title", "width", "height"},
+    "mark": {"class", "data-rank"},
+    "*": {"class"},
+}
 
 logger = structlog.get_logger(__name__)
 
@@ -111,6 +163,94 @@ async def translate_content(content: str, target_lang_code: str) -> str | None:
         result = re.sub(r"^```(?:html)?\n|\n```$", "", result.strip(), flags=re.MULTILINE)
         await redis_cache.set(cache_key, result, ttl_seconds=AI_CACHE_TTL)
         return result
+
+
+async def generate_highlights(content: str, article_id: str, language_key: str = "original") -> str | None:
+    """Generate AI Highlights (skim mode): the same HTML with <mark> tags inserted, with caching."""
+    client = _get_client()
+    if not client:
+        return None
+
+    truncated = content[:MAX_AI_INPUT_CHARS]
+
+    # Cache key based on article_id and language_key (mirrors generate_summary), NOT content
+    # hash — highlights don't vary by "target language" the way translation does, but they do
+    # need to be cached independently for a translated view of the same article.
+    cache_key = f"highlights:{article_id}:{language_key}"
+    if cached := await redis_cache.get(cache_key):
+        return cached
+
+    result = await _call_gemini(
+        client,
+        prompt=truncated,
+        system_instruction=get_highlight_system_prompt(),
+        max_tokens=6000,
+        temperature=0.2,
+    )
+
+    if not result:
+        return None
+
+    result = re.sub(r"^```(?:html)?\n|\n```$", "", result.strip(), flags=re.MULTILINE)
+
+    if not _highlights_preserve_text(original_html=truncated, candidate_html=result):
+        logger.warning("Discarding AI highlights: text integrity check failed", article_id=article_id)
+        return None
+
+    # The model is only asked to add data-rank (see get_highlight_system_prompt) — it can't be
+    # trusted to also remember a literal "rs-highlight" class on every tag, and the frontend CSS
+    # keys off that class, so stamp it on here rather than relying on the model to include it.
+    result = _add_highlight_class(result)
+
+    sanitized = nh3.clean(
+        result,
+        tags=HIGHLIGHT_ALLOWED_TAGS,
+        attributes=HIGHLIGHT_ALLOWED_ATTRIBUTES,
+        link_rel="noopener noreferrer",
+    )
+
+    await redis_cache.set(cache_key, sanitized, ttl_seconds=AI_CACHE_TTL)
+    return sanitized
+
+
+def _inject_highlight_class(match: re.Match[str]) -> str:
+    """re.sub callback: add class="rs-highlight" to a <mark> tag's attributes if missing."""
+    attrs = match.group(1)
+    class_match = re.search(r'class\s*=\s*"([^"]*)"', attrs)
+    if not class_match:
+        return f'<mark class="rs-highlight"{attrs}>'
+    if "rs-highlight" in class_match.group(1).split():
+        return match.group(0)
+    new_attrs = attrs[: class_match.start(1)] + class_match.group(1) + " rs-highlight" + attrs[class_match.end(1) :]
+    return f"<mark{new_attrs}>"
+
+
+def _add_highlight_class(html_content: str) -> str:
+    """Ensure every <mark> tag carries class="rs-highlight", adding it if missing and
+    appending to an existing class attribute otherwise (the model is never asked to add it)."""
+    return re.sub(r"<mark((?:\s+[^<>]*)?)>", _inject_highlight_class, html_content)
+
+
+def _strip_mark_tags(html_content: str) -> str:
+    """Remove <mark>/</mark> wrapper tags while leaving their contents in place."""
+    return re.sub(r"</?mark[^>]*>", "", html_content)
+
+
+def _highlights_preserve_text(original_html: str, candidate_html: str) -> bool:
+    """
+    Word-level integrity check: the model's response must contain the same words as the
+    original, modulo the <mark> tags it was asked to insert. Guards against hallucinated
+    rewrites reaching the reader (see PRD §3.4) — a missing paragraph or reworded sentence
+    would silently corrupt the article, unlike a bad translation, which is obvious.
+    """
+    original_words = clean_html_text(original_html).split()
+    candidate_words = clean_html_text(_strip_mark_tags(candidate_html)).split()
+
+    if not original_words or not candidate_words:
+        return False
+
+    similarity = SequenceMatcher(None, original_words, candidate_words).ratio()
+    return similarity >= HIGHLIGHT_TEXT_INTEGRITY_MIN_SIMILARITY
 
 
 def get_metadata_translation_system_prompt(target_lang: str) -> str:

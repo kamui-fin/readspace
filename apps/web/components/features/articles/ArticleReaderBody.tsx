@@ -13,9 +13,11 @@ const READER_SERIF =
 function NewsletterIframe({
     content,
     isDark,
+    highlightsEnabled = false,
 }: {
     content: string
     isDark: boolean
+    highlightsEnabled?: boolean
 }) {
     const iframeRef = useRef<HTMLIFrameElement>(null)
 
@@ -45,6 +47,7 @@ function NewsletterIframe({
                         }
                     }
 
+                    // Initial height set
                     updateHeight()
 
                     if (window.ResizeObserver) {
@@ -99,7 +102,7 @@ function NewsletterIframe({
                   background-color: #ededed !important; /* Inverts to #121212 */
                 }
 
-                img, video, svg, .no-invert {
+                img, video, svg, .no-invert, mark.rs-highlight {
                   filter: invert(1) hue-rotate(180deg) !important;
                 }
               `
@@ -122,10 +125,44 @@ function NewsletterIframe({
                   color: #010101 !important;
                 }
               }
+
+              /* AI Highlights (Skim Mode) — brand green tint, invisible until toggled on */
+              mark.rs-highlight {
+                background-color: transparent;
+                background-image: none;
+                color: inherit;
+                padding: 0;
+                border-radius: 3px;
+                box-decoration-break: clone;
+                -webkit-box-decoration-break: clone;
+              }
+              .rs-highlights-enabled mark.rs-highlight {
+                --rs-highlight-color: color-mix(in srgb, #6a994e ${isDark ? "58%" : "45%"}, transparent);
+                background-image: linear-gradient(90deg, var(--rs-highlight-color) 0%, var(--rs-highlight-color) 100%);
+                background-repeat: no-repeat;
+                background-size: 0% 100%;
+                background-position: left center;
+                padding: 0 1px;
+                animation: rs-highlight-sweep 320ms ease-out forwards;
+                animation-delay: calc(var(--rs-highlight-index, 0) * 30ms);
+              }
+              .rs-highlights-enabled mark.rs-highlight[data-rank="2"] {
+                --rs-highlight-color: color-mix(in srgb, #6a994e ${isDark ? "36%" : "26%"}, transparent);
+              }
+              @keyframes rs-highlight-sweep {
+                from { background-size: 0% 100%; }
+                to   { background-size: 100% 100%; }
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .rs-highlights-enabled mark.rs-highlight {
+                  animation: none;
+                  background-size: 100% 100%;
+                }
+              }
             </style>
           </head>
           <body>
-            <div id="mail-content-root" style="display: flow-root;">
+            <div id="mail-content-root" class="${highlightsEnabled ? "rs-highlights-enabled" : ""}" style="display: flow-root;">
               ${content}
             </div>
           </body>
@@ -170,6 +207,7 @@ interface ArticleReaderBodyProps {
     onDismissAiSummary?: () => void
     /** True while the article body is loading / being extracted / translated. */
     isBusy?: boolean
+    highlightsEnabled?: boolean
     /** True while a translation is in flight — skeletons the title (which changes on translate,
      *  unlike extraction/loading). */
     isTranslating?: boolean
@@ -197,7 +235,21 @@ export function ArticleReaderBody({
     onDismissAiSummary,
     isBusy = false,
     isTranslating = false,
+    highlightsEnabled = false,
 }: ArticleReaderBodyProps) {
+    const contentRef = useRef<HTMLDivElement>(null)
+    useEffect(() => {
+        if (!highlightsEnabled) return
+        contentRef.current
+            ?.querySelectorAll<HTMLElement>(".rs-highlight")
+            .forEach((mark, i) => {
+                mark.style.setProperty(
+                    "--rs-highlight-index",
+                    String(Math.min(i, 20))
+                )
+            })
+    }, [highlightsEnabled, displayContent, isBusy])
+
     return (
         <ProseContainer>
             <ArticleHeader
@@ -234,10 +286,16 @@ export function ArticleReaderBody({
                         <NewsletterIframe
                             content={displayContent}
                             isDark={isDark}
+                            highlightsEnabled={highlightsEnabled}
                         />
                     ) : (
                         <div
-                            className="text-xl leading-relaxed"
+                            className={
+                                highlightsEnabled
+                                    ? "text-xl leading-relaxed rs-highlights-enabled"
+                                    : "text-xl leading-relaxed"
+                            }
+                            ref={contentRef}
                             style={{ fontFamily: READER_SERIF }}
                         >
                             <div

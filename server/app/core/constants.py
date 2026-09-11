@@ -90,6 +90,7 @@ DEFAULT_AI_MAX_TOKENS = 1000  # Default maximum tokens for AI responses
 MAX_COMPOSITE_TEXT_LENGTH = 1000  # Maximum length for composite text in AI processing
 MAX_AI_SUMMARIZATION_CONTENT_BYTES = 100 * 1024  # Maximum content size for summarization (100KB)
 MAX_AI_TRANSLATION_CONTENT_BYTES = 50 * 1024  # Maximum content size for translation (50KB)
+MAX_AI_HIGHLIGHT_CONTENT_BYTES = 50 * 1024  # Maximum content size for AI highlights (50KB)
 MAX_AI_INPUT_CHARS = 15000  # Maximum characters for AI input
 
 # Article Summarization ("The Gist")
@@ -142,6 +143,10 @@ CODEX_MAX_IMAGE_PROBES = CODEX_MAX_STRIP_IMAGES + 1
 CODEX_IMAGE_PROBE_BYTES = 65536  # Ranged GET size — enough for the header of any common format
 CODEX_IMAGE_PROBE_TIMEOUT = 4.0  # Per-image probe timeout (seconds)
 CODEX_IMAGE_PROBE_CONCURRENCY = 8  # asyncio.Semaphore bound on the probe fan-out
+
+# AI Highlights (Skim Mode)
+HIGHLIGHT_TEXT_INTEGRITY_MIN_SIMILARITY = 0.85  # Min word-level similarity to accept AI highlight output
+
 
 # Common Error Messages
 ERROR_FEED_NOT_FOUND = "Feed not found"

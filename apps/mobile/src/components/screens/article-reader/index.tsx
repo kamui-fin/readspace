@@ -33,6 +33,8 @@ export interface ArticleReaderProps {
   lastScrollY: SharedValue<number>;
   scrollDirection: SharedValue<'up' | 'down'>;
   isLoadingContent?: boolean;
+  highlightedContent?: string | null;
+  highlightsEnabled?: boolean;
 }
 
 export function ArticleReader({
@@ -41,6 +43,8 @@ export function ArticleReader({
   lastScrollY,
   scrollDirection,
   isLoadingContent = false,
+  highlightedContent,
+  highlightsEnabled = false,
 }: ArticleReaderProps) {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
@@ -132,8 +136,10 @@ export function ArticleReader({
 
   // Remove the first image from HTML content if it matches the featured image
   const cleanedContent = useMemo(() => {
-    // Use the content prop which respects the view mode selection (original/extracted/translated)
-    const contentToUse = article.content;
+    // Use the content prop which respects the view mode selection (original/extracted/translated).
+    // Once AI Highlights are generated for this view, the marked-up HTML is baked in permanently —
+    // visibility toggles afterward are a CSS class flip via injectedJavaScript, not a content swap.
+    const contentToUse = highlightedContent || article.content;
 
     if (!contentToUse || !article.image_url) {
       return contentToUse;
@@ -158,7 +164,7 @@ export function ArticleReader({
     });
 
     return content;
-  }, [article.extracted_content, article.content, article.image_url]);
+  }, [article.extracted_content, article.content, article.image_url, highlightedContent]);
 
   // Handle dark mode / theme change inside WebView dynamically
   useEffect(() => {
@@ -177,6 +183,31 @@ export function ArticleReader({
       `);
     }
   }, [textColor, greyColor, bgColor, lightGreyColor, midGreyColor, colors, isDark]);
+
+  // Toggle AI Highlights visibility via a class flip on the already-rendered page — no
+  // WebView reload. Re-fires on every load (isReady flips false->true on a real reload,
+  // e.g. right after highlights are first generated), which is also when the capped
+  // reading-order stagger indices get (re)applied for the sweep-in animation.
+  useEffect(() => {
+    if (webViewRef.current && isReady) {
+      webViewRef.current.injectJavaScript(`
+        (function() {
+          var el = document.getElementById('readspace-reader-content');
+          if (!el) return true;
+          if (${highlightsEnabled}) {
+            el.classList.add('rs-highlights-on');
+            var marks = el.querySelectorAll('.rs-highlight');
+            for (var i = 0; i < marks.length; i++) {
+              marks[i].style.setProperty('--rs-highlight-index', String(Math.min(i, 20)));
+            }
+          } else {
+            el.classList.remove('rs-highlights-on');
+          }
+        })();
+        true;
+      `);
+    }
+  }, [highlightsEnabled, isReady]);
 
   const htmlContent = useMemo(() => {
     return `
@@ -221,6 +252,43 @@ export function ArticleReader({
 
     * {
       box-sizing: border-box;
+    }
+
+    /* AI Highlights (Skim Mode) — invisible until #readspace-reader-content carries
+       .rs-highlights-on, toggled via injectedJavaScript so the marked-up HTML can be
+       baked in once and shown/hidden without a WebView reload. Applies to newsletters
+       too, unlike Translate. */
+    mark.rs-highlight {
+      background-color: transparent;
+      background-image: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 3px;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+    }
+    #readspace-reader-content.rs-highlights-on mark.rs-highlight {
+      --rs-highlight-color: color-mix(in srgb, var(--color-secondary) ${isDark ? '58%' : '45%'}, transparent);
+      background-image: linear-gradient(90deg, var(--rs-highlight-color) 0%, var(--rs-highlight-color) 100%);
+      background-repeat: no-repeat;
+      background-size: 0% 100%;
+      background-position: left center;
+      padding: 0 1px;
+      animation: rs-highlight-sweep 320ms ease-out forwards;
+      animation-delay: calc(var(--rs-highlight-index, 0) * 30ms);
+    }
+    #readspace-reader-content.rs-highlights-on mark.rs-highlight[data-rank="2"] {
+      --rs-highlight-color: color-mix(in srgb, var(--color-secondary) ${isDark ? '36%' : '26%'}, transparent);
+    }
+    @keyframes rs-highlight-sweep {
+      from { background-size: 0% 100%; }
+      to   { background-size: 100% 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #readspace-reader-content.rs-highlights-on mark.rs-highlight {
+        animation: none;
+        background-size: 100% 100%;
+      }
     }
 
     ${

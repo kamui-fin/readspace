@@ -26,6 +26,7 @@ import {
     Languages,
     Loader2,
     Sparkles,
+    TextSelection,
 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "react-hot-toast"
@@ -42,9 +43,12 @@ interface ArticleToolbarProps {
     handleExtractContent: () => void
     handleSummarize: () => void
     handleTranslate: (language: string) => void
+    handleToggleHighlights: () => void
     isExtracting: boolean
     isSummarizing: boolean
     isTranslating: boolean
+    isHighlighting: boolean
+    highlightsEnabled: boolean
     onBack?: () => void
     isReadLaterMode: boolean
     translatedContent: string | null
@@ -64,9 +68,12 @@ export function ArticleToolbar({
     handleExtractContent,
     handleSummarize,
     handleTranslate,
+    handleToggleHighlights,
     isExtracting,
     isSummarizing,
     isTranslating,
+    isHighlighting,
+    highlightsEnabled,
     onBack,
     isReadLaterMode,
     translatedContent,
@@ -308,6 +315,41 @@ export function ArticleToolbar({
                             </TooltipTrigger>
                             <TooltipContent>
                                 {isSummarizing ? "Generating..." : "The Gist"}
+                            </TooltipContent>
+                        </Tooltip>
+                    )}
+
+                    {!isPreviewMode && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60 ${highlightsEnabled ? "bg-muted/60" : ""}`}
+                                    onClick={handleToggleHighlights}
+                                    disabled={isHighlighting}
+                                >
+                                    {isHighlighting ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <TextSelection
+                                            className="h-4 w-4"
+                                            style={{
+                                                color: highlightsEnabled
+                                                    ? colorTokens.primary
+                                                          .DEFAULT
+                                                    : undefined,
+                                            }}
+                                        />
+                                    )}
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                {isHighlighting
+                                    ? "Generating..."
+                                    : highlightsEnabled
+                                      ? "Hide AI Highlights"
+                                      : "AI Highlights"}
                             </TooltipContent>
                         </Tooltip>
                     )}

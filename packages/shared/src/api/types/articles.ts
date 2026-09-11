@@ -190,3 +190,13 @@ export type TranslateRequest = {
   target_language: string;
   content?: string;
 };
+
+export type HighlightResponse = {
+  highlighted_content: string;
+  highlight_count: number;
+};
+
+export type HighlightRequest = {
+  content?: string;
+  language_key?: string;
+};

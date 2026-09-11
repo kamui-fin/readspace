@@ -23,6 +23,7 @@ export const ARTICLE_ENHANCEMENT_QUERY_KEYS = {
   EXTRACTED_CONTENT: 'article-extracted-content',
   SUMMARY: 'article-summary',
   TRANSLATION: 'article-translation',
+  HIGHLIGHTS: 'article-highlights',
 } as const;
 
 export const USER_QUERY_KEYS = {
@@ -86,6 +87,8 @@ export const queryKeys = {
     [ARTICLE_ENHANCEMENT_QUERY_KEYS.SUMMARY, articleId, languageKey] as const,
   translation: (articleId: string, targetLanguage: string, contentHash: string) =>
     [ARTICLE_ENHANCEMENT_QUERY_KEYS.TRANSLATION, articleId, targetLanguage, contentHash] as const,
+  highlights: (articleId: string, languageKey: string) =>
+    [ARTICLE_ENHANCEMENT_QUERY_KEYS.HIGHLIGHTS, articleId, languageKey] as const,
 
   // OPML
   opmlImportStatus: (taskId: string | null) => [RSS_QUERY_KEYS.OPML_IMPORT_STATUS, taskId] as const,

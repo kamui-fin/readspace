@@ -5,6 +5,8 @@ import {
   ArticleSummary,
   CheckArticleSavedResponse,
   ExtractFullTextResponse,
+  HighlightRequest,
+  HighlightResponse,
   SaveArticleResponse,
   SummarizeRequest,
   SummarizeResponse,
@@ -175,6 +177,16 @@ export const articles = {
     const queryString = queryParams.toString();
     return ApiClient.post<TranslateResponse>(
       `/api/articles/${id}/translate${queryString ? `?${queryString}` : ''}`,
+      data
+    );
+  },
+
+  highlight: (id: string, data: HighlightRequest, article_type?: string) => {
+    const queryParams = new URLSearchParams();
+    if (article_type === 'clipped') queryParams.append('clipped', 'true');
+    const queryString = queryParams.toString();
+    return ApiClient.post<HighlightResponse>(
+      `/api/articles/${id}/highlight${queryString ? `?${queryString}` : ''}`,
       data
     );
   },

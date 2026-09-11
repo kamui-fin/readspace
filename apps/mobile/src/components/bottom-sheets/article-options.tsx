@@ -4,7 +4,7 @@ import { Text } from '@components/ui/text';
 import { type BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { DocumentTextIcon, GlobalIcon } from '@solar-icons/react-native/bold';
+import { DocumentTextIcon, GlobalIcon, TextSelectionIcon } from '@solar-icons/react-native/bold';
 import clsx from 'clsx';
 import { forwardRef, useMemo } from 'react';
 import { Pressable, View } from 'react-native';
@@ -22,6 +22,11 @@ interface ArticleOptionsBottomSheetProps {
   canExtractContent: boolean;
   isClipped: boolean;
   isNewsletter?: boolean;
+  hasHighlightedContent: boolean;
+  highlightsEnabled: boolean;
+  isGeneratingHighlights: boolean;
+  onGenerateHighlights: () => void;
+  onToggleHighlights: (enabled: boolean) => void;
 }
 
 export const ArticleOptionsBottomSheet = forwardRef<
@@ -40,6 +45,11 @@ export const ArticleOptionsBottomSheet = forwardRef<
       canExtractContent,
       isClipped,
       isNewsletter = false,
+      hasHighlightedContent,
+      highlightsEnabled,
+      isGeneratingHighlights,
+      onGenerateHighlights,
+      onToggleHighlights,
     },
     ref
   ) => {
@@ -121,6 +131,26 @@ export const ArticleOptionsBottomSheet = forwardRef<
                 hasTranslatedContent ? 'Change current language' : 'Pick a language',
                 onTranslate
               )}
+
+            {renderOption(
+              <TextSelectionIcon
+                size={22}
+                color={highlightsEnabled ? activeColor : greyColor}
+              />,
+              'AI Highlights',
+              isGeneratingHighlights
+                ? 'Generating...'
+                : hasHighlightedContent
+                  ? highlightsEnabled
+                    ? 'Tap to hide highlights'
+                    : 'Tap to show highlights'
+                  : 'Skim the key points',
+              hasHighlightedContent
+                ? () => onToggleHighlights(!highlightsEnabled)
+                : onGenerateHighlights,
+              highlightsEnabled,
+              isGeneratingHighlights
+            )}
 
             {!isNewsletter &&
               onOpenInBrowser &&

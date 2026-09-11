@@ -18,6 +18,7 @@ import { SUPPORTED_LANGUAGES } from '@lib/constants/languages';
 import {
   useArticle,
   useExtractFullTextMutation,
+  useGenerateHighlightsMutation,
   useSummarizeArticleMutation,
   useTranslateArticleMutation,
   useUpdateArticle,
@@ -71,6 +72,9 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   const summarizeMutation = useSummarizeArticleMutation();
   const summaryData = summarizeMutation.data;
   const isSummaryLoading = summarizeMutation.isPending;
+  const highlightMutation = useGenerateHighlightsMutation();
+  const [highlightedFor, setHighlightedFor] = useState<ArticleViewMode | null>(null);
+  const [highlightsEnabled, setHighlightsEnabled] = useState(false);
 
   const recentLanguages = useTranslationHistory((state) => state.recentLanguages);
   const addRecentLanguage = useTranslationHistory((state) => state.addRecentLanguage);
@@ -372,6 +376,51 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     [article, articleId, currentContent, addRecentLanguage, translateMutation]
   );
 
+  const hasHighlightsForView = highlightedFor === contentSource;
+
+  const handleGenerateHighlights = useCallback(() => {
+    if (!article) return;
+
+    if (hasHighlightsForView) {
+      // Already generated for this view — just flip visibility, no re-fetch
+      setHighlightsEnabled((prev) => !prev);
+      return;
+    }
+
+    if (!checkAndTriggerUpgrade('ai')) return;
+
+    toast.info('Generating highlights...');
+
+    highlightMutation
+      .mutateAsync({
+        articleId: articleId || '',
+        content: currentContent || undefined,
+        languageKey: contentSource,
+        articleType: article.article_type,
+      })
+      .then(() => {
+        setHighlightedFor(contentSource);
+        setHighlightsEnabled(true);
+        toast.success('Highlights ready');
+      })
+      .catch((error) => {
+        console.error('Failed to generate highlights:', error);
+        toast.error('Failed to generate highlights');
+      });
+  }, [
+    article,
+    articleId,
+    contentSource,
+    currentContent,
+    hasHighlightsForView,
+    highlightMutation,
+    checkAndTriggerUpgrade,
+  ]);
+
+  const handleToggleHighlights = useCallback((enabled: boolean) => {
+    setHighlightsEnabled(enabled);
+  }, []);
+
   const handleSelectView = useCallback(
     (view: ArticleViewMode) => {
       // Mark user selection to prevent auto-switch effects
@@ -490,6 +539,10 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
               lastScrollY={lastScrollY}
               scrollDirection={scrollDirection}
               isLoadingContent={isExtracting}
+              highlightedContent={
+                hasHighlightsForView ? highlightMutation.data?.highlighted_content : undefined
+              }
+              highlightsEnabled={highlightsEnabled && hasHighlightsForView}
             />
           )}
         </Animated.View>
@@ -525,6 +578,11 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         canExtractContent={true}
         isClipped={isClipped}
         isNewsletter={isNewsletter}
+        hasHighlightedContent={hasHighlightsForView}
+        highlightsEnabled={highlightsEnabled && hasHighlightsForView}
+        isGeneratingHighlights={highlightMutation.isPending}
+        onGenerateHighlights={handleGenerateHighlights}
+        onToggleHighlights={handleToggleHighlights}
       />
     </View>
   );

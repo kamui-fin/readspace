@@ -1,7 +1,8 @@
 """E2E tests for article enhancement routes - using real services."""
 
 import hashlib
-from unittest.mock import patch
+from datetime import date
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -12,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.article import ArticleContent, FeedArticle, UserEntry
 from app.models.feed import Feed, FeedSubscription
 from app.models.user import Profile
+from app.services.ai.service import generate_highlights as real_generate_highlights
 
 
 @pytest.fixture(autouse=True)
@@ -21,6 +23,7 @@ def mock_ai_service():
         patch("app.services.ai.service.generate_summary") as mock_summary,
         patch("app.services.ai.service.translate_content") as mock_translate,
         patch("app.services.ai.service.translate_metadata") as mock_translate_metadata,
+        patch("app.services.ai.service.generate_highlights") as mock_highlights,
     ):
         mock_summary.return_value = "This is a test summary of the article content."
         mock_translate.return_value = "Este es el contenido traducido."
@@ -29,6 +32,9 @@ def mock_ai_service():
             "description": "Descripcion Traducida",
             "tags": ["Etiqueta 1", "Etiqueta 2"],
         }
+        mock_highlights.return_value = (
+            '<mark data-rank="1">This is the full article content</mark> that can be enhanced.'
+        )
         yield
 
 
@@ -235,6 +241,171 @@ class TestTranslateArticle:
         )
 
         assert response.status_code == 404
+
+
+class TestHighlightArticle:
+    """Test AI Highlights (skim mode) endpoint with real AI service."""
+
+    @pytest.mark.asyncio
+    async def test_highlight_article_real_service(
+        self, async_client: AsyncClient, test_article_with_content: FeedArticle
+    ):
+        """Test article highlighting using real AI service."""
+        response = await async_client.post(f"/api/articles/{test_article_with_content.id}/highlight")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "highlighted_content" in data
+        assert "<mark" in data["highlighted_content"]
+        assert data["highlight_count"] == 1
+
+    @pytest.mark.asyncio
+    async def test_highlight_with_custom_content(
+        self, async_client: AsyncClient, test_article_with_content: FeedArticle
+    ):
+        """Test highlighting custom content."""
+        response = await async_client.post(
+            f"/api/articles/{test_article_with_content.id}/highlight",
+            json={"content": "Custom content to highlight for testing purposes."},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "highlighted_content" in data
+
+    @pytest.mark.asyncio
+    async def test_highlight_article_not_found(self, async_client: AsyncClient):
+        """Test highlighting a non-existent article."""
+        fake_id = uuid4()
+        response = await async_client.post(f"/api/articles/{fake_id}/highlight")
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_highlight_article_invalid_uuid(self, async_client: AsyncClient):
+        """Test with invalid UUID."""
+        response = await async_client.post("/api/articles/invalid-uuid/highlight")
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_highlight_allowed_on_newsletter(
+        self, async_client: AsyncClient, db_session: AsyncSession, test_feed: Feed, test_user: Profile, test_folder
+    ):
+        """Unlike Translate, Highlight must not hard-block newsletter emails (PRD §5)."""
+        from datetime import UTC, datetime
+
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
+        db_session.add(subscription)
+        await db_session.flush()
+
+        link = "newsletter://inbound/some-token"
+        content_hash = hashlib.sha256(link.encode()).hexdigest()
+        content = ArticleContent(
+            title="Test Newsletter",
+            link=link,
+            content_hash=content_hash,
+            description="A newsletter digest",
+            content="This is a newsletter digest with several stories in it.",
+        )
+        db_session.add(content)
+        await db_session.flush()
+
+        article = FeedArticle(
+            feed_id=test_feed.id,
+            content_id=content.id,
+            guid_hash="test-guid-newsletter-highlight",
+            published_at=datetime.now(UTC),
+        )
+        db_session.add(article)
+        await db_session.flush()
+
+        state = UserEntry(
+            user_id=test_user.id,
+            content_id=content.id,
+            feed_article_id=article.id,
+            is_read=False,
+        )
+        db_session.add(state)
+        await db_session.flush()
+
+        response = await async_client.post(f"/api/articles/{article.id}/highlight")
+
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_highlight_article_daily_quota_exceeded(
+        self,
+        async_client: AsyncClient,
+        test_article_with_content: FeedArticle,
+        test_user: Profile,
+        redis_client,
+    ):
+        """A basic-tier user at their 5/day AI quota gets AI_LIMIT_EXCEEDED, not a highlight."""
+        today_str = date.today().isoformat()
+        redis_key = f"ai_usage:{test_user.id}:{today_str}"
+        await redis_client.set(redis_key, 5)
+
+        response = await async_client.post(f"/api/articles/{test_article_with_content.id}/highlight")
+
+        assert response.status_code == 429
+        data = response.json()
+        assert data["error_code"] == "AI_LIMIT_EXCEEDED"
+
+        await redis_client.flushdb()
+
+
+class TestGenerateHighlightsService:
+    """
+    Tests the real generate_highlights service function (not the mocked endpoint) to verify
+    the text-integrity fallback and nh3 sanitization actually protect the cached/returned
+    content, backed by real Redis caching (PRD §6 items d/e).
+    """
+
+    @pytest.mark.asyncio
+    async def test_discards_reworded_response_and_returns_none(self, redis_client):
+        """A hallucinated rewrite must never reach the reader — soft-fail to None."""
+        original = "<p>The quick brown fox jumps over the lazy dog near the river.</p>"
+
+        with (
+            patch("app.services.ai.service._get_client", return_value=AsyncMock()),
+            patch(
+                "app.services.ai.service._call_gemini",
+                new=AsyncMock(return_value="<p>A completely unrelated made-up sentence about space travel.</p>"),
+            ),
+        ):
+            result = await real_generate_highlights(content=original, article_id=str(uuid4()), language_key="original")
+
+        assert result is None
+        await redis_client.flushdb()
+
+    @pytest.mark.asyncio
+    async def test_sanitizes_injected_script_while_keeping_marks(self, redis_client):
+        """A malicious response with an injected <script> must be stripped before caching."""
+        original = "<p>The quick brown fox jumps over the lazy dog near the river.</p>"
+        # Realistic model output: only data-rank, no class (the model is never asked for one —
+        # generate_highlights must stamp it on so the frontend's mark.rs-highlight CSS matches).
+        malicious = (
+            '<p>The <mark data-rank="1">quick brown fox</mark> jumps over the lazy dog near the river.</p>'
+            '<script>alert("xss")</script>'
+        )
+
+        with (
+            patch("app.services.ai.service._get_client", return_value=AsyncMock()),
+            patch("app.services.ai.service._call_gemini", new=AsyncMock(return_value=malicious)),
+        ):
+            article_id = str(uuid4())
+            result = await real_generate_highlights(content=original, article_id=article_id, language_key="original")
+
+            assert result is not None
+            assert "<script" not in result
+            assert '<mark class="rs-highlight" data-rank="1">quick brown fox</mark>' in result
+
+            # Second call should hit the Redis cache rather than calling Gemini again
+            cached = await real_generate_highlights(content=original, article_id=article_id, language_key="original")
+            assert cached == result
+
+        await redis_client.flushdb()
 
 
 class TestArticleEnhancementIntegration:

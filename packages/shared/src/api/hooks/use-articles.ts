@@ -23,6 +23,8 @@ import type {
   ArticleSummary,
   CheckArticleSavedResponse,
   ExtractFullTextResponse,
+  HighlightRequest,
+  HighlightResponse,
   SaveArticleResponse,
   SummarizeRequest,
   SummarizeResponse,
@@ -747,6 +749,52 @@ export function useSummarizeArticleMutation(
             language_key: languageKey,
           };
           return ApiClient.summarize(articleId, requestBody, articleType);
+        },
+        staleTime: 30 * 60 * 1000,
+        gcTime: 60 * 60 * 1000,
+        retry: 0,
+      });
+    },
+    ...options,
+  });
+}
+
+/**
+ * Mutation hook for generating AI Highlights (skim mode)
+ */
+export function useGenerateHighlightsMutation(
+  options?: UseMutationOptions<
+    HighlightResponse,
+    unknown,
+    {
+      articleId: string;
+      content?: string;
+      languageKey?: string;
+      articleType?: string;
+    }
+  >
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      articleId,
+      content,
+      languageKey = 'original',
+      articleType,
+    }: {
+      articleId: string;
+      content?: string;
+      languageKey?: string;
+      articleType?: string;
+    }) => {
+      return await queryClient.fetchQuery({
+        queryKey: queryKeys.highlights(articleId, languageKey),
+        queryFn: () => {
+          const requestBody: HighlightRequest = {
+            ...(content && { content }),
+            language_key: languageKey,
+          };
+          return ApiClient.highlight(articleId, requestBody, articleType);
         },
         staleTime: 30 * 60 * 1000,
         gcTime: 60 * 60 * 1000,

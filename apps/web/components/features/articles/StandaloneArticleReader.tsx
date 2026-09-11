@@ -139,6 +139,9 @@ function ReaderInner({
                 }
             }}
             handleTranslate={reader.handleTranslate}
+            handleToggleHighlights={reader.handleToggleHighlights}
+            isHighlighting={reader.isHighlighting}
+            highlightsEnabled={reader.highlightsEnabled}
             isExtracting={reader.isExtracting}
             isSummarizing={reader.isSummarizing}
             isTranslating={reader.isTranslating}
@@ -186,6 +189,7 @@ function ReaderInner({
                         article={reader.displayArticle}
                         isDark={isDark}
                         displayContent={reader.displayContent}
+                        highlightsEnabled={reader.highlightsEnabled}
                         contentKey={reader.contentKey}
                         clientReadTime={reader.clientReadTime}
                         shouldShowFeedBadge
