@@ -6,6 +6,17 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "react-hot-toast"
 
+async function sha256Hex(value: string) {
+    const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(value)
+    )
+
+    return Array.from(new Uint8Array(digest), (byte) =>
+        byte.toString(16).padStart(2, "0")
+    ).join("")
+}
+
 interface AppleIDSignInResponse {
     authorization: {
         id_token: string
@@ -69,16 +80,18 @@ export function AppleSignInButton({
 
         setIsLoading(true)
         try {
-            // A fresh nonce per attempt, re-initialized right before signIn() —
-            // Supabase verifies this exact value against the identity token's
-            // `nonce` claim, so it must match what was passed to init().
-            const nonce = crypto.randomUUID()
+            // Supabase hashes the raw nonce before comparing it with the
+            // token's nonce claim. Apple JS includes the value passed here
+            // verbatim, so Apple must receive the hash and Supabase the raw
+            // nonce that produced it.
+            const rawNonce = crypto.randomUUID()
+            const hashedNonce = await sha256Hex(rawNonce)
             window.AppleID.auth.init({
                 clientId: servicesId,
                 scope: "name email",
                 redirectURI: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
                 usePopup: true,
-                nonce,
+                nonce: hashedNonce,
             })
 
             const response = await window.AppleID.auth.signIn()
@@ -87,7 +100,7 @@ export function AppleSignInButton({
             const { error } = await supabase.auth.signInWithIdToken({
                 provider: "apple",
                 token: response.authorization.id_token,
-                nonce,
+                nonce: rawNonce,
             })
 
             if (error) throw error

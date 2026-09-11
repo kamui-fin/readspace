@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { ArrowRightIcon, StarsIcon } from "@solar-icons/react/bold"
@@ -14,8 +13,6 @@ interface CodexViewProps {
     /** A COMPLETED digest — callers handle pending/in_progress/failed/skipped states. */
     digest: CodexDigestResponse
 }
-
-const EXPLAINER_DISMISSED_KEY = "readspace:codex-explainer-dismissed"
 
 /**
  * The finished digest. A busy day lays out newspaper-style — a masthead (a short `headline`
@@ -72,12 +69,6 @@ export function CodexView({ digest }: CodexViewProps) {
                     <p className="mt-2 text-pretty text-[15px] leading-relaxed text-muted-foreground">
                         {standfirst}
                     </p>
-                )}
-                {hasDevelopments && (
-                    <FirstTimeExplainer
-                        articleCount={digest.input_article_count}
-                        sourceCount={digest.input_source_count}
-                    />
                 )}
             </header>
 
@@ -149,44 +140,6 @@ export function CodexView({ digest }: CodexViewProps) {
                 </div>
             )}
         </div>
-    )
-}
-
-/**
- * A one-liner orienting anyone who reached a finished digest without meeting the Daily Digest.
- * Reading serif, in the masthead under the standfirst — it reads as part of the front-page
- * dateline. Shows once (flag set on first render); the footer's "About" link is the way back.
- */
-function FirstTimeExplainer({
-    articleCount,
-    sourceCount,
-}: {
-    articleCount: number | null
-    sourceCount: number | null
-}) {
-    const [show, setShow] = useState(false)
-    useEffect(() => {
-        try {
-            if (window.localStorage.getItem(EXPLAINER_DISMISSED_KEY) === "1")
-                return
-            window.localStorage.setItem(EXPLAINER_DISMISSED_KEY, "1")
-            setShow(true)
-        } catch {
-            setShow(true)
-        }
-    }, [])
-    if (!show) return null
-
-    const detail =
-        articleCount && sourceCount
-            ? `${articleCount} articles from ${sourceCount} of your sources`
-            : "everything your sources published in the last 24 hours"
-
-    return (
-        <p className="mt-3 max-w-2xl font-serif text-[15px] leading-relaxed text-muted-foreground">
-            Your Daily Digest read {detail} and grouped what two or more of them
-            covered into the developments below.
-        </p>
     )
 }
 

@@ -124,6 +124,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ],
     ],
     extra: {
+      appVariant: APP_VARIANT || 'production',
       eas: {
         projectId: 'e28b2485-c247-405c-829e-2b9c9c2e7733',
       },

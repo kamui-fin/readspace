@@ -38,10 +38,11 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { ApiError } from '@readspace/shared';
 import * as Sentry from '@sentry/react-native';
-import { useSettingsStore } from '@stores/settings';
+import { useHasSettingsHydrated, useSettingsStore } from '@stores/settings';
 import { useThemeStore } from '@stores/theme';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import clsx from 'clsx';
+import Constants from 'expo-constants';
 import * as Font from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -56,19 +57,28 @@ import { configureApiClient } from '@lib/api-client';
 import { useUpgradeDialog } from '@stores/upgrade-dialog';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
-Sentry.init({
-  dsn: 'https://71c98634e6904ab52224714c8664fec9@o4511544654036992.ingest.us.sentry.io/4511544655609856',
+const SENTRY_DSN =
+  'https://71c98634e6904ab52224714c8664fec9@o4511544654036992.ingest.us.sentry.io/4511544655609856';
+const isProductionBuild = !__DEV__ && Constants.expoConfig?.extra?.appVariant === 'production';
 
-  // Adds more context data to events (IP address, cookies, user, etc.)
-  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
-  sendDefaultPii: true,
+function configureSentry(enabled: boolean) {
+  if (enabled) {
+    if (!Sentry.getClient()) {
+      Sentry.init({
+        dsn: SENTRY_DSN,
+        // Adds more context data to events (IP address, cookies, user, etc.)
+        // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
+        sendDefaultPii: true,
+        enableLogs: true,
+      });
+    }
+    return;
+  }
 
-  // Enable Logs
-  enableLogs: true,
-
-  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
-  // spotlight: __DEV__,
-});
+  if (Sentry.getClient()) {
+    void Sentry.close();
+  }
+}
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -101,10 +111,18 @@ const queryClient = new QueryClient({
 });
 
 function RootLayout() {
+  const hasSettingsHydrated = useHasSettingsHydrated();
+  const instanceType = useSettingsStore((state) => state.settings.instance_type);
+
   // Configure API client on app startup
   useEffect(() => {
     configureApiClient();
   }, []);
+
+  useEffect(() => {
+    if (!hasSettingsHydrated) return;
+    configureSentry(isProductionBuild && instanceType === 'cloud');
+  }, [hasSettingsHydrated, instanceType]);
 
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
