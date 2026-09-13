@@ -45,7 +45,7 @@
   }
 
   // Cursor spotlight on feature cards
-  root.querySelectorAll('.step-card, .gist-card, .spotlight-card').forEach(function (el) {
+  root.querySelectorAll('.gist-card, .spotlight-card').forEach(function (el) {
     el.addEventListener('mousemove', function (e) {
       var r = el.getBoundingClientRect();
       el.style.setProperty('--x', (e.clientX - r.left) + 'px');
@@ -164,8 +164,8 @@
     if (annualBtn) annualBtn.classList.toggle('active', annual);
     if (proPer) proPer.textContent = annual ? '/ year' : '/ month';
     if (proSub) proSub.textContent = annual
-      ? 'Billed yearly — $5.00 / month.'
-      : 'For people who want to spend less time catching up. $59.99 / year.';
+      ? 'Billed yearly — $4.99 / month.'
+      : 'For people who want to spend less time catching up.';
     if (proPrice) {
       proPrice.classList.add('is-rolling');
       setTimeout(function () {
@@ -177,6 +177,53 @@
   if (monthlyBtn) monthlyBtn.addEventListener('click', function () { setCycle(false); });
   if (annualBtn) annualBtn.addEventListener('click', function () { setCycle(true); });
 
+  // Hero screenshot tabs: feed vs. Daily Digest, auto-rotating every 2s unless hovered
+  var heroTabs = Array.prototype.slice.call(root.querySelectorAll('[data-hero-tab]'));
+  var heroPanels = Array.prototype.slice.call(root.querySelectorAll('[data-hero-panel]'));
+  var heroStage = root.querySelector('[data-hero-stage]');
+  if (heroTabs.length && heroPanels.length) {
+    var heroOrder = heroTabs.map(function (t) { return t.dataset.heroTab; });
+    var heroActive = heroOrder[0];
+    var heroTimer = null;
+    var setHeroTab = function (name) {
+      heroActive = name;
+      heroTabs.forEach(function (t) { t.classList.toggle('active', t.dataset.heroTab === name); });
+      heroPanels.forEach(function (p) { p.classList.toggle('is-active', p.dataset.heroPanel === name); });
+    };
+    // Lock the stage to the taller panel's height so switching tabs never reflows the page
+    var syncHeroHeight = function () {
+      if (!heroStage) return;
+      var max = 0;
+      heroPanels.forEach(function (p) { max = Math.max(max, p.offsetHeight); });
+      heroStage.style.height = max + 'px';
+    };
+    var stopHeroTimer = function () {
+      if (heroTimer) { clearInterval(heroTimer); heroTimer = null; }
+    };
+    var startHeroTimer = function () {
+      stopHeroTimer();
+      heroTimer = setInterval(function () {
+        setHeroTab(heroOrder[(heroOrder.indexOf(heroActive) + 1) % heroOrder.length]);
+      }, 5000);
+    };
+    heroTabs.forEach(function (t) {
+      t.addEventListener('click', function () {
+        setHeroTab(t.dataset.heroTab);
+        startHeroTimer();
+      });
+    });
+    if (heroStage) {
+      heroStage.addEventListener('mouseenter', stopHeroTimer);
+      heroStage.addEventListener('mouseleave', startHeroTimer);
+    }
+    syncHeroHeight();
+    window.addEventListener('resize', syncHeroHeight);
+    window.addEventListener('load', syncHeroHeight);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(syncHeroHeight);
+    setTimeout(syncHeroHeight, 500);
+    startHeroTimer();
+  }
+
   // Responsive layout toggles (mirrors the design's breakpoints)
   var wide = function () {
     var w = window.innerWidth;
@@ -185,9 +232,6 @@
     root.querySelectorAll('[data-foliage]').forEach(function (e) { e.style.display = w > 880 ? 'block' : 'none'; });
     root.querySelectorAll('[data-gistgrid]').forEach(function (e) {
       e.style.gridTemplateColumns = w > 1000 ? '1.4fr 1fr 1fr' : (w > 640 ? 'repeat(2,minmax(0,1fr))' : '1fr');
-    });
-    root.querySelectorAll('[data-steps]').forEach(function (e) {
-      e.style.gridTemplateColumns = w > 1000 ? 'repeat(4,minmax(0,1fr))' : (w > 560 ? 'repeat(2,minmax(0,1fr))' : '1fr');
     });
     root.querySelectorAll('[data-navlinks]').forEach(function (e) { e.style.display = w > 1000 ? 'flex' : 'none'; });
     root.querySelectorAll('[data-navstar]').forEach(function (e) { e.style.display = w > 760 ? 'inline-flex' : 'none'; });
@@ -240,61 +284,6 @@
     window.addEventListener('scroll', paintFills, { passive: true });
     window.addEventListener('resize', paintFills);
     document.addEventListener('scroll', paintFills, { capture: true, passive: true });
-  }
-
-  // "Chaos to calm" tile animation
-  var stage = root.querySelector('[data-chaos]');
-  if (stage) {
-    var tiles = Array.prototype.slice.call(stage.querySelectorAll('[data-tile]'));
-    var rows = Array.prototype.slice.call(stage.querySelectorAll('[data-row]'));
-    var card = stage.querySelector('[data-calm-card]');
-    var ease = function (t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; };
-    var lastE = -1, lastW = -1;
-    var paint = function (e, sw) {
-      var k = Math.min(1, sw / 940);
-      var W = Math.min(420, sw - 40);
-      if (card) {
-        card.style.width = W + 'px';
-        card.style.marginLeft = (-W / 2) + 'px';
-        card.style.opacity = Math.max(0, (e - 0.4) / 0.6);
-      }
-      tiles.forEach(function (t) {
-        var cx = (+t.dataset.cx) * k, cy = (+t.dataset.cy) * (sw < 620 ? 0.8 : 1), rot = +t.dataset.r;
-        var tx = cx * 0.18, ty = cy * 0.18, sc = 0.3, op = 0;
-        t.style.transform = 'translate(' + (cx + (tx - cx) * e) + 'px,' + (cy + (ty - cy) * e) + 'px) rotate(' + (rot * (1 - e)) + 'deg) scale(' + (1 + (sc - 1) * e) + ')';
-        t.style.opacity = String(1 + (op - 1) * e);
-      });
-      rows.forEach(function (r, i) {
-        r.style.transform = 'translate(' + (-W / 2 + 36) + 'px,' + ((i - 2.5) * 46) + 'px)';
-        r.style.width = (W - 72) + 'px';
-        r.style.opacity = String(Math.max(0, Math.min(1, (e - 0.5 - i * 0.05) / 0.28)));
-      });
-    };
-    var frame = function () {
-      var rect = stage.getBoundingClientRect();
-      var raw = (window.innerHeight * 0.84 - rect.top) / (rect.height * 0.95);
-      var e = ease(Math.max(0, Math.min(1, raw)));
-      var sw = stage.clientWidth || 900;
-      if (Math.abs(e - lastE) < 0.002 && sw === lastW) return;
-      lastE = e; lastW = sw;
-      paint(e, sw);
-    };
-    var ticking = true, sawProgress = false, raf;
-    var run = function () { frame(); if (lastE > 0.01) sawProgress = true; };
-    var tick = function () {
-      if (!ticking) return;
-      run();
-      raf = requestAnimationFrame(tick);
-    };
-    run();
-    raf = requestAnimationFrame(tick);
-    setInterval(run, 120);
-    window.addEventListener('scroll', run, { passive: true });
-    window.addEventListener('resize', run);
-    document.addEventListener('scroll', run, { capture: true, passive: true });
-    setTimeout(function () {
-      if (!sawProgress) { lastE = -1; paint(1, stage.clientWidth || 900); }
-    }, 1600);
   }
 
   // Scroll reveal

@@ -7,6 +7,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.constants import MAX_FOLLOW_CHECK_ITEMS
 from app.models.feed import Feed, FeedSubscription
 from app.models.folder import Folder
 from app.models.user import Profile
@@ -129,7 +130,10 @@ class TestFeedAdd:
         data = response.json()
         assert "id" in data
         assert "feed" in data
-        assert data["feed"]["url"] == "https://techcrunch.com/feed"
+        # The upstream currently redirects this URL to the trailing-slash form.
+        # Both identify the same endpoint, so do not make the integration suite
+        # depend on that external canonicalization detail.
+        assert data["feed"]["url"].rstrip("/") == "https://techcrunch.com/feed"
 
     @pytest.mark.asyncio
     async def test_add_feed_with_folder(self, async_client: AsyncClient, test_folder: Folder):
@@ -192,6 +196,97 @@ class TestFeedAdd:
         data = response.json()
         assert "id" in data
         assert "feed" in data
+
+
+class TestCheckFeedFollowed:
+    """Test the follow-status check used by the browser extension."""
+
+    @pytest.mark.asyncio
+    async def test_check_followed_by_url(
+        self,
+        async_client: AsyncClient,
+        test_feed: Feed,
+        test_user: Profile,
+        test_folder: Folder,
+        db_session: AsyncSession,
+    ):
+        """A subscribed feed matches by URL, even when the input is not normalized."""
+        db_session.add(FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id))
+        await db_session.flush()
+
+        response = await async_client.get(
+            "/api/feeds/check-followed",
+            params=[("url", "https://example.com/other.xml"), ("url", "HTTPS://HNRSS.org/newest")],
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["is_followed"] is True
+        assert data["feed_id"] == str(test_feed.id)
+        assert data["feed_url"] == test_feed.url
+
+    @pytest.mark.asyncio
+    async def test_check_followed_not_subscribed(self, async_client: AsyncClient, test_feed: Feed):
+        """An existing feed the user has not subscribed to (or unsubscribed from) is not followed."""
+        response = await async_client.get(
+            "/api/feeds/check-followed",
+            params=[("url", test_feed.url), ("feed_id", str(test_feed.id))],
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["is_followed"] is False
+        assert data["feed_id"] is None
+
+    @pytest.mark.asyncio
+    async def test_check_followed_by_feed_id_after_redirect(
+        self,
+        async_client: AsyncClient,
+        test_feed: Feed,
+        test_user: Profile,
+        test_folder: Folder,
+        db_session: AsyncSession,
+    ):
+        """A feed stored under a redirected URL still matches by its known ID."""
+        db_session.add(FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id))
+        await db_session.flush()
+
+        response = await async_client.get(
+            "/api/feeds/check-followed",
+            params=[("url", "https://news.ycombinator.com/rss"), ("feed_id", str(test_feed.id))],
+        )
+
+        assert response.status_code == 200
+        assert response.json()["is_followed"] is True
+
+    @pytest.mark.asyncio
+    async def test_check_followed_ignores_other_users(
+        self,
+        async_client: AsyncClient,
+        test_feed: Feed,
+        admin_user: Profile,
+        db_session: AsyncSession,
+    ):
+        """Another user's subscription does not count as followed."""
+        other_folder = Folder(user_id=admin_user.id, name="Other")
+        db_session.add(other_folder)
+        await db_session.flush()
+        db_session.add(FeedSubscription(user_id=admin_user.id, feed_id=test_feed.id, folder_id=other_folder.id))
+        await db_session.flush()
+
+        response = await async_client.get("/api/feeds/check-followed", params={"url": test_feed.url})
+
+        assert response.status_code == 200
+        assert response.json()["is_followed"] is False
+
+    @pytest.mark.asyncio
+    async def test_check_followed_rejects_too_many_urls(self, async_client: AsyncClient):
+        """The number of candidate URLs is capped."""
+        params = [("url", f"https://example.com/feed-{i}.xml") for i in range(MAX_FOLLOW_CHECK_ITEMS + 1)]
+
+        response = await async_client.get("/api/feeds/check-followed", params=params)
+
+        assert response.status_code == 422
 
 
 class TestFeedList:

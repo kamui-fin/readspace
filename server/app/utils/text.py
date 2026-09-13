@@ -14,6 +14,12 @@ CJK_PATTERN = re.compile(r"[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff
 WHITESPACE_PATTERN = re.compile(r"\s+")
 HTML_TAG_PATTERN = re.compile(r"<[^>]*>")
 PUNCTUATION_PATTERN = re.compile(r"[^\w\s]")
+SENTENCE_BOUNDARY_PATTERN = re.compile(r"(?<=[.!?])\s+")
+
+# Elements whose text never belongs in a prose excerpt
+EXCERPT_SKIPPED_TAGS = ["script", "style", "noscript", "figure", "picture", "svg", "iframe"]
+# Block elements that must be separated by whitespace once tags are stripped
+EXCERPT_BLOCK_TAGS = ["p", "div", "section", "article", "li", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6", "br"]
 
 # Matches en-US, en_US, en-us, etc.
 LANG_CODE_PATTERN = re.compile(r"^([a-z]{2,3})(?:[-_][a-z0-9]+)?$", re.IGNORECASE)
@@ -57,6 +63,48 @@ def clean_html_text(text: str | None) -> str:
     except Exception as e:
         logger.warning(f"Error cleaning HTML text: {e}")
         return html.unescape(nh3.clean(str(text), tags=set()))
+
+
+def build_excerpt(content: str | None, max_length: int, min_length: int) -> str:
+    """
+    Build a short plain-text preview from HTML content.
+
+    Takes whole leading sentences until the excerpt reaches ``min_length`` (so a tiny
+    opener like "Hi." gets company). If even the first sentence is longer than
+    ``max_length``, the text is cut on a word boundary and ellipsised.
+
+    Args:
+        content: HTML (or plain text) article body.
+        max_length: Maximum excerpt length in characters.
+        min_length: Stop adding sentences once the excerpt is at least this long.
+
+    Returns:
+        The excerpt, or an empty string when the content has no readable text.
+    """
+    if not content:
+        return ""
+
+    soup = BeautifulSoup(content, "html.parser")
+    for tag in soup.find_all(EXCERPT_SKIPPED_TAGS):
+        tag.decompose()
+    for tag in soup.find_all(EXCERPT_BLOCK_TAGS):
+        tag.insert_after(" ")
+    text = WHITESPACE_PATTERN.sub(" ", soup.get_text()).strip()
+    if not text:
+        return ""
+
+    excerpt = ""
+    for sentence in SENTENCE_BOUNDARY_PATTERN.split(text):
+        candidate = f"{excerpt} {sentence}".strip()
+        if len(candidate) > max_length:
+            break
+        excerpt = candidate
+        if len(excerpt) >= min_length:
+            break
+
+    if excerpt:
+        return excerpt
+    return text[: max_length - 1].rsplit(" ", 1)[0].rstrip(",;:") + "…"
 
 
 def is_content_complete(content: str | None, threshold: int = 500) -> bool:

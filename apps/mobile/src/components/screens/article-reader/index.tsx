@@ -117,7 +117,7 @@ export function ArticleReader({
 
   const { iconUrl, fallbackComponent } = useFavicon({
     url: article.link,
-    feedTitle: feedTitle || undefined,
+    feedTitle: displaySource || undefined,
     feedImage: feedImageUrl || undefined,
     isClipped: isClipped,
   });

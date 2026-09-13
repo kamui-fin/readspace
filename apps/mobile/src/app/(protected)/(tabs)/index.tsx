@@ -42,14 +42,19 @@ export default function FollowingRoute() {
   const clearView = useFeedViewStore((state) => state.clearView);
   const isViewingFeedOrFolder =
     viewType === 'feed' || viewType === 'folder' || viewType === 'feedPreview';
+  // Saved spans clipped articles too, so it isn't scoped to a feed and has no switcher
+  const isSavedTab = activeTab === 2 && !isViewingFeedOrFolder;
 
   // Determine the header title based on view type
   const headerTitle = useMemo(() => {
     if ((viewType === 'feed' || viewType === 'folder') && selectedName) {
       return selectedName;
     }
+    if (isSavedTab) {
+      return 'Read Later';
+    }
     return 'Following';
-  }, [viewType, selectedName]);
+  }, [viewType, selectedName, isSavedTab]);
 
   const headerTitleIcon = useMemo(() => {
     if (viewType === 'folder') {
@@ -216,7 +221,7 @@ export default function FollowingRoute() {
         onTabChange={handleTabChange}
         onHeaderHeightChange={handleHeaderHeightChange}
         actionButton={filterActionButton}
-        onTitlePress={handleTitlePress}
+        onTitlePress={isSavedTab ? undefined : handleTitlePress}
       />
 
       {/* Feed Switcher Bottom Sheet */}

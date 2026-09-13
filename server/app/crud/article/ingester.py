@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -142,9 +142,10 @@ async def upsert_article_content(
             index_elements=["content_hash"],
             set_={
                 "title": stmt.excluded.title,
-                "image_url": stmt.excluded.image_url,
-                "description": stmt.excluded.description,
-                "content": stmt.excluded.content,
+                # Keep previously stored values when this save didn't provide them
+                "image_url": func.coalesce(stmt.excluded.image_url, ArticleContent.image_url),
+                "description": func.coalesce(stmt.excluded.description, ArticleContent.description),
+                "content": func.coalesce(func.nullif(stmt.excluded.content, ""), ArticleContent.content),
             },
         )
     else:

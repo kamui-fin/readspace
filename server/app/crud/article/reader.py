@@ -506,8 +506,12 @@ async def get_read_later_articles(
     items = []
     for entry in entries_to_process:
         if entry.feed_article:
-            # This is a feed article
-            response = transformer.to_entry_list_item(entry.feed_article, entry)
+            # This is a feed article. Report the UserEntry's created_at (≈ when the user
+            # saved/interacted with it) rather than the feed article's ingestion time, so
+            # read later lists by save time - matching the ordering and cursor below.
+            response = transformer.to_entry_list_item(entry.feed_article, entry).model_copy(
+                update={"created_at": entry.created_at}
+            )
             items.append(response.model_dump())
         else:
             # This is a clipped article

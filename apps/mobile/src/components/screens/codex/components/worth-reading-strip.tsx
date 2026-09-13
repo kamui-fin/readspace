@@ -41,7 +41,12 @@ function WorthReadingRow({
       fallbackComponent={fallbackComponent}
       showTopDivider={showTopDivider}
       showBottomDivider={false}
-      onPress={() => router.push(`/(protected)/articles/${article.id}`)}
+      onPress={() =>
+        router.push({
+          pathname: '/(protected)/articles/[id]',
+          params: { id: article.id, type: article.article_type },
+        })
+      }
     />
   );
 }

@@ -89,7 +89,7 @@ async def test_add_feed_persists_metadata(db_session, test_user):
                             )
 
     # Verify
-    result = await db_session.execute(select(Feed).filter(Feed.url == "https://example.com/feed"))
+    result = await db_session.execute(select(Feed).filter(Feed.url == "http://example.com/feed"))
     feed = result.scalars().first()
 
     assert feed is not None

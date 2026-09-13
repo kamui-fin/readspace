@@ -4,9 +4,9 @@ from datetime import datetime
 from uuid import UUID
 
 import structlog
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, load_only
 
 from app.core.constants import INITIAL_UNREAD_COUNT
 from app.core.custom_exceptions import FeedSubscriptionError
@@ -114,6 +114,33 @@ async def get_subscription_by_feed_id(db: AsyncSession, *, feed_id: UUID, user_i
     )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def get_followed_feed(db: AsyncSession, *, user_id: UUID, urls: list[str], feed_ids: list[UUID]) -> Feed | None:
+    """
+    Return the first feed the user is subscribed to, matched by normalized URL or feed ID.
+
+    Feed IDs cover feeds stored under a redirected URL, which no longer matches the
+    URL a client discovered on the page.
+    """
+    conditions = []
+    normalized_urls = [normalize_url(url) for url in urls if url]
+    if normalized_urls:
+        conditions.append(Feed.url.in_(normalized_urls))
+    if feed_ids:
+        conditions.append(Feed.id.in_(feed_ids))
+    if not conditions:
+        return None
+
+    stmt = (
+        select(Feed)
+        .options(load_only(Feed.id, Feed.url))
+        .join(FeedSubscription, FeedSubscription.feed_id == Feed.id)
+        .where(FeedSubscription.user_id == user_id, or_(*conditions))
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().first()
 
 
 async def get_subscriptions_by_user(

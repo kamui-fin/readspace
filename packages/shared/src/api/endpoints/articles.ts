@@ -142,6 +142,8 @@ export const articles = {
     title?: string;
     content?: string;
     metadata?: Record<string, string>;
+    note?: string;
+    priority?: string;
   }) => ApiClient.post<SaveArticleResponse>('/api/articles/', data),
 
   checkArticleSaved: (url: string) => {

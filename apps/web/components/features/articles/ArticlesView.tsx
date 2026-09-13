@@ -14,7 +14,10 @@ import { ArticlesDetail } from "./ArticlesDetail"
 import { useArticlesStore } from "./stores/use-articles-store"
 import { useDeepRefresh } from "./hooks/use-deep-refresh"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { useArticleGrouping } from "./hooks/use-article-grouping"
+import {
+    getArticleListDate,
+    useArticleGrouping,
+} from "./hooks/use-article-grouping"
 
 import { useFeed, useUpdateArticle, ArticleFilterMode } from "@readspace/shared"
 import type { Article } from "@readspace/shared"
@@ -124,6 +127,7 @@ export function ArticlesView({
         articles,
         showUnreadOnly,
         isRecentlyReadMode,
+        isReadLaterMode,
         isTodayMode,
     })
 
@@ -246,6 +250,7 @@ export function ArticlesView({
         updateArticle.mutate({
             articleId: selectedArticle.id,
             data: updateData,
+            articleType: selectedArticle.article_type,
         })
     }
 
@@ -253,14 +258,13 @@ export function ArticlesView({
     useEffect(() => {
         if (isMobile) return
 
-        // Sort articles by published date (newest first)
+        // Sort articles by list date (newest first)
         const sortedArticles = [...articles].sort((a, b) => {
-            if (!a.published_at) return 1
-            if (!b.published_at) return -1
-            return (
-                new Date(b.published_at).getTime() -
-                new Date(a.published_at).getTime()
-            )
+            const aDate = getArticleListDate(a, isReadLaterMode)
+            const bDate = getArticleListDate(b, isReadLaterMode)
+            if (!aDate) return 1
+            if (!bDate) return -1
+            return new Date(bDate).getTime() - new Date(aDate).getTime()
         })
 
         // Check if currently selected article is still in the list
@@ -287,6 +291,7 @@ export function ArticlesView({
         selectedArticleId,
         isMobile,
         showUnreadOnly,
+        isReadLaterMode,
         query.isLoading,
         selectArticle,
     ])

@@ -1,5 +1,6 @@
 import { groupArticlesByDate } from '@lib/utils/date';
-import type { Article } from '@readspace/shared';
+import type { Article, ArticleSummary } from '@readspace/shared';
+import type { InfiniteData } from '@tanstack/react-query';
 
 export interface ListItem {
   type: 'section' | 'article' | 'divider';
@@ -134,4 +135,18 @@ export function createListItems(articles: Article[]): ListItem[] {
   }
 
   return items;
+}
+
+/**
+ * Pick the article to open after the current one leaves a paginated list:
+ * the one right after it, or the one before if it was the last.
+ */
+export function getAdjacentArticle(
+  infiniteData: InfiniteData<{ items: ArticleSummary[] }> | undefined,
+  currentId: string
+): ArticleSummary | undefined {
+  const items = infiniteData?.pages.flatMap((page) => page.items) ?? [];
+  const index = items.findIndex((item) => item.id === currentId);
+  if (index === -1) return undefined;
+  return items[index + 1] ?? items[index - 1];
 }

@@ -6,7 +6,19 @@ interface UseArticleGroupingProps {
     articles: Article[]
     showUnreadOnly: boolean
     isRecentlyReadMode: boolean
+    isReadLaterMode?: boolean
     isTodayMode: boolean
+}
+
+/**
+ * Date an article is listed under. Read later lists by when the article was
+ * saved (`created_at`), everything else by when it was published.
+ */
+export function getArticleListDate(
+    article: Pick<Article, "published_at" | "created_at">,
+    isReadLaterMode: boolean
+): string | null {
+    return isReadLaterMode ? article.created_at : article.published_at
 }
 
 export type ArticleRow =
@@ -17,6 +29,7 @@ export function useArticleGrouping({
     articles,
     showUnreadOnly,
     isRecentlyReadMode,
+    isReadLaterMode = false,
     isTodayMode,
 }: UseArticleGroupingProps) {
     // Filter articles based on unread toggle
@@ -43,9 +56,10 @@ export function useArticleGrouping({
 
         // Group articles by date
         filteredArticles.forEach((article) => {
-            if (!article.published_at) return
+            const listDate = getArticleListDate(article, isReadLaterMode)
+            if (!listDate) return
 
-            const date = parseISO(article.published_at)
+            const date = parseISO(listDate)
             const today = new Date()
             const yesterday = new Date()
             yesterday.setDate(today.getDate() - 1)
@@ -84,20 +98,19 @@ export function useArticleGrouping({
             })
             .forEach(([dateGroup, group]) => {
                 rows.push({ type: "header", label: group.label, dateGroup })
-                // Sort articles within each date group by published time (newest first)
+                // Sort articles within each date group by list date (newest first)
                 const sortedArticles = group.articles.sort((a, b) => {
-                    if (!a.published_at) return 1
-                    if (!b.published_at) return -1
-                    return (
-                        parseISO(b.published_at).getTime() -
-                        parseISO(a.published_at).getTime()
-                    )
+                    const aDate = getArticleListDate(a, isReadLaterMode)
+                    const bDate = getArticleListDate(b, isReadLaterMode)
+                    if (!aDate) return 1
+                    if (!bDate) return -1
+                    return parseISO(bDate).getTime() - parseISO(aDate).getTime()
                 })
                 rows.push(...sortedArticles)
             })
 
         return rows
-    }, [filteredArticles, isRecentlyReadMode, isTodayMode])
+    }, [filteredArticles, isRecentlyReadMode, isReadLaterMode, isTodayMode])
 
     return {
         filteredArticles,

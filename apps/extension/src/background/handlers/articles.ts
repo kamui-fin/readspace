@@ -1,11 +1,21 @@
-import { ApiClient } from '@readspace/shared'
-import { stateStore } from '../state-store'
+import {
+  ApiClient,
+  CheckArticleSavedResponse,
+  Priority,
+} from '@readspace/shared'
+import { normalizeKey } from '../../lib/normalize'
+import { broadcast } from '../broadcast'
+import { isNotFoundError } from '../errors'
+import { ItemState, stateStore } from '../state-store'
+import { SaveChangedPayload } from '../../shared/types'
 
 interface SaveArticlePayload {
   url: string
-  priority?: number
+  priority?: Priority
   note?: string
   title?: string
+  content?: string
+  metadata?: Record<string, string>
 }
 
 export async function handleSaveArticle(payload: SaveArticlePayload) {
@@ -55,6 +65,8 @@ export async function handleUnsaveArticle(payload: UnsaveArticlePayload) {
       return { success: true }
     }
   } catch (err) {
+    // Already removed on the server (e.g. from another client): the unsaved state is correct
+    if (isNotFoundError(err)) return { success: true }
     if (url) await stateStore.setSave(url, true, idToUse) // Revert
     throw err
   }
@@ -96,31 +108,81 @@ interface CheckArticleSavedPayload {
   url: string
 }
 
+function cachedToResponse(state: ItemState): CheckArticleSavedResponse {
+  if (!state.saved) {
+    return { is_saved: false, article_id: null }
+  }
+
+  // A saved entry can lack an ID while its save request is still in flight
+  return {
+    is_saved: true,
+    article_id: state.id,
+    priority: state.priority,
+    note: state.note,
+    title: state.title,
+  } as CheckArticleSavedResponse
+}
+
+function responseToState(
+  res: CheckArticleSavedResponse
+): Omit<ItemState, 'ts'> {
+  if (!res.is_saved) return { saved: false }
+  return {
+    saved: true,
+    id: res.article_id,
+    priority: res.priority ? String(res.priority) : undefined,
+    note: res.note || undefined,
+    title: res.title || undefined,
+  }
+}
+
+function isSameSaveState(a: Omit<ItemState, 'ts'>, b: Omit<ItemState, 'ts'>) {
+  if ((a.saved === true) !== (b.saved === true)) return false
+  if (!a.saved) return true
+  return (
+    a.id === b.id &&
+    a.priority === b.priority &&
+    a.note === b.note &&
+    a.title === b.title
+  )
+}
+
+/**
+ * Reconcile a cached entry with the server, which may have changed from the web or
+ * mobile app. Popups are notified only when the state actually differs.
+ */
+async function revalidateSaveState(url: string, cached: ItemState) {
+  try {
+    const res = await ApiClient.checkArticleSaved(url)
+    // A save/unsave/update ran while the request was in flight; its state is newer
+    if (stateStore.getSaveData(url) !== cached) return
+
+    const fresh = responseToState(res)
+    if (isSameSaveState(cached, fresh)) return
+
+    await stateStore.replaceSave(url, fresh)
+    const payload: SaveChangedPayload = { url: normalizeKey(url), article: res }
+    broadcast({ type: 'save-changed', payload })
+  } catch (err) {
+    console.warn('Failed to revalidate saved state', url, err)
+  }
+}
+
 export async function handleCheckArticleSaved(
   payload: CheckArticleSavedPayload
 ) {
-  // Use local state store first
-  if (payload.url) {
-    const state = stateStore.getSaveData(payload.url)
-    // If we have state (saved OR explicitly unsaved), use it
-    if (state) {
-      return {
-        saved: state.saved === true,
-        is_saved: state.saved === true,
-        article_id: state.id,
-        priority: state.priority,
-        note: state.note,
-        title: state.title,
-      }
-    }
+  const cached = stateStore.getSaveData(payload.url)
+  if (cached) {
+    // Serve the cache instantly, then correct it in the background if stale
+    void revalidateSaveState(payload.url, cached)
+    return cachedToResponse(cached)
   }
+
   const res = await ApiClient.checkArticleSaved(payload.url)
-  if (res.is_saved && res.article_id) {
-    await stateStore.setSave(payload.url, true, res.article_id, {
-      priority: res.priority ? String(res.priority) : undefined,
-      note: res.note || undefined,
-      title: res.title || undefined,
-    })
+  // Cache both positive and negative results, but never overwrite an action that
+  // started while the request was in flight.
+  if (!stateStore.getSaveData(payload.url)) {
+    await stateStore.replaceSave(payload.url, responseToState(res))
   }
   return res
 }

@@ -1,7 +1,9 @@
 import { ArticleItemCard } from '@components/screens/following/ui/article-item.card';
 import { Divider } from '@components/ui/divider';
+import { PriorityBadge } from '@components/ui/priority-badge';
 import { Text } from '@components/ui/text';
 import { useFavicon } from '@hooks/useFavicon';
+import { READ_LATER_READER_MODE } from '@lib/constants/app';
 import type { ListItem } from '@lib/utils/article';
 import type { Article } from '@readspace/shared';
 import { formatRelativeDate } from '@readspace/shared';
@@ -19,6 +21,8 @@ interface ArticleListItemProps {
   onBookmark: (articleId: string, currentlySaved: boolean, articleType: 'feed' | 'clipped') => void;
   hideReadState?: boolean;
   lastRefreshedAt?: number;
+  /** Rendered in the Saved tab — the reader then offers "mark as read & next" */
+  isReadLaterMode?: boolean;
 }
 
 export function ArticleListItem({
@@ -27,6 +31,7 @@ export function ArticleListItem({
   onBookmark,
   hideReadState = false,
   lastRefreshedAt,
+  isReadLaterMode = false,
 }: ArticleListItemProps) {
   const [hasMarkedRead, setHasMarkedRead] = useState(false);
 
@@ -36,10 +41,12 @@ export function ArticleListItem({
   const { feedTitle, feedImageUrl } = article
     ? extractFeedInfo(article)
     : { feedTitle: undefined, feedImageUrl: undefined };
+  // Clipped articles have no feed; the source domain is their "feed name"
+  const sourceName = isClipped ? article?.source_domain || undefined : feedTitle;
 
   const { iconUrl, fallbackComponent } = useFavicon({
     url: article?.link || '',
-    feedTitle: feedTitle,
+    feedTitle: sourceName,
     feedImage: feedImageUrl,
     isClipped: isClipped,
   });
@@ -59,24 +66,39 @@ export function ArticleListItem({
   }
 
   if (item.type === 'article' && article) {
-    const timestamp = article.published_at
-      ? formatRelativeDate(new Date(article.published_at))
-      : 'Unknown';
+    // Saved tab shows when the article was saved, not when it was published
+    const listDate = isReadLaterMode ? article.created_at : article.published_at;
+    const timestamp = listDate ? formatRelativeDate(new Date(listDate)) : 'Unknown';
 
     const displayImageUrl = article.image_url || undefined;
 
     return (
-      <Link href={`/(protected)/articles/${article.id}`} asChild>
+      <Link
+        href={{
+          pathname: '/(protected)/articles/[id]',
+          params: {
+            id: article.id,
+            type: article.article_type,
+            ...(isReadLaterMode && { mode: READ_LATER_READER_MODE }),
+          },
+        }}
+        asChild>
         <ArticleItemCard
           article={article}
-          isRead={hideReadState ? false : article.is_read || hasMarkedRead}
+          // Read state is meaningless in Read Later (like web), so don't dim there
+          isRead={hideReadState || isReadLaterMode ? false : article.is_read || hasMarkedRead}
           imageUrl={displayImageUrl}
           title={article.title || undefined}
-          description={article.description || undefined}
+          // Like web, a clip's personal note takes the description's place
+          description={
+            isClipped && article.user_note ? undefined : article.description || undefined
+          }
+          note={isClipped ? article.user_note || undefined : undefined}
+          badge={isClipped ? <PriorityBadge priority={article.priority} /> : undefined}
           timestamp={timestamp}
           faviconUrl={iconUrl}
           fallbackComponent={fallbackComponent}
-          feedName={feedTitle}
+          feedName={sourceName}
           className="px-4"
           showTopDivider={false}
           showBottomDivider={false}

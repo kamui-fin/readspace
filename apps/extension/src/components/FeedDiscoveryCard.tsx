@@ -37,7 +37,11 @@ function FeedDiscoveryCardSkeleton() {
 
 import browser from 'webextension-polyfill'
 import { sendMessage } from '@/shared/messaging'
-import { ExtensionMessage } from '@/shared/types'
+import {
+  ExtensionMessage,
+  FeedFollowStatus,
+  FollowChangedPayload,
+} from '@/shared/types'
 
 // ... imports
 
@@ -56,32 +60,33 @@ export function FeedDiscoveryCard({
   const createFeedMutation = useCreateFeed()
   const deleteFeedMutation = useDeleteFeed()
 
-  // Check initial status from cache
+  // Check initial status (served from cache, then corrected via 'follow-changed')
   useEffect(() => {
     if (!feeds || feeds.length === 0) return
 
     let mounted = true
 
     const checkStatus = async () => {
-      for (const feed of feeds) {
-        try {
-          const status = await sendMessage({
-            type: 'checkFeedFollowed',
-            payload: { url: feed.url },
-          })
-          if (!mounted) return
+      try {
+        const status = await sendMessage<FeedFollowStatus>({
+          type: 'checkFeedFollowed',
+          payload: { urls: feeds.map((feed) => feed.url) },
+        })
+        if (!mounted) return
 
-          if (status.followed) {
-            setOptimisticFollow(true)
-            if (status.followId) {
-              setOptimisticFeedId(status.followId)
-            }
-            setOptimisticFeedUrl(feed.url)
-            return // Found one, stop checking
-          }
-        } catch (error) {
-          console.error('Error checking feed status:', error)
+        setOptimisticFollow(status.followed)
+        if (!status.followed) {
+          setOptimisticFeedId(null)
+          setOptimisticFeedUrl(null)
+          return
         }
+
+        if (status.followId) {
+          setOptimisticFeedId(status.followId)
+        }
+        setOptimisticFeedUrl(status.url ?? null)
+      } catch (error) {
+        console.error('Error checking feed status:', error)
       }
     }
 
@@ -92,21 +97,22 @@ export function FeedDiscoveryCard({
     }
   }, [feeds])
 
-  // Listener for optimistic updates
+  // Listener for background revalidation updates
   useEffect(() => {
     const listener = (msg: unknown) => {
-      const message = msg as ExtensionMessage
-      if (message.type === 'follow-changed') {
-        // Check if any feed matches
-        const match = feeds?.some((f) =>
-          areUrlsEqual(f.url, message.payload.url)
-        )
-        if (match) {
-          setOptimisticFollow(message.payload.followed)
-          if (message.payload.id) {
-            setOptimisticFeedId(message.payload.id)
-          }
-        }
+      const message = msg as ExtensionMessage<FollowChangedPayload>
+      if (message.type !== 'follow-changed' || !message.payload) return
+
+      const { url, followed, id } = message.payload
+      if (!feeds?.some((f) => areUrlsEqual(f.url, url))) return
+
+      setOptimisticFollow(followed)
+      if (followed) {
+        if (id) setOptimisticFeedId(id)
+        setOptimisticFeedUrl(url)
+      } else {
+        setOptimisticFeedId(null)
+        setOptimisticFeedUrl(null)
       }
     }
     browser.runtime.onMessage.addListener(listener)

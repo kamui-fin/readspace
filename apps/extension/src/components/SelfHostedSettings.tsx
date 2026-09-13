@@ -127,10 +127,7 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
             </>
           ) : (
             <>
-              Self-hosted:{' '}
-              <span className="font-mono text-xs break-all">
-                {settings.readspace_url}
-              </span>
+              Connected to <span className="font-medium">Self-hosted</span>
             </>
           )}
         </p>

@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { BookOpen, Trash2 } from 'lucide-react'
+import { BookOpen, Loader2, Trash2 } from 'lucide-react'
 
 interface ArticleHeaderProps {
   isSaved: boolean
@@ -24,65 +24,59 @@ export function ArticleHeader({
   isSavePending,
   isPreparingToSave,
 }: ArticleHeaderProps) {
+  const isSaving = isSavePending || isPreparingToSave
+  const isBusy = isSaving || isUpdatePending || isUnsavePending
+  // Pending states win: `isSaved` is already true while a first save is in flight
+  const showUnsave =
+    isSaved && !hasUnsavedChanges && !isSaving && !isUpdatePending
+  const buttonLabel = isSaving
+    ? 'Saving'
+    : isUpdatePending
+      ? 'Updating'
+      : isUnsavePending
+        ? 'Removing'
+        : showUnsave
+          ? 'Unsave'
+          : isSaved
+            ? 'Update'
+            : 'Save'
+
   return (
     <div className="flex items-center gap-3">
-      {/* Icon */}
-      <div className="bg-primary rounded-full p-2 flex-shrink-0">
-        <BookOpen className="w-4 h-4 text-primary-foreground" />
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary">
+        <BookOpen className="size-4 text-primary-foreground" />
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0 flex flex-col justify-center">
-        <h3 className="font-semibold text-sm">
+      <div className="min-w-0 flex-1">
+        <h3 className="text-sm font-semibold leading-tight">
           {isSaved ? 'Saved article' : 'Save article for later'}
         </h3>
-        {readingTime && (
-          <p className="text-xs text-muted-foreground line-clamp-2">
+        {readingTime ? (
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {readingTime} min read
           </p>
-        )}
+        ) : null}
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <Button
-          onClick={() => onSave()}
-          disabled={isPending}
-          size="sm"
-          variant={isSaved && !hasUnsavedChanges ? 'outline' : 'default'}
-          className={`flex-shrink-0 w-[100px] ${
-            isSaved && !hasUnsavedChanges
-              ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
-              : ''
-          }`}
-        >
-          {isSaved && !hasUnsavedChanges && !isUnsavePending ? (
-            <div className="flex items-center justify-center">
-              <Trash2 className="w-3 h-3 mr-1.5" />
-              <span>Unsave</span>
-            </div>
-          ) : isUnsavePending ? (
-            <div className="px-2 flex items-center justify-center">
-              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" />
-              <span>Removing</span>
-            </div>
-          ) : isSaved && hasUnsavedChanges && !isUpdatePending ? (
-            'Update'
-          ) : isUpdatePending ? (
-            <div className="flex items-center justify-center">
-              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" />
-              <span>Updating</span>
-            </div>
-          ) : isSavePending || isPreparingToSave ? (
-            <div className="flex items-center justify-center">
-              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" />
-              <span>Saving</span>
-            </div>
-          ) : (
-            'Save'
-          )}
-        </Button>
-      </div>
+      <Button
+        onClick={() => onSave()}
+        disabled={isPending}
+        size="sm"
+        variant={showUnsave ? 'outline' : 'default'}
+        aria-busy={isBusy}
+        className={`w-[104px] shrink-0 ${
+          showUnsave
+            ? 'border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground'
+            : ''
+        }`}
+      >
+        {isBusy ? (
+          <Loader2 className="animate-spin" aria-hidden="true" />
+        ) : showUnsave ? (
+          <Trash2 aria-hidden="true" />
+        ) : null}
+        {buttonLabel}
+      </Button>
     </div>
   )
 }

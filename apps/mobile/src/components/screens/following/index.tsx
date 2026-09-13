@@ -148,10 +148,18 @@ export function FollowingScreen({
     return processArticles(data, isViewingFeedOrFolder, activeTab, filter);
   }, [data, filter, isViewingFeedOrFolder, activeTab]);
 
-  // Group articles by date and create flat list with sections and dividers
+  // Group articles by date and create flat list with sections and dividers.
+  // Saved tab lists by when the article was saved — remap created_at → published_at
+  // so createListItems groups (and the row timestamp shows) the saved date.
+  const isSavedTab = activeTab === 2 && !isViewingFeedOrFolder;
   const listItems = useMemo(() => {
-    return createListItems(allArticles);
-  }, [allArticles]);
+    if (!isSavedTab) return createListItems(allArticles);
+    const remapped = allArticles.map((article) => ({
+      ...article,
+      published_at: article.created_at ?? article.published_at,
+    }));
+    return createListItems(remapped);
+  }, [allArticles, isSavedTab]);
 
   // Mutation handlers
   const handleFolderSelect = useCallback(
@@ -479,10 +487,11 @@ export function FollowingScreen({
           onToggleRead={handleToggleRead}
           onBookmark={handleBookmark}
           lastRefreshedAt={lastRefreshedAt}
+          isReadLaterMode={activeTab === 2 && !isViewingFeedOrFolder}
         />
       );
     },
-    [handleToggleRead, handleBookmark, lastRefreshedAt]
+    [handleToggleRead, handleBookmark, lastRefreshedAt, activeTab, isViewingFeedOrFolder]
   );
 
   const renderFooter = () => {

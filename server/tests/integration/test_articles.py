@@ -517,6 +517,51 @@ class TestReadLaterArticles:
         assert "has_more" in data
         assert "next_cursor" in data
 
+    @pytest.mark.asyncio
+    async def test_read_later_feed_article_uses_user_entry_created_at(
+        self,
+        async_client: AsyncClient,
+        db_session: AsyncSession,
+        test_feed: Feed,
+        test_user: Profile,
+    ) -> None:
+        """Saved feed articles report when the user interacted with them, not when the feed item was ingested."""
+        now = datetime.now(UTC)
+        ingested_at = now - timedelta(days=2)
+        saved_at = now - timedelta(hours=1)
+
+        link = "https://example.com/read-later-created-at"
+        content = ArticleContent(title="Saved Feed Article", link=link, content_hash=get_content_hash(link))
+        db_session.add(content)
+        await db_session.flush()
+
+        article = FeedArticle(
+            feed_id=test_feed.id,
+            content_id=content.id,
+            guid_hash="read-later-created-at",
+            published_at=now - timedelta(days=3),
+            created_at=ingested_at,
+        )
+        db_session.add(article)
+        await db_session.flush()
+
+        db_session.add(
+            UserEntry(
+                user_id=test_user.id,
+                content_id=content.id,
+                feed_article_id=article.id,
+                is_saved=True,
+                created_at=saved_at,
+            )
+        )
+        await db_session.commit()
+
+        response = await async_client.get("/api/articles/views/read-later")
+
+        assert response.status_code == 200
+        item = next(i for i in response.json()["items"] if i["id"] == str(article.id))
+        assert datetime.fromisoformat(item["created_at"]) == saved_at
+
 
 class TestUnreadCounts:
     """Test unread article counts endpoint."""

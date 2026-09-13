@@ -225,3 +225,9 @@ export interface FeedsResponse {
   subscriptions: SubscriptionResponse[] | SubscriptionResponseExtended[];
   folders: FolderResponse[];
 }
+
+export interface CheckFeedFollowedResponse {
+  is_followed: boolean;
+  feed_id: string | null;
+  feed_url: string | null;
+}

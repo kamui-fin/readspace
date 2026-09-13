@@ -92,7 +92,10 @@ export const CodexWriteupsSheet = forwardRef<CodexWriteupsSheetHandle, object>((
                 showTopDivider={i > 0}
                 onPress={() => {
                   modalRef.current?.dismiss();
-                  router.push(`/(protected)/articles/${article.id}`);
+                  router.push({
+                    pathname: '/(protected)/articles/[id]',
+                    params: { id: article.id, type: article.article_type },
+                  });
                 }}
               />
             ))}

@@ -49,6 +49,7 @@ export function ArticlesList({
         articles,
         showUnreadOnly,
         isRecentlyReadMode,
+        isReadLaterMode,
         isTodayMode,
     })
 
@@ -195,6 +196,9 @@ export function ArticlesList({
                                                 }
                                                 isRecentlyReadMode={
                                                     isRecentlyReadMode
+                                                }
+                                                isReadLaterMode={
+                                                    isReadLaterMode
                                                 }
                                                 onClick={() =>
                                                     onArticleSelect(

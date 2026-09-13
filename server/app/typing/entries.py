@@ -101,12 +101,21 @@ class EntryDetail(ContentFields, UserStateFields, FeedContextFields):
 # ================= API Requests =================
 
 
+class ClippedArticleMetadata(BaseModel):
+    """Page metadata captured by the client (e.g. browser extension) when clipping."""
+
+    description: str | None = None
+    author: str | None = None
+    image_url: str | None = None
+
+
 class EntryCreateExternal(BaseModel):
     """Create a manually saved entry (Read-Later/Clipped)."""
 
     url: HttpUrl
     title: str | None = None
     content: str | None = None
+    metadata: ClippedArticleMetadata | None = None
     priority: ArticlePriority = ArticlePriority.MEDIUM
     note: str | None = None
 

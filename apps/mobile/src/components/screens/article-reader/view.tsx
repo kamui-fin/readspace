@@ -14,8 +14,11 @@ import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useLimitChecker } from '@hooks/useLimitChecker';
+import { READ_LATER_READER_MODE } from '@lib/constants/app';
 import { SUPPORTED_LANGUAGES } from '@lib/constants/languages';
+import { getAdjacentArticle } from '@lib/utils/article';
 import {
+  queryKeys,
   useArticle,
   useExtractFullTextMutation,
   useGenerateHighlightsMutation,
@@ -34,10 +37,19 @@ import Animated, { FadeIn, FadeOut, useSharedValue } from 'react-native-reanimat
 
 interface ArticleScreenProps {
   articleId: string;
+  /** 'feed' | 'clipped' — required to fetch clipped articles */
+  articleType?: string;
   isSubscribed?: boolean;
+  /** Opened from the Saved tab: checkmark marks read, unsaves, and advances */
+  isReadLaterMode?: boolean;
 }
 
-export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenProps) {
+export function ArticleScreen({
+  articleId,
+  articleType,
+  isSubscribed = true,
+  isReadLaterMode = false,
+}: ArticleScreenProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const scrollY = useSharedValue(0);
@@ -54,10 +66,12 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   // Fetch article data
   const { data: article, isLoading: isArticleLoading } = useArticle(articleId || '', {
     enabled: !!articleId,
+    articleType,
   });
 
-  // Check if this is a clipped article
-  const isClipped = article?.article_type === 'clipped';
+  // Check if this is a clipped article (route param covers the loading state)
+  const isClipped = (article?.article_type ?? articleType) === 'clipped';
+  const showDone = isClipped || isReadLaterMode;
 
   // ============ View Mode State ============
   const [contentSource, setContentSource] = useState<ArticleViewMode>('original');
@@ -257,25 +271,42 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    // Show immediate feedback
-    toast.success('Marked as done');
+    // Resolve the next saved article before the optimistic update drops this one from the list
+    const nextArticle = isReadLaterMode
+      ? getAdjacentArticle(queryClient.getQueryData(queryKeys.infiniteReadLater()), article.id)
+      : undefined;
 
-    updateArticle.mutate(
-      {
-        articleId: article.id,
-        data: { is_saved: false },
-        articleType: article.article_type || 'feed',
-      },
-      {
-        onSuccess: () => {
-          router.back();
+    // Like web: mark as read and remove from read later in one update
+    toast
+      .promise(
+        updateArticle.mutateAsync({
+          articleId: article.id,
+          data: { is_read: true, is_saved: false },
+          articleType: article.article_type || 'feed',
+        }),
+        {
+          loading: 'Marking as done...',
+          success: 'Marked as done',
+          error: 'Failed to mark as done',
+        }
+      )
+      .catch(() => {
+        // Error toast shown above; the hook rolls back the optimistic update
+      });
+
+    if (nextArticle) {
+      router.replace({
+        pathname: '/(protected)/articles/[id]',
+        params: {
+          id: nextArticle.id,
+          type: nextArticle.article_type,
+          mode: READ_LATER_READER_MODE,
         },
-        onError: () => {
-          toast.error('Failed to mark as done');
-        },
-      }
-    );
-  }, [article, updateArticle, router]);
+      });
+    } else {
+      router.back();
+    }
+  }, [article, isReadLaterMode, queryClient, updateArticle, router]);
 
   const handleShare = useCallback(async () => {
     if (!article) return;
@@ -498,15 +529,14 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         scrollDirection={isArticleLoading ? undefined : scrollDirection}
         onClose={handleClose}
         onShare={handleShare}
-        onBookmark={
-          isArticleLoading ? handleBookmark : isClipped ? handleMarkAsDone : handleBookmark
-        }
+        onBookmark={showDone ? handleMarkAsDone : handleBookmark}
         onMenuPress={isArticleLoading ? () => {} : handleMenuPress}
         hideMenu={isNewsletter}
         onGenerateSummary={isArticleLoading ? undefined : handleGenerateSummary}
         onCopyLink={isArticleLoading ? undefined : handleCopyLink}
         isBookmarked={article?.is_saved || false}
         isClipped={isClipped}
+        showDone={showDone}
       />
 
       {isArticleLoading || translateMutation.isPending ? (

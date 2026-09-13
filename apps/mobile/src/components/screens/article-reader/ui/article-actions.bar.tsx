@@ -33,6 +33,8 @@ interface ArticleActionBarProps {
   onCopyLink?: () => void;
   isBookmarked: boolean;
   isClipped: boolean;
+  /** Swap the bookmark for a "mark as read & remove from read later" checkmark */
+  showDone?: boolean;
   menuTrigger?: ReactNode;
 }
 
@@ -48,6 +50,7 @@ export function ArticleActionBar({
   onCopyLink,
   isBookmarked,
   isClipped,
+  showDone = false,
   menuTrigger,
 }: ArticleActionBarProps) {
   const isDark = useIsDarkMode();
@@ -166,29 +169,28 @@ export function ArticleActionBar({
           </Button>
         )}
 
-        {/* Bookmark Button (or Done button for clipped articles) */}
+        {/* Bookmark Button (or Done button in read later / for clipped articles) */}
         <Button
           variant="icon"
           size="small"
           fullWidth={false}
           onPress={onBookmark}
           style={
-            !isClipped && isBookmarked
+            !showDone && isBookmarked
               ? {
                   backgroundColor: colors.icon_bg_yellow,
                 }
               : undefined
           }>
-          {(() => {
-            const Icon = isClipped ? CheckCircleIcon : isBookmarked ? BookmarkIcon : BookmarkIcon;
-            return (
-              <Icon
-                size={18}
-                color={isClipped ? colors.secondary : isBookmarked ? '#FBBC04' : greyColor}
-                strokeWidth={2.4}
-              />
-            );
-          })()}
+          {showDone ? (
+            <CheckCircleIcon size={18} color={colors.secondary} strokeWidth={2.4} />
+          ) : (
+            <BookmarkIcon
+              size={18}
+              color={isBookmarked ? '#FBBC04' : greyColor}
+              strokeWidth={2.4}
+            />
+          )}
         </Button>
 
         {/* Menu Button */}

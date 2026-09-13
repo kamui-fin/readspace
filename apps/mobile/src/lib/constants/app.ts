@@ -10,6 +10,10 @@ export const BOTTOM_TABBAR_BASE_HEIGHT = 64;
 // no offset.
 export const REFRESH_SPINNER_HEADER_OVERLAP = 44;
 
+// Article reader `mode` route param: opened from the Saved tab, so the reader shows
+// the "mark as read & remove" checkmark and advances to the next saved article.
+export const READ_LATER_READER_MODE = 'read-later';
+
 export const MAX_TRENDING_ITEMS = 100;
 export const TRENDING_PAGE_SIZE = 20;
 

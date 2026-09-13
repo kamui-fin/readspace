@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { sendMessage } from '../shared/messaging'
 import { CheckArticleSavedResponse } from '@readspace/shared'
-import { ExtensionMessage } from '../shared/types'
+import { ExtensionMessage, SaveChangedPayload } from '../shared/types'
 import browser from 'webextension-polyfill'
 import { normalizeKey } from '../lib/normalize'
 
@@ -19,7 +19,7 @@ export function useCheckArticleSaved(url?: string) {
     let mounted = true
     setIsLoading(true)
 
-    // Initial check
+    // Initial check (may be served from cache, then corrected via 'save-changed')
     sendMessage<CheckArticleSavedResponse>({
       type: 'checkArticleSaved',
       payload: { url },
@@ -35,21 +35,11 @@ export function useCheckArticleSaved(url?: string) {
       })
 
     const listener = (msg: unknown) => {
-      const message = msg as ExtensionMessage
-      if (message.type === 'save-changed' || message.type === 'save-success') {
-        const normUrl = normalizeKey(url)
-        // message.payload.url is already normalized by background
-        if (message.payload.url === normUrl) {
-          setSavedArticle((prev) => {
-            if (!prev) return null // Can't update if we don't have base object, or should we fetch?
-            // If we are saving, we might want to show it as saved even if we don't have full details yet?
-            // But usually we have details if we are on the page.
-
-            // We need to cast or ensure we return valid CheckArticleSavedResponse
-            // Assuming CheckArticleSavedResponse has 'saved' boolean.
-            return { ...prev, saved: message.payload.saved }
-          })
-        }
+      const message = msg as ExtensionMessage<SaveChangedPayload>
+      if (message.type !== 'save-changed' || !message.payload) return
+      // payload.url is already normalized by the background
+      if (message.payload.url === normalizeKey(url)) {
+        setSavedArticle(message.payload.article)
       }
     }
 

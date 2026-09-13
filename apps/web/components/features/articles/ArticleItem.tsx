@@ -5,6 +5,7 @@ import { Clock, Paperclip } from "lucide-react"
 import Image from "next/image"
 import { useState } from "react"
 import { FeedIcon } from "@/components/features/feeds/FeedIcon"
+import { getArticleListDate } from "./hooks/use-article-grouping"
 
 import type { Article } from "@readspace/shared"
 
@@ -34,11 +35,12 @@ export function ArticleItem({
     isActive = false,
     isLastInGroup = false,
     isRecentlyReadMode = false,
+    isReadLaterMode = false,
     onClick,
 }: ArticleItemProps) {
     const [articleImageError, setArticleImageError] = useState(false)
 
-    const publishedAtString = article.published_at
+    const publishedAtString = getArticleListDate(article, isReadLaterMode)
     const readAtString = article.read_at
 
     const timeDisplay = publishedAtString

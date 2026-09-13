@@ -6,6 +6,7 @@
     "scripts": {
         "dev": "next dev -p 8042",
         "build": "next build",
+        "test": "bun test",
         "start": "next start -p 8042",
         "lint": "next lint",
         "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
@@ -72,6 +73,7 @@
         "cookie": "^1.0.2",
         "date-fns": "^4.1.0",
         "devalue": "^5.1.1",
+        "dompurify": "^3.4.15",
         "dotenv": "^16.4.7",
         "express": "^4.21.2",
         "formik": "^2.4.6",
@@ -141,6 +143,7 @@
         "@supabase/supabase-js": "^2.49.4",
         "@tailwindcss/postcss": "^4.0.15",
         "@tailwindcss/typography": "^0.5.16",
+        "@types/bun": "^1.3.0",
         "@types/jsdom": "^21.1.7",
         "@types/lodash.debounce": "^4.0.9",
         "@types/node": "^24.10.1",

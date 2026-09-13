@@ -74,3 +74,11 @@ class SubscriptionResponseExtended(SubscriptionResponse):
     """
 
     feed: FeedDetail
+
+
+class FeedFollowCheckResponse(BaseModel):
+    """Whether the user follows one of the checked feeds."""
+
+    is_followed: bool
+    feed_id: UUID | None = None
+    feed_url: str | None = None

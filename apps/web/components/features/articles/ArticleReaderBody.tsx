@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { Article } from "@readspace/shared"
 
 import { AiSummaryCard } from "./AiSummaryCard"
@@ -6,6 +6,7 @@ import { AnimatedContent } from "./AnimatedContent"
 import { ArticleHeader } from "./ArticleHeader"
 import { ProseContainer } from "./ProseContainer"
 import { Skeleton } from "@/components/ui/skeleton"
+import { sanitizeArticleHtml } from "@/lib/sanitize-article-html"
 
 const READER_SERIF =
     "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)"
@@ -238,6 +239,22 @@ export function ArticleReaderBody({
     highlightsEnabled = false,
 }: ArticleReaderBodyProps) {
     const contentRef = useRef<HTMLDivElement>(null)
+    const [canSanitize, setCanSanitize] = useState(false)
+    useEffect(() => setCanSanitize(true), [])
+
+    const sanitizedDisplayContent = useMemo(
+        () => (canSanitize ? sanitizeArticleHtml(displayContent || "") : ""),
+        [canSanitize, displayContent]
+    )
+    const sanitizedFallbackContent = useMemo(
+        () =>
+            canSanitize
+                ? sanitizeArticleHtml(
+                      article.user_note || article.description || ""
+                  )
+                : "",
+        [canSanitize, article.user_note, article.description]
+    )
     useEffect(() => {
         if (!highlightsEnabled) return
         contentRef.current
@@ -248,7 +265,7 @@ export function ArticleReaderBody({
                     String(Math.min(i, 20))
                 )
             })
-    }, [highlightsEnabled, displayContent, isBusy])
+    }, [highlightsEnabled, sanitizedDisplayContent, isBusy])
 
     return (
         <ProseContainer>
@@ -271,7 +288,7 @@ export function ArticleReaderBody({
                 />
             )}
 
-            {isBusy ? (
+            {isBusy || (!canSanitize && !!displayContent) ? (
                 <div className="space-y-4 mt-8">
                     <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-4 w-[90%]" />
@@ -280,11 +297,11 @@ export function ArticleReaderBody({
                     <Skeleton className="h-4 w-[85%]" />
                     <Skeleton className="h-4 w-[60%]" />
                 </div>
-            ) : displayContent ? (
+            ) : sanitizedDisplayContent ? (
                 <AnimatedContent contentKey={contentKey} className="mt-8">
                     {article.link?.startsWith("newsletter://") ? (
                         <NewsletterIframe
-                            content={displayContent}
+                            content={sanitizedDisplayContent}
                             isDark={isDark}
                             highlightsEnabled={highlightsEnabled}
                         />
@@ -300,7 +317,7 @@ export function ArticleReaderBody({
                         >
                             <div
                                 dangerouslySetInnerHTML={{
-                                    __html: displayContent,
+                                    __html: sanitizedDisplayContent,
                                 }}
                             />
                         </div>
@@ -308,14 +325,11 @@ export function ArticleReaderBody({
                 </AnimatedContent>
             ) : (
                 <div className="space-y-6 mt-8">
-                    {(article.description || article.user_note) && (
+                    {sanitizedFallbackContent && (
                         <blockquote className="border-l-4 border-primary/30 bg-muted/30 pl-4 italic text-muted-foreground prose prose-sm max-w-none">
                             <div
                                 dangerouslySetInnerHTML={{
-                                    __html:
-                                        article.user_note ||
-                                        article.description ||
-                                        "",
+                                    __html: sanitizedFallbackContent,
                                 }}
                             />
                         </blockquote>

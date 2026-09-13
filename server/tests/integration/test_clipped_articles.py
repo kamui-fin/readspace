@@ -6,6 +6,7 @@ from uuid import uuid4
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.article import ArticleContent, UserEntry
@@ -168,6 +169,29 @@ class TestCheckArticleSaved:
         data = response.json()
         assert data["is_saved"] is True
         assert data["article_id"] == str(test_clipped_article.id)
+
+    @pytest.mark.asyncio
+    async def test_check_saved_article_after_unsave(
+        self,
+        async_client: AsyncClient,
+        test_clipped_article: UserEntry,
+    ):
+        """Test an unsaved entry (row kept with is_saved=False) reports is_saved: false."""
+        unsave_response = await async_client.put(
+            f"/api/articles/{test_clipped_article.id}?article_type=clipped",
+            json={"is_saved": False},
+        )
+        assert unsave_response.status_code == 204
+
+        response = await async_client.get(
+            "/api/articles/check-saved",
+            params={"url": "https://example.com/test-clipped-article"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["is_saved"] is False
+        assert data["article_id"] is None
 
     @pytest.mark.asyncio
     async def test_check_saved_article_not_exists(self, async_client: AsyncClient):
@@ -364,3 +388,90 @@ class TestReadLaterEndpoint:
         first_page_ids = {item["id"] for item in data["items"]}
         second_page_ids = {item["id"] for item in next_data["items"]}
         assert first_page_ids.isdisjoint(second_page_ids)
+
+
+class TestClippedArticleMetadata:
+    """Test that clip metadata sent by the extension lands on article_contents."""
+
+    @staticmethod
+    async def _get_content(db_session: AsyncSession, url: str) -> ArticleContent:
+        """Load the stored content row for a clipped URL, bypassing the identity map."""
+        result = await db_session.execute(
+            select(ArticleContent).where(ArticleContent.link == url).execution_options(populate_existing=True)
+        )
+        return result.scalar_one()
+
+    @pytest.mark.asyncio
+    async def test_save_article_persists_metadata(self, async_client: AsyncClient, db_session: AsyncSession):
+        """Description, image and author from page metadata are stored."""
+        url = "https://example.com/metadata-article"
+        response = await async_client.post(
+            "/api/articles/",
+            json={
+                "url": url,
+                "title": "Metadata Article",
+                "content": "<p>Body text.</p>",
+                "metadata": {
+                    "description": "The og:description of the page",
+                    "image_url": "https://example.com/files/umbrella.jpg",
+                    "author": "Jane Doe",
+                },
+            },
+        )
+
+        assert response.status_code == 201
+        content = await self._get_content(db_session, url)
+        assert content.description == "The og:description of the page"
+        assert content.image_url == "https://example.com/files/umbrella.jpg"
+        assert content.author == "Jane Doe"
+
+    @pytest.mark.asyncio
+    async def test_save_article_without_description_uses_excerpt(
+        self, async_client: AsyncClient, db_session: AsyncSession
+    ):
+        """Without an SEO description, the first sentence of the content is used."""
+        url = "https://example.com/no-seo-article"
+        response = await async_client.post(
+            "/api/articles/",
+            json={
+                "url": url,
+                "title": "No SEO Article",
+                "content": (
+                    "<figure><figcaption>Photo credit</figcaption></figure>"
+                    "<p>The opening sentence of this article is long enough to stand on its own as a preview "
+                    "for readers.</p><p>A second paragraph that should not be included.</p>"
+                ),
+            },
+        )
+
+        assert response.status_code == 201
+        content = await self._get_content(db_session, url)
+        assert content.description == (
+            "The opening sentence of this article is long enough to stand on its own as a preview for readers."
+        )
+
+    @pytest.mark.asyncio
+    async def test_resave_without_metadata_keeps_existing_fields(
+        self, async_client: AsyncClient, db_session: AsyncSession
+    ):
+        """A later save with no metadata/content must not wipe what an earlier clip stored."""
+        url = "https://example.com/resaved-article"
+        first = await async_client.post(
+            "/api/articles/",
+            json={
+                "url": url,
+                "title": "Resaved Article",
+                "content": "<p>Original body.</p>",
+                "metadata": {"description": "Kept description", "image_url": "https://example.com/kept.jpg"},
+            },
+        )
+        assert first.status_code == 201
+
+        second = await async_client.post("/api/articles/", json={"url": url, "title": "Resaved Article v2"})
+        assert second.status_code == 201
+
+        content = await self._get_content(db_session, url)
+        assert content.title == "Resaved Article v2"
+        assert content.description == "Kept description"
+        assert content.image_url == "https://example.com/kept.jpg"
+        assert content.content == "<p>Original body.</p>"

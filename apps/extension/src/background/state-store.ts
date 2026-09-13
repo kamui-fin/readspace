@@ -70,6 +70,16 @@ class StateStore {
     return this.save.get(normalizeKey(rawUrl))
   }
 
+  getFollowData(rawUrl: string) {
+    return this.follow.get(normalizeKey(rawUrl))
+  }
+
+  /** Overwrite a save entry with server-confirmed state, without merging cached fields. */
+  async replaceSave(rawUrl: string, state: Omit<ItemState, 'ts'>) {
+    this.save.set(normalizeKey(rawUrl), { ...state, ts: Date.now() })
+    this.persistSaveDebounced()
+  }
+
   async setFollow(rawUrl: string, value: boolean, id?: string) {
     const url = normalizeKey(rawUrl)
     const existing = this.follow.get(url)

@@ -5,10 +5,12 @@ import structlog
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.constants import CLIPPED_EXCERPT_MAX_LENGTH, CLIPPED_EXCERPT_MIN_LENGTH
 from app.crud.article.actions import set_article_state
 from app.crud.article.ingester import upsert_article_content
 from app.models.article import ArticleContent, UserEntry
 from app.typing.entries import ArticleCreate
+from app.utils.text import build_excerpt
 
 logger = structlog.get_logger(__name__)
 
@@ -37,13 +39,19 @@ async def save_article_from_url(
     """
     metadata = metadata or {}
 
+    # Prefer the page's SEO/og description; otherwise derive one from the article body
+    description = metadata.get("description")
+    if not description:
+        description = build_excerpt(content, CLIPPED_EXCERPT_MAX_LENGTH, CLIPPED_EXCERPT_MIN_LENGTH) or None
+        logger.debug("Derived clip description from content", url=url, has_description=description is not None)
+
     # 1. Prepare Content Data
     content_in = ArticleCreate(
         title=title or "Untitled",
         link=url,
         guid=url,  # Use URL as GUID for clips
         content=content,
-        description=metadata.get("description"),
+        description=description,
         author=metadata.get("author"),
         image_url=metadata.get("image_url"),
         published_at=datetime.now(UTC),

@@ -1,5 +1,11 @@
 import { ApiClient } from '../core';
-import { FeedDetail, Subscription, FeedsResponse, AdminFeedUpdate } from '../types/feeds';
+import {
+  FeedDetail,
+  Subscription,
+  FeedsResponse,
+  AdminFeedUpdate,
+  CheckFeedFollowedResponse,
+} from '../types/feeds';
 
 export const feeds = {
   getFeeds: (params?: {
@@ -22,6 +28,16 @@ export const feeds = {
   },
 
   getFeed: (id: string) => ApiClient.get<FeedDetail>(`/api/feeds/${id}`),
+
+  /** Check whether the user follows any of the candidate feed URLs or known feed IDs. */
+  checkFeedFollowed: (params: { urls: string[]; feedIds?: string[] }) => {
+    const queryParams = new URLSearchParams();
+    params.urls.forEach((url) => queryParams.append('url', url));
+    params.feedIds?.forEach((id) => queryParams.append('feed_id', id));
+    return ApiClient.get<CheckFeedFollowedResponse>(
+      `/api/feeds/check-followed?${queryParams.toString()}`
+    );
+  },
 
   createFeed: (data: { url: string; folder_id?: string }, signal?: AbortSignal) =>
     ApiClient.post<Subscription>('/api/feeds/', data, signal ? { signal } : undefined),

@@ -56,7 +56,7 @@ class TestNewsletterFeature:
         db_session.add(test_user)
 
         # Set token on test user
-        token = "testtoken123"
+        token = "testtoken123"  # noqa: S105 - synthetic fixture value
         test_user.newsletter_token = token
         db_session.add(test_user)
         await db_session.commit()
@@ -71,7 +71,9 @@ class TestNewsletterFeature:
         }
 
         response = await async_client.post(
-            "/api/intake/webhook", json=payload, headers={"X-Readspace-Secret": settings.INBOUND_WEBHOOK_SECRET}
+            "/api/intake/webhook",
+            json=payload,
+            headers={"X-Readspace-Secret": settings.INBOUND_WEBHOOK_SECRET.get_secret_value()},
         )
 
         assert response.status_code == 201
@@ -143,7 +145,9 @@ class TestNewsletterFeature:
         }
 
         response = await async_client.post(
-            "/api/intake/webhook", json=payload, headers={"X-Readspace-Secret": settings.INBOUND_WEBHOOK_SECRET}
+            "/api/intake/webhook",
+            json=payload,
+            headers={"X-Readspace-Secret": settings.INBOUND_WEBHOOK_SECRET.get_secret_value()},
         )
         assert response.status_code == 404
 
@@ -236,7 +240,7 @@ class TestNewsletterFeature:
         self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
     ):
         """Test that webhook fails with 403 if the matching profile is a BASIC user."""
-        token = "basic_user_token"
+        token = "basic_user_token"  # noqa: S105 - synthetic fixture value
         test_user.newsletter_token = token
         # Ensure user is BASIC
         from app.models.enums import UserRole
@@ -254,7 +258,9 @@ class TestNewsletterFeature:
         }
 
         response = await async_client.post(
-            "/api/intake/webhook", json=payload, headers={"X-Readspace-Secret": settings.INBOUND_WEBHOOK_SECRET}
+            "/api/intake/webhook",
+            json=payload,
+            headers={"X-Readspace-Secret": settings.INBOUND_WEBHOOK_SECRET.get_secret_value()},
         )
         assert response.status_code == 403
         assert "premium subscription required" in response.json()["detail"].lower()

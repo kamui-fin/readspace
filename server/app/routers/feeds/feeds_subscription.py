@@ -4,13 +4,14 @@ from typing import Annotated, Any
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Body, Depends, status
+from fastapi import APIRouter, Body, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import ERROR_FEED_NOT_FOUND
+from app.core.constants import ERROR_FEED_NOT_FOUND, MAX_FOLLOW_CHECK_ITEMS
 from app.core.custom_exceptions import NotFoundError
 from app.crud.feed.core import get_feed_by_id
-from app.db.session import get_db_factory
+from app.crud.feed.subscription import get_followed_feed
+from app.db.session import get_db, get_db_factory
 from app.models.feed import Feed
 from app.services.feeds.service import add_feed
 from app.services.folder import ensure_default_folder
@@ -18,6 +19,7 @@ from app.services.user.auth import get_current_user
 from app.services.user.resource_limits import enforce_subscription_limit
 from app.typing.feeds import FeedCreate
 from app.typing.subscriptions import (
+    FeedFollowCheckResponse,
     SubscriptionResponse,
 )
 from app.typing.user import TokenData
@@ -86,3 +88,41 @@ async def add_new_feed(
 
     logger.info("Feed added successfully", feed_id=str(subscription.feed_id))
     return subscription
+
+
+# Registered on this router (included before feeds_router) so the static path wins over GET /{feed_id}
+@router.get(
+    "/check-followed",
+    response_model=FeedFollowCheckResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Check if the user follows any of the given feeds",
+)
+async def check_feed_followed(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[TokenData, Depends(get_current_user)],
+    urls: list[str] = Query(
+        default_factory=list,
+        alias="url",
+        max_length=MAX_FOLLOW_CHECK_ITEMS,
+        description="Candidate feed URLs",
+    ),
+    feed_ids: list[UUID] = Query(
+        default_factory=list,
+        alias="feed_id",
+        max_length=MAX_FOLLOW_CHECK_ITEMS,
+        description="Previously known feed IDs",
+    ),
+) -> FeedFollowCheckResponse:
+    """
+    Check whether the user is subscribed to any of the candidate feeds.
+
+    URLs are normalized the same way they are stored. Feed IDs let clients confirm
+    feeds that were stored under a redirected URL.
+    """
+    logger.bind(user_id=current_user.sub, url_count=len(urls), feed_id_count=len(feed_ids))
+
+    feed = await get_followed_feed(db, user_id=UUID(current_user.sub), urls=urls, feed_ids=feed_ids)
+    if not feed:
+        return FeedFollowCheckResponse(is_followed=False)
+
+    return FeedFollowCheckResponse(is_followed=True, feed_id=feed.id, feed_url=feed.url)

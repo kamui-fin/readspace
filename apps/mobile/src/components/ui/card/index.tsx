@@ -43,6 +43,8 @@ export interface CardProps
   faviconUrl?: string;
   fallbackComponent?: React.FC<{ size?: number; className?: string }>;
   feedName?: string;
+  badge?: ReactNode;
+  note?: string;
   showTopDivider?: boolean;
   showBottomDivider?: boolean;
   // Text-only variant props
@@ -69,6 +71,8 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
       faviconUrl,
       fallbackComponent: FallbackComponent,
       feedName,
+      badge,
+      note,
       showTopDivider = false,
       showBottomDivider = true,
       content,
@@ -164,8 +168,9 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
             {/* Content on left */}
             <View className="flex-1">
               {/* Feed name and timestamp header */}
-              {(feedName || timestamp) && (
+              {(feedName || timestamp || badge) && (
                 <View className="mb-3 flex-row items-center gap-1.5">
+                  {badge}
                   <FeedIcon
                     url={faviconUrl}
                     fallbackComponent={FallbackComponent}
@@ -212,6 +217,15 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                   )}
                   numberOfLines={3}>
                   {stripHtml(title)}
+                </Text>
+              )}
+              {note && (
+                <Text
+                  size={13}
+                  fontFamily="geist"
+                  className={clsx('mb-1 leading-5', isRead ? 'text-grey/70' : 'text-grey')}
+                  numberOfLines={2}>
+                  {note}
                 </Text>
               )}
               {description && (

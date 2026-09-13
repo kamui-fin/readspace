@@ -1,6 +1,9 @@
 // Content script for Readspace extension
 import browser from 'webextension-polyfill'
-import { extractArticleContent } from './lib/content-extractor'
+import {
+  extractArticleContent,
+  extractPageMetadata,
+} from './lib/content-extractor'
 import { scanForFeeds } from './lib/feed-discovery'
 import { ExtensionMessage } from './shared/types'
 
@@ -27,17 +30,12 @@ browser.runtime.onMessage.addListener((request: unknown) => {
 })
 
 /**
- * Extract basic metadata from the current page (FAST - no feed validation)
+ * Extract basic metadata from the current page (FAST - DOM read only, no Defuddle
+ * parse and no feed validation). Full content extraction is `extractContent`.
  */
 async function extractPageMetadataFast() {
-  // Discover potential feeds quickly without validation
-  const feeds = scanForFeeds()
-
-  // Use extractArticleContent but we only really need the metadata part
-  const content = await extractArticleContent()
-
   return {
-    ...content,
-    feeds,
+    ...extractPageMetadata(),
+    feeds: scanForFeeds(),
   }
 }

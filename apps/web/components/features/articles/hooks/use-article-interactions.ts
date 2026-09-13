@@ -47,6 +47,7 @@ export function useArticleInteractions({
             {
                 articleId: article.id,
                 data: updateData,
+                articleType: article.article_type,
             },
             {
                 onSuccess: () => {
@@ -68,6 +69,7 @@ export function useArticleInteractions({
                 data: {
                     is_saved: newReadLaterState,
                 },
+                articleType: article.article_type,
             },
             {
                 onError: (error: any) => {

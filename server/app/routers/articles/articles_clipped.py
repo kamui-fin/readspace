@@ -33,7 +33,6 @@ class ArticleCheckResponse(BaseModel):
     note: str | None = None
     priority: ArticlePriority | int | None = None
     is_read: bool = False
-    is_saved: bool = False
     read_at: str | None = None
 
 
@@ -64,7 +63,7 @@ async def save_web_article(
         url=str(request.url),
         content=request.content or "",
         title=request.title,
-        metadata=None,
+        metadata=request.metadata.model_dump(exclude_none=True) if request.metadata else None,
         note=request.note,
         priority=(request.priority.value if isinstance(request.priority, ArticlePriority) else request.priority),
     )
@@ -104,8 +103,10 @@ async def check_article_saved(
 
     content, user_entry = result
 
-    # 3. Handle Content Exists but User Entry Missing (rare edge case)
-    if not user_entry:
+    # 3. Handle Content Exists but User Entry Missing or Not Saved
+    # Unsaving keeps the UserEntry row (is_saved=False), and read feed articles have
+    # entries too, so the entry's existence alone does not mean it is saved.
+    if not user_entry or not user_entry.is_saved:
         return ArticleCheckResponse(is_saved=False)
 
     # 4. Return Hit

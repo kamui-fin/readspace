@@ -28,11 +28,14 @@ MAX_ERROR_BACKOFF_MINUTES = 12 * 60
 # Database Pagination
 MAX_PAGE_SIZE = 100  # Maximum items to return in a single page for list endpoints
 MAX_FEEDS_BATCH_SIZE = 1000  # Maximum feeds to process in a single batch
+MAX_FOLLOW_CHECK_ITEMS = 20  # Maximum feed URLs / IDs accepted by the follow-status check
 
 # String Length Limits
 MAX_URL_LENGTH = 2048
 MAX_TITLE_LENGTH = 500
 MAX_DESCRIPTION_LENGTH = 2000
+CLIPPED_EXCERPT_MAX_LENGTH = 280  # Fallback description length when a clip has no SEO description
+CLIPPED_EXCERPT_MIN_LENGTH = 80  # Keep adding leading sentences until the fallback excerpt is this long
 MAX_FOLDER_NAME_LENGTH = 255
 MAX_TAG_NAME_LENGTH = 50
 
