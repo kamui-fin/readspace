@@ -14,6 +14,7 @@
     "package:chrome": "npm run build:chrome && web-ext build --no-config-discovery --source-dir dist --artifacts-dir web-ext-artifacts --filename readspace-1.1.4-chrome.zip --overwrite-dest",
     "package:firefox": "npm run build:firefox && web-ext build --no-config-discovery --source-dir dist-firefox --artifacts-dir web-ext-artifacts --filename readspace-1.1.4-firefox.zip --overwrite-dest",
     "package:all": "npm run package:chrome && npm run package:firefox",
+    "package:source": "node scripts/package-source.js",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings 100",
     "lint:firefox": "web-ext lint --no-config-discovery --source-dir dist-firefox",
