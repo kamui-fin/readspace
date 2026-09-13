@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact — readspace</title>
+<meta name="description" content="Questions, feedback, or press inquiries? Get in touch with the readspace team.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+
+<div style="width:100%;overflow-x:clip">
+
+<!-- Nav -->
+<div data-sticky-nav style="position:sticky;top:0;z-index:50;backdrop-filter:blur(16px);background:rgba(250,250,244,.86);border-bottom:1px solid #E7E8DA;transition:box-shadow .25s ease">
+  <div class="nav-bar" style="max-width:1220px;margin:0 auto;padding:0 22px;height:64px;display:flex;align-items:center;gap:20px;transition:height .25s ease">
+    <a href="./index.html" style="display:flex;align-items:center;gap:9px;color:#1B211C;flex:none">
+      <img src="https://readspace.ai/readspace.svg" alt="readspace" style="width:24px;height:24px;display:block;border-radius:7px" data-logo>
+      <span style="display:none;width:24px;height:24px;border-radius:7px;background:#38663F;align-items:center;justify-content:center;color:#fff;font-family:'EB Garamond',serif;font-size:16px;line-height:1" data-logo-fallback>R</span>
+      <span style="font-family:'Figtree',sans-serif;font-size:17.5px;font-weight:600;letter-spacing:-.02em">readspace</span>
+    </a>
+    <div data-navlinks style="flex:1;display:none;align-items:center;justify-content:center;gap:4px;font-size:14px">
+      <a class="nav-link" href="./index.html#how">Features</a>
+      <a class="nav-link" href="./index.html#pricing">Pricing</a>
+      <a class="nav-link" href="./index.html#faq">FAQ</a>
+      <a class="nav-link" href="./contact.html">Contact</a>
+    </div>
+    <div data-navspacer style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:10px;flex:none">
+      <a data-navstar data-star-trigger href="https://github.com/kamui-fin/readspace" target="_blank" rel="noopener" title="GitHub" class="btn-ghost gh-icon-btn" style="display:none;padding:7px">
+        <span class="star" data-star>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>
+        </span>
+      </a>
+      <a href="./index.html#pricing" class="btn-primary">Start free</a>
+    </div>
+  </div>
+</div>
+
+<!-- Contact -->
+<section style="padding:96px 0 0;position:relative">
+  <div style="position:absolute;left:0;right:0;top:0;height:520px;overflow:hidden;pointer-events:none">
+    <div style="position:absolute;inset:0;background:radial-gradient(52% 42% at 50% 4%, rgba(110,156,78,.10), rgba(110,156,78,0) 72%)"></div>
+  </div>
+  <div style="position:relative;z-index:2;max-width:600px;margin:0 auto;padding:0 24px;text-align:center">
+    <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Get in touch</div>
+    <h1 style="margin:16px auto 0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(36px,5vw,54px);line-height:1.04;letter-spacing:-.02em;color:#171C18">Contact us</h1>
+    <p style="margin:18px auto 0;max-width:46ch;font-size:16.5px;line-height:1.6;color:#4D554E">Questions, feedback, or press inquiries? Email us at <a href="mailto:support@readspace.ai" style="font-weight:500">support@readspace.ai</a> — we read and respond to every message.</p>
+  </div>
+
+  <div style="position:relative;z-index:2;max-width:560px;margin:44px auto 0;padding:0 24px 96px">
+    <div id="contact-card" style="border-radius:18px;background:#fff;box-shadow:0 40px 90px -45px rgba(24,48,30,.34);padding:clamp(28px,4vw,48px)">
+
+      <form id="contact-form">
+        <div class="field">
+          <label class="field-label" for="name">Name</label>
+          <input class="field-input" type="text" id="name" name="name" required>
+          <div class="field-error" data-error-for="name"></div>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="email">Your email</label>
+          <input class="field-input" type="email" id="email" name="email" required>
+          <div class="field-error" data-error-for="email"></div>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="source">Where did you find us?</label>
+          <select class="field-input field-select" id="source" name="source">
+            <option value="" disabled selected>Select source</option>
+            <option value="Social media">Social media</option>
+            <option value="Tech community">Tech community</option>
+            <option value="Search">Search</option>
+            <option value="Friend">Friend</option>
+            <option value="Newsletter">Newsletter</option>
+            <option value="Other">Other</option>
+          </select>
+          <div class="field-error" data-error-for="source"></div>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="message">Message</label>
+          <textarea class="field-input field-textarea" id="message" name="message" rows="4" required></textarea>
+          <div class="field-error" data-error-for="message"></div>
+        </div>
+
+        <button type="submit" id="contact-submit" class="btn-primary" style="width:100%;justify-content:center;padding:12px 16px;font-size:15px">Submit</button>
+
+        <div id="contact-form-error" class="field-error" style="margin-top:14px;text-align:center;display:none">Something went wrong. Please try again.</div>
+      </form>
+
+      <div id="contact-success" style="display:none;text-align:center;padding:12px 0">
+        <div style="width:48px;height:48px;border-radius:12px;background:#E3EBDC;color:#38663F;display:flex;align-items:center;justify-content:center;margin:0 auto 18px">
+          <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l3.8 3.8L16 6"></path></svg>
+        </div>
+        <div style="font-family:'EB Garamond',ui-serif,Georgia,serif;font-size:22px;color:#171C18">Message sent successfully!</div>
+        <p style="margin:10px auto 0;max-width:36ch;font-size:15px;line-height:1.55;color:#5E665F">Thanks for reaching out. We'll get back to you as soon as possible.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer style="margin-top:0;border-top:1px solid #E7E8DA;background:#F1F3E7">
+  <div style="max-width:1180px;margin:0 auto;padding:64px 24px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:44px">
+    <div style="max-width:330px">
+      <div style="display:flex;align-items:center;gap:9px;color:#1B211C">
+        <img src="https://readspace.ai/readspace.svg" alt="readspace" style="width:26px;height:26px;display:block;border-radius:7px" data-logo>
+        <span style="display:none;width:26px;height:26px;border-radius:7px;background:#38663F;align-items:center;justify-content:center;color:#fff;font-family:'EB Garamond',serif;font-size:17px;line-height:1" data-logo-fallback>R</span>
+        <span style="font-family:'Figtree',sans-serif;font-size:21px;font-weight:600;letter-spacing:-.02em">readspace</span>
+      </div>
+      <p style="margin:16px 0 0;font-size:14.5px;line-height:1.6;color:#5E665F">Your news, blogs, and newsletters in one calm feed. Open source, and yours to host.</p>
+      <a href="./index.html#pricing" data-arrow-trigger class="btn-footer" style="margin-top:22px">Start reading for free<span class="arrow" data-arrow><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h11M11 6l4 4-4 4"></path></svg></span></a>
+      <div style="margin-top:24px;display:flex;gap:8px">
+        <a href="https://github.com/kamui-fin/readspace" target="_blank" rel="noopener" title="GitHub" class="social-icon">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>
+        </a>
+        <a href="https://discord.gg/2Q5PtYwUQZ" target="_blank" rel="noopener" title="Discord" class="social-icon">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 3.4a13 13 0 0 0-3.2-1 9 9 0 0 0-.4.83 12 12 0 0 0-3.6 0 8 8 0 0 0-.42-.83 13 13 0 0 0-3.2 1C.6 6.4.1 9.3.3 12.15a13 13 0 0 0 3.9 2 10 10 0 0 0 .84-1.36 8.4 8.4 0 0 1-1.32-.63c.11-.08.22-.17.32-.25a9.3 9.3 0 0 0 7.92 0c.11.09.21.17.32.25a8.4 8.4 0 0 1-1.33.63 10 10 0 0 0 .84 1.36 13 13 0 0 0 3.9-2c.24-3.3-.62-6.16-2.19-8.75zM5.68 10.4a1.45 1.45 0 0 1-1.35-1.52A1.44 1.44 0 0 1 5.68 7.35a1.43 1.43 0 0 1 1.34 1.53A1.44 1.44 0 0 1 5.68 10.4zm4.65 0a1.45 1.45 0 0 1-1.35-1.52 1.44 1.44 0 0 1 1.35-1.53 1.43 1.43 0 0 1 1.34 1.53 1.44 1.44 0 0 1-1.34 1.52z"></path></svg>
+        </a>
+        <a href="https://www.linkedin.com/company/readspace-ai" target="_blank" rel="noopener" title="LinkedIn" class="social-icon">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2.7 5.4h2.5V13H2.7zM4 1.3a1.45 1.45 0 1 1 0 2.9 1.45 1.45 0 0 1 0-2.9zM6.9 5.4h2.4v1.05h.03c.33-.63 1.15-1.3 2.36-1.3 2.52 0 2.99 1.66 2.99 3.82V13h-2.5V9.44c0-.85-.02-1.94-1.18-1.94-1.19 0-1.37.93-1.37 1.88V13h-2.5z"></path></svg>
+        </a>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:13.5px;font-weight:600;color:#1F2620;letter-spacing:-.01em">Get started</div>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+        <a href="./index.html#pricing" class="footer-link">Web app</a>
+        <a href="#" data-coming-soon class="footer-link">iOS</a>
+        <a href="#" data-coming-soon class="footer-link">Android</a>
+        <a href="https://chromewebstore.google.com/detail/readspace/ppadpdoicnolpjnflfladjllhmkonedi" target="_blank" rel="noopener" class="footer-link">Chrome extension</a>
+        <a href="https://addons.mozilla.org/en-US/firefox/addon/readspace/" target="_blank" rel="noopener" class="footer-link">Firefox extension</a>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:13.5px;font-weight:600;color:#1F2620;letter-spacing:-.01em">Company</div>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+        <a href="./index.html#why" class="footer-link">Why we built this</a>
+        <a href="./index.html#faq" class="footer-link">FAQ</a>
+        <a href="./index.html#pricing" class="footer-link">Pricing</a>
+        <a href="https://github.com/kamui-fin/readspace" target="_blank" rel="noopener" class="footer-link">GitHub</a>
+        <a href="./contact.html" class="footer-link">Contact</a>
+      </div>
+    </div>
+  </div>
+  <div style="max-width:1180px;margin:0 auto;padding:44px 24px 40px">
+    <div style="border-top:1px solid #E2E4D6;padding-top:22px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:6px;font-size:13.5px;color:#6E776E">Made with <svg width="13" height="13" viewBox="0 0 16 16" fill="#38663F" style="flex:none"><path d="M8 14C4 11.2 1 8.6 1 5.6 1 3.6 2.6 2 4.6 2c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5C12.6 2 14 3.6 14 5.6c0 3-3 5.6-6 8.4z"></path></svg> @kamui-fin</div>
+      <div style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#646D64">© 2026 readspace</div>
+    </div>
+  </div>
+</footer>
+
+</div>
+
+<script src="./assets/main.js"></script>
+<script src="./assets/contact.js"></script>
+</body>
+</html>

@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/landing/**'
+      - 'landing/**'
       - '.github/workflows/deploy-landing.yml'
 
 permissions:
@@ -19,31 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Cache Turbo
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-turbo-
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build landing page
-        run: cd apps/landing && bun run build
-
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./apps/landing/out
+          path: ./landing
 
   deploy:
     environment:

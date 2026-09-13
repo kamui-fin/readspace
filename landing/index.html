@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>readspace — Stay informed without staying online</title>
+<meta name="description" content="Follow what matters. Catch up in five minutes. Save the rest for when you have time. RSS feeds, newsletters, saved articles and more in one calm, open-source reading hub.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="wind">
+    <feTurbulence type="fractalNoise" baseFrequency="0.008 0.02" numOctaves="2" seed="7" result="noise">
+      <animate attributeName="baseFrequency" values="0.008 0.02;0.012 0.03;0.008 0.02" dur="8s" repeatCount="indefinite" />
+    </feTurbulence>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="8" xChannelSelector="R" yChannelSelector="G" />
+  </filter>
+</svg>
+
+<div style="width:100%;overflow-x:clip">
+
+<!-- Nav -->
+<div data-sticky-nav style="position:sticky;top:0;z-index:50;backdrop-filter:blur(16px);background:rgba(250,250,244,.86);border-bottom:1px solid #E7E8DA;transition:box-shadow .25s ease">
+  <div class="nav-bar" style="max-width:1220px;margin:0 auto;padding:0 22px;height:64px;display:flex;align-items:center;gap:20px;transition:height .25s ease">
+    <a href="#top" style="display:flex;align-items:center;gap:9px;color:#1B211C;flex:none">
+      <img src="https://readspace.ai/readspace.svg" alt="readspace" style="width:24px;height:24px;display:block;border-radius:7px" data-logo>
+      <span style="display:none;width:24px;height:24px;border-radius:7px;background:#38663F;align-items:center;justify-content:center;color:#fff;font-family:'EB Garamond',serif;font-size:16px;line-height:1" data-logo-fallback>R</span>
+      <span style="font-family:'Figtree',sans-serif;font-size:17.5px;font-weight:600;letter-spacing:-.02em">readspace</span>
+    </a>
+    <div data-navlinks style="flex:1;display:none;align-items:center;justify-content:center;gap:4px;font-size:14px">
+      <a class="nav-link" href="#how">Features</a>
+      <a class="nav-link" href="#pricing">Pricing</a>
+      <a class="nav-link" href="#faq">FAQ</a>
+      <a class="nav-link" href="./contact.html">Contact</a>
+    </div>
+    <div data-navspacer style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:10px;flex:none">
+      <a data-navstar data-star-trigger href="https://github.com/kamui-fin/readspace" target="_blank" rel="noopener" title="GitHub" class="btn-ghost gh-icon-btn" style="display:none;padding:7px">
+        <span class="star" data-star>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>
+        </span>
+      </a>
+      <a href="#pricing" class="btn-primary">Start free</a>
+    </div>
+  </div>
+</div>
+
+<!-- Hero -->
+<section id="top" style="padding:78px 0 0;position:relative">
+  <div style="position:absolute;left:0;right:0;top:0;height:780px;overflow:hidden;pointer-events:none">
+    <div style="position:absolute;left:50%;top:-540px;transform:translateX(-50%);width:1140px;height:1140px;border-radius:50%;border:1px solid #EDEEE2"></div>
+    <div style="position:absolute;left:50%;top:-420px;transform:translateX(-50%);width:880px;height:880px;border-radius:50%;border:1px solid #EFF0E4"></div>
+    <div style="position:absolute;left:50%;top:-300px;transform:translateX(-50%);width:640px;height:640px;border-radius:50%;border:1px solid #F1F2E6"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(52% 42% at 50% 4%, rgba(110,156,78,.11), rgba(110,156,78,0) 72%)"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:200px;background:linear-gradient(180deg,rgba(250,250,244,0),#FAFAF4)"></div>
+  </div>
+  <div data-foliage class="hero-foliage hero-foliage-left" style="position:absolute;left:-18px;top:0;width:min(22vw,300px);height:640px;z-index:1;display:none">
+    <img src="./assets/img/foliage-left.png" alt="" style="display:block;width:100%;height:100%;object-fit:cover;object-position:right top">
+  </div>
+  <div data-foliage class="hero-foliage hero-foliage-right" style="position:absolute;right:-18px;top:52px;width:min(16vw,220px);height:640px;z-index:1;display:none">
+    <img src="./assets/img/foliage-right.png" alt="" style="display:block;width:100%;height:100%;object-fit:cover;object-position:left top">
+  </div>
+  <div style="position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:0 24px;text-align:center">
+    <a href="https://github.com/kamui-fin/readspace" target="_blank" rel="noopener" data-star-trigger class="star-badge">
+      <span class="star" data-star>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.6l1.9 4 4.3.6-3.1 3 .8 4.3L8 11.4 4.1 13.5l.8-4.3-3.1-3 4.3-.6z"></path></svg>
+      </span>
+      <span>Star us on GitHub</span>
+    </a>
+    <h1 style="margin:0 auto;max-width:16ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(46px,6.8vw,88px);line-height:.98;letter-spacing:-.022em;color:#171C18;text-wrap:balance">Stay <span style="background:linear-gradient(90deg,#38663F,#6E9C4E);-webkit-background-clip:text;background-clip:text;color:transparent">informed</span> <span style="font-style:italic">without</span> staying online.</h1>
+    <p style="margin:26px auto 0;max-width:56ch;font-size:19px;line-height:1.55;color:#4D554E;text-wrap:pretty">Follow what matters. Catch up in five minutes. Save the rest for when you have time.</p>
+    <div style="margin:34px 0 0;display:flex;justify-content:center">
+      <a href="#pricing" data-arrow-trigger class="btn-hero">
+        <span>Start reading for free</span>
+        <span class="arrow" data-arrow>
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h11M11 6l4 4-4 4"></path></svg>
+        </span>
+      </a>
+    </div>
+    <div style="margin:14px 0 0;display:flex;flex-wrap:wrap;gap:4px;justify-content:center">
+      <a href="#" data-coming-soon data-draw-trigger class="pill-platform">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2.5h6a1.5 1.5 0 0 1 1.5 1.5v12A1.5 1.5 0 0 1 13 17.5H7A1.5 1.5 0 0 1 5.5 16V4A1.5 1.5 0 0 1 7 2.5z"></path><path d="M9 15.2h2"></path></svg>iOS</a>
+      <a href="#" data-coming-soon data-draw-trigger class="pill-platform">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8.5a5 5 0 0 1 10 0v6a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 5 14.5z"></path><path d="M7 5.2 6 3.4M13 5.2l1-1.8"></path></svg>Android</a>
+      <a href="#pricing" data-draw-trigger class="pill-platform">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.3"></circle><path d="M2.7 10h14.6M10 2.7c1.9 2 2.9 4.5 2.9 7.3s-1 5.3-2.9 7.3c-1.9-2-2.9-4.5-2.9-7.3S8.1 4.7 10 2.7z"></path></svg>Web app</a>
+      <a href="https://chromewebstore.google.com/detail/readspace/ppadpdoicnolpjnflfladjllhmkonedi" target="_blank" rel="noopener" data-draw-trigger class="pill-platform">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.2a1.8 1.8 0 0 1 3.6 0v1.1h2.6a1 1 0 0 1 1 1v2.6h-1.1a1.8 1.8 0 0 0 0 3.6h1.1v3.2a1 1 0 0 1-1 1H5.2a1 1 0 0 1-1-1V5.3a1 1 0 0 1 1-1H8z"></path></svg>Chrome</a>
+      <a href="https://addons.mozilla.org/en-US/firefox/addon/readspace/" target="_blank" rel="noopener" data-draw-trigger class="pill-platform">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.4 6.2h13.2a.9.9 0 0 1 .9.9v7.6a.9.9 0 0 1-.9.9H3.4a.9.9 0 0 1-.9-.9V7.1a.9.9 0 0 1 .9-.9z"></path><path d="M2.5 6.2 5 3.3h10l2.5 2.9"></path></svg>Firefox</a>
+    </div>
+  </div>
+
+  <div data-reveal style="position:relative;z-index:2;max-width:1180px;margin:52px auto 0;padding:0 24px">
+    <div style="position:relative;border-radius:26px;overflow:hidden;background:linear-gradient(168deg,#E6EEDB,#F2F6E9 62%,#EDF2E2);padding:clamp(16px,3.2vw,46px) clamp(14px,3vw,44px) 0">
+    <div data-tilt style="position:relative;border-radius:14px;background:#fff;box-shadow:0 40px 90px -40px rgba(24,48,30,.35),0 2px 6px rgba(24,48,30,.05);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid #EEEFE4;background:#F6F8EE">
+        <span style="width:10px;height:10px;border-radius:50%;background:#E2E7DE"></span>
+        <span style="width:10px;height:10px;border-radius:50%;background:#E2E7DE"></span>
+        <span style="width:10px;height:10px;border-radius:50%;background:#E2E7DE"></span>
+        <span style="margin-left:10px;font-family:'Geist Mono',ui-monospace;font-size:11px;color:#9AA497">app.readspace.ai</span>
+      </div>
+      <div style="display:flex;min-height:520px">
+        <div style="width:224px;flex:none;border-right:1px solid #EEEFE4;background:#F7F8F0;padding:18px 14px;display:none;gap:22px;flex-direction:column" data-sidebar>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:7px;font-size:13.5px;color:#4D554E"><span>Your feed</span><span style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;color:#9AA497">34</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:7px;font-size:13.5px;color:#4D554E"><span>Daily Digest</span><span style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;color:#9AA497">1</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:7px;font-size:13.5px;color:#4D554E"><span>Saved</span><span style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;color:#9AA497">38</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:7px;font-size:13.5px;color:#4D554E"><span>Discover</span><span style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;color:#9AA497"></span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="font-family:'Geist Mono',ui-monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#A3AC9E;padding:0 10px">Sources</div>
+            <div style="display:flex;align-items:center;gap:9px;padding:5px 10px;font-size:13px;color:#59615A"><span style="width:16px;height:16px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9.5px;display:flex;align-items:center;justify-content:center;font-weight:500;flex:none">V</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">The Verge</span></div>
+            <div style="display:flex;align-items:center;gap:9px;padding:5px 10px;font-size:13px;color:#59615A"><span style="width:16px;height:16px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9.5px;display:flex;align-items:center;justify-content:center;font-weight:500;flex:none">A</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Ars Technica</span></div>
+            <div style="display:flex;align-items:center;gap:9px;padding:5px 10px;font-size:13px;color:#59615A"><span style="width:16px;height:16px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9.5px;display:flex;align-items:center;justify-content:center;font-weight:500;flex:none">S</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Stratechery</span></div>
+            <div style="display:flex;align-items:center;gap:9px;padding:5px 10px;font-size:13px;color:#59615A"><span style="width:16px;height:16px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9.5px;display:flex;align-items:center;justify-content:center;font-weight:500;flex:none">I</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Interconnected</span></div>
+            <div style="display:flex;align-items:center;gap:9px;padding:5px 10px;font-size:13px;color:#59615A"><span style="width:16px;height:16px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9.5px;display:flex;align-items:center;justify-content:center;font-weight:500;flex:none">N</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Noahpinion</span></div>
+            <div style="display:flex;align-items:center;gap:9px;padding:5px 10px;font-size:13px;color:#59615A"><span style="width:16px;height:16px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9.5px;display:flex;align-items:center;justify-content:center;font-weight:500;flex:none">W</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Works in Progress</span></div>
+            <div style="display:flex;align-items:center;gap:9px;padding:5px 10px;font-size:13px;color:#59615A"><span style="width:16px;height:16px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9.5px;display:flex;align-items:center;justify-content:center;font-weight:500;flex:none">C</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Craig Mod</span></div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:20px 22px 14px;border-bottom:1px solid #F1F2EA">
+            <div style="font-weight:600;font-size:19px;letter-spacing:-.02em;color:#1B211C">Your feed</div>
+            <div style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#9AA497">Friday · 34 new</div>
+          </div>
+          <div style="padding:16px 22px 0">
+            <div style="border:1px solid #DCE7D4;border-radius:12px;background:linear-gradient(180deg,#F3F5E9,#FCFEFB);padding:18px">
+              <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#5E7A54">
+                <span style="width:6px;height:6px;border-radius:50%;background:#6E9C4E"></span>Daily Digest · 5 min
+              </div>
+              <div style="margin-top:10px;font-weight:600;font-size:17px;line-height:1.35;letter-spacing:-.015em;color:#1B211C">Six things worth knowing from your 62 sources today</div>
+              <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">
+                <span style="border:1px solid #DFE7D9;background:#fff;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59">62 sources</span>
+                <span style="border:1px solid #DFE7D9;background:#fff;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59">118 articles</span>
+                <span style="border:1px solid #DFE7D9;background:#fff;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59">6 stories</span>
+                <span style="border:1px solid #DFE7D9;background:#fff;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59">Built 07:00</span>
+                <span style="border:1px solid #DFE7D9;background:#fff;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59">Links included</span>
+              </div>
+            </div>
+          </div>
+          <div style="padding:8px 8px 0">
+            <div style="display:flex;gap:16px;padding:16px 14px;border-bottom:1px solid #F3F4EC;align-items:flex-start">
+              <div style="width:108px;height:72px;border-radius:8px;flex:none;background:#EEEFE4;border:1px solid #E7ECE3"></div>
+              <div style="min-width:0;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10.5px;color:#98A295"><span style="width:14px;height:14px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="color:#6D766C">Stratechery</span><span>·</span><span>12m</span></div>
+                <div style="font-size:15.5px;font-weight:500;color:#22281F;line-height:1.32">The unbundling of the attention economy</div>
+                <div style="font-size:13.5px;line-height:1.5;color:#7A827A;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">Distribution used to be the moat. When every platform ships the same recommendations, the moat moves somewhere else entirely.</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:16px;padding:16px 14px;border-bottom:1px solid #F3F4EC;align-items:flex-start">
+              <div style="width:108px;height:72px;border-radius:8px;flex:none;background:#EEEFE4;border:1px solid #E7ECE3"></div>
+              <div style="min-width:0;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10.5px;color:#98A295"><span style="width:14px;height:14px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center;flex:none">A</span><span style="color:#6D766C">Ars Technica</span><span>·</span><span>48m</span></div>
+                <div style="font-size:15.5px;font-weight:500;color:#22281F;line-height:1.32">The quiet return of the personal website</div>
+                <div style="font-size:13.5px;line-height:1.5;color:#7A827A;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">A domain, a static site, and a feed. The mechanics are unglamorous, which is exactly why they keep working.</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:16px;padding:16px 14px;border-bottom:1px solid #F3F4EC;align-items:flex-start">
+              <div style="width:108px;height:72px;border-radius:8px;flex:none;background:#EEEFE4;border:1px solid #E7ECE3"></div>
+              <div style="min-width:0;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10.5px;color:#98A295"><span style="width:14px;height:14px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center;flex:none">W</span><span style="color:#6D766C">Works in Progress</span><span>·</span><span>2h</span></div>
+                <div style="font-size:15.5px;font-weight:500;color:#22281F;line-height:1.32">What cities got right before zoning</div>
+                <div style="font-size:13.5px;line-height:1.5;color:#7A827A;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">Street grids, plot sizes, and the surprisingly small rulebooks that produced the neighbourhoods people still queue to live in.</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:16px;padding:16px 14px;border-bottom:1px solid #F3F4EC;align-items:flex-start">
+              <div style="width:108px;height:72px;border-radius:8px;flex:none;background:#EEEFE4;border:1px solid #E7ECE3"></div>
+              <div style="min-width:0;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10.5px;color:#98A295"><span style="width:14px;height:14px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center;flex:none">C</span><span style="color:#6D766C">Craig Mod</span><span>·</span><span>4h</span></div>
+                <div style="font-size:15.5px;font-weight:500;color:#22281F;line-height:1.32">Walking the Nakasendo, again</div>
+                <div style="font-size:13.5px;line-height:1.5;color:#7A827A;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">Notes from twenty days on foot, and what changes when the phone stays in the bag.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+    <div style="position:absolute;right:2%;bottom:-52px;width:196px;border:7px solid #1E241F;border-radius:30px;background:#fff;box-shadow:0 30px 60px -20px rgba(24,48,30,.4);overflow:hidden;display:none" data-phone-hero>
+      <div style="padding:9px 14px 6px;display:flex;justify-content:space-between;font-family:'Geist Mono',ui-monospace;font-size:9px;color:#9AA497"><span>9:41</span><span>▮▮▮</span></div>
+      <div style="padding:4px 12px 10px;font-weight:600;font-size:14px;letter-spacing:-.015em;color:#1B211C">Your feed</div>
+      <div style="padding:10px 12px;border-top:1px solid #F2F3EB;display:flex;flex-direction:column;gap:5px"><div style="font-family:'Geist Mono',ui-monospace;font-size:8.5px;color:#9AA497;letter-spacing:.04em">STRATECHERY · 12M</div><div style="font-size:11.5px;font-weight:500;line-height:1.3;color:#262C25">The unbundling of the attention economy</div></div>
+      <div style="padding:10px 12px;border-top:1px solid #F2F3EB;display:flex;flex-direction:column;gap:5px"><div style="font-family:'Geist Mono',ui-monospace;font-size:8.5px;color:#9AA497;letter-spacing:.04em">ARS TECHNICA · 48M</div><div style="font-size:11.5px;font-weight:500;line-height:1.3;color:#262C25">The quiet return of the personal website</div></div>
+      <div style="padding:10px 12px;border-top:1px solid #F2F3EB;display:flex;flex-direction:column;gap:5px"><div style="font-family:'Geist Mono',ui-monospace;font-size:8.5px;color:#9AA497;letter-spacing:.04em">NOAHPINION · 1H</div><div style="font-size:11.5px;font-weight:500;line-height:1.3;color:#262C25">Five charts that explain the week</div></div>
+      <div style="padding:10px 12px;border-top:1px solid #F2F3EB;display:flex;flex-direction:column;gap:5px"><div style="font-family:'Geist Mono',ui-monospace;font-size:8.5px;color:#9AA497;letter-spacing:.04em">CRAIG MOD · 4H</div><div style="font-size:11.5px;font-weight:500;line-height:1.3;color:#262C25">Walking the Nakasendo, again</div></div>
+      <div style="height:16px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- The problem / calm -->
+<section id="calm" style="padding:128px 0 0">
+  <div style="max-width:1180px;margin:0 auto;padding:0 24px;text-align:center">
+    <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">The problem</div>
+    <h2 style="margin:16px auto 0;max-width:20ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.02;letter-spacing:-.02em;color:#171C18">Following the internet shouldn&rsquo;t be a <span data-fill data-fill-to="#171C18">full-time job.</span></h2>
+    <p style="margin:20px auto 0;max-width:50ch;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">Newsletters pile up. Blogs get forgotten. Tabs multiply. And algorithmic feeds fill the gaps with things you never asked for.</p>
+  </div>
+  <div style="max-width:1180px;margin:26px auto 0;padding:0 24px">
+    <div data-chaos style="position:relative;height:440px">
+      <div style="position:absolute;inset:0;background:radial-gradient(48% 46% at 50% 50%, rgba(110,156,78,.10), rgba(110,156,78,0) 72%);pointer-events:none"></div>
+      <div data-calm-card style="position:absolute;left:50%;top:50%;width:420px;height:316px;margin:-158px 0 0 -210px;border-radius:16px;background:#fff;box-shadow:0 34px 70px -44px rgba(24,48,30,.34);opacity:0;transition:opacity .25s linear;pointer-events:none"></div>
+      <div data-row style="position:absolute;left:50%;top:50%;height:12px;margin-top:-6px;opacity:0;pointer-events:none"><div style="height:9px;border-radius:3px;background:#EFF2ED;width:78%"></div></div>
+      <div data-row style="position:absolute;left:50%;top:50%;height:12px;margin-top:-6px;opacity:0;pointer-events:none"><div style="height:9px;border-radius:3px;background:#EFF2ED;width:92%"></div></div>
+      <div data-row style="position:absolute;left:50%;top:50%;height:12px;margin-top:-6px;opacity:0;pointer-events:none"><div style="height:9px;border-radius:3px;background:#EFF2ED;width:64%"></div></div>
+      <div data-row style="position:absolute;left:50%;top:50%;height:12px;margin-top:-6px;opacity:0;pointer-events:none"><div style="height:9px;border-radius:3px;background:#EFF2ED;width:86%"></div></div>
+      <div data-row style="position:absolute;left:50%;top:50%;height:12px;margin-top:-6px;opacity:0;pointer-events:none"><div style="height:9px;border-radius:3px;background:#EFF2ED;width:72%"></div></div>
+      <div data-row style="position:absolute;left:50%;top:50%;height:12px;margin-top:-6px;opacity:0;pointer-events:none"><div style="height:9px;border-radius:3px;background:#EFF2ED;width:58%"></div></div>
+
+      <div data-tile data-cx="-312" data-cy="-128" data-r="-14" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:72%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:54%"></div></div>
+      <div data-tile data-cx="268" data-cy="-152" data-r="11" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:58%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:80%"></div></div>
+      <div data-tile data-cx="-196" data-cy="108" data-r="8" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:86%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:46%"></div></div>
+      <div data-tile data-cx="330" data-cy="96" data-r="-9" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:64%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:72%"></div></div>
+      <div data-tile data-cx="-60" data-cy="-172" data-r="13" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:78%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:58%"></div></div>
+      <div data-tile data-cx="92" data-cy="156" data-r="-12" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:50%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:84%"></div></div>
+      <div data-tile data-cx="-368" data-cy="36" data-r="17" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:72%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:54%"></div></div>
+      <div data-tile data-cx="392" data-cy="-28" data-r="-16" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:58%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:80%"></div></div>
+      <div data-tile data-cx="-252" data-cy="-36" data-r="6" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:86%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:46%"></div></div>
+      <div data-tile data-cx="196" data-cy="-74" data-r="-7" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:64%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:72%"></div></div>
+      <div data-tile data-cx="-128" data-cy="176" data-r="15" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:78%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:58%"></div></div>
+      <div data-tile data-cx="246" data-cy="178" data-r="-14" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:50%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:84%"></div></div>
+      <div data-tile data-cx="-420" data-cy="148" data-r="9" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:72%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:54%"></div></div>
+      <div data-tile data-cx="432" data-cy="150" data-r="-11" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:58%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:80%"></div></div>
+      <div data-tile data-cx="36" data-cy="-108" data-r="5" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:86%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:46%"></div></div>
+      <div data-tile data-cx="-84" data-cy="44" data-r="-6" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:64%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:72%"></div></div>
+      <div data-tile data-cx="150" data-cy="30" data-r="10" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:78%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:58%"></div></div>
+      <div data-tile data-cx="-300" data-cy="192" data-r="-13" style="position:absolute;left:50%;top:50%;width:104px;height:34px;margin:-17px 0 0 -52px;border-radius:7px;background:#fff;border:1px solid #E6E8D8;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:0 11px;box-shadow:0 12px 24px -14px rgba(24,48,30,.42);will-change:transform"><div style="height:5px;border-radius:2px;background:#E4E8DE;width:50%"></div><div style="height:5px;border-radius:2px;background:#EFF1EB;width:84%"></div></div>
+    </div>
+    <p style="margin:26px auto 0;max-width:34ch;text-align:center;font-family:'EB Garamond',ui-serif,Georgia,serif;font-size:clamp(23px,2.6vw,31px);line-height:1.3;color:#171C18;text-wrap:balance">You shouldn&rsquo;t have to read 100 articles to know what happened today.</p>
+  </div>
+</section>
+
+<!-- How it works -->
+<section id="how" style="padding:64px 0 0">
+  <div style="max-width:1180px;margin:0 auto;padding:0 24px">
+    <div data-steps style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">
+      <div class="step-card">
+        <div style="display:flex;align-items:baseline;gap:10px;padding-bottom:11px;border-bottom:1px solid #EFF1E7"><span style="font-family:'Geist Mono',ui-monospace;font-size:10px;letter-spacing:.12em;color:#A8AF9E">01</span><span style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#38663F">Follow</span></div>
+        <div style="font-size:15.5px;line-height:1.5;color:#4D554E;text-wrap:pretty">Add the publications, blogs, newsletters and writers you actually want to hear from.</div>
+      </div>
+      <div class="step-card">
+        <div style="display:flex;align-items:baseline;gap:10px;padding-bottom:11px;border-bottom:1px solid #EFF1E7"><span style="font-family:'Geist Mono',ui-monospace;font-size:10px;letter-spacing:.12em;color:#A8AF9E">02</span><span style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#38663F">Catch up</span></div>
+        <div style="font-size:15.5px;line-height:1.5;color:#4D554E;text-wrap:pretty">Read everything in order, or let the five-minute briefing tell you what mattered.</div>
+      </div>
+      <div class="step-card">
+        <div style="display:flex;align-items:baseline;gap:10px;padding-bottom:11px;border-bottom:1px solid #EFF1E7"><span style="font-family:'Geist Mono',ui-monospace;font-size:10px;letter-spacing:.12em;color:#A8AF9E">03</span><span style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#38663F">Save</span></div>
+        <div style="font-size:15.5px;line-height:1.5;color:#4D554E;text-wrap:pretty">Keep anything worth returning to — from readspace or from any page on the web.</div>
+      </div>
+      <div class="step-card">
+        <div style="display:flex;align-items:baseline;gap:10px;padding-bottom:11px;border-bottom:1px solid #EFF1E7"><span style="font-family:'Geist Mono',ui-monospace;font-size:10px;letter-spacing:.12em;color:#A8AF9E">04</span><span style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#38663F">Read</span></div>
+        <div style="font-size:15.5px;line-height:1.5;color:#4D554E;text-wrap:pretty">One clean reader on every device, with summaries and translation when you want them.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Daily Digest -->
+<section id="digest" style="padding:112px 0 0">
+  <div style="max-width:1180px;margin:0 auto;padding:0 24px;text-align:center">
+    <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Daily Digest</div>
+    <h2 style="margin:16px auto 0;max-width:22ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.4vw,56px);line-height:1.02;letter-spacing:-.02em;color:#171C18">Everything that mattered. <span data-fill data-fill-to="#38663F" style="font-style:italic;color:#38663F">Five minutes.</span></h2>
+    <p style="margin:22px auto 0;max-width:60ch;font-size:17.5px;line-height:1.6;color:#4D554E;text-wrap:pretty">Your sources, read down to the handful of things worth knowing. Coffee length, then move on.</p>
+    <div style="margin:30px auto 0;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center;font-family:'Geist Mono',ui-monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase">
+      <span style="border:1px solid #E2E4D6;background:#fff;border-radius:999px;padding:10px 16px;color:#6E776E;white-space:nowrap"><span data-count-to="118">0</span> articles</span>
+      <span style="color:#6E9C4E">→</span>
+      <span style="border:1px solid #DCE7D4;background:#F3F5E9;border-radius:999px;padding:10px 16px;color:#38663F;white-space:nowrap"><span data-count-to="6">0</span> things worth knowing</span>
+      <span style="color:#6E9C4E">→</span>
+      <span style="border:1px solid #E2E4D6;background:#fff;border-radius:999px;padding:10px 16px;color:#6E776E;white-space:nowrap"><span data-count-to="5">0</span> minutes</span>
+    </div>
+  </div>
+
+  <div data-reveal style="max-width:1020px;margin:40px auto 0;padding:0 24px">
+    <div style="border-radius:18px;background:#fff;box-shadow:0 40px 90px -45px rgba(24,48,30,.34);overflow:hidden">
+      <div style="padding:26px 30px 22px;border-bottom:1px solid #F0F1E8;background:linear-gradient(180deg,#F5FAF3,#FFFFFF)">
+        <div style="display:flex;align-items:center;gap:9px;font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#5E7A54"><span style="width:6px;height:6px;border-radius:50%;background:#6E9C4E"></span>Daily Digest · Friday, 12 September</div>
+        <div style="margin-top:12px;font-weight:650;font-size:clamp(19px,2.2vw,25px);line-height:1.24;letter-spacing:-.025em;color:#171C18">Built from 62 sources you follow. 118 articles, read down to six.</div>
+      </div>
+      <div>
+        <div style="padding:24px 30px;border-bottom:1px solid #F3F4EC;display:flex;gap:24px;flex-wrap:wrap;text-align:left">
+          <div style="width:120px;flex:none;font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#9AA497;padding-top:4px">Technology</div>
+          <div style="flex:1;min-width:min(100%,260px)">
+            <div style="font-size:17.5px;font-weight:500;color:#1F2620;line-height:1.35">Reading modes are becoming a browser feature again</div>
+            <div style="margin-top:8px;font-size:15px;line-height:1.62;color:#5E665F">Two of the four major browsers shipped clutter-free reading views this week, and both cite the same reason: pages have become too expensive to render. Publishers are split on whether it costs them anything.</div>
+            <div style="margin-top:12px;display:flex;gap:7px;flex-wrap:wrap">
+              <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #E4E9DF;background:#F7F8F1;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59"><span style="width:12px;height:12px;border-radius:3px;background:#E3EBDC;color:#38663F;font-size:8px;display:flex;align-items:center;justify-content:center">V</span>The Verge</span>
+              <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #E4E9DF;background:#F7F8F1;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59"><span style="width:12px;height:12px;border-radius:3px;background:#E3EBDC;color:#38663F;font-size:8px;display:flex;align-items:center;justify-content:center">A</span>Ars Technica</span>
+              <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #E4E9DF;background:#F7F8F1;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59"><span style="width:12px;height:12px;border-radius:3px;background:#E3EBDC;color:#38663F;font-size:8px;display:flex;align-items:center;justify-content:center">I</span>Interconnected</span>
+            </div>
+          </div>
+        </div>
+        <div style="padding:24px 30px;border-bottom:1px solid #F3F4EC;display:flex;gap:24px;flex-wrap:wrap;text-align:left">
+          <div style="width:120px;flex:none;font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#9AA497;padding-top:4px">Economics</div>
+          <div style="flex:1;min-width:min(100%,260px)">
+            <div style="font-size:17.5px;font-weight:500;color:#1F2620;line-height:1.35">Soft payrolls shift the rate conversation</div>
+            <div style="margin-top:8px;font-size:15px;line-height:1.62;color:#5E665F">Hiring came in below expectations for a second month. Your sources broadly agree on the number and disagree on what it means for the autumn — the split is summarised below with links to each argument.</div>
+            <div style="margin-top:12px;display:flex;gap:7px;flex-wrap:wrap">
+              <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #E4E9DF;background:#F7F8F1;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59"><span style="width:12px;height:12px;border-radius:3px;background:#E3EBDC;color:#38663F;font-size:8px;display:flex;align-items:center;justify-content:center">N</span>Noahpinion</span>
+              <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #E4E9DF;background:#F7F8F1;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59"><span style="width:12px;height:12px;border-radius:3px;background:#E3EBDC;color:#38663F;font-size:8px;display:flex;align-items:center;justify-content:center">S</span>Stratechery</span>
+            </div>
+          </div>
+        </div>
+        <div style="padding:24px 30px;border-bottom:1px solid #F3F4EC;display:flex;gap:24px;flex-wrap:wrap;text-align:left">
+          <div style="width:120px;flex:none;font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#9AA497;padding-top:4px">Ideas</div>
+          <div style="flex:1;min-width:min(100%,260px)">
+            <div style="font-size:17.5px;font-weight:500;color:#1F2620;line-height:1.35">Two long reads worth your evening</div>
+            <div style="margin-top:8px;font-size:15px;line-height:1.62;color:#5E665F">A history of pre-zoning street grids, and twenty days of walking notes from Japan. Neither is news; both were the most-saved pieces among people following your sources.</div>
+            <div style="margin-top:12px;display:flex;gap:7px;flex-wrap:wrap">
+              <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #E4E9DF;background:#F7F8F1;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59"><span style="width:12px;height:12px;border-radius:3px;background:#E3EBDC;color:#38663F;font-size:8px;display:flex;align-items:center;justify-content:center">W</span>Works in Progress</span>
+              <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #E4E9DF;background:#F7F8F1;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59"><span style="width:12px;height:12px;border-radius:3px;background:#E3EBDC;color:#38663F;font-size:8px;display:flex;align-items:center;justify-content:center">C</span>Craig Mod</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:18px 30px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;background:#F7F8F1">
+        <div style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#646D64">Every story links back to the original reporting</div>
+        <a href="#pricing" style="font-size:14px;font-weight:500">See Daily Digest →</a>
+      </div>
+    </div>
+    <div style="margin-top:18px;text-align:center;font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#646D64">Pro · Up to 2 briefings every day</div>
+  </div>
+</section>
+
+<!-- Your feed -->
+<section id="feed" style="padding:72px 0 0">
+  <div style="max-width:1180px;margin:0 auto;padding:0 24px">
+    <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-end;justify-content:space-between">
+      <div style="min-width:min(100%,420px);flex:1">
+        <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Your feed</div>
+        <h2 style="margin:16px 0 0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.02;letter-spacing:-.02em;color:#171C18">You choose what makes the feed.</h2>
+      </div>
+      <div style="min-width:min(100%,360px);flex:1;max-width:520px">
+        <p style="margin:0;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">No recommendation algorithm. No engagement ranking. No endless stream of things you never asked for.</p>
+        <p style="margin:18px 0 0;font-size:15px;font-weight:500;color:#38663F">120,000+ sources to discover. Or add any site yourself.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:40px;position:relative">
+      <div data-tilt style="border-radius:16px;background:#fff;box-shadow:0 30px 70px -40px rgba(24,48,30,.3);overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid #EEEFE4;background:#F7F8F0">
+          <span style="font-family:'EB Garamond',serif;font-size:16px;color:#38663F">readspace</span>
+          <span style="margin-left:auto;font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#9AA497">Chronological · All sources</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr))">
+          <div style="padding:18px;border-right:1px solid #F2F3EB;border-bottom:1px solid #F2F3EB;display:flex;flex-direction:column;gap:11px">
+            <div style="height:112px;border-radius:8px;background:#EEEFE4;border:1px solid #E7ECE3"></div>
+            <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#98A295"><span style="width:14px;height:14px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center;flex:none">V</span><span style="color:#6D766C">The Verge</span><span>·</span><span>9m</span></div>
+            <div style="font-size:15px;font-weight:500;line-height:1.34;color:#22281F">Every browser is becoming a reader again</div>
+          </div>
+          <div style="padding:18px;border-right:1px solid #F2F3EB;border-bottom:1px solid #F2F3EB;display:flex;flex-direction:column;gap:11px">
+            <div style="height:112px;border-radius:8px;background:#EEEFE4;border:1px solid #E7ECE3"></div>
+            <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#98A295"><span style="width:14px;height:14px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="color:#6D766C">Stratechery</span><span>·</span><span>12m</span></div>
+            <div style="font-size:15px;font-weight:500;line-height:1.34;color:#22281F">The unbundling of the attention economy</div>
+          </div>
+          <div style="padding:18px;border-right:1px solid #F2F3EB;border-bottom:1px solid #F2F3EB;display:flex;flex-direction:column;gap:11px">
+            <div style="height:112px;border-radius:8px;background:#EEEFE4;border:1px solid #E7ECE3"></div>
+            <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#98A295"><span style="width:14px;height:14px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center;flex:none">A</span><span style="color:#6D766C">Ars Technica</span><span>·</span><span>48m</span></div>
+            <div style="font-size:15px;font-weight:500;line-height:1.34;color:#22281F">The quiet return of the personal website</div>
+          </div>
+          <div style="padding:18px;border-right:1px solid #F2F3EB;border-bottom:1px solid #F2F3EB;display:flex;flex-direction:column;gap:11px">
+            <div style="height:112px;border-radius:8px;background:#EEEFE4;border:1px solid #E7ECE3"></div>
+            <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#98A295"><span style="width:14px;height:14px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center;flex:none">N</span><span style="color:#6D766C">Noahpinion</span><span>·</span><span>1h</span></div>
+            <div style="font-size:15px;font-weight:500;line-height:1.34;color:#22281F">Five charts that explain the week</div>
+          </div>
+          <div style="padding:18px;border-right:1px solid #F2F3EB;border-bottom:1px solid #F2F3EB;display:flex;flex-direction:column;gap:11px">
+            <div style="height:112px;border-radius:8px;background:#EEEFE4;border:1px solid #E7ECE3"></div>
+            <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#98A295"><span style="width:14px;height:14px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center;flex:none">W</span><span style="color:#6D766C">Works in Progress</span><span>·</span><span>2h</span></div>
+            <div style="font-size:15px;font-weight:500;line-height:1.34;color:#22281F">What cities got right before zoning</div>
+          </div>
+          <div style="padding:18px;border-right:1px solid #F2F3EB;border-bottom:1px solid #F2F3EB;display:flex;flex-direction:column;gap:11px">
+            <div style="height:112px;border-radius:8px;background:#EEEFE4;border:1px solid #E7ECE3"></div>
+            <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#98A295"><span style="width:14px;height:14px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center;flex:none">I</span><span style="color:#6D766C">Interconnected</span><span>·</span><span>3h</span></div>
+            <div style="font-size:15px;font-weight:500;line-height:1.34;color:#22281F">Notes on making things for the web</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px">
+        <div style="border:1px solid #E2E4D6;background:#F6F8EE;border-radius:6px;padding:14px 16px">
+          <div style="font-size:13.5px;font-weight:500;color:#2B4A31">Your sources</div>
+          <div style="margin-top:5px;font-size:13px;line-height:1.5;color:#778076">Nothing gets added unless you follow it.</div>
+        </div>
+        <div style="border:1px solid #E2E4D6;background:#F6F8EE;border-radius:6px;padding:14px 16px">
+          <div style="font-size:13.5px;font-weight:500;color:#2B4A31">One feed</div>
+          <div style="margin-top:5px;font-size:13px;line-height:1.5;color:#778076">Everything you follow, together, in order.</div>
+        </div>
+        <div style="border:1px solid #E2E4D6;background:#F6F8EE;border-radius:6px;padding:14px 16px">
+          <div style="font-size:13.5px;font-weight:500;color:#2B4A31">Pick up anywhere</div>
+          <div style="margin-top:5px;font-size:13px;line-height:1.5;color:#778076">Synced across web, iOS, and Android.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Saved / read later -->
+<section id="saved" style="padding:120px 0 0">
+  <div style="max-width:1180px;margin:0 auto;padding:0 24px">
+    <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-end;justify-content:space-between">
+      <div style="flex:1;min-width:min(100%,420px)">
+        <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Read later</div>
+        <h2 style="margin:16px 0 0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.02;letter-spacing:-.02em;color:#171C18;max-width:20ch">Save anything. Read it when you actually have time.</h2>
+      </div>
+      <div style="flex:1;min-width:min(100%,340px);max-width:500px">
+        <p style="margin:0;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">A long essay, a newsletter, something you stumbled on halfway through the day. Save it to readspace instead of another bookmark folder.</p>
+        <p style="margin:16px 0 0;font-size:15px;font-weight:500;color:#38663F">Save from anywhere. Read anywhere.</p>
+      </div>
+    </div>
+
+    <div data-reveal style="margin-top:44px;position:relative;display:flex;flex-wrap:wrap;gap:26px;align-items:flex-end;justify-content:center">
+      <div style="position:relative;flex:1;min-width:min(100%,340px);max-width:720px">
+        <div style="margin:0 0 -14px 0;border-radius:12px 12px 0 0;background:#EEF0E3;border:1px solid #E2E4D6;border-bottom:none;padding:12px 16px 22px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
+          <span style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;color:#6E776E">theatlantic.com/long-read</span>
+          <span style="display:inline-flex;align-items:center;gap:7px;background:#38663F;color:#fff;border-radius:7px;padding:7px 12px;font-size:12.5px;font-weight:500"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2.5h8v11l-4-3-4 3z"></path></svg>Saved to readspace</span>
+        </div>
+      <div data-tilt style="position:relative;border-radius:16px;background:#fff;box-shadow:0 34px 70px -44px rgba(24,48,30,.32);overflow:hidden">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #EEEFE4;background:#F7F8F0">
+          <div style="font-weight:600;font-size:16px;letter-spacing:-.015em;color:#1B211C">Reading library</div>
+          <div style="display:flex;gap:6px">
+            <span class="lib-tab">All</span>
+            <span class="lib-tab">Unread</span>
+            <span class="lib-tab">In progress</span>
+          </div>
+        </div>
+        <div class="saved-row" style="display:flex;gap:16px;padding:16px 20px;border-bottom:1px solid #F3F4EC;align-items:center">
+          <div style="width:84px;height:58px;border-radius:8px;background:#EEEFE4;border:1px solid #E7ECE3;flex:none"></div>
+          <div style="min-width:0;flex:1">
+            <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#98A295"><span style="width:14px;height:14px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center;flex:none">W</span><span style="color:#6D766C">Works in Progress</span><span>·</span><span>22 min</span><span>·</span><span>Saved Tue</span></div>
+            <div style="margin-top:6px;font-size:15px;font-weight:500;line-height:1.34;color:#22281F">What cities got right before zoning</div>
+            <div style="margin-top:10px;height:3px;border-radius:999px;background:#EFF2ED;overflow:hidden"><div style="height:3px;border-radius:999px;background:#6E9C4E;width:38%"></div></div>
+          </div>
+          <span style="font-family:'Geist Mono',ui-monospace;font-size:10px;color:#A3AC9E;flex:none">Reading</span>
+        </div>
+        <div class="saved-row" style="display:flex;gap:16px;padding:16px 20px;border-bottom:1px solid #F3F4EC;align-items:center">
+          <div style="width:84px;height:58px;border-radius:8px;background:#EEEFE4;border:1px solid #E7ECE3;flex:none"></div>
+          <div style="min-width:0;flex:1">
+            <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#98A295"><span style="width:14px;height:14px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center;flex:none">C</span><span style="color:#6D766C">Craig Mod</span><span>·</span><span>31 min</span><span>·</span><span>Saved Mon</span></div>
+            <div style="margin-top:6px;font-size:15px;font-weight:500;line-height:1.34;color:#22281F">Walking the Nakasendo, again</div>
+            <div style="margin-top:10px;height:3px;border-radius:999px;background:#EFF2ED;overflow:hidden"><div style="height:3px;border-radius:999px;background:#6E9C4E;width:0%"></div></div>
+          </div>
+          <span style="font-family:'Geist Mono',ui-monospace;font-size:10px;color:#A3AC9E;flex:none">Unread</span>
+        </div>
+        <div class="saved-row" style="display:flex;gap:16px;padding:16px 20px;border-bottom:1px solid #F3F4EC;align-items:center">
+          <div style="width:84px;height:58px;border-radius:8px;background:#EEEFE4;border:1px solid #E7ECE3;flex:none"></div>
+          <div style="min-width:0;flex:1">
+            <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#98A295"><span style="width:14px;height:14px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center;flex:none">S</span><span style="color:#6D766C">Stratechery</span><span>·</span><span>9 min</span><span>·</span><span>Saved Sun</span></div>
+            <div style="margin-top:6px;font-size:15px;font-weight:500;line-height:1.34;color:#22281F">The unbundling of the attention economy</div>
+            <div style="margin-top:10px;height:3px;border-radius:999px;background:#EFF2ED;overflow:hidden"><div style="height:3px;border-radius:999px;background:#6E9C4E;width:72%"></div></div>
+          </div>
+          <span style="font-family:'Geist Mono',ui-monospace;font-size:10px;color:#A3AC9E;flex:none">Reading</span>
+        </div>
+        <div class="saved-row" style="display:flex;gap:16px;padding:16px 20px;border-bottom:1px solid #F3F4EC;align-items:center">
+          <div style="width:84px;height:58px;border-radius:8px;background:#EEEFE4;border:1px solid #E7ECE3;flex:none"></div>
+          <div style="min-width:0;flex:1">
+            <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#98A295"><span style="width:14px;height:14px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center;flex:none">I</span><span style="color:#6D766C">Interconnected</span><span>·</span><span>6 min</span><span>·</span><span>Saved Sun</span></div>
+            <div style="margin-top:6px;font-size:15px;font-weight:500;line-height:1.34;color:#22281F">Notes on making things for the web</div>
+            <div style="margin-top:10px;height:3px;border-radius:999px;background:#EFF2ED;overflow:hidden"><div style="height:3px;border-radius:999px;background:#6E9C4E;width:0%"></div></div>
+          </div>
+          <span style="font-family:'Geist Mono',ui-monospace;font-size:10px;color:#A3AC9E;flex:none">Unread</span>
+        </div>
+        <div style="padding:14px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:#F7F8F1;font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#9AA497">
+          <span>38 saved · 4 h 20 m of reading</span><span>Synced · web, iOS, Android</span>
+        </div>
+      </div>
+      </div>
+      <div style="width:206px;flex:none;border:7px solid #1E241F;border-radius:30px;background:#fff;box-shadow:0 30px 60px -22px rgba(24,48,30,.38);overflow:hidden">
+        <div style="padding:9px 14px 6px;display:flex;justify-content:space-between;font-family:'Geist Mono',ui-monospace;font-size:9px;color:#9AA497"><span>9:41</span><span>▮▮▮</span></div>
+        <div style="padding:2px 13px 12px;display:flex;align-items:baseline;justify-content:space-between">
+          <span style="font-weight:600;font-size:14.5px;letter-spacing:-.015em;color:#1B211C">Saved</span>
+          <span style="font-family:'Geist Mono',ui-monospace;font-size:8.5px;color:#A3AC9E">38</span>
+        </div>
+        <div style="padding:11px 13px;border-top:1px solid #F2F3EB;display:flex;gap:10px;align-items:flex-start"><div style="width:40px;height:30px;border-radius:5px;background:#EEEFE4;flex:none"></div><div style="min-width:0"><div style="font-family:'Geist Mono',ui-monospace;font-size:8px;color:#A3AC9E">WORKS IN PROGRESS</div><div style="margin-top:3px;font-size:11px;font-weight:500;line-height:1.3;color:#262C25">What cities got right before zoning</div></div></div>
+        <div style="padding:11px 13px;border-top:1px solid #F2F3EB;display:flex;gap:10px;align-items:flex-start"><div style="width:40px;height:30px;border-radius:5px;background:#EEEFE4;flex:none"></div><div style="min-width:0"><div style="font-family:'Geist Mono',ui-monospace;font-size:8px;color:#A3AC9E">CRAIG MOD</div><div style="margin-top:3px;font-size:11px;font-weight:500;line-height:1.3;color:#262C25">Walking the Nakasendo, again</div></div></div>
+        <div style="padding:11px 13px;border-top:1px solid #F2F3EB;display:flex;gap:10px;align-items:flex-start"><div style="width:40px;height:30px;border-radius:5px;background:#EEEFE4;flex:none"></div><div style="min-width:0"><div style="font-family:'Geist Mono',ui-monospace;font-size:8px;color:#A3AC9E">STRATECHERY</div><div style="margin-top:3px;font-size:11px;font-weight:500;line-height:1.3;color:#262C25">The unbundling of attention</div></div></div>
+        <div style="padding:11px 13px;border-top:1px solid #F2F3EB;display:flex;gap:10px;align-items:flex-start"><div style="width:40px;height:30px;border-radius:5px;background:#EEEFE4;flex:none"></div><div style="min-width:0"><div style="font-family:'Geist Mono',ui-monospace;font-size:8px;color:#A3AC9E">INTERCONNECTED</div><div style="margin-top:3px;font-size:11px;font-weight:500;line-height:1.3;color:#262C25">Notes on making things for the web</div></div></div>
+        <div style="height:16px"></div>
+      </div>
+    </div>
+    <div style="margin-top:28px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:center;text-align:center">
+      <span style="font-size:15px;color:#4D554E"><span style="font-weight:500;color:#1F2620">Coming from Pocket or Instapaper?</span> Save any page with the browser extension and read it in the same clean reader.</span>
+      <a href="#discovery" data-arrow-trigger style="display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:500">Get the extension<span class="arrow" data-arrow><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h11M11 6l4 4-4 4"></path></svg></span></a>
+    </div>
+  </div>
+</section>
+
+<!-- Reader -->
+<section id="reader" style="padding:132px 0 0">
+  <div style="max-width:1180px;margin:0 auto;padding:0 24px">
+    <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Reader</div>
+    <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-end;justify-content:space-between;margin-top:16px">
+      <h2 style="margin:0;flex:1;min-width:min(100%,340px);font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.02;letter-spacing:-.02em;color:#171C18">When you do read, just read.</h2>
+      <p style="margin:0;flex:1;min-width:min(100%,320px);max-width:470px;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">Sometimes you just want to read. No popups. No autoplay. No cookie banners.</p>
+    </div>
+
+    <div style="margin-top:48px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:22px;align-items:stretch">
+      <div>
+        <div style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#6E776E;margin-bottom:12px">The web</div>
+        <div style="border:1px solid #E6E6E6;border-radius:14px;background:#fff;overflow:hidden;height:420px;position:relative;filter:saturate(.75)">
+          <div style="display:flex;gap:6px;align-items:center;padding:9px 12px;background:#F1F1F1;border-bottom:1px solid #E3E3E3;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#9A9A9A">example-news-site.com</div>
+          <div style="padding:10px 12px;background:#FFE9C9;border-bottom:1px solid #F0D9B4;font-size:10.5px;color:#8A6B33;display:flex;justify-content:space-between;gap:8px"><span>Subscribe now — 70% off your first year</span><span>✕</span></div>
+          <div style="height:52px;background:#E9EDF2;border-bottom:1px solid #DFE4EA;display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#A7AEB8">ADVERTISEMENT</div>
+          <div style="padding:14px 14px 0">
+            <div style="font-size:16px;font-weight:600;color:#2A2A2A;line-height:1.25">The quiet return of the personal website</div>
+            <div style="margin-top:8px;height:9px;background:#EDEDED;border-radius:3px"></div>
+            <div style="margin-top:6px;height:9px;background:#EDEDED;border-radius:3px;width:92%"></div>
+            <div style="margin-top:6px;height:9px;background:#EDEDED;border-radius:3px;width:78%"></div>
+          </div>
+          <div style="margin:12px 14px;height:86px;background:#EAF0F6;border:1px dashed #D5DEE7;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#A7AEB8">AUTOPLAY VIDEO</div>
+          <div style="padding:0 14px">
+            <div style="height:9px;background:#EDEDED;border-radius:3px"></div>
+            <div style="margin-top:6px;height:9px;background:#EDEDED;border-radius:3px;width:85%"></div>
+          </div>
+          <div style="position:absolute;left:12px;right:12px;bottom:12px;background:#2F3337;color:#DDE1E4;border-radius:8px;padding:12px;font-size:10.5px;display:flex;justify-content:space-between;align-items:center;gap:10px">
+            <span>We value your privacy. We and our 847 partners use cookies.</span>
+            <span style="background:#6E9C4E;color:#fff;padding:5px 9px;border-radius:5px;white-space:nowrap">Accept all</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#5E7A54;margin-bottom:12px">readspace</div>
+        <div style="border:1px solid #E2E4D6;border-radius:14px;background:#fff;height:420px;overflow:hidden;box-shadow:0 30px 60px -36px rgba(24,48,30,.3)">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid #EEEFE4;background:#F7F8F0;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#9AA497"><span>Reader</span><span>Aa · Save · Summarise</span></div>
+          <div style="padding:30px 34px">
+            <div style="font-family:'Geist Mono',ui-monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#9AA497">Ars Technica · 8 min</div>
+            <div style="margin-top:12px;font-family:'EB Garamond',serif;font-size:29px;line-height:1.1;color:#171C18">The quiet return of the personal website</div>
+            <div style="margin-top:18px;font-family:'EB Garamond',ui-serif,Georgia,serif;font-size:17.5px;line-height:1.74;color:#414A42">
+              <p style="margin:0">For a decade the answer to &ldquo;where do you publish?&rdquo; was somebody else's platform. That is changing again, slowly, and the people leaving are taking their readers with them.</p>
+              <p style="margin:14px 0 0">The mechanics are unglamorous: a domain, a static site, and a feed. The feed is the part that matters.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Gist / summary -->
+<section style="padding:60px 0 0">
+  <div style="max-width:1180px;margin:0 auto;padding:0 24px">
+    <h2 style="margin:0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(27px,3vw,40px);line-height:1.04;letter-spacing:-.022em;color:#171C18;max-width:22ch;text-wrap:balance">Read the whole thing. <span data-fill data-fill-to="#828C81" style="color:#828C81">Or just the gist.</span></h2>
+    <div data-gistgrid style="margin-top:54px;display:grid;grid-template-columns:1fr;gap:30px;align-items:stretch">
+      <div style="display:flex;flex-direction:column">
+        <div style="font-size:19px;font-weight:600;letter-spacing:-.015em;color:#1F2620">Get the gist</div>
+        <div style="margin-top:9px;font-size:15px;line-height:1.55;color:#818A80;max-width:34ch;text-wrap:pretty">Understand the important points without reading the whole article.</div>
+        <div class="gist-card" style="margin-top:22px;border-radius:22px;background:#DCE8D6;padding:26px 24px;flex:1;display:flex;align-items:flex-end">
+          <div style="width:100%;border-radius:9px;background:#fff;padding:17px;box-shadow:0 18px 30px -22px rgba(24,48,30,.5)">
+            <div style="font-family:'Geist Mono',ui-monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#5E7A54">Summary · 3 points</div>
+            <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;gap:9px;align-items:flex-start"><span style="width:5px;height:5px;border-radius:50%;background:#6E9C4E;margin-top:7px;flex:none"></span><span style="font-size:13.5px;line-height:1.5;color:#4E5650">Independent publishing is cheaper and more durable than it was a decade ago.</span></div>
+              <div style="display:flex;gap:9px;align-items:flex-start"><span style="width:5px;height:5px;border-radius:50%;background:#6E9C4E;margin-top:7px;flex:none"></span><span style="font-size:13.5px;line-height:1.5;color:#4E5650">The feed is the only part of the old web that never stopped working.</span></div>
+              <div style="display:flex;gap:9px;align-items:flex-start"><span style="width:5px;height:5px;border-radius:50%;background:#6E9C4E;margin-top:7px;flex:none"></span><span style="font-size:13.5px;line-height:1.5;color:#4E5650">Platform exits are now taking audiences with them, not losing them.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <div style="font-size:19px;font-weight:600;letter-spacing:-.015em;color:#1F2620">Find what matters</div>
+        <div style="margin-top:9px;font-size:15px;line-height:1.55;color:#818A80;max-width:34ch;text-wrap:pretty">Surface the key parts without digging through the entire piece.</div>
+        <div class="gist-card" style="margin-top:22px;border-radius:22px;background:#E7EBDA;padding:26px 24px;flex:1;display:flex;align-items:flex-end">
+          <div style="width:100%;border-radius:9px;background:#fff;padding:17px;box-shadow:0 18px 30px -22px rgba(24,48,30,.5)">
+            <div style="font-family:'EB Garamond',ui-serif,Georgia,serif;font-size:15px;line-height:1.75;color:#4E5650">
+              <p style="margin:0">The mechanics are unglamorous: a domain, a static site, and a feed. <span style="background:#DCEBCF;padding:1px 3px;border-radius:3px;color:#2B4A31">The feed is the only piece of the old web that never stopped working.</span></p>
+              <p style="margin:12px 0 0">Independent publishing is cheaper and more durable than it was, and <span style="background:#DCEBCF;padding:1px 3px;border-radius:3px;color:#2B4A31">the tools finally assume you own the output.</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <div style="font-size:19px;font-weight:600;letter-spacing:-.015em;color:#1F2620">Read it in your language</div>
+        <div style="margin-top:9px;font-size:15px;line-height:1.55;color:#818A80;max-width:34ch;text-wrap:pretty">Translate articles without leaving readspace.</div>
+        <div class="gist-card" style="margin-top:22px;border-radius:22px;background:#E2E9E4;padding:26px 24px;flex:1;display:flex;align-items:flex-end">
+          <div style="width:100%;border-radius:9px;background:#fff;padding:17px;box-shadow:0 18px 30px -22px rgba(24,48,30,.5)">
+            <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#9AA497"><span>EN</span><span style="color:#6E9C4E">→</span><span style="color:#38663F">ES</span></div>
+            <div style="margin-top:12px;font-family:'EB Garamond',ui-serif,Georgia,serif;font-size:15px;line-height:1.7;color:#A6AEA6">The mechanics are unglamorous: a domain, a static site, and a feed.</div>
+            <div style="margin-top:10px;font-family:'EB Garamond',ui-serif,Georgia,serif;font-size:15px;line-height:1.7;color:#3E463F">La mecánica no tiene nada de glamuroso: un dominio, un sitio estático y un feed.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Newsletters -->
+<section id="newsletters" style="padding:120px 0 0">
+  <div style="max-width:1180px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:56px;align-items:center">
+    <div>
+      <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Newsletters</div>
+      <h2 style="margin:16px 0 0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(32px,3.6vw,48px);line-height:1.04;letter-spacing:-.02em;color:#171C18">Get newsletters out of your inbox.</h2>
+      <p style="margin:20px 0 0;font-size:17px;line-height:1.6;color:#4D554E;max-width:48ch;text-wrap:pretty">Get your own @readspace.ai address. Newsletters land in your feed instead of your inbox. Available with Pro.</p>
+      <div style="margin:24px 0 0;display:inline-flex;align-items:center;gap:10px;border:1px solid #E2E4D6;background:#F6F8EE;border-radius:9px;padding:11px 15px;font-family:'Geist Mono',ui-monospace;font-size:14px;color:#38663F">yourname@readspace.ai</div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#9AA497">
+        <span style="border:1px solid #E4E9DF;border-radius:7px;padding:8px 11px;background:#fff">Newsletter</span>
+        <span style="color:#6E9C4E">→</span>
+        <span style="border:1px solid #DCE7D4;border-radius:7px;padding:8px 11px;background:#F3F5E9;color:#38663F">@readspace.ai</span>
+        <span style="color:#6E9C4E">→</span>
+        <span style="border:1px solid #E4E9DF;border-radius:7px;padding:8px 11px;background:#fff">Your feed</span>
+      </div>
+      <div style="margin-top:18px;border-radius:16px;background:#fff;box-shadow:0 30px 60px -40px rgba(24,48,30,.3);overflow:hidden">
+        <div style="padding:11px 16px;border-bottom:1px solid #EEEFE4;background:#F7F8F0;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#9AA497">Reader · Newsletter</div>
+        <div style="padding:24px 26px">
+          <div style="display:flex;align-items:center;gap:9px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#98A295"><span style="width:15px;height:15px;border-radius:4px;background:#E3EBDC;color:#38663F;font-size:9px;display:flex;align-items:center;justify-content:center">N</span><span style="color:#6D766C">Noahpinion</span><span>·</span><span>Issue 412</span></div>
+          <div style="margin-top:12px;font-family:'EB Garamond',serif;font-size:24px;line-height:1.14;color:#171C18">Five charts that explain the week</div>
+          <div style="margin-top:14px;font-family:'EB Garamond',ui-serif,Georgia,serif;font-size:16.5px;line-height:1.72;color:#414A42">Nothing about this issue arrived in an inbox. It landed in the same feed as everything else you follow, in the order it was published.</div>
+          <div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap">
+            <span style="border:1px solid #E4E9DF;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59">No inbox</span>
+            <span style="border:1px solid #E4E9DF;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59">Same reader</span>
+            <span style="border:1px solid #E4E9DF;border-radius:999px;padding:4px 10px;font-size:11.5px;color:#5C6B59">Counts toward your digest</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Discovery -->
+<section id="discovery" style="padding:120px 0 0">
+  <div style="max-width:1180px;margin:0 auto;padding:0 24px;text-align:center">
+    <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Discovery</div>
+    <h2 style="margin:16px auto 0;max-width:24ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.03;letter-spacing:-.02em;color:#171C18">If it&rsquo;s on the web, you can probably follow it.</h2>
+    <p style="margin:20px auto 0;max-width:52ch;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">Search 120,000+ indexed sources, paste any URL, or bring your subscriptions over with OPML.</p>
+  </div>
+  <div style="max-width:1180px;margin:20px auto 0;padding:0 24px">
+    <div style="position:relative;height:330px;overflow:hidden">
+      <div style="position:absolute;left:50%;bottom:-360px;transform:translateX(-50%);width:820px;height:820px;border-radius:50%;background:#F3F5E9;border:1px solid #E9EBDC"></div>
+      <div style="position:absolute;left:50%;bottom:-280px;transform:translateX(-50%);width:620px;height:620px;border-radius:50%;background:#F0F2E6;border:1px solid #E6E8D9"></div>
+      <div style="position:absolute;left:50%;bottom:-200px;transform:translateX(-50%);width:420px;height:420px;border-radius:50%;background:#EBEEDF;border:1px solid #E2E4D4"></div>
+      <div style="position:absolute;left:50%;bottom:26px;transform:translateX(-50%);width:76px;height:76px;border-radius:50%;background:#38663F;color:#fff;display:flex;align-items:center;justify-content:center;font-family:'EB Garamond',serif;font-size:34px;box-shadow:0 14px 30px -10px rgba(40,86,48,.55)">R</div>
+      <div style="position:absolute;left:50%;bottom:150px;transform:translateX(-50%);width:52px;height:52px;border-radius:50%;background:#1F2620;color:#F6FBF3;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;box-shadow:0 12px 24px -12px rgba(24,48,30,.5)">S</div>
+      <div style="position:absolute;left:28%;bottom:118px;width:50px;height:50px;border-radius:50%;background:#fff;border:1px solid #E6E8D8;color:#2B4A31;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;box-shadow:0 12px 24px -14px rgba(24,48,30,.4)">V</div>
+      <div style="position:absolute;right:28%;bottom:118px;width:50px;height:50px;border-radius:50%;background:#6E9C4E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;box-shadow:0 12px 24px -14px rgba(24,48,30,.4)">A</div>
+      <div style="position:absolute;left:16%;bottom:56px;width:44px;height:44px;border-radius:50%;background:#fff;border:1px solid #E6E8D8;color:#5C6B59;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600">N</div>
+      <div style="position:absolute;right:16%;bottom:56px;width:44px;height:44px;border-radius:50%;background:#1F2620;color:#E4F0DC;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600">W</div>
+      <div style="position:absolute;left:38%;bottom:214px;width:40px;height:40px;border-radius:50%;background:#fff;border:1px solid #E6E8D8;color:#38663F;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;opacity:.85">I</div>
+      <div style="position:absolute;right:34%;bottom:236px;width:38px;height:38px;border-radius:50%;background:#E3EBDC;color:#38663F;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;opacity:.8">C</div>
+      <div style="position:absolute;left:6%;bottom:172px;width:34px;height:34px;border-radius:50%;background:#fff;border:1px solid #EEEFE4;color:#9AA497;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;opacity:.7">T</div>
+      <div style="position:absolute;right:5%;bottom:196px;width:32px;height:32px;border-radius:50%;background:#fff;border:1px solid #EEEFE4;color:#9AA497;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;opacity:.6">M</div>
+      <div style="position:absolute;left:2%;bottom:38px;width:30px;height:30px;border-radius:50%;background:#F3F5E9;border:1px solid #EEEFE4;color:#B6C2B2;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;opacity:.5">G</div>
+      <div style="position:absolute;right:1%;bottom:34px;width:30px;height:30px;border-radius:50%;background:#F3F5E9;border:1px solid #EEEFE4;color:#B6C2B2;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;opacity:.5">P</div>
+      <div style="position:absolute;left:0;right:0;bottom:0;height:56px;background:linear-gradient(180deg,rgba(250,250,244,0),#FAFAF4)"></div>
+    </div>
+    <div style="text-align:center;font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#646D64"><span data-count-to="120000" data-count-suffix="+">0</span> feeds indexed · news, blogs, newsletters, forums</div>
+  </div>
+
+  <div style="max-width:960px;margin:36px auto 0;padding:0 24px">
+    <div style="border-radius:16px;background:#fff;box-shadow:0 34px 70px -44px rgba(24,48,30,.32);overflow:hidden">
+      <div style="padding:20px;border-bottom:1px solid #F0F1E8;background:#F7F8F0">
+        <div style="display:flex;align-items:center;gap:11px;border:1px solid #E2E4D6;background:#fff;border-radius:10px;padding:13px 16px">
+          <span style="color:#9AA497;font-size:14px">⌕</span>
+          <span style="font-size:15px;color:#3E463F">independent tech writing</span>
+          <span style="margin-left:auto;font-family:'Geist Mono',ui-monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#A3AC9E">1,284 feeds</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr))">
+        <div style="padding:18px;border-right:1px solid #F2F3EB;border-bottom:1px solid #F2F3EB;display:flex;gap:12px;align-items:flex-start;text-align:left"><span style="width:32px;height:32px;border-radius:7px;background:#E3EBDC;color:#38663F;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:500">A</span><div style="min-width:0;flex:1"><div style="font-size:14.5px;font-weight:500;color:#22281F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Ars Technica</div><div style="margin-top:3px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#9AA497">14 posts / week</div></div><span class="follow-pill">Follow</span></div>
+        <div style="padding:18px;border-right:1px solid #F2F3EB;border-bottom:1px solid #F2F3EB;display:flex;gap:12px;align-items:flex-start;text-align:left"><span style="width:32px;height:32px;border-radius:7px;background:#E3EBDC;color:#38663F;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:500">S</span><div style="min-width:0;flex:1"><div style="font-size:14.5px;font-weight:500;color:#22281F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Stratechery</div><div style="margin-top:3px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#9AA497">4 posts / week</div></div><span class="follow-pill">Follow</span></div>
+        <div style="padding:18px;border-right:1px solid #F2F3EB;border-bottom:1px solid #F2F3EB;display:flex;gap:12px;align-items:flex-start;text-align:left"><span style="width:32px;height:32px;border-radius:7px;background:#E3EBDC;color:#38663F;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:500">I</span><div style="min-width:0;flex:1"><div style="font-size:14.5px;font-weight:500;color:#22281F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Interconnected</div><div style="margin-top:3px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#9AA497">2 posts / week</div></div><span class="follow-pill">Follow</span></div>
+        <div style="padding:18px;border-right:1px solid #F2F3EB;border-bottom:1px solid #F2F3EB;display:flex;gap:12px;align-items:flex-start;text-align:left"><span style="width:32px;height:32px;border-radius:7px;background:#E3EBDC;color:#38663F;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:500">W</span><div style="min-width:0;flex:1"><div style="font-size:14.5px;font-weight:500;color:#22281F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Works in Progress</div><div style="margin-top:3px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#9AA497">Monthly</div></div><span class="follow-pill">Follow</span></div>
+        <div style="padding:18px;border-right:1px solid #F2F3EB;border-bottom:1px solid #F2F3EB;display:flex;gap:12px;align-items:flex-start;text-align:left"><span style="width:32px;height:32px;border-radius:7px;background:#E3EBDC;color:#38663F;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:500">C</span><div style="min-width:0;flex:1"><div style="font-size:14.5px;font-weight:500;color:#22281F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Craig Mod</div><div style="margin-top:3px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#9AA497">Occasional</div></div><span class="follow-pill">Follow</span></div>
+        <div style="padding:18px;border-right:1px solid #F2F3EB;border-bottom:1px solid #F2F3EB;display:flex;gap:12px;align-items:flex-start;text-align:left"><span style="width:32px;height:32px;border-radius:7px;background:#E3EBDC;color:#38663F;font-size:13px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:500">V</span><div style="min-width:0;flex:1"><div style="font-size:14.5px;font-weight:500;color:#22281F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">The Verge</div><div style="margin-top:3px;font-family:'Geist Mono',ui-monospace;font-size:10px;color:#9AA497">60 posts / week</div></div><span class="follow-pill">Follow</span></div>
+      </div>
+    </div>
+    <div style="margin-top:34px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px;text-align:left">
+      <div class="spotlight-card" style="border:1px solid #E2E4D6;border-radius:8px;background:#F7F8F1;padding:22px 24px">
+        <div style="font-size:17px;font-weight:600;letter-spacing:-.015em;color:#1F2620">Follow it from the page you're on</div>
+        <div style="margin-top:8px;font-size:15px;line-height:1.55;color:#5E665F;max-width:36ch">Found a writer worth hearing from again? The browser extension finds the feed for you — no hunting for an RSS link.</div>
+        <div style="margin-top:18px;border-radius:10px;background:#fff;border:1px solid #E7E8DA;padding:14px">
+          <div style="display:flex;align-items:center;gap:8px;font-family:'Geist Mono',ui-monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5E7A54"><span style="width:6px;height:6px;border-radius:50%;background:#6E9C4E"></span>Feed found</div>
+          <div style="margin-top:10px;display:flex;align-items:center;gap:9px">
+            <span style="width:22px;height:22px;border-radius:6px;background:#E3EBDC;color:#38663F;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none">I</span>
+            <div style="min-width:0;flex:1"><div style="font-size:13px;font-weight:500;color:#22281F">Interconnected</div><div style="font-family:'Geist Mono',ui-monospace;font-size:9.5px;color:#8A9289">/blog/feed.xml</div></div>
+            <span style="background:#38663F;color:#fff;border-radius:7px;padding:7px 12px;font-size:12.5px;font-weight:500;flex:none">+ Follow</span>
+          </div>
+        </div>
+      </div>
+      <div class="spotlight-card" style="border:1px solid #E2E4D6;border-radius:8px;background:#F7F8F1;padding:22px 24px;display:flex;flex-direction:column">
+        <div style="font-size:17px;font-weight:600;letter-spacing:-.015em;color:#1F2620">Already use RSS?</div>
+        <div style="margin-top:8px;font-size:15px;line-height:1.55;color:#5E665F;max-width:36ch">Bring every subscription across with an OPML file — and export yours the same way, any time.</div>
+        <div style="margin-top:18px;border-radius:10px;background:#fff;border:1.5px dashed #C9D0BE;padding:22px 14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;flex:1;text-align:center">
+          <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="#8A9289" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M6.5 8.5L10 12l3.5-3.5M4 15.5h12"></path></svg>
+          <div style="font-family:'Geist Mono',ui-monospace;font-size:12px;color:#6E776E">Drag and drop your .opml file</div>
+          <div style="margin-top:6px;border-radius:8px;background:#F7F8F1;border:1px solid #E7E8DA;padding:10px 14px;font-family:'Geist Mono',ui-monospace;font-size:12px;line-height:1.8;color:#6E776E;width:100%;max-width:280px;text-align:left">
+            <div>feedly-export.opml</div>
+            <div style="color:#38663F">✓ 214 feeds ready to import</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- No algorithm -->
+<section style="margin-top:128px;padding:108px 0;background:#233026;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;opacity:.07;background-image:linear-gradient(#9EC28C 1px,transparent 1px),linear-gradient(90deg,#9EC28C 1px,transparent 1px);background-size:96px 96px"></div>
+  <div style="position:relative;max-width:1180px;margin:0 auto;padding:0 24px;text-align:center">
+    <h2 style="margin:0 auto;max-width:20ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(36px,5vw,66px);line-height:1.02;letter-spacing:-.022em;color:#F6FBF3">Your internet doesn't need an <span data-fill data-fill-to="#B6D6A2" data-fill-from="#3E5742" style="font-style:italic;color:#B6D6A2">algorithm.</span></h2>
+    <div style="margin:34px auto 0;display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:center;max-width:680px;font-family:'Geist Mono',ui-monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#A8BE9D">
+      <span style="white-space:nowrap">No algorithmic feed</span>
+      <span style="white-space:nowrap">No ads</span>
+      <span style="white-space:nowrap">No tracking</span>
+      <span style="white-space:nowrap">No lock-in</span>
+    </div>
+    <p style="margin:40px auto 0;max-width:44ch;font-size:17.5px;line-height:1.62;color:#BFCFB7">You decide what enters your feed. And if you ever leave, your subscriptions leave with you.</p>
+  </div>
+</section>
+
+<!-- Open source -->
+<section id="opensource" style="padding:112px 0 0">
+  <div style="max-width:1180px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:56px;align-items:center">
+    <div>
+      <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Open source</div>
+      <h2 style="margin:16px 0 0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(32px,3.6vw,48px);line-height:1.04;letter-spacing:-.02em;color:#171C18">Host it yourself.</h2>
+      <p style="margin:20px 0 0;font-size:17px;line-height:1.6;color:#4D554E;max-width:48ch;text-wrap:pretty">Run the whole platform on your own server for $0. Bring your own API keys. Point the apps and extension at it.</p>
+      <p style="margin:14px 0 0;font-size:16px;font-weight:500;color:#1F2620">All features. No readspace usage limits.</p>
+      <div style="margin:26px 0 0;display:flex;flex-wrap:wrap;gap:12px">
+        <a href="https://github.com/kamui-fin/readspace#self-hosting" target="_blank" rel="noopener" class="btn-dark">Self-host readspace</a>
+      </div>
+    </div>
+    <div class="term-block">
+      <div class="term-titlebar">
+        <span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span>
+        <span class="term-titlebar-label">terminal</span>
+      </div>
+      <pre class="term-body"><span class="term-line"><span class="term-prompt">$</span> git clone https://github.com/kamui-fin/readspace.git</span>
+<span class="term-line"><span class="term-prompt">$</span> cd readspace/docker</span>
+<span class="term-line"><span class="term-prompt">$</span> ./setup.sh</span>
+<span class="term-line"><span class="term-prompt">$</span> ./launch.sh</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- Why we're building this -->
+<section id="why" style="margin-top:120px;padding:100px 0 108px;background:#F1F3E7;border-top:1px solid #E7E8DA;border-bottom:1px solid #E7E8DA;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;background-image:radial-gradient(#CBDABE 1.4px, transparent 1.5px);background-size:15px 15px;opacity:.45;pointer-events:none"></div>
+  <div style="position:absolute;left:0;right:0;top:0;height:180px;background:linear-gradient(180deg,#F1F3E7,rgba(241,243,231,0));pointer-events:none"></div>
+  <div data-foliage class="hero-foliage" style="position:absolute;left:-30px;bottom:-40px;width:min(19vw,260px);height:340px;z-index:1;display:none">
+    <img src="./assets/img/why-branch.png" alt="" style="display:block;width:100%;height:100%;object-fit:contain;object-position:left bottom">
+  </div>
+  <div style="position:relative;z-index:2;max-width:900px;margin:0 auto;padding:0 24px;text-align:center">
+    <div style="display:flex;align-items:center;justify-content:center;gap:clamp(12px,3vw,40px);font-family:'EB Garamond',ui-serif,Georgia,serif">
+      <span style="font-size:clamp(44px,6vw,78px);line-height:1;color:#A6B99C">(</span>
+      <h2 style="margin:0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,5vw,62px);line-height:1;letter-spacing:-.02em;color:#171C18">Why we're <span data-fill data-fill-to="#38663F" style="font-style:italic;color:#38663F">building this</span></h2>
+      <span style="font-size:clamp(44px,6vw,78px);line-height:1;color:#A6B99C">)</span>
+    </div>
+    <div style="margin-top:12px;font-family:'EB Garamond',ui-serif,Georgia,serif;font-style:italic;font-size:clamp(19px,2.2vw,26px);color:#5E7059">A quieter way to follow the internet</div>
+  </div>
+  <div style="position:relative;z-index:2;max-width:760px;margin:46px auto 0;padding:0 24px">
+    <div style="background:#FCFCF5;border:1px solid #E4E7D6;border-radius:3px;padding:clamp(30px,4.4vw,58px);box-shadow:0 34px 64px -44px rgba(24,48,30,.34)">
+      <div style="font-family:'EB Garamond',ui-serif,Georgia,serif;font-size:19px;line-height:1.78;color:#3B443C;text-wrap:pretty">
+        <p style="margin:0"><span style="float:left;font-size:64px;line-height:.86;padding:4px 12px 0 0;color:#38663F">W</span>e started readspace because we missed choosing what to read. Feeds used to be simple: you picked the writers you trusted, and their work arrived in order.</p>
+        <p style="margin:18px 0 0">Then reading became something platforms optimise on our behalf. We wanted a reader where the sources, the order and the attention are yours — and one you can inspect, export or host yourself.</p>
+        <p style="margin:18px 0 0">Nothing here ranks what you follow. The briefing exists for the days you only have ten minutes, not to replace the reading.</p>
+      </div>
+      <div style="margin-top:34px;padding-top:22px;border-top:1px solid #EDEFE0;display:flex;flex-wrap:wrap;gap:14px;align-items:center">
+        <span style="font-family:'EB Garamond',ui-serif,Georgia,serif;font-style:italic;font-size:21px;color:#5E7059">— Readspace</span>
+        <a href="https://github.com/kamui-fin/readspace/blob/main/MANIFESTO.md" target="_blank" rel="noopener" data-arrow-trigger style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-size:14.5px;font-weight:500">Read the full manifesto<span class="arrow" data-arrow><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h11M11 6l4 4-4 4"></path></svg></span></a>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:center;gap:14px;margin-top:-9px">
+      <span style="width:18px;height:18px;border-radius:50%;background:#F1F3E7;border:1px solid #E4E7D6;border-top-color:#F1F3E7"></span>
+      <span style="width:18px;height:18px;border-radius:50%;background:#F1F3E7;border:1px solid #E4E7D6;border-top-color:#F1F3E7"></span>
+      <span style="width:18px;height:18px;border-radius:50%;background:#F1F3E7;border:1px solid #E4E7D6;border-top-color:#F1F3E7"></span>
+      <span style="width:18px;height:18px;border-radius:50%;background:#F1F3E7;border:1px solid #E4E7D6;border-top-color:#F1F3E7"></span>
+      <span style="width:18px;height:18px;border-radius:50%;background:#F1F3E7;border:1px solid #E4E7D6;border-top-color:#F1F3E7"></span>
+      <span style="width:18px;height:18px;border-radius:50%;background:#F1F3E7;border:1px solid #E4E7D6;border-top-color:#F1F3E7"></span>
+      <span style="width:18px;height:18px;border-radius:50%;background:#F1F3E7;border:1px solid #E4E7D6;border-top-color:#F1F3E7"></span>
+      <span style="width:18px;height:18px;border-radius:50%;background:#F1F3E7;border:1px solid #E4E7D6;border-top-color:#F1F3E7"></span>
+      <span style="width:18px;height:18px;border-radius:50%;background:#F1F3E7;border:1px solid #E4E7D6;border-top-color:#F1F3E7"></span>
+      <span style="width:18px;height:18px;border-radius:50%;background:#F1F3E7;border:1px solid #E4E7D6;border-top-color:#F1F3E7"></span>
+      <span style="width:18px;height:18px;border-radius:50%;background:#F1F3E7;border:1px solid #E4E7D6;border-top-color:#F1F3E7"></span>
+      <span style="width:18px;height:18px;border-radius:50%;background:#F1F3E7;border:1px solid #E4E7D6;border-top-color:#F1F3E7"></span>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section id="pricing" style="margin-top:0;padding:96px 0;background:#F1F3E7;border-top:1px solid #E7E8DA;border-bottom:1px solid #E7E8DA">
+  <div style="max-width:1180px;margin:0 auto;padding:0 24px;text-align:center">
+    <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Pricing</div>
+    <h2 style="margin:16px auto 0;max-width:26ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.03;letter-spacing:-.02em;color:#171C18">Start free. Upgrade when readspace becomes your reader.</h2>
+    <p style="margin:18px auto 0;font-size:17px;color:#4D554E">Three ways to use readspace.</p>
+    <div class="cycle-toggle-group" style="margin:28px 0 0">
+      <button type="button" id="cycle-monthly" class="cycle-toggle active">Monthly</button>
+      <button type="button" id="cycle-annual" class="cycle-toggle">Yearly<span class="save-badge">Save 17%</span></button>
+    </div>
+  </div>
+  <div style="max-width:1180px;margin:36px auto 0;padding:0 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:20px;align-items:start">
+    <div class="plan-card">
+      <div>
+        <div style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Basic</div>
+        <div style="margin-top:14px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap"><span style="font-family:'EB Garamond',serif;font-size:40px;line-height:1;color:#171C18">$0</span><span style="font-family:'Geist Mono',ui-monospace;font-size:11px;color:#9AA497"></span></div>
+        <div style="margin-top:10px;font-size:14.5px;color:#778076">For trying it out.</div>
+      </div>
+      <div style="font-size:15px;font-weight:500;color:#2B4A31;border-top:1px solid #F0F1E8;border-bottom:1px solid #F0F1E8;padding:14px 0">10 feeds</div>
+      <div style="display:flex;flex-direction:column;gap:10px;flex:1">
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Save articles for up to a month</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">5 AI summaries a day</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">5 clean article views a day</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">3 Daily Digests a month</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">120,000+ source database</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">iOS, Android &amp; web</span></div>
+      </div>
+      <div style="font-size:12.5px;line-height:1.5;color:#9AA497"></div>
+    </div>
+    <div class="plan-card is-recommended">
+      <div class="plan-badge">Recommended</div>
+      <div>
+        <div style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Pro</div>
+        <div style="margin-top:14px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap"><span id="pro-price" style="font-family:'EB Garamond',serif;font-size:40px;line-height:1;color:#171C18">$5.99</span><span id="pro-per" style="font-family:'Geist Mono',ui-monospace;font-size:11px;color:#9AA497">/ month</span></div>
+        <div id="pro-sub" style="margin-top:10px;font-size:14.5px;color:#778076">For people who want to spend less time catching up. $59.99 / year.</div>
+      </div>
+      <div style="font-size:15px;font-weight:500;color:#2B4A31;border-top:1px solid #F0F1E8;border-bottom:1px solid #F0F1E8;padding:14px 0">Up to 1,000 feeds</div>
+      <div style="display:flex;flex-direction:column;gap:10px;flex:1">
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Unlimited summaries, translations &amp; highlights*</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Unlimited clean article views*</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Newsletters inside readspace</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">2 Daily Digests every day</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Everything in Basic</span></div>
+      </div>
+      <div style="font-size:12.5px;line-height:1.5;color:#9AA497">*Reasonable rate limits apply.</div>
+    </div>
+    <div class="plan-card">
+      <div>
+        <div style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Self-hosted</div>
+        <div style="margin-top:14px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap"><span style="font-family:'EB Garamond',serif;font-size:40px;line-height:1;color:#171C18">$0</span><span style="font-family:'Geist Mono',ui-monospace;font-size:11px;color:#9AA497">forever</span></div>
+        <div style="margin-top:10px;font-size:14.5px;color:#778076">For complete control.</div>
+      </div>
+      <div style="font-size:15px;font-weight:500;color:#2B4A31;border-top:1px solid #F0F1E8;border-bottom:1px solid #F0F1E8;padding:14px 0">All features</div>
+      <div style="display:flex;flex-direction:column;gap:10px;flex:1">
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">No readspace usage limits</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Bring your own API keys</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Use your own server</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Mobile apps + extension supported</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Fully open source</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Import feeds with OPML</span></div>
+      </div>
+      <div style="font-size:12.5px;line-height:1.5;color:#9AA497">Does not include readspace's hosted 120,000+ source database.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" style="padding:104px 0 0">
+  <div style="max-width:1180px;margin:0 auto;padding:0 24px">
+    <div style="max-width:820px;margin:0 auto">
+      <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">FAQ</div>
+      <h2 style="margin:16px 0 0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(32px,3.8vw,50px);line-height:1.03;letter-spacing:-.02em;color:#171C18">Questions, answered plainly.</h2>
+      <div style="margin-top:36px;border-top:1px solid #E7E8DA">
+        <details class="faq-item">
+          <summary class="faq-summary"><span>Is it really free?</span><span class="faq-chev"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l5 5 5-5"></path></svg></span></summary>
+          <div class="faq-body">Yes. Basic covers ten feeds, the full source database, and the apps on every platform, with no card required. Pro is $5.99 a month if you want unlimited AI features, newsletters and two briefings a day.</div>
+        </details>
+        <details class="faq-item">
+          <summary class="faq-summary"><span>Where is my reading data stored?</span><span class="faq-chev"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l5 5 5-5"></path></svg></span></summary>
+          <div class="faq-body">On readspace servers if you use the hosted apps, and nowhere else — no ads, no trackers, no third-party analytics on your reading. Self-host and it never leaves your machine.</div>
+        </details>
+        <details class="faq-item">
+          <summary class="faq-summary"><span>Can I self-host it?</span><span class="faq-chev"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l5 5 5-5"></path></svg></span></summary>
+          <div class="faq-body">The whole platform runs on your own server for $0 with Docker. Bring your own API keys, then point the mobile apps and the extension at your instance.</div>
+        </details>
+        <details class="faq-item">
+          <summary class="faq-summary"><span>Can I bring my subscriptions from Feedly or Reeder?</span><span class="faq-chev"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l5 5 5-5"></path></svg></span></summary>
+          <div class="faq-body">Export an OPML file from your current reader and import it in one step. You can export yours from readspace the same way, any time.</div>
+        </details>
+        <details class="faq-item">
+          <summary class="faq-summary"><span>Where does AI get used?</span><span class="faq-chev"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l5 5 5-5"></path></svg></span></summary>
+          <div class="faq-body">Only where you ask for it: the daily briefing, article summaries, highlights and translation. Nothing is ever ranked or reordered by a model — your feed stays chronological.</div>
+        </details>
+        <details class="faq-item">
+          <summary class="faq-summary"><span>What about paywalled articles?</span><span class="faq-chev"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l5 5 5-5"></path></svg></span></summary>
+          <div class="faq-body">readspace shows whatever the publisher puts in the feed. Where a site only syndicates an excerpt, you read that excerpt and open the original in one tap.</div>
+        </details>
+      </div>
+      <div style="margin-top:26px;font-size:14.5px;color:#8A9289">Still wondering something? <a href="#opensource" style="font-weight:500">Ask in the GitHub discussions.</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer style="margin-top:96px;background:#F1F3E7">
+  <div class="footer-landscape" aria-hidden="true">
+    <img src="./assets/img/footer-landscape.jpg" alt="">
+  </div>
+  <div style="max-width:1180px;margin:0 auto;padding:64px 24px 0;display:flex;flex-wrap:wrap;gap:44px;justify-content:space-between">
+    <div style="max-width:330px;flex:1;min-width:min(100%,280px)">
+      <div style="display:flex;align-items:center;gap:9px;color:#1B211C">
+        <img src="https://readspace.ai/readspace.svg" alt="readspace" style="width:26px;height:26px;display:block;border-radius:7px" data-logo>
+        <span style="display:none;width:26px;height:26px;border-radius:7px;background:#38663F;align-items:center;justify-content:center;color:#fff;font-family:'EB Garamond',serif;font-size:17px;line-height:1" data-logo-fallback>R</span>
+        <span style="font-family:'Figtree',sans-serif;font-size:21px;font-weight:600;letter-spacing:-.02em">readspace</span>
+      </div>
+      <p style="margin:16px 0 0;font-size:14.5px;line-height:1.6;color:#5E665F">Your news, blogs, and newsletters in one calm feed. Open source, and yours to host.</p>
+      <a href="#pricing" data-arrow-trigger class="btn-footer" style="margin-top:22px">Start reading for free<span class="arrow" data-arrow><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h11M11 6l4 4-4 4"></path></svg></span></a>
+      <div style="margin-top:24px;display:flex;gap:8px">
+        <a href="https://github.com/kamui-fin/readspace" target="_blank" rel="noopener" title="GitHub" class="social-icon">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>
+        </a>
+        <a href="https://discord.gg/2Q5PtYwUQZ" target="_blank" rel="noopener" title="Discord" class="social-icon">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.5 3.4a13 13 0 0 0-3.2-1 9 9 0 0 0-.4.83 12 12 0 0 0-3.6 0 8 8 0 0 0-.42-.83 13 13 0 0 0-3.2 1C.6 6.4.1 9.3.3 12.15a13 13 0 0 0 3.9 2 10 10 0 0 0 .84-1.36 8.4 8.4 0 0 1-1.32-.63c.11-.08.22-.17.32-.25a9.3 9.3 0 0 0 7.92 0c.11.09.21.17.32.25a8.4 8.4 0 0 1-1.33.63 10 10 0 0 0 .84 1.36 13 13 0 0 0 3.9-2c.24-3.3-.62-6.16-2.19-8.75zM5.68 10.4a1.45 1.45 0 0 1-1.35-1.52A1.44 1.44 0 0 1 5.68 7.35a1.43 1.43 0 0 1 1.34 1.53A1.44 1.44 0 0 1 5.68 10.4zm4.65 0a1.45 1.45 0 0 1-1.35-1.52 1.44 1.44 0 0 1 1.35-1.53 1.43 1.43 0 0 1 1.34 1.53 1.44 1.44 0 0 1-1.34 1.52z"></path></svg>
+        </a>
+        <a href="https://www.linkedin.com/company/readspace-ai" target="_blank" rel="noopener" title="LinkedIn" class="social-icon">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2.7 5.4h2.5V13H2.7zM4 1.3a1.45 1.45 0 1 1 0 2.9 1.45 1.45 0 0 1 0-2.9zM6.9 5.4h2.4v1.05h.03c.33-.63 1.15-1.3 2.36-1.3 2.52 0 2.99 1.66 2.99 3.82V13h-2.5V9.44c0-.85-.02-1.94-1.18-1.94-1.19 0-1.37.93-1.37 1.88V13h-2.5z"></path></svg>
+        </a>
+      </div>
+    </div>
+    <div style="flex:none">
+      <div style="font-size:13.5px;font-weight:600;color:#1F2620;letter-spacing:-.01em">Get started</div>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+        <a href="#pricing" class="footer-link">Web app</a>
+        <a href="#" data-coming-soon class="footer-link">iOS</a>
+        <a href="#" data-coming-soon class="footer-link">Android</a>
+        <a href="https://chromewebstore.google.com/detail/readspace/ppadpdoicnolpjnflfladjllhmkonedi" target="_blank" rel="noopener" class="footer-link">Chrome extension</a>
+        <a href="https://addons.mozilla.org/en-US/firefox/addon/readspace/" target="_blank" rel="noopener" class="footer-link">Firefox extension</a>
+      </div>
+    </div>
+    <div style="flex:none">
+      <div style="font-size:13.5px;font-weight:600;color:#1F2620;letter-spacing:-.01em">Company</div>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+        <a href="#why" class="footer-link">Why we built this</a>
+        <a href="#faq" class="footer-link">FAQ</a>
+        <a href="#pricing" class="footer-link">Pricing</a>
+        <a href="https://github.com/kamui-fin/readspace" target="_blank" rel="noopener" class="footer-link">GitHub</a>
+        <a href="./contact.html" class="footer-link">Contact</a>
+      </div>
+    </div>
+  </div>
+  <div style="max-width:1180px;margin:0 auto;padding:44px 24px 40px">
+    <div style="border-top:1px solid #E2E4D6;padding-top:22px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:6px;font-size:13.5px;color:#6E776E">Made with<svg width="13" height="13" viewBox="0 0 16 16" fill="#38663F" style="flex:none;display:block;position:relative;top:1px"><path d="M8 14C4 11.2 1 8.6 1 5.6 1 3.6 2.6 2 4.6 2c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5C12.6 2 14 3.6 14 5.6c0 3-3 5.6-6 8.4z"></path></svg>@kamui-fin</div>
+      <div style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#646D64">© 2026 readspace</div>
+    </div>
+  </div>
+</footer>
+
+</div>
+
+<script src="./assets/main.js"></script>
+</body>
+</html>
