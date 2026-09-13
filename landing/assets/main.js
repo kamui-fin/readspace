@@ -121,9 +121,9 @@
   var modal = document.createElement('div');
   modal.className = 'modal-backdrop';
   modal.innerHTML =
-    '<div class="modal-card" role="dialog" aria-modal="true">' +
+    '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="coming-soon-title">' +
       '<div class="modal-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.3"></circle><path d="M10 5.5v5l3 2"></path></svg></div>' +
-      '<div class="modal-title">Coming soon!</div>' +
+      '<div class="modal-title" id="coming-soon-title">Coming soon!</div>' +
       '<div class="modal-body">The native app isn\'t out yet &mdash; the web app works great in the meantime.</div>' +
       '<button type="button" class="modal-close">Got it</button>' +
     '</div>';
@@ -269,9 +269,11 @@
       el._to = hex(el.dataset.fillTo || '#171C18');
     });
     var paintFills = function () {
-      fills.forEach(function (el) {
-        var r = el.getBoundingClientRect();
-        var p = Math.max(0, Math.min(1, (window.innerHeight * 0.82 - r.top) / (window.innerHeight * 0.4)));
+      var viewportHeight = window.innerHeight;
+      var positions = fills.map(function (el) { return el.getBoundingClientRect().top; });
+      fills.forEach(function (el, index) {
+        var top = positions[index];
+        var p = Math.max(0, Math.min(1, (viewportHeight * 0.82 - top) / (viewportHeight * 0.4)));
         var n = el._chars.length;
         el._chars.forEach(function (s, i) {
           var cp = Math.max(0, Math.min(1, p * (n * 0.6 + 1) - i * 0.6));
@@ -279,11 +281,17 @@
         });
       });
     };
-    paintFills();
-    setInterval(paintFills, 90);
-    window.addEventListener('scroll', paintFills, { passive: true });
-    window.addEventListener('resize', paintFills);
-    document.addEventListener('scroll', paintFills, { capture: true, passive: true });
+    var fillFrame = null;
+    var scheduleFillPaint = function () {
+      if (fillFrame !== null) return;
+      fillFrame = requestAnimationFrame(function () {
+        fillFrame = null;
+        paintFills();
+      });
+    };
+    scheduleFillPaint();
+    window.addEventListener('scroll', scheduleFillPaint, { passive: true });
+    window.addEventListener('resize', scheduleFillPaint);
   }
 
   // Scroll reveal

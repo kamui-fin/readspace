@@ -150,7 +150,7 @@ summary:focus-visible,
   position: relative; margin: 0 auto; font-family: 'EB Garamond', ui-serif, Georgia, serif;
   font-size: clamp(42px, 6vw, 64px); line-height: 1; letter-spacing: -.025em; font-weight: 500; color: #171C18;
 }
-.legal-updated { position: relative; margin: 18px 0 0; font-size: 14px; color: #6E776E; }
+.legal-updated { position: relative; margin: 18px 0 0; font-size: 14px; color: #5E665F; }
 .legal-layout {
   max-width: 1040px; margin: 0 auto; padding: 64px 24px 104px; display: grid;
   grid-template-columns: 210px minmax(0, 700px); gap: clamp(48px, 8vw, 92px); justify-content: center; align-items: start;
@@ -211,7 +211,7 @@ summary:focus-visible,
 .cycle-toggle {
   border: none; padding: 8px 18px; border-radius: 999px; font-family: 'Geist Mono', ui-monospace, monospace;
   font-size: 12.5px; letter-spacing: .02em; font-weight: 500; cursor: pointer; transition: all .18s;
-  background: transparent; color: #6E776E; display: inline-flex; align-items: center; gap: 7px;
+  background: transparent; color: #5E665F; display: inline-flex; align-items: center; gap: 7px;
 }
 .cycle-toggle.active { background: #fff; color: #1F2620; box-shadow: 0 1px 3px rgba(24,48,30,.12); }
 .cycle-toggle .save-badge { font-size: 10.5px; font-weight: 600; color: #38663F; background: #E3EBDC; border-radius: 999px; padding: 2px 7px; }
@@ -265,7 +265,7 @@ summary:focus-visible,
   width: 100%; border: 1px solid #E2E4D6; border-radius: 8px; background: #FAFAF4; padding: 10px 13px;
   font-family: inherit; font-size: 14.5px; color: #1F2620; transition: border-color .18s, background .18s;
 }
-.field-input::placeholder { color: #A3AC9E; }
+.field-input::placeholder { color: #5E665F; }
 .field-input:focus { outline: none; border-color: #38663F; background: #fff; }
 .field-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%236E776E' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 8l5 5 5-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; background-size: 15px; padding-right: 34px; cursor: pointer; }
 .field-textarea { resize: vertical; min-height: 92px; }
