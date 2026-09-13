@@ -74,7 +74,7 @@ bun run build:all
 # Package Chrome extension (creates .zip ready for Chrome Web Store)
 bun run package:chrome
 
-# Package Firefox extension (creates .xpi using web-ext)
+# Package Firefox extension (creates a ZIP ready for AMO submission)
 bun run package:firefox
 
 # Package for both browsers

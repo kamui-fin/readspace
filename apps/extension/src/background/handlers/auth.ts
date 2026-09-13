@@ -20,7 +20,7 @@ export async function startGoogleOAuth() {
       url: authData.url,
       interactive: true,
     })
-  } catch (error) {
+  } catch {
     // User cancelled the auth flow
     throw new Error('Google sign-in was cancelled')
   }

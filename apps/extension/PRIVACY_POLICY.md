@@ -1,141 +1,71 @@
-# Privacy Policy for Readspace Browser Extension
+# Privacy Policy for the Readspace Browser Extension
+
+Last updated: September 13, 2026
 
 ## Overview
 
-Readspace is a browser extension that helps users save articles and subscribe to RSS feeds for organized, distraction-free reading. This privacy policy explains how the Readspace browser extension collects, uses, and protects your information.
+Readspace helps users collect web reading material in their Readspace account by saving webpage articles and subscribing to RSS feeds discovered on websites they visit. This policy explains how the Readspace browser extension handles information.
 
-## Information We Collect
+## Information We Handle
 
-### 1. Authentication Information
+### Account and Authentication Information
 
-- **Access tokens:** Securely stored authentication tokens from your Readspace account to enable communication with your personal Readspace instance
-- **User profile data:** Basic account information (username, email) retrieved from your Readspace account for authentication purposes
+- Email address and basic Readspace account profile information
+- Passwords submitted directly to the configured Supabase authentication service when email/password sign-in is used
+- OAuth authorization results and authentication tokens used to keep the user signed in
 
-### 2. Website Content (User-Initiated Only)
+### Web History and Website Content
 
-When you explicitly choose to save an article or subscribe to a feed, we collect:
+On HTTP and HTTPS pages, the extension automatically reads the current page URL and extracts page metadata, article content, images, and RSS or Atom feed links. It uses this information to display feed availability, prepare the current page for saving, and make the extension load faster.
 
-- **Article content:** Full text content from web pages you choose to save
-- **Article metadata:** Title, description, author, publication date, and featured images
-- **Page information:** URL, favicon, and canonical URL of saved pages
-- **RSS feed data:** Feed URLs and metadata when you subscribe to RSS feeds
+Page information and extracted content may be cached temporarily in extension-local browser storage. Article content and associated metadata are sent to the user's configured Readspace server only when the user chooses to save the article. Feed URLs and metadata are sent when the user chooses to subscribe to a feed.
 
-### 3. Extension Settings
+### Settings and Organizational Data
 
-- **Server configuration:** Your Readspace server URL and Supabase configuration for self-hosted instances
-- **User preferences:** Extension settings like auto-save preferences, theme selection, and default tags
-- **Organizational data:** Your personal folders and tags for content organization
+- The configured Readspace and Supabase server details for hosted or self-hosted use
+- Preferences such as theme and saving options
+- Selected folders, priorities, notes, and titles used to organize saved content
 
-## How We Use Your Information
+## How We Use Information
 
-### Primary Purpose
+We use this information only to provide Readspace's article-saving, feed-discovery, authentication, synchronization, and content-organization features. We do not use it for advertising, creditworthiness, lending, or unrelated profiling.
 
-All collected data serves the single purpose of saving articles and RSS feeds to your personal Readspace library. Specifically:
+## Storage and Retention
 
-- **Content Processing:** Extract and format article content for optimal reading experience
-- **Account Integration:** Authenticate and sync with your Readspace account
-- **Content Organization:** Apply your chosen tags, folders, and organization preferences
-- **Feed Management:** Subscribe to and manage RSS feeds you've selected
+The extension stores authentication sessions, settings, cached page data, and cached save or follow status in extension-local browser storage. This local data remains until it expires, is cleared by the extension, the user clears the extension's data, or the extension is uninstalled.
 
-### Data Processing Location
+Articles, feeds, account information, and related metadata that the user sends to a Readspace server are retained according to that server's policies and the user's account settings. Users can manage saved content through their Readspace account.
 
-- Data is sent directly to your configured Readspace server (either the official hosted service at api.readspace.ai or your self-hosted instance)
-- No data is processed on third-party servers outside of your chosen Readspace instance
+## Sharing and Service Providers
 
-## Data Storage and Retention
+The extension communicates with:
 
-### Local Storage
+- The official Readspace service or the self-hosted Readspace server selected by the user
+- The configured Supabase service for authentication
+- Google when the user chooses Google OAuth sign-in
+- Websites and feed URLs accessed to detect and validate RSS or Atom feeds
 
-The extension stores the following data locally on your device:
+We do not sell user data. We do not transfer user data to advertising platforms, data brokers, or other third parties except service providers necessary to deliver Readspace, transfers requested by the user, security or legal requirements, or other cases permitted by the Chrome Web Store User Data Policy.
 
-- Authentication tokens (encrypted)
-- Extension settings and preferences
-- Temporary page metadata during the saving process
+The use of information received from Google APIs will adhere to the Chrome Web Store User Data Policy, including the Limited Use requirements.
 
-### Server Storage
+## Permissions
 
-Saved articles, RSS feeds, and associated metadata are stored on your Readspace server according to that service's data retention policies.
+- **storage:** Stores authentication sessions, settings, cached page information, and saved or followed state locally.
+- **identity:** Runs the browser-mediated Google OAuth flow when the user chooses Google sign-in.
+- **scripting:** Re-injects the extension's packaged content script into an eligible page when a tab opened before an extension installation, update, or reload no longer has a live content-script receiver.
+- **Host access for HTTP and HTTPS pages:** Detects feeds, extracts page content and metadata, validates feed URLs, and enables the user to save articles from websites across the web.
 
-### Data Removal
+The extension does not download or execute remote JavaScript or WebAssembly.
 
-- Local data can be removed by uninstalling the extension or clearing browser extension data
-- Server-stored content can be managed through your Readspace account settings
+## Security
 
-## Data Sharing and Third Parties
+User data transmitted by the extension is sent over secure HTTPS connections. Authentication sessions are kept in browser extension-local storage and are not intentionally exposed to webpages. Users of self-hosted instances are responsible for securing and maintaining those servers.
 
-### No Third-Party Sharing
+## User Choices and Data Removal
 
-We do NOT:
+Users can disable or uninstall the extension at any time. Uninstalling removes extension-local data according to browser behavior. Users can manage or delete server-stored articles and feeds through their Readspace account. For requests concerning account data, contact admin@readspace.ai.
 
-- Sell or transfer your data to third parties
-- Share your content with advertisers or analytics services
-- Use your data for purposes unrelated to the extension's core functionality
-- Access your data for marketing or promotional purposes
+## Changes
 
-### Direct Communication Only
-
-The extension communicates exclusively with:
-
-- Your configured Readspace server (api.readspace.ai or your self-hosted instance)
-- Supabase authentication service (for account authentication only)
-- The specific websites you choose to save content from (to extract article content)
-
-## Permissions Explanation
-
-### Required Permissions
-
-- **activeTab:** Access current tab information (URL, title, favicon) when saving articles
-- **storage:** Store authentication tokens and extension settings locally
-- **notifications:** Display save confirmations and error messages
-- **host*permissions (http://*/_, https://_/\_):** Access any website to extract content when you explicitly save an article or subscribe to a feed
-
-### Permission Usage
-
-Permissions are used exclusively for the extension's core functionality. We do not:
-
-- Monitor your browsing activity
-- Collect data from websites you don't explicitly save
-- Track your behavior across websites
-- Access sensitive information from web pages
-
-## Security Measures
-
-### Data Protection
-
-- Authentication tokens are stored securely using browser extension storage APIs
-- All communications with Readspace servers use HTTPS encryption
-- No sensitive data is logged or transmitted to unauthorized parties
-
-### Access Control
-
-- The extension only accesses website content when you explicitly trigger a save action
-- Authentication is handled through secure OAuth flows with your Readspace account
-
-## Your Rights and Controls
-
-### Data Control
-
-For any requests related to accessing, deleting, exporting, or otherwise controlling your data, please email us at admin@readspace.ai and we will handle your request.
-
-### Extension Management
-
-- **Disable:** Turn off the extension at any time through browser settings
-- **Uninstall:** Remove the extension and all local data
-- **Permission Review:** Review and understand all requested permissions before installation
-
-## Self-Hosted Instances
-
-If you use a self-hosted Readspace instance:
-
-- Your data is stored entirely on your own servers
-- This privacy policy applies to the extension's behavior, not your server's data handling
-- You control all aspects of data storage, retention, and security on your self-hosted instance
-
-## Compliance
-
-This privacy policy is designed to comply with:
-
-- Chrome Web Store Developer Program Policies
-- Mozilla Add-on Policies
-- General Data Protection Regulation (GDPR) principles
-- California Consumer Privacy Act (CCPA) principles
+We may update this policy when the extension's behavior or legal requirements change. The updated date above identifies the latest revision.
