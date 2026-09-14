@@ -7,6 +7,7 @@ import { usePostHog } from "posthog-js/react"
 import posthog from "posthog-js"
 import { PostHogProvider as PHProvider } from "posthog-js/react"
 import { isCloudProd } from "@/lib/is-cloud-prod"
+import { useCurrentUser } from "@/hooks/use-current-user"
 
 function PostHogPageView() {
     const pathname = usePathname()
@@ -28,6 +29,22 @@ function PostHogPageView() {
     return null
 }
 
+function PostHogIdentify() {
+    const { user, isLoading } = useCurrentUser()
+
+    useEffect(() => {
+        if (isLoading) return
+
+        if (user) {
+            posthog.identify(user.id, { email: user.email })
+        } else {
+            posthog.reset()
+        }
+    }, [user, isLoading])
+
+    return null
+}
+
 export function PosthogProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (isCloudProd() && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
@@ -44,6 +61,7 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
         return (
             <PHProvider client={posthog}>
                 <PostHogPageView />
+                <PostHogIdentify />
                 {children}
             </PHProvider>
         )
