@@ -22,6 +22,7 @@ class TestConfigEndpoint:
         # Mock keys returned from Meilisearch client
         mock_key_1 = MagicMock()
         mock_key_1.name = "Default Search API Key"
+        mock_key_1.actions = ["search"]
         mock_key_1.key = "meilisearch-search-key-abcde"
 
         mock_keys = MagicMock()
@@ -62,3 +63,29 @@ class TestConfigEndpoint:
             assert data["supabase_anon_key"] == "test-anon-key-fallback"
             assert data["meilisearch_url"] == settings.MEILISEARCH_URL
             assert data["meilisearch_search_key"] == ""  # Fallback value when Meilisearch is down
+
+    @pytest.mark.asyncio
+    async def test_get_config_never_exposes_admin_key(self, async_client: AsyncClient):
+        """With no search-only key in Meilisearch, the public endpoint returns no key rather than the admin key."""
+        mock_admin_key = MagicMock()
+        mock_admin_key.name = "Default Admin API Key"
+        mock_admin_key.actions = ["*"]
+        mock_admin_key.key = "meilisearch-admin-key-secret"
+
+        mock_wide_key = MagicMock()
+        mock_wide_key.name = "search-and-documents"
+        mock_wide_key.actions = ["search", "documents.get"]
+        mock_wide_key.key = "meilisearch-wide-key-secret"
+
+        mock_keys = MagicMock()
+        mock_keys.results = [mock_admin_key, mock_wide_key]
+
+        mock_client_instance = AsyncMock()
+        mock_client_instance.get_keys.return_value = mock_keys
+        mock_client_instance.aclose = AsyncMock()
+
+        with patch("meilisearch_python_sdk.AsyncClient", return_value=mock_client_instance):
+            response = await async_client.get("/api/config")
+
+            assert response.status_code == 200
+            assert response.json()["meilisearch_search_key"] == ""

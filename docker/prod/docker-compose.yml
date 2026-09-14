@@ -104,8 +104,6 @@ services:
     image: getmeili/meilisearch:v1.16
     container_name: readspace_meilisearch
     restart: always
-    ports:
-      - "7700:7700"
     volumes:
       - meilisearch-data:/meili_data
     environment:
@@ -124,8 +122,8 @@ services:
     container_name: supabase-kong
     restart: unless-stopped
     ports:
-      - 18000:8000/tcp
-      - 8443:8443/tcp
+      - 127.0.0.1:18000:8000/tcp
+      - 127.0.0.1:8443:8443/tcp
     volumes:
       - ../supabase/volumes/api/kong.yml:/home/kong/temp.yml:ro,z
     depends_on:
@@ -248,6 +246,11 @@ services:
       IMGPROXY_URL: http://imgproxy:5001
     volumes:
       - storage-data:/var/lib/storage:z
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://storage:5000/status"]
+      timeout: 5s
+      interval: 5s
+      retries: 3
 
   imgproxy:
     image: darthsim/imgproxy:v3.30.1
@@ -295,7 +298,7 @@ services:
     container_name: supabase-analytics
     restart: unless-stopped
     ports:
-      - 4000:4000
+      - 127.0.0.1:4000:4000
     environment:
       LOGFLARE_NODE_HOST: 127.0.0.1
       DB_USERNAME: supabase_admin
@@ -367,6 +370,7 @@ services:
     command: >
       sh -c "alembic upgrade head &&
              python scripts/init_meilisearch.py &&
+             python scripts/init_storage.py &&
              uvicorn app.main:app --host 0.0.0.0 --port 8008"
     depends_on:
       redis:
@@ -375,8 +379,24 @@ services:
         condition: service_healthy
       supavisor:
         condition: service_healthy
+      # scripts/init_storage.py creates the favicons bucket through Kong -> Storage
+      kong:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8008/docs', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      # Migrations + Meilisearch/Storage setup run before uvicorn starts
+      start_period: 120s
+    # Code is baked into the image (no ../../server:/app mount), so deploys need
+    # `docker compose up -d --build`. server/.env still supplies settings not set below.
+    env_file:
+      - path: ../../server/.env
+        required: false
     volumes:
-      - ../../server:/app
       # Volume mappings for dataset imports
       - ./feeds.jsonl:/feeds.jsonl:ro
       - ./favicons:/favicons:ro
@@ -414,11 +434,15 @@ services:
 
   worker:
     image: readspace-server:local
-    build: *server-build
+    # api builds readspace-server:local once; worker and scheduler reuse that image
+    pull_policy: never
     container_name: readspace_worker
     restart: always
     command: taskiq worker app.core.taskiq_app:broker app.workers.registry --max-async-tasks 200
     depends_on:
+      # Image exists and migrations have run before tasks touch the schema
+      api:
+        condition: service_healthy
       redis:
         condition: service_healthy
       meilisearch:
@@ -454,11 +478,13 @@ services:
 
   scheduler:
     image: readspace-server:local
-    build: *server-build
+    pull_policy: never
     container_name: readspace_scheduler
     restart: always
     command: taskiq scheduler app.core.taskiq_app:scheduler app.workers.registry
     depends_on:
+      api:
+        condition: service_healthy
       redis:
         condition: service_healthy
       supavisor:

@@ -131,6 +131,21 @@ if [ "$REGENERATE_SECRETS" = true ]; then
     echo "🔄 --regenerate-secrets passed — generating fresh secrets."
 fi
 
+# Helper function: Normalize a user-entered public URL (strip trailing slashes, require http(s)).
+# CORS_ORIGIN must equal the browser's Origin header exactly, and every URL is later joined
+# with paths, so "https://app.example.com/" would silently break CORS and produce "//" paths.
+normalize_url() {
+    local value="$1"
+    while [[ "$value" == */ ]]; do
+        value="${value%/}"
+    done
+    if [[ ! "$value" =~ ^https?://[^/]+$ ]]; then
+        echo "❌ Error: '$1' is not a valid base URL (expected http(s)://host[:port], no path)" >&2
+        exit 1
+    fi
+    printf '%s' "$value"
+}
+
 # --- Access Configuration ---
 # Check if --dev flag is provided
 if [ "$DEV_FLAG" = true ]; then
@@ -168,6 +183,11 @@ else
         read -p "API URL (e.g., https://api.example.com): " API_URL
         read -p "Supabase URL (e.g., https://supabase.example.com): " SUPABASE_PUBLIC_URL
         read -p "Meilisearch URL (e.g., https://search.example.com): " MEILISEARCH_PUBLIC_URL
+
+        WEB_URL=$(normalize_url "$WEB_URL")
+        API_URL=$(normalize_url "$API_URL")
+        SUPABASE_PUBLIC_URL=$(normalize_url "$SUPABASE_PUBLIC_URL")
+        MEILISEARCH_PUBLIC_URL=$(normalize_url "$MEILISEARCH_PUBLIC_URL")
 
         echo ""
         echo "✅ Domain configuration:"
@@ -209,12 +229,9 @@ else
 
     if [[ "$USE_LOCAL_RSSHUB_INPUT" =~ ^[Yy]$ ]]; then
         RSSHUB_MODE="local"
-        # For domain mode, RSSHub is accessed via Docker network; for IP mode use the configured host
-        if [ "$ACCESS_TYPE" = "2" ]; then
-            RSSHUB_URL="http://rsshub:1200"
-        else
-            RSSHUB_URL="http://${API_HOST}:1200"
-        fi
+        # Only the api/worker containers call RSSHub, so always use its Docker network name:
+        # "http://localhost:1200" would resolve to the calling container itself.
+        RSSHUB_URL="http://rsshub:1200"
         echo "✅ Local RSSHub instance will be used at ${RSSHUB_URL}"
     else
         RSSHUB_MODE="external"
@@ -283,6 +300,61 @@ if ! validate_env_file "$SCRIPT_DIR/.env" \
     exit 1
 fi
 
+# --- Port Availability Check ---
+# Runs before this script starts Meilisearch, which would otherwise occupy 7700 itself.
+echo "🔍 Checking port availability..."
+
+# Define the ports exposed to host
+REQUIRED_PORTS=(18000 18008 18042 1200 6379 7700)
+OCCUPIED_PORTS=()
+
+# Function to check if a port is in use
+check_port() {
+  local port=$1
+  # Only LISTEN sockets count. `lsof -i :PORT` also matches client connections to that port, and
+  # as a non-root user it cannot see docker-proxy's root-owned listeners at all; ss sees every
+  # listener regardless of owner.
+  if command -v ss &> /dev/null; then
+    if ss -ltn "sport = :$port" 2>/dev/null | tail -n +2 | grep -q .; then
+      return 0  # Port is occupied
+    fi
+  elif command -v lsof &> /dev/null; then
+    if lsof -iTCP:"$port" -sTCP:LISTEN &> /dev/null; then
+      return 0  # Port is occupied
+    fi
+  elif command -v netstat &> /dev/null; then
+    if netstat -ltn 2>/dev/null | grep -q -E "[:.]$port[[:space:]]"; then
+      return 0  # Port is occupied
+    fi
+  fi
+  return 1  # Port is available
+}
+
+# Check each required port
+for port in "${REQUIRED_PORTS[@]}"; do
+  if check_port $port; then
+    OCCUPIED_PORTS+=($port)
+  fi
+done
+
+# If any ports are occupied, warn and offer to bypass
+if [ ${#OCCUPIED_PORTS[@]} -ne 0 ]; then
+  echo "⚠️  Warning: The following required ports are already in use:" >&2
+  for port in "${OCCUPIED_PORTS[@]}"; do
+    echo "  - Port $port" >&2
+  done
+  echo "" >&2
+  echo "If you are re-running setup.sh to update an existing deployment, you can ignore this check." >&2
+  read -p "Do you want to ignore this port check and proceed? [y/N]: " PROCEED_PORT_INPUT
+  PROCEED_PORT_INPUT=${PROCEED_PORT_INPUT:-"N"}
+  if [[ ! "$PROCEED_PORT_INPUT" =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
+  echo "✅ Proceeding despite port conflicts."
+else
+  echo "✅ All required ports are available."
+fi
+
 # --- Start Meilisearch to generate search key ---
 echo "🚀 Starting Meilisearch container with the generated master key..."
 # Include supabase/docker-compose.yml here too (with .env.example as a placeholder —
@@ -328,56 +400,6 @@ if ! validate_env_file "$SCRIPT_DIR/.env" \
     exit 1
 fi
 
-# --- Port Availability Check ---
-echo "🔍 Checking port availability..."
-
-# Define the ports exposed to host
-REQUIRED_PORTS=(18000 18008 18042 1200 6379 7700)
-OCCUPIED_PORTS=()
-
-# Function to check if a port is in use
-check_port() {
-  local port=$1
-  if command -v lsof &> /dev/null; then
-    if lsof -i :$port &> /dev/null; then
-      return 0  # Port is occupied
-    fi
-  elif command -v netstat &> /dev/null; then
-    if netstat -ln 2>/dev/null | grep -q -E "[:.]$port[[:space:]]"; then
-      return 0  # Port is occupied
-    fi
-  elif command -v ss &> /dev/null; then
-    if ss -ln 2>/dev/null | grep -q ":$port "; then
-      return 0  # Port is occupied
-    fi
-  fi
-  return 1  # Port is available
-}
-
-# Check each required port
-for port in "${REQUIRED_PORTS[@]}"; do
-  if check_port $port; then
-    OCCUPIED_PORTS+=($port)
-  fi
-done
-
-# If any ports are occupied, warn and offer to bypass
-if [ ${#OCCUPIED_PORTS[@]} -ne 0 ]; then
-  echo "⚠️  Warning: The following required ports are already in use:" >&2
-  for port in "${OCCUPIED_PORTS[@]}"; do
-    echo "  - Port $port" >&2
-  done
-  echo "" >&2
-  echo "If you are re-running setup.sh to update an existing deployment, you can ignore this check." >&2
-  read -p "Do you want to ignore this port check and proceed? [y/N]: " PROCEED_PORT_INPUT
-  PROCEED_PORT_INPUT=${PROCEED_PORT_INPUT:-"N"}
-  if [[ ! "$PROCEED_PORT_INPUT" =~ ^[Yy]$ ]]; then
-    exit 1
-  fi
-  echo "✅ Proceeding despite port conflicts."
-fi
-
-echo "✅ All required ports are available."
 
 # Set domain based on access type
 if [ "$ACCESS_TYPE" = "2" ]; then
@@ -486,8 +508,13 @@ set_env_var "$SCRIPT_DIR/supabase/.env" "SERVICE_ROLE_KEY" "$SERVICE_ROLE_KEY"
 set_env_var "$SCRIPT_DIR/supabase/.env" "DASHBOARD_PASSWORD" "not_being_used"
 set_env_var "$SCRIPT_DIR/supabase/.env" "SECRET_KEY_BASE" "$SECRET_KEY_BASE"
 set_env_var "$SCRIPT_DIR/supabase/.env" "VAULT_ENC_KEY" "$VAULT_ENC_KEY"
-set_env_var "$SCRIPT_DIR/supabase/.env" "API_EXTERNAL_URL" "https://$DOMAIN"
-set_env_var "$SCRIPT_DIR/supabase/.env" "SUPABASE_PUBLIC_URL" "https://$DOMAIN"
+# Must match the URL clients actually reach Kong on (http://<ip>:18000 in IP mode, the
+# entered URL in custom-domain mode): GoTrue builds OAuth callback and email links from it.
+set_env_var "$SCRIPT_DIR/supabase/.env" "API_EXTERNAL_URL" "$SUPABASE_PUBLIC_URL"
+set_env_var "$SCRIPT_DIR/supabase/.env" "SUPABASE_PUBLIC_URL" "$SUPABASE_PUBLIC_URL"
+# GoTrue only redirects to SITE_URL's origin (or ADDITIONAL_REDIRECT_URLS); anything else, like
+# the web app's /auth/callback on a real host, silently falls back to SITE_URL.
+set_env_var "$SCRIPT_DIR/supabase/.env" "SITE_URL" "$WEB_URL"
 set_env_var "$SCRIPT_DIR/supabase/.env" "ENABLE_EMAIL_AUTOCONFIRM" "$AUTO_CONFIRM_EMAIL"
 
 # Validate critical keys

@@ -2,6 +2,7 @@
 
 import logging
 import os
+from typing import Any
 
 from taskiq import AsyncBroker, InMemoryBroker, PrometheusMiddleware, TaskiqScheduler
 from taskiq.middlewares import SmartRetryMiddleware
@@ -9,6 +10,7 @@ from taskiq.schedule_sources import LabelScheduleSource
 from taskiq_redis import ListRedisScheduleSource, RedisAsyncResultBackend, RedisStreamBroker
 
 from app.core.config import get_settings
+from app.core.constants import TASKIQ_METRICS_DIR
 from app.core.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -27,7 +29,7 @@ if env in ("test", "pytest"):
     broker: AsyncBroker = InMemoryBroker()
 else:
     # Create result backend with Redis
-    result_backend = RedisAsyncResultBackend(
+    result_backend: RedisAsyncResultBackend[Any] = RedisAsyncResultBackend(
         redis_url=settings.REDIS_URL,
         result_ex_time=86400,  # Results expire after 24 hours
         keep_results=False,  # Remove results after reading
@@ -39,6 +41,11 @@ else:
         url=settings.REDIS_URL,
         queue_name="taskiq_tasks",
     ).with_result_backend(result_backend)
+
+    # PrometheusMiddleware does a non-atomic exists()/mkdir() on its multiprocess metrics dir.
+    # Worker processes import this module concurrently, so one would lose that race and crash
+    # with FileExistsError on startup; pre-creating the dir with exist_ok=True is race-free.
+    TASKIQ_METRICS_DIR.mkdir(parents=True, exist_ok=True)
 
     # Add middlewares for retry and metrics
     broker = broker.with_middlewares(
@@ -56,6 +63,7 @@ else:
         # Exposes metrics at http://worker:9090/metrics
         # Tracks: task_duration, task_count, task_errors, task_retries
         PrometheusMiddleware(
+            metrics_path=TASKIQ_METRICS_DIR,
             server_addr="0.0.0.0",  # noqa: S104 - Docker container binding
             server_port=9090,
         ),

@@ -1,4 +1,16 @@
-node_modules
-docker/supabase/volumes/db/data
-apps/web/node_modules
-packages/shared/node_modules
+# Build context for apps/web/Dockerfile (context: repo root). server/ has its own .dockerignore.
+# The web Dockerfile only copies root manifests, apps/web and packages.
+.git
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+apps/mobile
+apps/extension
+apps/inbound
+server
+docker
+# Local env files must never end up in an image: the web build receives NEXT_PUBLIC_* as build args
+**/.env
+**/.env.*
+!**/.env.example

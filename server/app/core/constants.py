@@ -3,9 +3,21 @@ Application constants
 """
 
 from datetime import timedelta
+from pathlib import Path
+from tempfile import gettempdir
 
 # RSS Feed Constants
 DEFAULT_RSS_TIMEOUT = 30  # seconds - reduced from 180s to prevent connection exhaustion
+
+# Meilisearch Key Constants
+MEILISEARCH_SEARCH_ACTION = "search"  # The only action a publicly exposed key may carry
+MEILISEARCH_DEFAULT_SEARCH_KEY_NAME = "Default Search API Key"  # Created by Meilisearch on first boot
+
+# Supabase Storage Constants
+FAVICONS_BUCKET_NAME = "favicons"  # Public bucket; API serves /storage/v1/object/public/favicons/<path>
+
+# Taskiq Constants
+TASKIQ_METRICS_DIR = Path(gettempdir()) / "taskiq_worker"  # Prometheus multiprocess metrics dir
 
 # OPML Import Constants
 MAX_OPML_FILE_SIZE_MB = 5  # Maximum OPML file size (50MB)

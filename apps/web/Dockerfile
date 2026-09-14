@@ -30,6 +30,22 @@ COPY packages ./packages
 # Add node_modules/.bin to PATH for CLI tools
 ENV PATH="/app/node_modules/.bin:$PATH"
 
+# NEXT_PUBLIC_* values are inlined into the client bundle at build time, so they must be build
+# args (docker/docker-compose.yml passes them). .env files are excluded from the build context,
+# which makes these the single source of truth for the baked-in URLs and public keys.
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_API_BASE_URL
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_MEILISEARCH_URL
+ARG NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
+    NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL \
+    NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
+    NEXT_PUBLIC_MEILISEARCH_URL=$NEXT_PUBLIC_MEILISEARCH_URL \
+    NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY=$NEXT_PUBLIC_MEILISEARCH_SEARCH_KEY
+
 # Build Next.js (standalone output)
 RUN turbo run build
 

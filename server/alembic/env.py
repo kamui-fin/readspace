@@ -33,7 +33,7 @@ def get_url():
     """
     settings = get_settings()
 
-    # Use ALEMBIC_DB_URL if it exists, otherwise fall back to SUPABASE_DB_CONNECTION
+    # Use ALEMBIC_DB_URL if it exists, otherwise fall back to DATABASE_URL_API
     db_url = os.getenv("ALEMBIC_DB_URL")
     if not db_url:
         db_url = settings.DATABASE_URL_API

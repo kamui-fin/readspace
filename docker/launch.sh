@@ -51,6 +51,8 @@ fi
 # Add dev-specific overlay if in development mode
 if [ "$DEV_MODE" = true ]; then
     COMPOSE_FILES+=("-f" "$SCRIPT_DIR/supabase/docker-compose.dev.yml")
+    # docker-compose.yml defaults Meilisearch to production (no dashboard); keep it locally
+    export MEILI_ENV=development
     print_info "› Starting Readspace in DEVELOPMENT mode..."
 else
     # Add app profile for self-host (full Docker stack)

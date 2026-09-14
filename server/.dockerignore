@@ -1,0 +1,17 @@
+# Keep the build context small and secrets out of image layers.
+# The Dockerfile only COPYs requirements.txt, alembic.ini, alembic/, app/ and scripts/.
+.env
+.env.*
+!.env.example
+.venv/
+.git/
+**/__pycache__/
+**/*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+.tranco/
+tests/

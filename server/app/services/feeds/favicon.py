@@ -7,6 +7,7 @@ from supabase import AsyncClient
 from supabase import acreate_client as create_async_client
 
 from app.core.config import get_settings
+from app.core.constants import FAVICONS_BUCKET_NAME
 from app.typing.feeds import FaviconResult
 
 logger = structlog.get_logger(__name__)
@@ -72,7 +73,6 @@ async def upload_favicon_to_storage(feed_url: str, image_content: any, image_for
     """
     try:
         supabase = await _get_async_supabase()
-        bucket_name = "favicons"
 
         # Convert PIL Image to bytes if necessary
         # Note: image_content.save() is blocking CPU work, but for small icons it's negligible.
@@ -99,7 +99,7 @@ async def upload_favicon_to_storage(feed_url: str, image_content: any, image_for
         # Note: supabase-py async storage seems to use standard 'upload' method but on async client?
         # Actually checking docs/usage: await client.storage.from_().upload()
 
-        await supabase.storage.from_(bucket_name).upload(
+        await supabase.storage.from_(FAVICONS_BUCKET_NAME).upload(
             path=path, file=image_content, file_options={"content-type": f"image/{file_ext}"}
         )
 

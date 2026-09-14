@@ -1,10 +1,14 @@
 """Public configuration and information router."""
 
+from collections.abc import Sequence
+
 import structlog
 from fastapi import APIRouter, Depends
+from meilisearch_python_sdk.models.client import Key
 from pydantic import BaseModel
 
 from app.core.config import Settings, get_settings
+from app.core.constants import MEILISEARCH_DEFAULT_SEARCH_KEY_NAME, MEILISEARCH_SEARCH_ACTION
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(tags=["Configuration"])
@@ -17,8 +21,34 @@ class ConfigResponse(BaseModel):
     meilisearch_search_key: str
 
 
+def select_public_search_key(keys: Sequence[Key]) -> str:
+    """
+    Pick a Meilisearch key that is safe to hand to anyone.
+
+    Only keys whose sole permission is ``search`` qualify - never the admin key, and never a
+    key that can also read documents, even if its name mentions search. The default search key
+    wins when several qualify.
+
+    Args:
+        keys: All keys returned by Meilisearch.
+
+    Returns:
+        The key string, or an empty string when no search-only key exists.
+    """
+    search_only = [key_obj for key_obj in keys if key_obj.actions == [MEILISEARCH_SEARCH_ACTION]]
+
+    for key_obj in search_only:
+        if key_obj.name == MEILISEARCH_DEFAULT_SEARCH_KEY_NAME:
+            return key_obj.key
+
+    if search_only:
+        return search_only[0].key
+
+    return ""
+
+
 async def get_meilisearch_search_key(settings: Settings) -> str:
-    """Fetch the default search API key from Meilisearch."""
+    """Fetch a search-only API key from Meilisearch, or an empty string if none exists."""
     client = None
     try:
         from meilisearch_python_sdk import AsyncClient
@@ -29,19 +59,10 @@ async def get_meilisearch_search_key(settings: Settings) -> str:
         )
         keys = await client.get_keys()
 
-        # 1. Look for the exact default search API key name
-        for key_obj in keys.results:
-            if key_obj.name == "Default Search API Key":
-                return key_obj.key
-
-        # 2. Fallback to any key with search actions or 'search' in name
-        for key_obj in keys.results:
-            if "search" in key_obj.actions or "search" in key_obj.name.lower():
-                return key_obj.key
-
-        # 3. Fallback to the first available key if any exist
-        if keys.results:
-            return keys.results[0].key
+        search_key = select_public_search_key(keys.results)
+        if not search_key:
+            logger.warning("No search-only Meilisearch key found; /config will return an empty search key")
+        return search_key
 
     except Exception as e:
         logger.warning("Failed to fetch search key from Meilisearch", error=str(e))
