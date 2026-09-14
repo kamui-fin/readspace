@@ -5,6 +5,39 @@ x-server-build: &server-build
   dockerfile: Dockerfile
 
 services:
+  # --- Observability collector (Grafana hosts Loki/Tempo) ---
+  alloy:
+    image: grafana/alloy:v1.19.2
+    container_name: readspace_alloy
+    restart: unless-stopped
+    # Required by Alloy's embedded cAdvisor exporter on a Linux Docker host.
+    privileged: true
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy/data
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    environment:
+      - GRAFANA_CLOUD_API_KEY=${GRAFANA_CLOUD_API_KEY:?GRAFANA_CLOUD_API_KEY must be set}
+      - GRAFANA_CLOUD_LOKI_URL=${GRAFANA_CLOUD_LOKI_URL:?GRAFANA_CLOUD_LOKI_URL must be set}
+      - GRAFANA_CLOUD_LOKI_USER=${GRAFANA_CLOUD_LOKI_USER:?GRAFANA_CLOUD_LOKI_USER must be set}
+      - GRAFANA_CLOUD_OTLP_ENDPOINT=${GRAFANA_CLOUD_OTLP_ENDPOINT:?GRAFANA_CLOUD_OTLP_ENDPOINT must be set}
+      - GRAFANA_CLOUD_OTLP_INSTANCE_ID=${GRAFANA_CLOUD_OTLP_INSTANCE_ID:?GRAFANA_CLOUD_OTLP_INSTANCE_ID must be set}
+      - GRAFANA_CLOUD_PROMETHEUS_URL=${GRAFANA_CLOUD_PROMETHEUS_URL:?GRAFANA_CLOUD_PROMETHEUS_URL must be set}
+      - GRAFANA_CLOUD_PROMETHEUS_USER=${GRAFANA_CLOUD_PROMETHEUS_USER:?GRAFANA_CLOUD_PROMETHEUS_USER must be set}
+
   # --- Core Cache & Databases ---
   redis:
     image: redis:alpine
@@ -378,7 +411,7 @@ services:
       sh -c "alembic upgrade head &&
              python scripts/init_meilisearch.py &&
              python scripts/init_storage.py &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8008"
+             opentelemetry-instrument uvicorn app.main:app --host 0.0.0.0 --port 8008"
     depends_on:
       redis:
         condition: service_healthy
@@ -407,7 +440,6 @@ services:
       # Volume mappings for dataset imports
       - ./feeds.jsonl:/feeds.jsonl:ro
       - ./favicons:/favicons:ro
-      - /home/ubuntu/gcp-key.json:/app/gcp-key.json:ro
     environment:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
@@ -421,6 +453,12 @@ services:
       - MEILISEARCH_INDEX_NAME=feeds
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
+      - OTEL_SERVICE_NAME=readspace-api
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production,service.namespace=readspace
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=none
       - INBOUND_WEBHOOK_SECRET=${INBOUND_WEBHOOK_SECRET}
       # Browser origin allowed by CORSMiddleware; the app default "*" allows any site
       - CORS_ORIGIN=${SITE_URL}
@@ -429,16 +467,12 @@ services:
       # Resolves rsshub:// feed URLs; no rsshub service runs in this stack
       - RSSHUB_URL=${RSSHUB_URL:-https://rsshub.app}
 
-      # Google Cloud / Vertex AI & Gemini configurations
+      # Gemini AI configuration
       - ENABLE_AI=${ENABLE_AI:-true}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_SMART_MODEL=${GEMINI_SMART_MODEL:-gemini-2.5-flash}
       - GEMINI_FAST_MODEL=${GEMINI_FAST_MODEL:-gemini-2.5-flash-lite}
       - GEMINI_EMBEDDING_MODEL=${GEMINI_EMBEDDING_MODEL:-gemini-embedding-001}
-      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
-      - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION:-us-central1}
-      - GCS_BUCKET=${GCS_BUCKET}
-      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
     logging:
       driver: json-file
       options:
@@ -451,7 +485,7 @@ services:
     pull_policy: never
     container_name: readspace_worker
     restart: always
-    command: taskiq worker app.core.taskiq_app:broker app.workers.registry --max-async-tasks 200
+    command: opentelemetry-instrument taskiq worker app.core.taskiq_app:broker app.workers.registry --max-async-tasks 200
     depends_on:
       # Image exists and migrations have run before tasks touch the schema
       api:
@@ -462,8 +496,6 @@ services:
         condition: service_healthy
       supavisor:
         condition: service_healthy
-    volumes:
-      - /home/ubuntu/gcp-key.json:/app/gcp-key.json:ro
     environment:
       - PYTHONPATH=/app
       # Feed fetching (and rsshub:// resolution) runs here
@@ -479,24 +511,26 @@ services:
       - MEILISEARCH_INDEX_NAME=feeds
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
+      - OTEL_SERVICE_NAME=readspace-worker
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production,service.namespace=readspace
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=none
       
-      # Google Cloud / Vertex AI & Gemini configurations
+      # Gemini AI configuration
       - ENABLE_AI=${ENABLE_AI:-true}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_SMART_MODEL=${GEMINI_SMART_MODEL:-gemini-2.5-flash}
       - GEMINI_FAST_MODEL=${GEMINI_FAST_MODEL:-gemini-2.5-flash-lite}
       - GEMINI_EMBEDDING_MODEL=${GEMINI_EMBEDDING_MODEL:-gemini-embedding-001}
-      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
-      - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION:-us-central1}
-      - GCS_BUCKET=${GCS_BUCKET}
-      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
   scheduler:
     image: readspace-server:local
     pull_policy: never
     container_name: readspace_scheduler
     restart: always
-    command: taskiq scheduler app.core.taskiq_app:scheduler app.workers.registry
+    command: opentelemetry-instrument taskiq scheduler app.core.taskiq_app:scheduler app.workers.registry
     depends_on:
       api:
         condition: service_healthy
@@ -504,8 +538,6 @@ services:
         condition: service_healthy
       supavisor:
         condition: service_healthy
-    volumes:
-      - /home/ubuntu/gcp-key.json:/app/gcp-key.json:ro
     environment:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
@@ -519,19 +551,22 @@ services:
       - MEILISEARCH_INDEX_NAME=feeds
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
+      - OTEL_SERVICE_NAME=readspace-scheduler
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production,service.namespace=readspace
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_METRICS_EXPORTER=none
+      - OTEL_LOGS_EXPORTER=none
       
-      # Google Cloud / Vertex AI & Gemini configurations
+      # Gemini AI configuration
       - ENABLE_AI=${ENABLE_AI:-true}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_SMART_MODEL=${GEMINI_SMART_MODEL:-gemini-2.5-flash}
       - GEMINI_FAST_MODEL=${GEMINI_FAST_MODEL:-gemini-2.5-flash-lite}
       - GEMINI_EMBEDDING_MODEL=${GEMINI_EMBEDDING_MODEL:-gemini-embedding-001}
-      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
-      - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION:-us-central1}
-      - GCS_BUCKET=${GCS_BUCKET}
-      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
 volumes:
+  alloy-data:
   redis-data:
   meilisearch-data:
   db-config:

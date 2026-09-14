@@ -82,7 +82,16 @@ defusedxml = "^0.7.1"
 brotli = "^1.1.0"
 python-json-logger = "^4.0.0"
 prometheus-fastapi-instrumentator = "^7.1.0"
-taskiq = {extras = ["metrics", "reload"], version = "^0.11.20"}
+taskiq = {extras = ["metrics", "opentelemetry", "reload"], version = "^0.12.6"}
+opentelemetry-distro = ">=0.59b0,<1"
+opentelemetry-exporter-otlp = ">=1.38,<2"
+opentelemetry-instrumentation-aiohttp-client = "^0.65b0"
+opentelemetry-instrumentation-asyncpg = "^0.65b0"
+opentelemetry-instrumentation-fastapi = "^0.65b0"
+opentelemetry-instrumentation-httpx = "^0.65b0"
+opentelemetry-instrumentation-redis = "^0.65b0"
+opentelemetry-instrumentation-requests = "^0.65b0"
+opentelemetry-instrumentation-sqlalchemy = "^0.65b0"
 meilisearch-python-sdk = "^5.4.0"
 python-dateutil = "^2.9.0.post0"
 nh3 = "^0.3.2"
@@ -92,8 +101,6 @@ sqlmodel = "^0.0.27"
 listparser = {extras = ["lxml"], version = "^0.20"}
 langcodes = "^3.5.0"
 url-normalize = "^2.2.1"
-google-cloud-storage = "^3.9.0"
-google-cloud-aiplatform = "^2.1.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"

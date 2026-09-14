@@ -44,10 +44,6 @@ class Settings(BaseSettings):
     MEILISEARCH_MASTER_KEY: SecretStr
     MEILISEARCH_INDEX_NAME: str = "feeds"
 
-    # Google Cloud / Vertex AI Configuration
-    GOOGLE_CLOUD_PROJECT: str | None = None
-    GOOGLE_CLOUD_LOCATION: str = "global"
-    GCS_BUCKET: str | None = None
     # Inbound Webhook Config
     INBOUND_WEBHOOK_SECRET: SecretStr = Field(default_factory=lambda: SecretStr("dev_inbound_secret"))
 
@@ -56,7 +52,7 @@ class Settings(BaseSettings):
     @field_validator("GEMINI_API_KEY")
     @classmethod
     def validate_gemini_api_key(cls, v: str, info) -> str:
-        """Validate GEMINI_API_KEY is provided when AI is enabled and Vertex AI is not used."""
+        """Validate GEMINI_API_KEY is provided when AI is enabled."""
         return v
 
     @field_validator("DATABASE_URL_API")

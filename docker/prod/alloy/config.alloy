@@ -1,0 +1,146 @@
+// Collect application logs only. Infrastructure remains covered by cAdvisor metrics.
+discovery.docker "readspace" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "readspace" {
+  targets = discovery.docker.readspace.targets
+
+  // Keep noisy database, Supabase, Redis, Meilisearch, and Alloy logs out of Loki.
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/readspace_(api|worker|scheduler)"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/readspace_(.+)"
+    target_label  = "service_name"
+    replacement   = "readspace-$1"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.+)"
+    target_label  = "container"
+    replacement   = "$1"
+  }
+
+  rule {
+    target_label = "environment"
+    replacement  = "production"
+  }
+
+  rule {
+    target_label = "service_namespace"
+    replacement  = "readspace"
+  }
+}
+
+loki.source.docker "readspace" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.readspace.output
+  forward_to = [loki.process.readspace.receiver]
+}
+
+// A fresh positions database can encounter old Docker history on its first pass.
+// Grafana Cloud accepts only recent timestamps, so discard that backlog locally.
+loki.process "readspace" {
+  stage.drop {
+    older_than          = "144h"
+    drop_counter_reason = "outside_cloud_ingestion_window"
+  }
+
+  forward_to = [loki.write.grafana_cloud.receiver]
+}
+
+loki.write "grafana_cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_CLOUD_LOKI_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_CLOUD_LOKI_USER")
+      password = sys.env("GRAFANA_CLOUD_API_KEY")
+    }
+  }
+}
+
+// Receive traces from the API, worker, and scheduler over the private Compose network.
+otelcol.receiver.otlp "readspace" {
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.processor.batch.readspace.input]
+  }
+}
+
+otelcol.processor.batch "readspace" {
+  output {
+    traces = [otelcol.exporter.otlphttp.grafana_cloud.input]
+  }
+}
+
+otelcol.exporter.otlphttp "grafana_cloud" {
+  client {
+    endpoint = sys.env("GRAFANA_CLOUD_OTLP_ENDPOINT")
+    auth     = otelcol.auth.headers.grafana_cloud.handler
+  }
+}
+
+otelcol.auth.headers "grafana_cloud" {
+  header {
+    key = "Authorization"
+    value = string.format(
+      "Basic %s",
+      encoding.to_base64(
+        string.format(
+          "%s:%s",
+          sys.env("GRAFANA_CLOUD_OTLP_INSTANCE_ID"),
+          sys.env("GRAFANA_CLOUD_API_KEY"),
+        ),
+      ),
+    )
+  }
+}
+
+// Host CPU, memory, filesystem, disk, network, load, and uptime metrics.
+prometheus.exporter.unix "host" {
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+  rootfs_path = "/host/root"
+}
+
+prometheus.scrape "host" {
+  targets         = prometheus.exporter.unix.host.targets
+  scrape_interval = "30s"
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+// Per-container CPU, memory, filesystem, disk, and network metrics.
+prometheus.exporter.cadvisor "docker" {
+  docker_host                  = "unix:///var/run/docker.sock"
+  docker_only                  = true
+  storage_duration             = "5m"
+  store_container_labels       = false
+  allowlisted_container_labels = ["com.docker.compose.project", "com.docker.compose.service"]
+}
+
+prometheus.scrape "docker" {
+  targets         = prometheus.exporter.cadvisor.docker.targets
+  scrape_interval = "30s"
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_CLOUD_PROMETHEUS_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_CLOUD_PROMETHEUS_USER")
+      password = sys.env("GRAFANA_CLOUD_API_KEY")
+    }
+  }
+}

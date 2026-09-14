@@ -6,7 +6,6 @@ import hashlib
 import json
 import re
 from difflib import SequenceMatcher
-from functools import lru_cache
 from typing import Any
 
 import nh3
@@ -23,6 +22,7 @@ from app.core.constants import (
     SUMMARY_MAX_OUTPUT_TOKENS,
     SUMMARY_TEMPERATURE,
 )
+from app.services.ai.client import get_gemini_client
 from app.services.ai.prompts import SUMMARY_SYSTEM_PROMPT, get_highlight_system_prompt, get_translation_system_prompt
 from app.typing.common import LanguageCode
 from app.utils.text import clean_html_text
@@ -79,28 +79,9 @@ HIGHLIGHT_ALLOWED_ATTRIBUTES = {
 logger = structlog.get_logger(__name__)
 
 
-@lru_cache(maxsize=1)
-def _get_client() -> genai.Client | None:
-    """Lazy load the Gemini client."""
-    settings = get_settings()
-    if settings.ENABLE_AI:
-        try:
-            if settings.GOOGLE_CLOUD_PROJECT:
-                return genai.Client(
-                    vertexai=True,
-                    project=settings.GOOGLE_CLOUD_PROJECT,
-                    location=settings.GOOGLE_CLOUD_LOCATION,
-                )
-            elif settings.GEMINI_API_KEY:
-                return genai.Client(api_key=settings.GEMINI_API_KEY)
-        except Exception as e:
-            logger.error("Failed to initialize Gemini client", error=str(e))
-    return None
-
-
 async def generate_summary(title: str, content: str, article_id: str, language_key: str = "original") -> str | None:
     """Generate a summary with caching."""
-    client = _get_client()
+    client = get_gemini_client()
     if not client:
         return None
 
@@ -139,7 +120,7 @@ async def generate_summary(title: str, content: str, article_id: str, language_k
 
 async def translate_content(content: str, target_lang_code: str) -> str | None:
     """Translate HTML content with caching."""
-    client = _get_client()
+    client = get_gemini_client()
     if not client:
         return None
 
@@ -167,7 +148,7 @@ async def translate_content(content: str, target_lang_code: str) -> str | None:
 
 async def generate_highlights(content: str, article_id: str, language_key: str = "original") -> str | None:
     """Generate AI Highlights (skim mode): the same HTML with <mark> tags inserted, with caching."""
-    client = _get_client()
+    client = get_gemini_client()
     if not client:
         return None
 
@@ -274,7 +255,7 @@ async def translate_metadata(
     target_lang_code: str,
 ) -> dict[str, Any]:
     """Translate title, description, and tags concurrently in a single LLM call with caching."""
-    client = _get_client()
+    client = get_gemini_client()
     if not client:
         return {"title": title, "description": description, "tags": tags}
 

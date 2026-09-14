@@ -8,16 +8,15 @@ asyncio.to_thread to avoid blocking the worker's event loop.
 
 import asyncio
 import json
-from functools import lru_cache
 from typing import TypeVar
 
 import structlog
-from google import genai
 from google.genai import types
 from pydantic import BaseModel
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from app.core.config import get_settings
+from app.services.ai.client import get_gemini_client
 from app.services.ai.prompts import get_codex_synthesis_system_prompt, get_codex_triage_system_prompt
 from app.typing.codex import CodexSynthesisOutput, CodexTriageOutput
 
@@ -30,26 +29,6 @@ class CodexGenerationError(Exception):
     """Raised when a Codex LLM call fails after retries, or returns unparsable output."""
 
 
-@lru_cache(maxsize=1)
-def _get_client() -> genai.Client | None:
-    """Lazy load the Gemini client. Mirrors services/ai/service.py::_get_client."""
-    settings = get_settings()
-    if not settings.ENABLE_AI:
-        return None
-    try:
-        if settings.GOOGLE_CLOUD_PROJECT:
-            return genai.Client(
-                vertexai=True,
-                project=settings.GOOGLE_CLOUD_PROJECT,
-                location=settings.GOOGLE_CLOUD_LOCATION,
-            )
-        elif settings.GEMINI_API_KEY:
-            return genai.Client(api_key=settings.GEMINI_API_KEY)
-    except Exception as e:
-        logger.error("Failed to initialize Gemini client for Codex", error=str(e))
-    return None
-
-
 @retry(
     retry=retry_if_exception_type(Exception),
     stop=stop_after_attempt(2),
@@ -58,7 +37,7 @@ def _get_client() -> genai.Client | None:
 )
 async def run_codex_triage(triage_prompt: str) -> CodexTriageOutput:
     """Phase 1: cluster + rank the whole catalog. Raises CodexGenerationError on failure."""
-    client = _get_client()
+    client = get_gemini_client()
     if not client:
         raise CodexGenerationError("AI is disabled or no Gemini client is configured")
 
@@ -93,7 +72,7 @@ async def run_codex_triage(triage_prompt: str) -> CodexTriageOutput:
 )
 async def run_codex_synthesis(synthesis_prompt: str) -> CodexSynthesisOutput:
     """Phase 2: write the finished digest over the chosen full-text articles."""
-    client = _get_client()
+    client = get_gemini_client()
     if not client:
         raise CodexGenerationError("AI is disabled or no Gemini client is configured")
 
