@@ -5,7 +5,6 @@ import {
     useMenu,
     useSearchBox,
 } from "react-instantsearch"
-import { usePersistentState } from "@/hooks/use-persistent-state"
 import { useFeedPreview } from "@/components/features/discover/hooks/use-feed-preview"
 
 export function useDiscoverController() {
@@ -37,20 +36,10 @@ export function useDiscoverController() {
         clearRefinementsBase()
     }, [clearRefinementsBase])
 
-    // Persistent language preference — defaults to "en". Applied downstream as a
-    // raw Meilisearch `filters` string on <Configure> (see DiscoverContent),
-    // NOT as an InstantSearch menu refinement: the menu approach raced against
-    // its own "restore persisted default" effect and silently dropped the
-    // filter, so switching away from English appeared to do nothing.
-    const [persistedLanguage, setPersistedLanguage] = usePersistentState(
-        "discover-language",
-        "en"
-    )
-    const displayLanguage = persistedLanguage || "en"
-    const languageFilter =
-        displayLanguage && displayLanguage !== "all"
-            ? `language = ${displayLanguage}`
-            : undefined
+    // Discover search is English-only for now — applied as a raw Meilisearch
+    // `filters` string on <Configure> (see DiscoverContent).
+    const displayLanguage = "en"
+    const languageFilter = `language = ${displayLanguage}`
 
     // Get active category from current refinements
     const activeCategoryRefinement = currentRefinements.find(
@@ -74,13 +63,6 @@ export function useDiscoverController() {
             }
         },
         [isPopularSelected, refineCategory, setIsPopularSelected]
-    )
-
-    const handleLanguageChange = useCallback(
-        (newLanguage: string) => {
-            setPersistedLanguage(newLanguage)
-        },
-        [setPersistedLanguage]
     )
 
     const clearSearch = useCallback(() => {
@@ -121,7 +103,6 @@ export function useDiscoverController() {
 
         // Actions
         handleCategoryClick,
-        handleLanguageChange,
         clearSearch,
     }
 }

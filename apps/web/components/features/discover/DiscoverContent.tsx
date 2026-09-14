@@ -25,10 +25,8 @@ export function DiscoverContent() {
         isPreviewLoading,
         previewError,
         isPreviewError,
-        displayLanguage,
         languageFilter,
         handleCategoryClick,
-        handleLanguageChange,
         clearSearch,
     } = useDiscoverController()
 
@@ -79,11 +77,7 @@ export function DiscoverContent() {
 
                     {/* Search Section */}
                     <div className="w-full max-w-2xl mx-auto mb-8">
-                        <CustomSearchBox
-                            placeholder="Search for a website or paste RSS link"
-                            language={displayLanguage}
-                            onLanguageChange={handleLanguageChange}
-                        />
+                        <CustomSearchBox placeholder="Search for a website or paste RSS link" />
                     </div>
 
                     {/* Content Section */}

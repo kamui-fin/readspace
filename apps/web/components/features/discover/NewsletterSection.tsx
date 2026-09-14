@@ -6,6 +6,7 @@ import { toast } from "react-hot-toast"
 import { MailOpen, Copy, Check } from "lucide-react"
 import { useUserRole } from "@/hooks/use-user-role"
 import { useUpgradeDialog } from "@/stores/upgrade-dialog"
+import { isCloudProd } from "@/lib/is-cloud-prod"
 import {
     Dialog,
     DialogContent,
@@ -16,6 +17,7 @@ import {
 export function NewsletterSection() {
     const { isBasic } = useUserRole()
     const { open: openUpgrade } = useUpgradeDialog()
+    const isCloud = isCloudProd()
     const [isOpen, setIsOpen] = useState(false)
     const [tokenData, setTokenData] = useState<{
         token: string
@@ -63,6 +65,9 @@ export function NewsletterSection() {
             setIsOpen(true)
         }
     }
+
+    // Newsletter ingestion relies on the hosted inbound email worker — not available on self-hosted instances.
+    if (!isCloud) return null
 
     return (
         <>

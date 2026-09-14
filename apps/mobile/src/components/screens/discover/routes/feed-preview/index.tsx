@@ -20,7 +20,7 @@ import {
   useDeleteFeed,
   useFeed,
 } from '@readspace/shared';
-import { discoverLanguageToCode, useDiscoverPreferences } from '@stores/discover-preferences';
+import { discoverLanguageToCode, getDiscoverLanguage } from '@stores/discover-preferences';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -63,8 +63,7 @@ export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPre
   const deleteFeed = useDeleteFeed();
 
   // Carry the discover screen's language filter into the "you might also like" list.
-  const language = useDiscoverPreferences((s) => s.language);
-  const languageCode = discoverLanguageToCode(language);
+  const languageCode = discoverLanguageToCode(getDiscoverLanguage());
 
   // Fetch preview articles for the feed
   const { data: articlesData, isLoading: isArticlesLoading } = useQuery({

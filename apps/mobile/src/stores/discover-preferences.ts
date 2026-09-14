@@ -1,40 +1,10 @@
 import type { Language } from '@components/screens/discover/ui/search-bar.input';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
 
-interface DiscoverPreferencesState {
-  /** Selected discover search language. Always defaults to English. */
-  language: Language;
-}
-
-interface DiscoverPreferencesActions {
-  setLanguage: (language: Language) => void;
-}
-
-export type DiscoverPreferencesStore = DiscoverPreferencesState & DiscoverPreferencesActions;
-
-export const useDiscoverPreferences = create<DiscoverPreferencesStore>()(
-  persist(
-    (set) => ({
-      language: 'english',
-
-      setLanguage: (language) => {
-        set({ language });
-      },
-    }),
-    {
-      name: 'readspace-discover-preferences',
-      storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({
-        language: state.language,
-      }),
-    }
-  )
-);
-
-/** Read the persisted discover language synchronously, outside of React. */
-export const getDiscoverLanguage = (): Language => useDiscoverPreferences.getState().language;
+/**
+ * Discover search is English-only for now — there is no UI to change it, and this always
+ * resolves to English regardless of any language preference persisted by an older app version.
+ */
+export const getDiscoverLanguage = (): Language => 'english';
 
 /**
  * Map a discover language label to the ISO code used in Meilisearch `language`

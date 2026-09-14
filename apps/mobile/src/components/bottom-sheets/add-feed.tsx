@@ -20,6 +20,7 @@ import {
   LetterOpenedIcon,
   UserCircleIcon,
 } from '@solar-icons/react-native/linear';
+import { useSettingsStore } from '@stores/settings';
 import { useUpgradeDialog } from '@stores/upgrade-dialog';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
@@ -64,6 +65,7 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
     const colors = COLORS[isDark ? 'dark' : 'light'];
     const { isPro } = useRevenueCat();
     const { open: openUpgrade } = useUpgradeDialog();
+    const isSelfHosted = useSettingsStore((state) => state.settings.instance_type === 'self-hosted');
 
     // Tab animation state
     const [containerWidth, setContainerWidth] = useState(0);
@@ -87,7 +89,7 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
     const { data: tokenData, isLoading: isTokenLoading } = useQuery({
       queryKey: ['newsletterToken'],
       queryFn: () => ApiClient.getNewsletterToken(),
-      enabled: mode === 'newsletter' && isPro,
+      enabled: mode === 'newsletter' && isPro && !isSelfHosted,
       staleTime: Infinity, // Token doesn't change between sessions
     });
 
@@ -413,7 +415,26 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
         )}
 
         {/* ── NEWSLETTER MODE ── */}
-        {mode === 'newsletter' && (
+        {mode === 'newsletter' && isSelfHosted && (
+          <View className="mt-3 flex-1 items-center justify-center px-6 py-12">
+            <LetterOpenedIcon size={32} color={colors.grey} strokeWidth={1.8} />
+            <Text
+              fontFamily="geist-semibold"
+              className="mt-4 text-center text-black dark:text-white"
+              style={{ fontSize: 15 }}>
+              Newsletters not supported on self-host
+            </Text>
+            <Text
+              fontFamily="geist"
+              className="text-grey dark:text-grey mt-2 text-center"
+              style={{ fontSize: 13, lineHeight: 18 }}>
+              Newsletter ingestion requires the hosted Readspace inbound email service, which
+              isn&apos;t available on self-hosted instances.
+            </Text>
+          </View>
+        )}
+
+        {mode === 'newsletter' && !isSelfHosted && (
           <View className="mt-3 flex-1">
             <Text className="font-geist-regular text-grey dark:text-grey mb-5 text-sm">
               Use your private email alias to subscribe to any newsletter. Emails land straight in

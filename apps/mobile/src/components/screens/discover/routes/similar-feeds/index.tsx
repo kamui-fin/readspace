@@ -14,7 +14,7 @@ import { COLORS } from '@lib/constants/colors';
 import { FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import { ApiClient, useCreateFeed } from '@readspace/shared';
 import { ArrowLeftIcon, DocumentTextIcon } from '@solar-icons/react-native/linear';
-import { discoverLanguageToCode, useDiscoverPreferences } from '@stores/discover-preferences';
+import { discoverLanguageToCode, getDiscoverLanguage } from '@stores/discover-preferences';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -50,8 +50,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
   const router = useRouter();
 
   // Carry the discover screen's language filter into similar-feeds results.
-  const language = useDiscoverPreferences((s) => s.language);
-  const languageCode = discoverLanguageToCode(language);
+  const languageCode = discoverLanguageToCode(getDiscoverLanguage());
 
   // Fetch the feed details to get the title
   const { data: feedData } = useQuery({

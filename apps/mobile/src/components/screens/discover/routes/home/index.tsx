@@ -8,13 +8,11 @@ import {
   type FolderPickerBottomSheetRef,
 } from '@components/bottom-sheets/folder-picker';
 import { Plus } from '@components/icons/svg';
-import { LanguagePicker } from '@components/screens/discover/ui/language-picker.dropdown';
 import { RecentSearches } from '@components/screens/discover/ui/recent-searches';
-import { type Language, SearchBar } from '@components/screens/discover/ui/search-bar.input';
+import { SearchBar } from '@components/screens/discover/ui/search-bar.input';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useDiscoverController } from '@hooks/useDiscoverController';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import {
@@ -26,7 +24,7 @@ import { COLORS } from '@lib/constants/colors';
 import { createSearchClient, FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import type { FeedSummary } from '@readspace/shared';
 import { MOBILE_CATEGORY_NAMES, POPULAR_CATEGORIES, useCreateFeed } from '@readspace/shared';
-import { discoverLanguageToCode, useDiscoverPreferences } from '@stores/discover-preferences';
+import { discoverLanguageToCode, getDiscoverLanguage } from '@stores/discover-preferences';
 import { useSearchHistory } from '@stores/search-history';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { MotiView } from 'moti';
@@ -67,8 +65,6 @@ export function DiscoverScreen() {
 }
 
 function DiscoverScreenInner() {
-  const selectedLanguage = useDiscoverPreferences((s) => s.language);
-  const setSelectedLanguage = useDiscoverPreferences((s) => s.setLanguage);
   const [_isSearchFocused, setIsSearchFocused] = useState(false);
   const [viewState, setViewState] = useState<ViewState>('default');
   const [_, startTransition] = useTransition();
@@ -97,7 +93,6 @@ function DiscoverScreenInner() {
   const searchBarRef = useRef<RNTextInput>(null);
   const categoryScrollRef = useRef<ScrollView>(null);
   const createFolderModalRef = useRef<CreateFolderModalRef>(null);
-  const languagePickerRef = useRef<BottomSheetModal>(null);
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const { searches: recentSearches, addSearch, clearHistory } = useSearchHistory();
@@ -117,10 +112,9 @@ function DiscoverScreenInner() {
   const contentPaddingBottom = BOTTOM_TABBAR_BASE_HEIGHT + 24;
   const trendingScrollRef = useRef<ScrollView>(null);
 
-  // Language filter for both trending + live search. Default is always English;
-  // 'all' means no language filter at all. Shared with the similar-feeds queries
-  // via the persisted discover-preferences store.
-  const languageCode = discoverLanguageToCode(selectedLanguage);
+  // Discover search is English-only for now. Shared with the similar-feeds queries via
+  // getDiscoverLanguage().
+  const languageCode = discoverLanguageToCode(getDiscoverLanguage());
 
   // Fetch trending feeds using Meilisearch directly — infinite paginated, capped at MAX_TRENDING_ITEMS
   // Trending shows popular feeds from News, Tech, and Business categories only
@@ -286,10 +280,6 @@ function DiscoverScreenInner() {
     });
   }, [refineQuery]);
 
-  const handleLanguageChange = useCallback((language: Language) => {
-    setSelectedLanguage(language);
-  }, []);
-
   const handleRecentSearchPress = useCallback(
     (query: string) => {
       addSearch(query);
@@ -324,10 +314,7 @@ function DiscoverScreenInner() {
   const hasTypedQuery = searchInputValue.trim().length > 0;
 
   // Language filter for Configure — applied as raw Meilisearch filter
-  const languageFilter =
-    selectedLanguage && selectedLanguage !== 'all'
-      ? `language = ${languageCode || 'en'}`
-      : undefined;
+  const languageFilter = `language = ${languageCode || 'en'}`;
 
   return (
     <View
@@ -381,9 +368,6 @@ function DiscoverScreenInner() {
                   value={searchInputValue}
                   onChangeText={handleSearchChange}
                   onFocus={handleSearchFocus}
-                  onLanguageChange={handleLanguageChange}
-                  selectedLanguage={selectedLanguage}
-                  languagePickerRef={languagePickerRef}
                   onClear={handleClearSearch}
                   onCancel={handleSearchCancel}
                   onSubmit={handleSearchSubmit}
@@ -464,13 +448,6 @@ function DiscoverScreenInner() {
       <CreateFolderModal ref={createFolderModalRef} />
       <AddFeedBottomSheet ref={addFeedModalRef} onConfirm={handleAddFeedConfirm} />
       <FolderPickerBottomSheet ref={folderPickerModalRef} onFolderSelect={handleFolderSelect} />
-
-      {/* Language Picker Bottom Sheet */}
-      <LanguagePicker
-        ref={languagePickerRef}
-        initialLanguage={selectedLanguage}
-        onLanguageChange={(lang) => handleLanguageChange(lang as Language)}
-      />
     </View>
   );
 }
