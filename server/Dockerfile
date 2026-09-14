@@ -18,6 +18,14 @@ WORKDIR /app
 # Copy requirements file
 COPY requirements.txt .
 
+# gitignore-parser ships no wheel, so pip builds it from source. By default that
+# spins up an isolated build env and re-fetches setuptools/wheel from PyPI even
+# though they're already installed below — an extra network round trip that has
+# caused self-hosted builds to fail on flaky/restricted DNS. Install the build
+# tools first and build it with --no-build-isolation to skip that fetch.
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir --no-build-isolation gitignore-parser==0.1.13
+
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 

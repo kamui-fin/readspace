@@ -129,6 +129,13 @@ services:
     depends_on:
       auth:
         condition: service_started
+    # api waits on this (service_healthy) before running scripts/init_storage.py
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
@@ -415,7 +422,13 @@ services:
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
       - INBOUND_WEBHOOK_SECRET=${INBOUND_WEBHOOK_SECRET}
-      
+      # Browser origin allowed by CORSMiddleware; the app default "*" allows any site
+      - CORS_ORIGIN=${SITE_URL}
+      # Returned by the public GET /config endpoint
+      - SUPABASE_ANON_KEY=${ANON_KEY}
+      # Resolves rsshub:// feed URLs; no rsshub service runs in this stack
+      - RSSHUB_URL=${RSSHUB_URL:-https://rsshub.app}
+
       # Google Cloud / Vertex AI & Gemini configurations
       - ENABLE_AI=${ENABLE_AI:-true}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
@@ -453,6 +466,8 @@ services:
       - /home/ubuntu/gcp-key.json:/app/gcp-key.json:ro
     environment:
       - PYTHONPATH=/app
+      # Feed fetching (and rsshub:// resolution) runs here
+      - RSSHUB_URL=${RSSHUB_URL:-https://rsshub.app}
       - REDIS_URL=redis://redis:6379/0
       - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - SUPABASE_JWT_SECRET=${JWT_SECRET}
