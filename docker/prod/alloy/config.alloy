@@ -134,6 +134,19 @@ prometheus.scrape "docker" {
   forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
 }
 
+// Taskiq's built-in Prometheus middleware listens inside the worker container.
+prometheus.scrape "taskiq" {
+  targets = [{
+    "__address__" = "worker:9090",
+    "job"         = "readspace/taskiq",
+    "service_name" = "readspace-worker",
+    "environment" = "production",
+  }]
+
+  scrape_interval = "30s"
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
 prometheus.remote_write "grafana_cloud" {
   endpoint {
     url = sys.env("GRAFANA_CLOUD_PROMETHEUS_URL")
