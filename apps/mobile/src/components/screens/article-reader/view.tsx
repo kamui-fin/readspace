@@ -18,6 +18,7 @@ import { READ_LATER_READER_MODE } from '@lib/constants/app';
 import { SUPPORTED_LANGUAGES } from '@lib/constants/languages';
 import { getAdjacentArticle } from '@lib/utils/article';
 import {
+  isPaywallError,
   queryKeys,
   useArticle,
   useExtractFullTextMutation,
@@ -119,17 +120,20 @@ export function ArticleScreen({
       ? translateData.translated_content
       : currentContent;
 
-  const extractFullText = useCallback(async () => {
-    return extractMutation.mutateAsync({
-      articleId: articleId || '',
-      articleUrl: article?.link || '',
-    });
-  }, [articleId, article?.link, extractMutation]);
+  // `auto` = background extraction on open: over the free quota it quietly yields no content
+  // (the reader stays on RSS) instead of a 429 that would pop the paywall
+  const extractFullText = useCallback(
+    async (auto = false) => {
+      return extractMutation.mutateAsync({
+        articleId: articleId || '',
+        articleUrl: article?.link || '',
+        auto,
+      });
+    },
+    [articleId, article?.link, extractMutation]
+  );
 
   const generateSummary = useCallback(async () => {
-    if (!checkAndTriggerUpgrade('ai')) {
-      throw new Error('AI limit reached');
-    }
     const languageKey =
       contentSource === 'translated' && targetLanguage ? targetLanguage : 'original';
     return summarizeMutation.mutateAsync({
@@ -137,14 +141,7 @@ export function ArticleScreen({
       content: activeContent || undefined,
       languageKey,
     });
-  }, [
-    articleId,
-    activeContent,
-    contentSource,
-    targetLanguage,
-    summarizeMutation,
-    checkAndTriggerUpgrade,
-  ]);
+  }, [articleId, activeContent, contentSource, targetLanguage, summarizeMutation]);
 
   // ============ View Mode Effects ============
   // Initialize view based on available content
@@ -193,7 +190,7 @@ export function ArticleScreen({
         }
       }, 5000);
 
-      extractFullText()
+      extractFullText(true)
         .catch((error) => {
           console.warn('Failed to auto-extract article content:', error);
         })
@@ -257,7 +254,9 @@ export function ArticleScreen({
             toast.success('Article removed from read later');
           }
         },
-        onError: () => {
+        onError: (error) => {
+          // Plan limits (e.g. the free saved-articles cap) open the upgrade dialog globally
+          if (isPaywallError(error)) return;
           toast.error(
             newValue ? 'Failed to save article' : 'Failed to remove article from read later'
           );
@@ -352,6 +351,9 @@ export function ArticleScreen({
   const handleGenerateSummary = useCallback(() => {
     if (!article) return;
 
+    // Over the AI quota: the upgrade dialog is the only feedback — no sheet, no error toast
+    if (!checkAndTriggerUpgrade('ai')) return;
+
     // Open bottom sheet immediately
     summaryBottomSheetRef.current?.present();
 
@@ -362,13 +364,17 @@ export function ArticleScreen({
       })
       .catch((error) => {
         console.error('Failed to generate summary:', error);
-        toast.error('Failed to generate summary');
         summaryBottomSheetRef.current?.dismiss();
+        // Plan limits open the upgrade dialog globally — don't stack an error toast on it
+        if (isPaywallError(error)) return;
+        toast.error('Failed to generate summary');
       });
-  }, [article, generateSummary]);
+  }, [article, generateSummary, checkAndTriggerUpgrade]);
 
   const handleRegenerateSummary = useCallback(() => {
     if (!article) return;
+
+    if (!checkAndTriggerUpgrade('ai')) return;
 
     generateSummary()
       .then(() => {
@@ -376,9 +382,10 @@ export function ArticleScreen({
       })
       .catch((error) => {
         console.error('Failed to regenerate summary:', error);
+        if (isPaywallError(error)) return;
         toast.error('Failed to regenerate summary');
       });
-  }, [article, generateSummary]);
+  }, [article, generateSummary, checkAndTriggerUpgrade]);
 
   const handleTranslateSelect = useCallback(
     (language: string) => {
@@ -401,6 +408,7 @@ export function ArticleScreen({
         })
         .catch((error) => {
           console.error('Failed to translate:', error);
+          if (isPaywallError(error)) return;
           toast.error('Failed to translate article');
         });
     },
@@ -436,6 +444,7 @@ export function ArticleScreen({
       })
       .catch((error) => {
         console.error('Failed to generate highlights:', error);
+        if (isPaywallError(error)) return;
         toast.error('Failed to generate highlights');
       });
   }, [
@@ -469,7 +478,8 @@ export function ArticleScreen({
               setContentSource('extracted');
               toast.success('Full text extracted!');
             })
-            .catch(() => {
+            .catch((error) => {
+              if (isPaywallError(error)) return;
               toast.error('Failed to extract text');
             });
         } else {

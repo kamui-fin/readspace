@@ -37,12 +37,14 @@ export interface UserLimits {
     max_daily_ai_calls: number;
     max_daily_scrapes: number;
     semantic_search: boolean;
-    read_later_retention_days: number;
+    /** Max saved (read-later) articles held at once; -1 = unlimited. */
+    max_saved_articles: number;
     /** Codex allowance for this role — {} for Admin (unlimited). */
     codex?: CodexAllowance;
   };
   usage: {
     subscriptions: number;
+    saved_articles: number;
     daily_ai_calls: number;
     daily_scrapes: number;
     /** Codex usage — { unlimited: true } for Admin, else { period, limit, used }. */

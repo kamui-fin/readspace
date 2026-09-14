@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import {
   useClearRefinements,
   useCurrentRefinements,
@@ -8,7 +8,6 @@ import {
 
 export function useDiscoverController() {
   const { query, refine: refineQuery } = useSearchBox();
-  const [isPopularSelected, setIsPopularSelected] = useState(false);
 
   // Use InstantSearch's menu widget for category filtering — exactly like web
   const { refine: refineCategory } = useMenu({
@@ -27,35 +26,21 @@ export function useDiscoverController() {
 
   const handleCategoryClick = useCallback(
     (categoryName: string) => {
-      if (categoryName === 'popular') {
-        // Toggle popular mode — when enabled, filter gets stripped so all feeds show sorted by popularity
-        refineCategory('popular');
-        setIsPopularSelected((prev) => !prev);
-      } else {
-        // Switching to a regular category — disable popular if it was on
-        if (isPopularSelected) {
-          setIsPopularSelected(false);
-          refineCategory('popular'); // Remove popular filter
-        }
-        refineCategory(categoryName);
-      }
+      refineCategory(categoryName);
     },
-    [isPopularSelected, refineCategory]
+    [refineCategory]
   );
 
   const clearSearch = useCallback(() => {
-    setIsPopularSelected(false);
     refineQuery('');
     clearRefinementsBase();
   }, [refineQuery, clearRefinementsBase]);
 
-  const effectiveCategory = isPopularSelected ? 'Popular' : activeCategory;
-  const hasActiveSearch = Boolean(query || activeCategory || isPopularSelected);
+  const hasActiveSearch = Boolean(query || activeCategory);
 
   return {
     query,
-    activeCategory: effectiveCategory,
-    isPopularSelected,
+    activeCategory,
     hasActiveSearch,
     handleCategoryClick,
     clearSearch,

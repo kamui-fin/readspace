@@ -674,7 +674,7 @@ export function useExtractFullTextMutation(
   options?: UseMutationOptions<
     ExtractFullTextResponse,
     unknown,
-    { articleId: string; articleUrl: string; articleType?: string }
+    { articleId: string; articleUrl: string; articleType?: string; auto?: boolean }
   >
 ) {
   const queryClient = useQueryClient();
@@ -683,21 +683,32 @@ export function useExtractFullTextMutation(
       articleId,
       articleUrl,
       articleType,
+      auto,
     }: {
       articleId: string;
       articleUrl: string;
       articleType?: string;
+      /** Background extraction — silently yields no content once the daily quota is used up */
+      auto?: boolean;
     }) => {
       const urlHash = createContentHash(articleUrl);
-      return await queryClient.fetchQuery({
-        queryKey: queryKeys.extractedContent(articleId, urlHash),
-        queryFn: () => ApiClient.extractFullText(articleId, articleType),
+      const queryKey = queryKeys.extractedContent(articleId, urlHash);
+      const result = await queryClient.fetchQuery({
+        queryKey,
+        queryFn: () => ApiClient.extractFullText(articleId, articleType, { auto }),
         staleTime: 30 * 60 * 1000,
         gcTime: 60 * 60 * 1000,
         retry: 0,
       });
+      // A quota-skipped background extraction must not be cached, or a later explicit
+      // "Full Text" tap would be served the empty result instead of reaching the paywall
+      if (!result.content) {
+        queryClient.removeQueries({ queryKey, exact: true });
+      }
+      return result;
     },
     onSuccess: (data, variables) => {
+      if (!data.content) return;
       // Optimistically update the article with the extracted content
       // Don't invalidate — the optimistic update is sufficient and prevents race conditions
       // where a background refetch might complete before the server has persisted the data

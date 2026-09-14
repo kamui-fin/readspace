@@ -415,7 +415,7 @@ class TestCodexPipelineViaTask:
         monkeypatch.setattr("app.services.codex.pipeline.run_codex_synthesis", fake_synthesis)
 
         # Mock full-text fetch + image probing - no real HTTP calls in integration tests.
-        async def fake_fetch_full_texts(items):
+        async def fake_fetch_full_texts(items, stored_bodies=None):
             return {item.id: item.description or "" for item in items}
 
         async def fake_select_imagery(articles):
@@ -481,7 +481,7 @@ class TestCodexPipelineViaTask:
             observed_phases.append((await db_session.get(type(digest), digest.id)).progress_phase)
             return _fake_synthesis_output([1])
 
-        async def fake_fetch_full_texts(items):
+        async def fake_fetch_full_texts(items, stored_bodies=None):
             observed_phases.append((await db_session.get(type(digest), digest.id)).progress_phase)
             return {item.id: item.description or "" for item in items}
 
@@ -625,7 +625,7 @@ class TestCodexPipelineRespectsPreferences:
         async def fake_synthesis(prompt: str) -> CodexSynthesisOutput:
             return _fake_synthesis_output([1, 2, 3])
 
-        async def fake_fetch_full_texts(items):
+        async def fake_fetch_full_texts(items, stored_bodies=None):
             return {item.id: item.description or "" for item in items}
 
         async def fake_select_imagery(articles):

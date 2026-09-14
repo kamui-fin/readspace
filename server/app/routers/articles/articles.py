@@ -9,11 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.custom_exceptions import NotFoundError
 from app.crud.article.actions import update_article_status
-from app.crud.article.reader import CursorPaginationParams, get_articles
+from app.crud.article.reader import CursorPaginationParams, get_articles, is_article_saved
 from app.db.session import get_db, get_db_factory
 from app.services.articles.service import get_article_details
 from app.services.feeds.service import SessionFactory, refresh_feed
 from app.services.user.auth import get_current_user
+from app.services.user.resource_limits import enforce_saved_articles_limit
 from app.typing.common import CursorPaginatedResponse
 from app.typing.entries import EntryDetail, EntryListItem, EntryUpdate
 from app.typing.user import TokenData
@@ -134,12 +135,21 @@ async def update_article(
     """
     Update user-specific article metadata (read status, notes, priority).
     """
+    user_id = UUID(current_user.sub)
+    is_clipped = article_type.lower() == "clipped"
+
+    # Saving counts against the saved-articles cap; re-saving an already-saved article does not
+    if article_in.is_saved and not await is_article_saved(
+        db, user_id=user_id, article_id=article_id, is_clipped=is_clipped
+    ):
+        await enforce_saved_articles_limit(db, user_id)
+
     updated_article = await update_article_status(
         db=db,
         article_id=article_id,
-        user_id=UUID(current_user.sub),
+        user_id=user_id,
         article_in=article_in,
-        is_clipped=(article_type.lower() == "clipped"),
+        is_clipped=is_clipped,
     )
 
     if not updated_article:

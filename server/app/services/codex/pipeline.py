@@ -24,8 +24,10 @@ from app.core.constants import (
     CODEX_MAX_WORTH_READING,
     CODEX_MAX_WORTH_READING_FALLBACK,
     CODEX_READING_WPM,
+    NEWSLETTER_URL_SCHEME,
 )
 from app.crud import codex as crud_codex
+from app.crud.article.reader import get_feed_article_bodies
 from app.models.enums import CodexDigestPhase, CodexDigestStatus
 from app.services.ai.codex import CodexGenerationError, run_codex_synthesis, run_codex_triage
 from app.services.codex.gather import fetch_full_texts, gather_catalog
@@ -112,7 +114,17 @@ async def generate_digest_for_user(user_id: UUID, digest_id: UUID) -> None:
         async with worker_db() as db:
             await crud_codex.set_progress_phase(db, digest_id, CodexDigestPhase.READING)
 
-        full_texts = await fetch_full_texts(list(fulltext_targets.values()))
+        # Newsletters have no web page to scrape - their stored email body is the full text
+        newsletter_ids = [
+            item.id for item in fulltext_targets.values() if item.link and item.link.startswith(NEWSLETTER_URL_SCHEME)
+        ]
+        stored_bodies: dict[UUID, str] = {}
+        if newsletter_ids:
+            async with worker_db() as db:
+                stored_bodies = await get_feed_article_bodies(db, newsletter_ids)
+            log.info("Codex loaded stored newsletter bodies", requested=len(newsletter_ids), found=len(stored_bodies))
+
+        full_texts = await fetch_full_texts(list(fulltext_targets.values()), stored_bodies=stored_bodies)
         full_text_by_catalog_id = {
             cid: full_texts.get(item.id, item.description or "") for cid, item in fulltext_targets.items()
         }

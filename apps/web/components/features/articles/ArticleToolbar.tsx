@@ -319,40 +319,41 @@ export function ArticleToolbar({
                         </Tooltip>
                     )}
 
-                    {!isPreviewMode && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60 ${highlightsEnabled ? "bg-muted/60" : ""}`}
-                                    onClick={handleToggleHighlights}
-                                    disabled={isHighlighting}
-                                >
-                                    {isHighlighting ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <TextSelection
-                                            className="h-4 w-4"
-                                            style={{
-                                                color: highlightsEnabled
-                                                    ? colorTokens.primary
-                                                          .DEFAULT
-                                                    : undefined,
-                                            }}
-                                        />
-                                    )}
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                {isHighlighting
-                                    ? "Generating..."
-                                    : highlightsEnabled
-                                      ? "Hide AI Highlights"
-                                      : "AI Highlights"}
-                            </TooltipContent>
-                        </Tooltip>
-                    )}
+                    {!isPreviewMode &&
+                        !article.link?.startsWith("newsletter://") && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60 ${highlightsEnabled ? "bg-muted/60" : ""}`}
+                                        onClick={handleToggleHighlights}
+                                        disabled={isHighlighting}
+                                    >
+                                        {isHighlighting ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <TextSelection
+                                                className="h-4 w-4"
+                                                style={{
+                                                    color: highlightsEnabled
+                                                        ? colorTokens.primary
+                                                              .DEFAULT
+                                                        : undefined,
+                                                }}
+                                            />
+                                        )}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    {isHighlighting
+                                        ? "Generating..."
+                                        : highlightsEnabled
+                                          ? "Hide AI Highlights"
+                                          : "AI Highlights"}
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
 
                     {!isPreviewMode &&
                         !article.link?.startsWith("newsletter://") && (

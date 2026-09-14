@@ -148,6 +148,8 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
     const handleModeSwitch = useCallback(
       (next: Mode) => {
         if (next === 'newsletter' && !isPro) {
+          // Free tier: close this sheet and go straight to the paywall
+          bottomSheetRef.current?.dismiss();
           openUpgrade({
             title: 'Upgrade to Readspace Pro',
             description:

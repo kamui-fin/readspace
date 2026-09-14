@@ -1,5 +1,6 @@
 import {
     ContentView,
+    isPaywallError,
     useExtractFullTextMutation,
     useGenerateHighlightsMutation,
     useSummarizeArticleMutation,
@@ -137,8 +138,10 @@ export function useArticleAI({
                     articleUrl: article.link,
                     articleType: article.article_type,
                 })
-            } catch {
+            } catch (error) {
                 setContentView(ContentView.Original)
+                // Plan limits open the upgrade dialog globally — don't stack an error toast on it
+                if (isPaywallError(error)) return
                 toast.error("Failed to extract article content", {
                     id: "extract-error",
                 })
@@ -192,27 +195,29 @@ export function useArticleAI({
                     ? currentTranslation.language
                     : "original"
 
+            const toastId = toast.loading("Generating highlights...")
             try {
-                const result = await toast.promise(
-                    highlightMutation.mutateAsync({
-                        articleId: article.id,
-                        content: activeContent || undefined,
-                        languageKey,
-                        articleType: article.article_type,
-                    }),
-                    {
-                        loading: "Generating highlights...",
-                        success: "Highlights ready",
-                        error: "Failed to generate highlights",
-                    }
-                )
+                const result = await highlightMutation.mutateAsync({
+                    articleId: article.id,
+                    content: activeContent || undefined,
+                    languageKey,
+                    articleType: article.article_type,
+                })
+                toast.success("Highlights ready", { id: toastId })
                 setHighlightedData({
                     content: result.highlighted_content,
                     forView: contentView,
                 })
                 setHighlightsEnabled(true)
-            } catch {
-                // toast.promise already surfaced the error
+            } catch (error) {
+                // Plan limits open the upgrade dialog globally — drop the spinner, no error toast
+                if (isPaywallError(error)) {
+                    toast.dismiss(toastId)
+                } else {
+                    toast.error("Failed to generate highlights", {
+                        id: toastId,
+                    })
+                }
             }
         },
     }

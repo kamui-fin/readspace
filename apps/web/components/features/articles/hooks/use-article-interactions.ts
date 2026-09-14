@@ -1,4 +1,8 @@
-import { useUpdateArticle, type Article, ApiError } from "@readspace/shared"
+import {
+    isPaywallError,
+    useUpdateArticle,
+    type Article,
+} from "@readspace/shared"
 import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
 
@@ -73,7 +77,7 @@ export function useArticleInteractions({
             },
             {
                 onError: (error: any) => {
-                    if (error instanceof ApiError && error.status === 429) {
+                    if (isPaywallError(error)) {
                         return
                     }
                     toast.error("Failed to update read later status")

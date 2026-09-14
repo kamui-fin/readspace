@@ -56,6 +56,37 @@ async def enforce_subscription_limit(db: AsyncSession, user_id: UUID, additional
             )
 
 
+async def enforce_saved_articles_limit(db: AsyncSession, user_id: UUID) -> None:
+    """
+    Check the saved (read-later) article cap before a NEW save.
+
+    Only call this when an article is transitioning from unsaved to saved - re-saving an
+    already-saved article (e.g. updating its note) must not be blocked at the cap.
+
+    Raises:
+        ResourceLimitError: When the user already holds the maximum number of saved articles.
+    """
+    profile = await get_profile_by_id(db, user_id=user_id)
+    if not profile:
+        raise NotFoundError(message="User profile not found", error_code="USER_PROFILE_NOT_FOUND")
+
+    resource = "max_saved_articles"
+    limit = _get_limit_for_role(str(profile.role), resource)
+    if limit == -1:
+        return
+
+    current = await get_current_usage(db, user_id, resource)
+    if current >= limit:
+        raise ResourceLimitError(
+            message=(
+                f"You've saved {limit} articles, the most the free plan allows. "
+                "Remove a saved article or upgrade to Pro for unlimited saves."
+            ),
+            error_code="SAVED_ARTICLES_LIMIT_EXCEEDED",
+            details={"current_usage": current, "limit": limit},
+        )
+
+
 async def enforce_daily_ai_limit(db: AsyncSession, user_id: UUID) -> None:
     """
     Checks and speculatively increments daily AI invocation limit.
@@ -246,6 +277,7 @@ async def get_user_limits_and_usage(db: AsyncSession, user_id: UUID, local_date:
 
     # Get current usages
     sub_usage = await get_current_usage(db, user_id, "max_subscriptions")
+    saved_usage = await get_current_usage(db, user_id, "max_saved_articles")
 
     today_str = date.today().isoformat()
     ai_usage_str = await redis_cache.get(f"ai_usage:{user_id}:{today_str}")
@@ -261,6 +293,7 @@ async def get_user_limits_and_usage(db: AsyncSession, user_id: UUID, local_date:
         "limits": {**limits, "codex": CODEX_LIMITS.get(role_lower, {})},
         "usage": {
             "subscriptions": sub_usage,
+            "saved_articles": saved_usage,
             "daily_ai_calls": ai_usage,
             "daily_scrapes": scrape_usage,
             "codex": codex_usage,

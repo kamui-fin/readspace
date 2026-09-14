@@ -115,6 +115,35 @@ async def test_auto_extract_counts_toward_quota_and_degrades_gracefully(
 
 
 @pytest.mark.asyncio
+async def test_background_extraction_falls_back_silently_when_quota_exhausted(
+    async_client: AsyncClient, short_article: FeedArticle
+):
+    """
+    Reader-initiated background extraction (auto=true) extracts while quota remains, then returns
+    content=None with a 200 -- never a 429, so no paywall pops up just from opening an article.
+    A user-initiated extraction after that still gets the 429 that opens the paywall.
+    """
+    url = f"/api/articles/{short_article.id}/extract-full-text"
+    with patch(
+        "app.routers.articles.articles_enhancements.extract_full_content",
+        return_value=SCRAPE_RESULT,
+    ) as mock_extract:
+        for _ in range(5):
+            resp = await async_client.post(url, params={"auto": "true"})
+            assert resp.status_code == 200
+            assert resp.json()["content"] == SCRAPE_RESULT[0]
+
+        exhausted = await async_client.post(url, params={"auto": "true"})
+        explicit = await async_client.post(url)
+
+    assert exhausted.status_code == 200
+    assert exhausted.json()["content"] is None
+    assert mock_extract.call_count == 5  # quota-skipped requests never scrape
+    assert explicit.status_code == 429
+    assert explicit.json()["error_code"] == "SCRAPE_LIMIT_EXCEEDED"
+
+
+@pytest.mark.asyncio
 async def test_limits_endpoint_reports_scrape_usage(async_client: AsyncClient, short_article: FeedArticle):
     """GET /api/users/limits exposes max_daily_scrapes and daily_scrapes usage."""
     with patch(

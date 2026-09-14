@@ -52,7 +52,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import '@lib/api-client';
 import { UpgradePaywallModal } from '@components/bottom-sheets/upgrade';
-import { OfflineBanner } from '@components/ui/offline-banner';
 import { configureApiClient } from '@lib/api-client';
 import { useUpgradeDialog } from '@stores/upgrade-dialog';
 import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
@@ -275,7 +274,7 @@ function RootNavigator() {
         <BottomSheetModalProvider>
           <ToastProvider>
             <StatusBar style={isDark ? 'light' : 'dark'} />
-            <OfflineBanner />
+            {/* <OfflineBanner /> (@components/ui/offline-banner) is hidden for now */}
             <Stack
               key={isDark ? 'dark' : 'light'}
               screenOptions={{ headerShown: false, contentStyle: { backgroundColor } }}>

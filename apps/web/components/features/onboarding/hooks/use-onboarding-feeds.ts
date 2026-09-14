@@ -17,24 +17,28 @@ type SimilarInsertion = {
 
 /**
  * Merge the query's base feed list with any "similar feed" groups the user has
- * pulled in by subscribing. Each group is spliced in right after its anchor,
- * skipping feeds already present. Derived synchronously so there is never a
- * render where the query has resolved but the list is still empty (which is
- * what briefly flashed the error state).
+ * pulled in by subscribing. Groups are appended to the END of the list in the
+ * order they were requested, skipping feeds already present — splicing them in
+ * under the anchor shoved down feeds the user may have already been eyeing.
+ * Derived synchronously so there is never a render where the query has resolved
+ * but the list is still empty (which is what briefly flashed the error state).
  */
 function mergeSimilarFeeds(
     base: OnboardingFeed[],
     insertions: SimilarInsertion[]
 ): OnboardingFeed[] {
     const merged = [...base]
+    const seen = new Set(merged.map((f) => f.id))
 
     for (const { anchorId, feeds } of insertions) {
-        const anchorIndex = merged.findIndex((f) => f.id === anchorId)
-        if (anchorIndex === -1) continue
+        // Drop groups whose anchor is no longer listed (e.g. categories changed)
+        if (!seen.has(anchorId)) continue
 
-        const seen = new Set(merged.map((f) => f.id))
-        const unique = feeds.filter((f) => !seen.has(f.id))
-        merged.splice(anchorIndex + 1, 0, ...unique)
+        for (const feed of feeds) {
+            if (seen.has(feed.id)) continue
+            seen.add(feed.id)
+            merged.push(feed)
+        }
     }
 
     return merged

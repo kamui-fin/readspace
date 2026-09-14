@@ -108,18 +108,18 @@ export default function UpgradeDialog() {
                                 </div>
                             </div>
 
-                            {/* Benefit 4: Full articles, saved forever */}
+                            {/* Benefit 4: Full articles, unlimited saves */}
                             <div className="flex items-start">
                                 <div className="mr-3 h-5 w-5 flex-shrink-0 text-secondary mt-0.5">
                                     <Book2Icon className="h-5 w-5" />
                                 </div>
                                 <div>
                                     <span className="font-semibold text-sm sm:text-base text-foreground">
-                                        Full articles, saved forever
+                                        Full articles, unlimited saves
                                     </span>
                                     <p className="text-sm text-muted-foreground mt-0.5">
                                         Full text from the original website.
-                                        Saved articles never expire.
+                                        Save as many articles as you like.
                                     </p>
                                 </div>
                             </div>

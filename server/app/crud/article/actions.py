@@ -265,31 +265,18 @@ async def delete_old_article_contents(db: AsyncSession, *, retention_days: int, 
     return result.rowcount or 0
 
 
-async def expire_basic_read_later_entries(db: AsyncSession, *, retention_days: int = 30) -> int:
+async def purge_stale_user_entries(db: AsyncSession) -> int:
     """
-    Expires old saved read-later entries for BASIC users by setting is_saved = False.
-    Also deletes entries that have no other active user interactions.
+    Delete user entries with no remaining user interaction (not saved, not read, no note).
+
+    Saved entries are never touched - saved articles do not expire for any tier; the Basic
+    tier is capped on count at save time instead (see enforce_saved_articles_limit).
     """
     from sqlalchemy import text
 
     # Set statement timeout for safety
     await db.execute(text("SET LOCAL statement_timeout = '60s'"))
 
-    # Update is_saved flag for basic users' entries older than 30 days
-    update_query = text(
-        """
-        UPDATE user_entries
-        SET is_saved = FALSE, updated_at = NOW()
-        FROM profiles
-        WHERE user_entries.user_id = profiles.id
-          AND profiles.role = 'BASIC'
-          AND user_entries.is_saved = TRUE
-          AND user_entries.created_at < NOW() - MAKE_INTERVAL(days => :retention_days)
-        """
-    )
-    result = await db.execute(update_query, {"retention_days": retention_days})
-
-    # Purge user entries that are fully stale (not saved, not read, no notes)
     delete_query = text(
         """
         DELETE FROM user_entries
@@ -298,7 +285,7 @@ async def expire_basic_read_later_entries(db: AsyncSession, *, retention_days: i
           AND user_note IS NULL
         """
     )
-    await db.execute(delete_query)
+    result = await db.execute(delete_query)
     await db.flush()
 
     return result.rowcount or 0

@@ -22,6 +22,14 @@ export class ApiError extends Error {
 }
 
 /**
+ * True when the API refused a request because of a plan limit (HTTP 429).
+ * Clients open the upgrade dialog for these globally, so callers should skip their own error toast.
+ */
+export function isPaywallError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 429;
+}
+
+/**
  * Normalize URL by removing trailing slash from base and ensuring endpoint starts with /
  */
 function normalizeUrl(baseUrl: string, endpoint: string): string {

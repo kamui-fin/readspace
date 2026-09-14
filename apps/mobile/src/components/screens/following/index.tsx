@@ -16,6 +16,7 @@ import { BOTTOM_TABBAR_BASE_HEIGHT, REFRESH_SPINNER_HEADER_OVERLAP } from '@lib/
 import { COLORS } from '@lib/constants/colors';
 import { createListItems, type ListItem, processArticles } from '@lib/utils/article';
 import {
+  isPaywallError,
   useCreateFeed,
   useFeed,
   useFeeds,
@@ -202,7 +203,9 @@ export function FollowingScreen({
           articleType,
         },
         {
-          onError: () => {
+          onError: (error) => {
+            // Plan limits (e.g. the free saved-articles cap) open the upgrade dialog globally
+            if (isPaywallError(error)) return;
             toast.error('Failed to update bookmark');
           },
         }

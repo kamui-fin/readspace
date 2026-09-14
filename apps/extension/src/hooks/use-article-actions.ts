@@ -2,6 +2,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { sendMessage } from '../shared/messaging'
 import {
+  isPaywallError,
   PageMetadata,
   Priority,
   CheckArticleSavedResponse,
@@ -163,7 +164,12 @@ export function useArticleActions({
       setSavedArticle(updated)
     } catch (error) {
       console.error('Failed to save article:', error)
-      toast.error('Failed to save article')
+      // Plan limits (e.g. the free saved-articles cap) carry a user-facing message from the server
+      toast.error(
+        error instanceof Error && isPaywallError(error)
+          ? error.message
+          : 'Failed to save article'
+      )
     } finally {
       setStatus((prev) => ({ ...prev, isPreparing: false, isSaving: false }))
     }

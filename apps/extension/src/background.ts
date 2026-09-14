@@ -20,13 +20,18 @@ browser.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
       return { data: response, error: null }
     } catch (e: unknown) {
       console.error('Message handler error:', e)
-      const errorMessage = e instanceof Error ? e.message : String(e)
-      throw new Error(errorMessage)
+      throw e
     }
   })()
     .then(sendResponse)
-    .catch((error) => {
-      sendResponse({ data: null, error: error.message })
+    .catch((error: unknown) => {
+      // Forward the HTTP status of API failures so the UI can tell plan limits (429) apart
+      const status = (error as { status?: unknown } | null)?.status
+      sendResponse({
+        data: null,
+        error: error instanceof Error ? error.message : String(error),
+        status: typeof status === 'number' ? status : undefined,
+      })
     })
 
   return true

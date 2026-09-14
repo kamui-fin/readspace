@@ -2,7 +2,6 @@ import { CLOUD_CONFIG } from '@lib/constants/config';
 import { resolveHostname } from '@lib/utils/network';
 import { instantMeiliSearch } from '@meilisearch/instant-meilisearch';
 import type { HybridSearchConfig } from '@readspace/shared';
-import { POPULAR_CATEGORIES } from '@readspace/shared';
 import { getSettings } from '@stores/settings';
 import { MeiliSearch } from 'meilisearch';
 import { Platform } from 'react-native';
@@ -65,56 +64,6 @@ function hasCategoryFilter(filters: Array<string | string[]>): boolean {
     }
     return false;
   });
-}
-
-/**
- * Transform 'popular' category filter to only include News, Tech, and Business categories.
- */
-function transformPopularCategoryFilter(request: SearchRequest): SearchRequest {
-  if (!request.params) return request;
-
-  const transformFilter = (filters: any) => {
-    if (!filters) return filters;
-    if (Array.isArray(filters)) {
-      return filters.map((f) => {
-        if (typeof f === 'string') {
-          if (f.includes('popular')) {
-            // Replace "popular" with OR filter for News, Tech, Business
-            const popularCategoryFilters = POPULAR_CATEGORIES.map(
-              (cat) => `top_level_category = "${cat}"`
-            );
-            return popularCategoryFilters.join(' OR ');
-          }
-          return f;
-        }
-        if (Array.isArray(f)) {
-          return f.map((item: string) => {
-            if (typeof item === 'string' && item.includes('popular')) {
-              const popularCategoryFilters = POPULAR_CATEGORIES.map(
-                (cat) => `top_level_category = "${cat}"`
-              );
-              return `(${popularCategoryFilters.join(' OR ')})`;
-            }
-            return item;
-          });
-        }
-        return f;
-      });
-    }
-    return filters;
-  };
-
-  const afterFacetFilters = transformFilter(request.params.facetFilters);
-  const afterFilter = transformFilter(request.params.filter);
-
-  return {
-    ...request,
-    params: {
-      ...request.params,
-      facetFilters: afterFacetFilters,
-      filter: afterFilter,
-    },
-  };
 }
 
 function hasMeaningfulCriteria(params?: SearchParams): boolean {
@@ -195,13 +144,10 @@ export function createSearchClient(getHybridConfig?: () => HybridSearchConfig | 
         });
       }
 
-      // Transform popular category filter to only include News, Tech, Business
-      const meiliRequests = processedRequests.map((r) => transformPopularCategoryFilter(r));
-
       // ⚠️ CRITICAL: instant-meilisearch doesn't pass sort parameters through!
       // Must add stable sort AFTER instant-meilisearch creates the query, not before
       // Inject sort with stable tiebreaker (id) so results are consistent
-      const sortedRequests = meiliRequests.map((r) => ({
+      const sortedRequests = processedRequests.map((r) => ({
         ...r,
         sort: ['frontend_rank_override:asc', 'popularity_score:desc', 'id:asc'],
       }));

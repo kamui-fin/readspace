@@ -60,11 +60,10 @@ export function ArticlesHeader({
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button
-                                        variant={
-                                            showUnreadOnly ? "default" : "ghost"
-                                        }
+                                        variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8"
+                                        aria-pressed={showUnreadOnly}
+                                        className={`h-8 w-8 ${showUnreadOnly ? "bg-secondary/15 text-secondary hover:bg-secondary/25 hover:text-secondary" : ""}`}
                                         onClick={toggleShowUnreadOnly}
                                     >
                                         {showUnreadOnly ? (

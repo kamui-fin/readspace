@@ -1,4 +1,5 @@
 import browser from 'webextension-polyfill'
+import { ApiError } from '@readspace/shared'
 import { ExtensionMessage } from './types'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -6,12 +7,16 @@ export async function sendMessage<T = any>(msg: ExtensionMessage): Promise<T> {
   const response = (await browser.runtime.sendMessage(msg)) as {
     data: T
     error?: string
+    status?: number
   }
   if (!response) {
     throw new Error('No response')
   }
   if (response.error) {
-    throw new Error(response.error)
+    // Rehydrate API failures so callers can branch on the HTTP status
+    throw typeof response.status === 'number'
+      ? new ApiError(response.status, response.error)
+      : new Error(response.error)
   }
   return response.data
 }

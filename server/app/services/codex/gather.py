@@ -22,10 +22,12 @@ from app.core.constants import (
     CODEX_MAX_ARTICLES,
     CODEX_MAX_PER_FEED,
     CODEX_SNIPPET_CHAR_CAP,
+    NEWSLETTER_URL_SCHEME,
 )
 from app.crud.article.reader import CursorPaginationParams, get_articles
 from app.services.articles.scrape import extract_full_content
 from app.typing.entries import EntryListItem
+from app.utils.text import clean_html_text
 
 logger = structlog.get_logger(__name__)
 
@@ -170,16 +172,28 @@ def _cap_and_dedupe(items: list[EntryListItem]) -> list[EntryListItem]:
 
 async def fetch_full_texts(
     items: list[EntryListItem],
+    stored_bodies: dict[UUID, str] | None = None,
 ) -> dict[UUID, str]:
     """Phase 1.5: fetch full body text for the given items, bounded by a semaphore.
 
     On extraction failure/timeout, falls back to the feed's own content, then description.
     Truncates each body to CODEX_FULLTEXT_CHAR_CAP.
+
+    Newsletter items (``newsletter://`` links) are never scraped - no web page exists behind
+    them. Their body is the ingested email from ``stored_bodies`` (keyed by item id), reduced
+    to plain text so layout markup doesn't eat the character cap.
     """
     semaphore = asyncio.Semaphore(CODEX_FULLTEXT_FETCH_CONCURRENCY)
     results: dict[UUID, str] = {}
+    stored_bodies = stored_bodies or {}
 
     async def _fetch_one(item: EntryListItem) -> None:
+        if item.link and item.link.startswith(NEWSLETTER_URL_SCHEME):
+            stored = stored_bodies.get(item.id)
+            body = clean_html_text(stored) if stored else ""
+            results[item.id] = (body or item.description or "")[:CODEX_FULLTEXT_CHAR_CAP]
+            return
+
         async with semaphore:
             content, error = await extract_full_content(item.link, item.title, item.image_url)
             if error or not content:

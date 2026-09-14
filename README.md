@@ -1,171 +1,148 @@
 <div align="center">
-  <img src="./apps/web/public/wordmark.png" alt="Readspace Logo" width="300" />
+  <a href="https://readspace.ai">
+    <img src="./apps/web/public/wordmark.png" alt="Readspace" width="300" />
+  </a>
 </div>
 
-# Readspace
+<h1 align="center">An open-source reader for the web.</h1>
 
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/kamui-fin/readspace/ci.yml)
-![Discord](https://img.shields.io/discord/1349476822290530357?style=flat&logo=discord&label=discord&link=https%3A%2F%2Fdiscord.com%2Finvite%2F2Q5PtYwUQZ)
-![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/readspace_ai)
-![GitHub License](https://img.shields.io/github/license/kamui-fin/readspace)
-![GitHub commit activity](https://img.shields.io/github/commit-activity/m/kamui-fin/readspace)
-![GitHub Repo stars](https://img.shields.io/github/stars/kamui-fin/readspace)
+<p align="center">
+  <strong>Bring the publications, newsletters, and independent voices you follow into one calm feed, with a five-minute digest for catching up.</strong>
+</p>
 
-A privacy-focused open-source RSS reader to follow all the blogs, publications, newsletters, and writers you care about.
+<p align="center">
+  <a href="https://app.readspace.ai">Hosted app</a>
+  ·
+  <a href="https://readspace.ai">Landing page</a>
+  ·
+  <a href="https://chromewebstore.google.com/detail/readspace/ppadpdoicnolpjnflfladjllhmkonedi">Chrome</a>
+  ·
+  <a href="https://addons.mozilla.org/en-us/firefox/addon/readspace/">Firefox</a>
+</p>
 
-All in one distraction-free inbox. No algorithms, no ads, no tracking.
+<p align="center">
+  <a href="https://github.com/kamui-fin/readspace/actions/workflows/ci.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/kamui-fin/readspace/ci.yml?branch=main"></a>
+  <a href="./LICENSE"><img alt="AGPL-3.0 license" src="https://img.shields.io/github/license/kamui-fin/readspace"></a>
+  <a href="https://github.com/kamui-fin/readspace/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/kamui-fin/readspace"></a>
+  <a href="https://discord.gg/2q5ptywuqz"><img alt="Discord community" src="https://img.shields.io/discord/1349476822290530357?logo=discord&label=discord"></a>
+</p>
 
-![Readspace Web Demo](./docs/screenshots/readspace-desktop.png)
+![Readspace feed and article reader](./landing/assets/img/main_feed_web-1200.webp)
 
-<div>
-  <img src="./docs/screenshots/readspace-mobile.png" alt="Readspace Mobile Feeds Demo" width="250" />
-  <img src="./docs/screenshots/readspace-discover.png" alt="Readspace Discover Demo" width="250" />
-  <img src="./docs/screenshots/readspace-mobile-article.png" alt="Readspace Mobile Article Demo" width="250" />
-</div>
+<p align="center">
+  <img src="./landing/assets/img/main_feed_mobile.webp" alt="Readspace mobile feed" width="280" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="./landing/assets/img/daily_digest_mobile.webp" alt="Readspace mobile daily digest" width="280" />
+</p>
 
-## Features
-
-- Open source, Easy self-hosting, Privacy-friendly
-- Hosted version at app.readspace.ai
-- Firefox / Chrome extensions
-  - Save article to Readspace to read later
-  - Detect and follow feeds directly on any site
-- Web, iOS, Android
-  - Smart search engine with over 10,000 feeds
-  - View similar feeds
-  - Read the original articles
-  - Summaries, translations
-  - Folder-based organization
-  - RSSHub support
-  - OPML import / export
-  - Dark mode
-  - Beautiful UI/UX & minimalist reader
-- ... and much more coming!
-
-## Motivation
+## About
 
 Information consumption is broken. Algorithms dictate what you see, newsletters pile up unread, and the need to constantly check multiple sites leads to information overload and fatigue. You are missing what actually matters because platforms are designed to maximize engagement, not respect your attention.
 
-The abrupt shutdown of Google Reader fractured the original user-controlled web reading experience. Its commercial successors, like Feedly, have since prioritized high-value enterprise AI solutions (threat intelligence, market research), effectively abandoning the core consumer mission of a simple, focused reader.
+Readspace is RSS-first. You choose the publications, blogs, writers, and communities you want to follow; Readspace fetches their RSS or Atom feeds and puts every new article into one chronological timeline. It does not reorder the feed for engagement or insert stories from sources you never followed.
 
-**Readspace reclaims this legacy.**
+But a complete feed is not always a manageable feed. The **daily digest** condenses recent articles from your subscriptions into a five-minute overview of the major developments and articles worth reading. It only uses sources you follow, and every item links back to the underlying material.
 
-We are building the best way to stay informed by leveraging the power of RSS, giving you a focused, ad-free, chronological stream from your chosen sources.
+Readspace also brings saved webpages and extracted article content into the same library. The hosted service can receive email newsletters at a private `@readspace.ai` address. Your feeds and reading state sync across the web app, mobile clients, and browser extensions. The RSS reader is fully self-hostable, and its AI-backed features can be disabled.
 
-## Getting Started
+**New to RSS?** RSS is an open format websites use to publish their latest posts. An RSS reader checks the feeds you subscribe to and collects new entries in one place without relying on a platform to decide what appears.
 
-The hosted version is available at [app.readspace.ai](https://app.readspace.ai).
+## Features
 
-### Browser Extension
+### Reading and organization
 
-Save what you find, follow what you love.
+- Chronological RSS and Atom timeline with all, today, and unread views
+- Folders, unread counts, and read/unread controls for articles, feeds, and folders
+- Save feed articles to read later or archive any webpage from the browser extension
+- Recently read history for finding articles you previously opened
+- Full-article extraction when a feed provides only an excerpt
+- Clean article reader with summaries, skim-mode highlights, and translations
+- Light and dark themes across the web, mobile, and extension interfaces
 
-The Readspace browser extension makes it effortless to capture articles as you browse. With one click, you can save any page to your Readspace “Read Later” list, just like Pocket—perfect for all those tabs you promise to get back to.
+### Sources and discovery
 
-It also includes a built-in RSS radar that automatically detects feeds on any website (even the ones that try to hide them). When you find a site worth following, just click once to subscribe directly from the browser.
+- Add a feed URL directly, paste a website, or detect its feed with the browser extension
+- Search more than 120,000 feeds by topic on the hosted service
+- View similar feeds to discover related sources
+- Import and export subscriptions with OPML
+- Follow sites without native feeds through RSSHub using `rsshub://` routes
+- Receive newsletters at a private `@readspace.ai` address on the hosted service
 
-- Firefox: [Get it on Add-ons →](https://addons.mozilla.org/en-US/firefox/addon/readspace/)
-- Chrome: Coming soon
+### Catch up faster
 
-<img src="./docs/screenshots/readspace-ext.png" alt="Readspace Browser Extension Demo" width="500" />
+- Turn the day's articles into a five-minute daily digest of what matters and what is worth reading
+- Use summaries, skim mode, and translations when you want a faster way through an article
+- Disable AI features entirely on a self-hosted instance
 
-### Self-Hosting
+## Clients
 
-Readspace is designed for easy self-hosting, giving you complete control over your data and experience.
+- **Web:** Available at [app.readspace.ai](https://app.readspace.ai) or as part of a self-hosted deployment
+- **Chrome:** [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/readspace/ppadpdoicnolpjnflfladjllhmkonedi)
+- **Firefox:** [Install from Firefox Add-ons](https://addons.mozilla.org/en-us/firefox/addon/readspace/)
+- **iOS and Android:** Currently in closed beta testing and store review, with public releases expected within two weeks
 
-#### Prerequisites
+The browser extensions and mobile clients can connect to a self-hosted Readspace instance using only its instance URL.
 
-- **Git**: For cloning the repository.
-- **Docker**: Ensure Docker Desktop or Docker Engine is installed and running (v20 or higher recommended).
-- **jq**: Command-line JSON processor used by setup scripts.
+## Browser extensions
 
-#### Steps
+The extension supports two main workflows:
 
-1.  **Clone the Repository**
+- Detect RSS or Atom feeds on the site you are visiting and follow them in one click.
+- Save any page to read later, with an optional priority and note.
 
-    ```bash
-    git clone https://github.com/kamui-fin/readspace.git
-    cd readspace/docker
-    ```
 
-2.  **Configure `.env` files**
+## Self-hosting
 
-    ```bash
-    ./setup.sh
-    ```
+The Docker setup runs the web app, API, workers, Supabase, Redis, Meilisearch, and an optional RSSHub instance. Email newsletter ingestion is not currently available when self-hosting.
 
-    > Safe to re-run any time you want to change your access URL, RSSHub mode, or AI settings — existing secrets (database password, JWT signing key, Meilisearch key) are detected and reused automatically, so a running instance won't break. See [Resetting & Rotating Secrets](#resetting--rotating-secrets) below for a completely fresh start.
+### Requirements
 
-3.  **Launch services**
+- Git
+- Docker Engine or Docker Desktop with Docker Compose
+- Bash, `curl`, `jq`, and OpenSSL
 
-    ```bash
-    ./launch.sh
-    ```
-
-4.  **Create your account**
-
-    Visit `localhost:18042` and sign up for a new account.
-
-5.  **Promote to admin** (Optional)
-
-    Grant admin privileges to your account:
-
-    ```bash
-    ./promote-admin.sh your-email@example.com
-    ```
-
-#### Prefer raw Docker Compose?
-
-If you prefer to run Docker directly instead of using the wrapper scripts, you can use:
+### Install
 
 ```bash
-# --project-directory/--project-name are required: without them Compose resolves the
-# app/web images' relative build contexts (../server, ..) against the wrong directory
-# and fails with "unable to prepare context: path ... not found".
+git clone https://github.com/kamui-fin/readspace.git
+cd readspace
 
-# After running ./setup.sh to generate .env files, start the full stack with:
-docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml \
-  --env-file docker/supabase/.env --env-file docker/.env \
-  --project-directory docker --project-name readspace \
-  --profile app --profile rsshub up -d
-
-# If you configured RSSHub as external, omit the --profile rsshub flag:
-docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml \
-  --env-file docker/supabase/.env --env-file docker/.env \
-  --project-directory docker --project-name readspace \
-  --profile app up -d
-
-# To stop:
-docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml \
-  --env-file docker/supabase/.env --env-file docker/.env \
-  --project-directory docker --project-name readspace down
-```
-
-6.  **Configure Browser Extension** (Optional)
-
-    To connect the browser extension to your self-hosted instance, configure:
-    - **Server URL**: `http://your-ip-or-domain:18008`
-    - **Supabase URL**: `http://your-ip-or-domain:18000`
-    - **Supabase Anon Key**: `grep NEXT_PUBLIC_SUPABASE_ANON_KEY apps/web/.env`
-
-#### Using a Custom Domain
-
-If you want to access Readspace via your own domain (e.g., `https://app.example.com`):
-
-1. Run `./setup.sh` and select option 2 (Custom domain)
-2. Configure your reverse proxy (Traefik, nginx, Caddy, etc.)
-3. See [docs/reverse-proxy-examples.md](docs/reverse-proxy-examples.md) for detailed configuration examples
-
-#### Resetting & Rotating Secrets
-
-**To wipe your instance and start over** — this permanently deletes every article, feed, and user, along with the search index and cache, but keeps your existing secrets so nothing needs reconfiguring:
-
-```bash
-./docker/reset.sh       # add --dev if you launched with --dev
+./docker/setup.sh
 ./docker/launch.sh
 ```
 
-**To rotate secrets** (e.g. you suspect the database password or JWT signing key leaked), reset first, then regenerate:
+`setup.sh` configures the public URL, RSSHub, and optional AI support. `launch.sh` builds and starts the stack. Running setup again preserves existing secrets unless you explicitly rotate them.
+
+Open [http://localhost:18042](http://localhost:18042) and create an account. To make it an administrator:
+
+```bash
+./docker/promote-admin.sh you@example.com
+```
+
+For a public deployment, follow the [reverse proxy examples](./docs/reverse-proxy-examples.md) for Caddy, Nginx, or Traefik.
+
+### Connect an extension or mobile app to your instance
+
+Open the extension or mobile app settings and enter your **instance URL**. This is the URL of the Readspace API, which usually ends in port `18008`:
+
+```text
+http://192.168.1.42:18008
+```
+
+That is the only value the client needs; Supabase configuration is discovered automatically. Use your public HTTPS API URL instead when running behind a reverse proxy.
+
+<details>
+<summary><strong>Reset or rotate secrets</strong></summary>
+
+> [!CAUTION]
+> Resetting permanently deletes all instance data.
+
+```bash
+./docker/reset.sh
+./docker/launch.sh
+```
+
+To also regenerate secrets:
 
 ```bash
 ./docker/reset.sh
@@ -173,17 +150,37 @@ If you want to access Readspace via your own domain (e.g., `https://app.example.
 ./docker/launch.sh
 ```
 
-`setup.sh --regenerate-secrets` refuses to run while a database container still exists — rotating secrets against a live database corrupts Postgres authentication for every service, so a reset is required first.
+</details>
+
+## Development
+
+Readspace is a monorepo containing several product surfaces and services:
+
+| Path | What it contains |
+| --- | --- |
+| `apps/web` | Next.js web application |
+| `apps/mobile` | Expo / React Native mobile application |
+| `apps/extension` | Chrome and Firefox browser extension |
+| `apps/inbound` | Hosted newsletter ingestion worker |
+| `server` | FastAPI API, feed processing, and background jobs |
+| `packages` | Shared code, configuration, and design tokens |
+| `docker` | Self-hosted infrastructure and setup scripts |
+
+For prerequisites, local infrastructure, app-specific commands, database migrations, tests, and pull-request guidance, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Contributing
 
-Readspace is built by the community and we welcome contributions of all kinds, from bug fixes to new features.
+Bug fixes, documentation improvements, feature work, and thoughtful product feedback are all welcome.
 
-To get started, please check out our **[Contributing Guide](CONTRIBUTING.md)**.
+1. Read the [contributing guide](./CONTRIBUTING.md).
+2. Check [existing issues](https://github.com/kamui-fin/readspace/issues) before opening a new one.
+3. For ideas or questions that are not yet actionable bugs, start a [GitHub discussion](https://github.com/kamui-fin/readspace/discussions).
 
-## Community & Roadmap
+## Community
 
-We're building Readspace transparently and collaboratively. Join our growing community and help shape the future of focused reading:
+- [Join the Discord](https://discord.gg/2q5ptywuqz)
+- [Start a discussion](https://github.com/kamui-fin/readspace/discussions)
 
-- **Discord:** [Join our community here](https://discord.gg/2Q5PtYwUQZ)
-- **GitHub:** Star us and help shape the product.
+## License
+
+Readspace is licensed under the [GNU Affero General Public License v3.0](./LICENSE).

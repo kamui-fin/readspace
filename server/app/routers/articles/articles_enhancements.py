@@ -97,15 +97,31 @@ async def extract_full_text(
     user: Annotated[TokenData, Depends(get_current_user)],
     db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
     clipped: bool = Query(False, description="Whether the article is a clipped article"),
+    auto: bool = Query(
+        False,
+        description=(
+            "Background extraction started by the reader (not the user). Once the daily scrape quota "
+            "is used up it returns no content instead of a 429, so the reader stays on the RSS content."
+        ),
+    ),
 ) -> ExtractionResponse:
     """
-    Manually trigger full-text extraction for an article.
+    Trigger full-text extraction for an article.
     """
     logger.bind(article_id=str(article_id), user_id=user.sub)
 
-    # 1. Enforce daily scrape quota (free tier: 5/day, pro/admin: unlimited)
+    # 1. Daily scrape quota (free tier: 5/day, pro/admin: unlimited). A user-initiated extraction
+    #    gets the 429 that opens the paywall; background extraction falls back silently.
     async with db_factory() as db:
-        await enforce_daily_scrape_limit(db, UUID(user.sub))
+        if auto:
+            allowed = await check_daily_scrape_limit(db, UUID(user.sub))
+        else:
+            await enforce_daily_scrape_limit(db, UUID(user.sub))
+            allowed = True
+
+    if not allowed:
+        logger.info("Skipping background extraction: daily scrape quota reached", article_id=str(article_id))
+        return ExtractionResponse(content=None)
 
     # 2. Verify Article
     article = await get_article_or_404(db_factory, article_id, UUID(user.sub), is_clipped=clipped)

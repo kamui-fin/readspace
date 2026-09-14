@@ -24,3 +24,4 @@ export {
   type AuthTokenProvider,
   type TokenRefreshProvider,
 } from './client';
+export { isPaywallError } from './core';

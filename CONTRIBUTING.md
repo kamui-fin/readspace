@@ -1,113 +1,295 @@
 # Contributing to Readspace
 
-First off, thank you for considering contributing to Readspace! It's people like you that make open source great. We welcome any and all contributions.
+Thanks for contributing to Readspace. Bug fixes, documentation improvements, feature work, and thoughtful product feedback are all welcome.
 
-## Table of Contents
+Before starting a large change, check the [existing issues](https://github.com/kamui-fin/readspace/issues) and [discussions](https://github.com/kamui-fin/readspace/discussions). Opening an issue first helps confirm the scope and avoids duplicated work.
 
-- [Contributing to Readspace](#contributing-to-readspace)
-  - [Table of Contents](#table-of-contents)
-  - [Getting Started](#getting-started)
-    - [Prerequisites](#prerequisites)
-    - [Initial Setup](#initial-setup)
-  - [Development Environment Setup](#development-environment-setup)
-    - [Resetting Your Environment](#resetting-your-environment)
-    - [2. Run Application Services](#2-run-application-services)
-      - [Web Client (Next.js)](#web-client-nextjs)
-      - [Backend Server (FastAPI)](#backend-server-fastapi)
-      - [Chrome Extension](#chrome-extension)
-    - [Working on Background Tasks (Celery)](#working-on-background-tasks-celery)
-    - [Database Migrations (Alembic)](#database-migrations-alembic)
-    - [Linting and Formatting](#linting-and-formatting)
-      - [Backend (Server)](#backend-server)
-      - [Frontend (Web) and Browser Extension](#frontend-web-and-browser-extension)
-  - [Submitting a Pull Request](#submitting-a-pull-request)
-
-## Getting Started
-
-### Prerequisites
+## Prerequisites
 
 - [Git](https://git-scm.com/)
-- [Docker](https://www.docker.com/products/docker-desktop/) and Docker Compose
-- [Node.js v20+](https://nodejs.org/en/) (we recommend using a version manager like `nvm`)
-- [Bun](https://bun.sh/) - Fast all-in-one JavaScript runtime and package manager
-- [Python 3.13+](https://www.python.org/)
-- [Poetry](https://python-poetry.org/)
+- [Docker Engine](https://docs.docker.com/engine/install/) or Docker Desktop with Docker Compose
+- [Node.js 18 or newer](https://nodejs.org/). CI currently uses Node.js 20.
+- [Bun 1.3.x](https://bun.sh/). The repository currently pins Bun 1.3.0.
+- [Python 3.10 or newer](https://www.python.org/). Python 3.13 is recommended because it matches CI.
+- [Poetry 2.x](https://python-poetry.org/)
+- Bash, `curl`, `jq`, and OpenSSL for the Docker setup scripts
 
-### Initial Setup
+Mobile development also requires the platform tools described in the [Expo local app development guide](https://docs.expo.dev/guides/local-app-development/).
 
-1.  **Fork and Clone the Repository**
+## Initial setup
 
-    ```bash
-    git clone https://github.com/kamui-fin/readspace.git
-    cd readspace
-    ```
+1. Fork the repository, then clone your fork:
 
-2.  **Configure Environment Variables**
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/readspace.git
+   cd readspace
+   git remote add upstream https://github.com/kamui-fin/readspace.git
+   ```
 
-    Run the setup script to generate the necessary `.env` files for all services.
+2. Install the JavaScript workspace dependencies:
 
-    ```bash
-    ./docker/setup.sh
-    ```
+   ```bash
+   bun install
+   ```
 
-    This will create `.env` files in `docker/supabase/`, `docker/.env` (Meilisearch keys), `apps/web/`, `apps/mobile/`, and `server/`.
+3. Install the backend dependencies:
 
-    This script is safe to re-run whenever you want to change deployment config (access URL, RSSHub mode, AI settings) — it detects existing secrets (Postgres password, JWT signing key, Meilisearch master key) in `docker/supabase/.env` / `docker/.env` and reuses them rather than regenerating, so it won't silently break a database you already initialized. See [Resetting Your Environment](#resetting-your-environment) if you actually want a clean slate or to rotate secrets.
+   ```bash
+   cd server
+   poetry install
+   cd ..
+   ```
 
-3.  **Install Dependencies**
+4. Generate local development configuration:
 
-    Install all workspace dependencies using Bun:
+   ```bash
+   ./docker/setup.sh --dev
+   ```
 
-    ```bash
-    bun i
-    ```
+   This generates the required environment files for Docker, the web app, the mobile app, and the server. Development mode uses local URLs and disables optional AI features by default.
 
-    This will install dependencies for all apps and packages in the monorepo.
+5. Start the local infrastructure:
 
-## Development Environment Setup
+   ```bash
+   ./docker/launch.sh --dev
+   ```
 
-Our recommended development setup uses Docker to run the core infrastructure (Supabase, Redis, RSSHub, Taskiq workers) while you run the application services (Web, API, Extension, Mobile) directly on your host machine. This gives you the best of both worlds: a stable backend foundation and a fast, hot-reloading development loop for the parts you're actively working on.
+   Development mode starts Supabase, Redis, Meilisearch, and the optional local RSSHub service. It does not start the web app, API, Taskiq worker, or Taskiq scheduler. Run the application services you need directly on your host for faster reloads.
 
-First, configure your environment for development mode by running the setup script with the `--dev` flag (this automatically configures localhost loopback URLs and disables AI for local work without interactive prompts):
+Useful local endpoints include:
+
+- Supabase Studio: [http://localhost:18000](http://localhost:18000)
+- Meilisearch: [http://localhost:7700](http://localhost:7700)
+- RSSHub, when enabled: [http://localhost:1200](http://localhost:1200)
+
+Startup can take a minute. Use `docker ps` to inspect service health and `docker logs CONTAINER_NAME` to investigate an individual service.
+
+## Run application services
+
+Only run the services relevant to the area you are changing.
+
+### Web app
 
 ```bash
-./docker/setup.sh --dev
+cd apps/web
+bun run dev
 ```
 
-Then start the infrastructure services in development mode:
+The Next.js app is available at [http://localhost:8042](http://localhost:8042).
+
+### Backend API
+
+Apply migrations before starting the API:
 
 ```bash
-./docker/launch.sh --dev
+cd server
+poetry run poe migrate
+poetry run poe start
 ```
 
-This starts the core database and caching infrastructure:
+The FastAPI server is available at [http://localhost:8008](http://localhost:8008).
 
-- Supabase (with Studio, Pooler, and database)
-- Redis
-- Meilisearch (search engine)
-- RSSHub (optional)
+### Taskiq worker and scheduler
 
-_Note: Application containers (Web, API, Taskiq worker, Taskiq scheduler) are assigned to the `app` profile and are skipped during `--dev` mode so you can run them locally on your host machine for hot-reloading._
+Development mode does not start the Taskiq containers. Features that fetch feeds, process articles, or schedule background work need these processes running locally.
 
-**Supabase Studio:** Access the local dashboard at [http://localhost:18000](http://localhost:18000).
+Run each command in a separate terminal:
 
-Wait a minute for the services to initialize. You can check their status with `docker ps`.
+```bash
+cd server
+poetry run poe worker
+```
 
-### Resetting Your Environment
+```bash
+cd server
+poetry run poe scheduler
+```
 
-There are two reset scripts, scoped differently:
+Both tasks load workers through `app.workers.registry`, matching the production configuration.
 
-- **`./docker/reset.sh`** — the counterpart to `launch.sh`. Wipes everything: Postgres, Meilisearch's search index, and Redis. Use this for "start over completely." Add `--dev` if your last `launch.sh` used it, so it tears down the matching compose profile.
-- **`./docker/supabase/reset.sh`** — wipes only the Supabase/Postgres database. Use this if you just want a clean database but don't need to touch Meilisearch or Redis.
+### Browser extension
 
-Both scripts prompt for confirmation and, importantly, **leave `docker/supabase/.env` and `docker/.env` untouched** — your secrets are preserved, so `./docker/launch.sh --dev` immediately reinitializes a clean instance without needing to re-run `setup.sh`.
+The extension supports Chrome and Firefox.
+
+For Chrome:
+
+```bash
+cd apps/extension
+bun run dev
+```
+
+Then open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select `apps/extension/dist`.
+
+For Firefox, run these commands in separate terminals:
+
+```bash
+cd apps/extension
+bun run dev:firefox:watch
+```
+
+```bash
+cd apps/extension
+bun run dev:firefox
+```
+
+The first command rebuilds on source changes. The second builds the initial Firefox version and launches it with `web-ext`.
+
+### Mobile app
+
+The mobile app uses Expo development builds rather than Expo Go.
+
+To build and launch a development client:
+
+```bash
+cd apps/mobile
+bun run ios:dev
+```
+
+Or for Android:
+
+```bash
+cd apps/mobile
+bun run android:dev
+```
+
+Once a development client is installed, start the Expo development server with:
+
+```bash
+cd apps/mobile
+bun run start:dev
+```
+
+`./docker/setup.sh --dev` generates `apps/mobile/.env` with localhost URLs. A physical device cannot use your computer's localhost. Replace the host in that file with your computer's LAN address, such as `192.168.1.50`, and ensure the device can reach your computer over the local network.
+
+### Newsletter ingestion worker
+
+The hosted newsletter ingestion service is a Cloudflare Worker:
+
+```bash
+cd apps/inbound
+bun run dev
+```
+
+Self-hosted newsletter ingestion is not currently supported.
+
+## Database migrations
+
+Database schema changes require an Alembic migration.
+
+1. Start the development infrastructure with `./docker/launch.sh --dev`.
+2. Modify the SQLAlchemy or SQLModel definitions in `server/app/models/`.
+3. Generate a migration from the `server` directory:
+
+   ```bash
+   cd server
+   poetry run alembic revision --autogenerate -m "Describe the schema change"
+   ```
+
+4. Review the generated file in `server/alembic/versions/`. Autogenerated migrations must be checked for unintended changes, unsafe operations, and correct downgrade behavior.
+5. Apply the migration:
+
+   ```bash
+   poetry run poe migrate
+   ```
+
+## Tests
+
+Run the tests relevant to your changes before opening a pull request.
+
+### Backend
+
+From `server/`:
+
+```bash
+poetry run poe test-unit
+poetry run poe test-integration
+```
+
+Integration tests require the local infrastructure. To run the full backend suite or generate coverage:
+
+```bash
+poetry run poe test
+poetry run poe test-coverage
+```
+
+### Web app
+
+From `apps/web/`:
+
+```bash
+bun test
+```
+
+### Newsletter ingestion worker
+
+From `apps/inbound/`:
+
+```bash
+bun test
+```
+
+The mobile app and browser extension currently rely on linting, type checking, build checks, and manual testing because they do not define automated test scripts.
+
+## Linting, formatting, and type checking
+
+### JavaScript and TypeScript workspaces
+
+From the repository root, lint and type check all workspaces that define those tasks:
+
+```bash
+bun run lint
+bun run check-types
+```
+
+The web app, browser extension, and shared packages use ESLint and Prettier. Run their formatter from the relevant workspace:
+
+```bash
+cd apps/web
+bun run format
+```
+
+```bash
+cd apps/extension
+bun run format
+```
+
+The mobile app uses Biome:
+
+```bash
+cd apps/mobile
+bun run check:ci
+```
+
+To apply Biome fixes and formatting, run `bun run check` from `apps/mobile`.
+
+### Backend
+
+From `server/`:
+
+```bash
+poetry run poe lint
+poetry run poe format
+poetry run poe type-check
+```
+
+The `lint` task runs Ruff with automatic fixes. The `type-check` task runs mypy separately.
+
+## Reset or stop the development environment
+
+Stop the infrastructure without deleting data:
+
+```bash
+./docker/down.sh --dev
+```
+
+Reset all local instance data, including Postgres, Redis, and the Meilisearch index:
 
 ```bash
 ./docker/reset.sh --dev
 ./docker/launch.sh --dev
 ```
 
-**Rotating secrets** (e.g. after a suspected leak) is a separate, deliberate step — reset first, then pass `--regenerate-secrets` to `setup.sh`:
+The reset script asks for confirmation and preserves existing secrets. To reset the data and rotate secrets:
 
 ```bash
 ./docker/reset.sh --dev
@@ -115,193 +297,21 @@ Both scripts prompt for confirmation and, importantly, **leave `docker/supabase/
 ./docker/launch.sh --dev
 ```
 
-`setup.sh --regenerate-secrets` will refuse to run while a `supabase-db` container still exists, since generating a new Postgres password against a database that already has the old one baked in breaks authentication for every Supabase service. Reset first, then rotate.
+> [!CAUTION]
+> Resetting permanently deletes all data in the local instance. Secret regeneration must only be run after the existing database containers have been removed.
 
-### 2. Run Application Services
+## Pull requests
 
-With the infrastructure running, you can now launch any of the application services on your host machine.
+1. Create a focused branch from the latest `main` branch.
+2. Keep unrelated changes out of the pull request.
+3. Add or update tests for behavior changes where automated coverage exists.
+4. Run the relevant tests, lint checks, formatting checks, and type checks.
+5. Update documentation when behavior, configuration, or developer workflows change.
+6. Open the pull request against `main` with a clear description of the problem and solution.
+7. Include screenshots or recordings for visible web, mobile, or extension changes.
 
-#### Web Client (Next.js)
+CI currently checks backend Ruff formatting and linting, backend mypy types, backend unit tests, and frontend linting and type checking. Passing local checks before pushing makes review faster.
 
-```bash
-cd apps/web
-bun dev
-```
+## Reporting security issues
 
-The web client will be available at `http://localhost:8042`.
-
-#### Backend Server (FastAPI)
-
-```bash
-cd server
-poetry install
-poetry run poe migrate
-poetry run poe start
-```
-
-The backend API will be available at `http://localhost:8008`.
-
-#### Browser Extension
-
-The extension is built with Vite and supports both Chrome and Firefox.
-
-**For Chrome:**
-
-1.  **Start the development server:**
-
-    ```bash
-    cd apps/extension
-    bun dev
-    ```
-
-2.  **Load the extension in Chrome:**
-    - Open Chrome and navigate to `chrome://extensions`.
-    - Enable "Developer mode".
-    - Click "Load unpacked".
-    - Select the `apps/extension/dist` directory.
-
-**For Firefox:**
-
-```bash
-cd apps/extension
-bun dev:firefox:watch # in one terminal
-bun dev:firefox # in another terminal
-```
-
-This will automatically build, launch Firefox with the extension, and reload on changes.
-
-Changes to the source code will be automatically rebuilt.
-
-#### Mobile App (React Native)
-
-The mobile app is built with Expo and React Native.
-
-```bash
-cd apps/mobile
-bun install
-bun ios # or bun android
-```
-
-Follow the Expo CLI instructions to run on iOS simulator, Android emulator, or physical device.
-
-> [!NOTE]
-> **Environment Variables**: The `apps/mobile/.env` file is generated automatically by running `./docker/setup.sh --dev`.
->
-> **Physical Device Testing**: If you are running the app on a physical phone via the Expo Go app over Wi-Fi, you must replace `localhost` in `apps/mobile/.env` with your computer's local network IP address (e.g., `192.168.1.50`) so the phone can reach the API.
-
-### Working on Background Tasks (Taskiq)
-
-Our backend uses Taskiq to manage asynchronous tasks. The architecture consists of two main components:
-
-- **`worker`**: Executes background tasks, such as fetching RSS feeds, processing articles, or sending notifications.
-- **`scheduler`**: Periodically adds tasks to the queue based on a defined schedule (e.g., "fetch this feed every hour").
-
-When running `./docker/launch.sh --dev`, the worker and scheduler services are automatically started in Docker.
-
-**For active Taskiq development**, it's better to run them directly on your host machine for faster iteration:
-
-```bash
-cd server
-
-# Run the scheduler
-poetry run taskiq scheduler app.core.taskiq_app:scheduler --fs-discover --tasks-pattern "app/workers/*.py"
-
-# In another terminal, run the worker
-poetry run taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-pattern "app/workers/*.py"
-```
-
-This gives you immediate feedback and easier debugging compared to running in Docker.
-
-### Database Migrations (Alembic)
-
-When you make changes to the database schema (i.e., by modifying the SQLAlchemy models in `server/app/models/`), you must create a new migration file. We use Alembic to manage schema changes.
-
-1.  **Ensure Supabase is running:**
-    Make sure you've started the infrastructure with `./docker/launch.sh --dev`.
-
-2.  **Generate a new migration:**
-    Run the `alembic revision` command from the `server` directory:
-
-    ```bash
-    cd server
-    alembic revision --autogenerate -m "Your descriptive migration message"
-    ```
-
-3.  **Review the generated migration:**
-    A new migration script will be created in `server/alembic/versions/`. Please inspect this file to ensure it accurately reflects your intended changes.
-
-4.  **Apply the migration:**
-    ```bash
-    alembic upgrade head
-    ```
-
-### Linting and Formatting
-
-To maintain code quality and consistency, please run the linters and formatters before submitting a pull request. Each part of the monorepo has its own scripts.
-
-#### Backend
-
-We use `ruff` for both linting and formatting. `lint` also runs `mypy` for type checking.
-
-```bash
-cd server
-# Lint and auto-fix issues
-poe lint
-
-# Format the code
-poe format
-```
-
-#### Frontend (Web, Extension, Mobile)
-
-We use ESLint for linting and Prettier for formatting.
-
-```bash
-# Lint all projects
-bun run lint
-
-# Format all projects
-bun run format
-
-# Type check all projects
-bun run check-types
-```
-
-#### Prefer raw Docker Compose for development?
-
-If you prefer to use Docker Compose directly:
-
-```bash
-# --project-directory/--project-name pin Compose's path resolution and project identity
-# to match the wrapper scripts — needed if you ever add --profile app to build the app
-# images this way, and keeps volume names consistent with launch.sh/reset.sh either way.
-
-# Start development infrastructure (database, cache, search)
-docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml -f docker/supabase/docker-compose.dev.yml \
-  --env-file docker/supabase/.env --env-file docker/.env \
-  --project-directory docker --project-name readspace up -d
-
-# Then start services on your host machine (see "Run Application Services" section above)
-
-# To stop:
-docker compose -f docker/supabase/docker-compose.yml -f docker/docker-compose.yml -f docker/supabase/docker-compose.dev.yml \
-  --project-directory docker --project-name readspace down
-```
-
-**Stopping Services:**
-
-When you're done developing, stop the infrastructure services:
-
-```bash
-./docker/down.sh --dev
-```
-
-## Submitting a Pull Request
-
-1.  Create a new branch for your feature or bug fix.
-2.  Make your changes.
-3.  Ensure your code lints and tests pass.
-4.  Push your branch and open a Pull Request against the `main` branch.
-5.  Provide a clear description of your changes.
-
-Thank you for your contribution!
+Please do not open a public issue for a suspected security vulnerability. Report it privately through GitHub's security advisory feature for this repository.

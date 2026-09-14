@@ -504,18 +504,18 @@ async def test_compaction_task_wrapper_e2e(db_session: AsyncSession, test_user: 
 
 
 @pytest.mark.asyncio
-async def test_compaction_expires_basic_read_later_e2e(
+async def test_compaction_never_expires_saved_articles_e2e(
     db_session: AsyncSession,
 ) -> None:
-    """Test that compaction expires old read-later entries (>30 days) for BASIC users only."""
+    """Saved articles never expire for any tier; only entries with no interaction are purged."""
     from uuid import uuid4
 
-    from app.crud.article.actions import expire_basic_read_later_entries
+    from app.crud.article.actions import purge_stale_user_entries
     from app.models.article import ArticleContent, UserEntry
     from app.models.enums import UserRole
     from app.models.user import Profile
 
-    # 1. Create a BASIC user and a PRO user
+    # 1. A BASIC and a PRO user
     basic_user = Profile(
         id=uuid4(),
         email=f"basic-{uuid4()}@example.com",
@@ -529,61 +529,50 @@ async def test_compaction_expires_basic_read_later_e2e(
     db_session.add_all([basic_user, pro_user])
     await db_session.commit()
 
-    # 2. Create article contents
-    c1 = ArticleContent(id=uuid4(), title="Basic Old", content_hash=f"h1-{uuid4()}")
-    c2 = ArticleContent(id=uuid4(), title="Pro Old", content_hash=f"h2-{uuid4()}")
-    c3 = ArticleContent(id=uuid4(), title="Basic New", content_hash=f"h3-{uuid4()}")
-    db_session.add_all([c1, c2, c3])
+    # 2. Article contents
+    c1 = ArticleContent(id=uuid4(), title="Basic Old Saved", content_hash=f"h1-{uuid4()}")
+    c2 = ArticleContent(id=uuid4(), title="Pro Old Saved", content_hash=f"h2-{uuid4()}")
+    c3 = ArticleContent(id=uuid4(), title="Basic Stale", content_hash=f"h3-{uuid4()}")
+    c4 = ArticleContent(id=uuid4(), title="Basic Old Unsaved With Note", content_hash=f"h4-{uuid4()}")
+    db_session.add_all([c1, c2, c3, c4])
     await db_session.commit()
 
-    # 3. Create UserEntries with mock creation dates
-    # basic_old: >30 days (should expire)
-    basic_old = UserEntry(
-        id=uuid4(),
-        user_id=basic_user.id,
-        content_id=c1.id,
-        is_saved=True,
-        created_at=datetime.now(timezone.utc) - timedelta(days=32),
-    )
-    # pro_old: >30 days (should NOT expire because PRO)
-    pro_old = UserEntry(
-        id=uuid4(),
-        user_id=pro_user.id,
-        content_id=c2.id,
-        is_saved=True,
-        created_at=datetime.now(timezone.utc) - timedelta(days=32),
-    )
-    # basic_new: <30 days (should NOT expire because recent)
-    basic_new = UserEntry(
-        id=uuid4(),
-        user_id=basic_user.id,
-        content_id=c3.id,
-        is_saved=True,
-        created_at=datetime.now(timezone.utc) - timedelta(days=5),
-    )
+    long_ago = datetime.now(timezone.utc) - timedelta(days=365)
 
-    db_session.add_all([basic_old, pro_old, basic_new])
+    # 3. Entries - saved ones are a year old, well past the retired 30-day Basic expiry
+    basic_old_saved = UserEntry(id=uuid4(), user_id=basic_user.id, content_id=c1.id, is_saved=True, created_at=long_ago)
+    pro_old_saved = UserEntry(id=uuid4(), user_id=pro_user.id, content_id=c2.id, is_saved=True, created_at=long_ago)
+    # No interaction left at all - purged
+    basic_stale = UserEntry(
+        id=uuid4(), user_id=basic_user.id, content_id=c3.id, is_saved=False, is_read=False, created_at=long_ago
+    )
+    # Unsaved but carries a note - kept
+    basic_with_note = UserEntry(
+        id=uuid4(),
+        user_id=basic_user.id,
+        content_id=c4.id,
+        is_saved=False,
+        is_read=False,
+        user_note="keep me",
+        created_at=long_ago,
+    )
+    db_session.add_all([basic_old_saved, pro_old_saved, basic_stale, basic_with_note])
     await db_session.commit()
 
     # 4. Run the cleanup action
-    expired_count = await expire_basic_read_later_entries(db_session, retention_days=30)
+    purged_count = await purge_stale_user_entries(db_session)
     await db_session.commit()
 
-    # Verify return count (should be exactly 1)
-    assert expired_count == 1
+    # Other stale rows in the shared test DB may be purged too, so only a lower bound is exact
+    assert purged_count >= 1
 
-    # 5. Fetch and assert final states
-    # basic_old should be is_saved = False (or deleted if no other state, but here is_read=False, user_note=None so deleted)
-    result = await db_session.execute(select(UserEntry).where(UserEntry.id == basic_old.id))
-    basic_old_after = result.scalar_one_or_none()
-    assert basic_old_after is None or not basic_old_after.is_saved
+    # 5. Saved entries survive untouched, for BASIC and PRO alike
+    for entry_id in (basic_old_saved.id, pro_old_saved.id):
+        result = await db_session.execute(select(UserEntry).where(UserEntry.id == entry_id))
+        assert result.scalar_one().is_saved is True
 
-    # pro_old should remain is_saved = True
-    result = await db_session.execute(select(UserEntry).where(UserEntry.id == pro_old.id))
-    pro_old_after = result.scalar_one()
-    assert pro_old_after.is_saved is True
+    result = await db_session.execute(select(UserEntry).where(UserEntry.id == basic_stale.id))
+    assert result.scalar_one_or_none() is None
 
-    # basic_new should remain is_saved = True
-    result = await db_session.execute(select(UserEntry).where(UserEntry.id == basic_new.id))
-    basic_new_after = result.scalar_one()
-    assert basic_new_after.is_saved is True
+    result = await db_session.execute(select(UserEntry).where(UserEntry.id == basic_with_note.id))
+    assert result.scalar_one().user_note == "keep me"

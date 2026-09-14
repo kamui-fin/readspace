@@ -79,15 +79,15 @@ export function useOnboardingFeeds(selectedCategories: string[] = []) {
       }));
 
       setDisplayedFeeds((prev) => {
-        const feedIndex = prev.findIndex((f) => f.id === feedId);
-        if (feedIndex === -1) return prev;
+        if (!prev.some((f) => f.id === feedId)) return prev;
 
-        const newFeeds = [...prev];
         const uniqueSimilar = similarFeeds.filter(
-          (sf: OnboardingFeed) => !newFeeds.some((f) => f.id === sf.id)
+          (sf: OnboardingFeed) => !prev.some((f) => f.id === sf.id)
         );
-        newFeeds.splice(feedIndex + 1, 0, ...uniqueSimilar);
-        return newFeeds;
+        if (uniqueSimilar.length === 0) return prev;
+
+        // Append to the END — splicing under the tapped feed shoved down feeds the user was already eyeing
+        return [...prev, ...uniqueSimilar];
       });
     } catch (error) {
       console.error('Failed to fetch similar feeds:', error);

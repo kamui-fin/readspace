@@ -1,12 +1,13 @@
 """Unit tests for Codex Digest Phase 0 pure logic (no DB) - dedupe, capping, age formatting."""
 
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
 
 from app.core.constants import CODEX_MAX_PER_FEED
-from app.services.codex.gather import _cap_and_dedupe, _normalize_title, _relative_age
+from app.services.codex.gather import _cap_and_dedupe, _normalize_title, _relative_age, fetch_full_texts
 from app.typing.entries import EntryListItem
 
 pytestmark = pytest.mark.unit
@@ -141,3 +142,43 @@ class TestCapAndDedupe:
         survivors = _cap_and_dedupe([older, newer])
 
         assert [item.title for item in survivors] == ["New", "Old"]
+
+
+class TestFetchFullTexts:
+    NEWSLETTER_LINK = "newsletter://user-id/writer@example.com/abc123"
+
+    @pytest.mark.asyncio
+    async def test_newsletter_uses_stored_body_as_plain_text_without_scraping(self, monkeypatch):
+        scrape = AsyncMock(return_value=("<p>scraped</p>", None))
+        monkeypatch.setattr("app.services.codex.gather.extract_full_content", scrape)
+        item = _make_item(link=self.NEWSLETTER_LINK, description="Short excerpt")
+
+        results = await fetch_full_texts(
+            [item], stored_bodies={item.id: "<table><tr><td><p>The whole newsletter body</p></td></tr></table>"}
+        )
+
+        scrape.assert_not_called()
+        assert "The whole newsletter body" in results[item.id]
+        assert "<" not in results[item.id]
+
+    @pytest.mark.asyncio
+    async def test_newsletter_without_stored_body_falls_back_to_description(self, monkeypatch):
+        scrape = AsyncMock(return_value=("<p>scraped</p>", None))
+        monkeypatch.setattr("app.services.codex.gather.extract_full_content", scrape)
+        item = _make_item(link=self.NEWSLETTER_LINK, description="Short excerpt")
+
+        results = await fetch_full_texts([item])
+
+        scrape.assert_not_called()
+        assert results[item.id] == "Short excerpt"
+
+    @pytest.mark.asyncio
+    async def test_web_articles_are_still_scraped(self, monkeypatch):
+        scrape = AsyncMock(return_value=("<p>Scraped body</p>", None))
+        monkeypatch.setattr("app.services.codex.gather.extract_full_content", scrape)
+        item = _make_item(link="https://example.com/story")
+
+        results = await fetch_full_texts([item], stored_bodies={item.id: "ignored for web articles"})
+
+        scrape.assert_awaited_once()
+        assert results[item.id] == "<p>Scraped body</p>"

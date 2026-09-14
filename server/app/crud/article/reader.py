@@ -471,6 +471,40 @@ async def check_article_saved_by_url(
     return cast(tuple[ArticleContent, UserEntry | None], row)
 
 
+async def is_article_saved(db: AsyncSession, *, user_id: UUID, article_id: UUID, is_clipped: bool) -> bool:
+    """
+    Whether the user currently has this article saved.
+
+    ``article_id`` is a UserEntry.id for clipped articles and a FeedArticle.id for feed articles
+    (the same addressing the article update endpoint uses).
+    """
+    query = select(UserEntry.id).where(UserEntry.user_id == user_id, UserEntry.is_saved)
+    if is_clipped:
+        query = query.where(UserEntry.id == article_id)
+    else:
+        query = query.join(FeedArticle, FeedArticle.content_id == UserEntry.content_id).where(
+            FeedArticle.id == article_id
+        )
+
+    result = await db.execute(query.limit(1))
+    return result.first() is not None
+
+
+async def get_feed_article_bodies(db: AsyncSession, feed_article_ids: list[UUID]) -> dict[UUID, str]:
+    """
+    Stored HTML body for each FeedArticle id. Articles without a stored body are omitted.
+    """
+    if not feed_article_ids:
+        return {}
+
+    result = await db.execute(
+        select(FeedArticle.id, ArticleContent.content)
+        .join(ArticleContent, ArticleContent.id == FeedArticle.content_id)
+        .where(FeedArticle.id.in_(feed_article_ids), ArticleContent.content.isnot(None))
+    )
+    return {row.id: row.content for row in result.all() if row.content}
+
+
 async def get_read_later_articles(
     db: AsyncSession,
     user_id: UUID,

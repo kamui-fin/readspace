@@ -181,7 +181,7 @@ export function UpgradePaywallModal() {
                 </View>
               </View>
 
-              {/* Benefit 4: Full articles, saved forever */}
+              {/* Benefit 4: Full articles, unlimited saves */}
               <View className="flex-row items-start">
                 <View
                   className="mr-3.5 h-9 w-9 items-center justify-center rounded-full"
@@ -190,14 +190,14 @@ export function UpgradePaywallModal() {
                 </View>
                 <View className="flex-1 justify-center">
                   <Text size="base" fontFamily="geist-semibold" style={{ color: colors.black }}>
-                    Full articles, saved forever
+                    Full articles, unlimited saves
                   </Text>
                   <Text
                     size="xs"
                     fontFamily="geist"
                     className="mt-0.5"
                     style={{ color: colors.grey }}>
-                    Full text from the original website. Saved articles never expire.
+                    Full text from the original website. Save as many articles as you like.
                   </Text>
                 </View>
               </View>

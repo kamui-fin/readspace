@@ -1,5 +1,9 @@
 # Base docker-compose template
 
+x-server-build: &server-build
+  context: ${PROJECT_ROOT}/server
+  dockerfile: Dockerfile
+
 services:
   redis:
     image: redis:alpine
@@ -58,9 +62,8 @@ services:
 
   api:
     profiles: ["app"]
-    build:
-      context: ${PROJECT_ROOT}/server
-      dockerfile: Dockerfile
+    image: readspace-server:local
+    build: *server-build
     container_name: readspace_api
     command: >
       sh -c "alembic upgrade head &&
@@ -106,9 +109,8 @@ services:
 
   worker:
     profiles: ["app"]
-    build:
-      context: ${PROJECT_ROOT}/server
-      dockerfile: Dockerfile.taskiq
+    image: readspace-server:local
+    build: *server-build
     container_name: readspace_worker
     command: taskiq worker app.core.taskiq_app:broker app.workers.registry --max-async-tasks 200
     volumes:
@@ -138,9 +140,8 @@ services:
 
   scheduler:
     profiles: ["app"]
-    build:
-      context: ${PROJECT_ROOT}/server
-      dockerfile: Dockerfile.taskiq
+    image: readspace-server:local
+    build: *server-build
     container_name: readspace_scheduler
     command: taskiq scheduler app.core.taskiq_app:scheduler app.workers.registry
     volumes:

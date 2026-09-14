@@ -1,5 +1,9 @@
 version: '3.8'
 
+x-server-build: &server-build
+  context: ../../server
+  dockerfile: Dockerfile
+
 services:
   # --- Core Cache & Databases ---
   redis:
@@ -356,9 +360,8 @@ services:
 
   # --- Readspace Python Backend ---
   api:
-    build:
-      context: ../../server
-      dockerfile: Dockerfile
+    image: readspace-server:local
+    build: *server-build
     container_name: readspace_api
     restart: always
     command: >
@@ -410,9 +413,8 @@ services:
         max-file: "3"
 
   worker:
-    build:
-      context: ../../server
-      dockerfile: Dockerfile.taskiq
+    image: readspace-server:local
+    build: *server-build
     container_name: readspace_worker
     restart: always
     command: taskiq worker app.core.taskiq_app:broker app.workers.registry --max-async-tasks 200
@@ -451,9 +453,8 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
 
   scheduler:
-    build:
-      context: ../../server
-      dockerfile: Dockerfile.taskiq
+    image: readspace-server:local
+    build: *server-build
     container_name: readspace_scheduler
     restart: always
     command: taskiq scheduler app.core.taskiq_app:scheduler app.workers.registry

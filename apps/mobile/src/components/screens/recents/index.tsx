@@ -12,7 +12,11 @@ import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { createListItems, type ListItem } from '@lib/utils/article';
 import type { Article } from '@readspace/shared';
-import { useInfiniteRecentlyReadArticles, useUpdateArticle } from '@readspace/shared';
+import {
+  isPaywallError,
+  useInfiniteRecentlyReadArticles,
+  useUpdateArticle,
+} from '@readspace/shared';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -84,7 +88,9 @@ export function RecentsScreen() {
       updateArticle.mutate(
         { articleId, data: { is_saved: newValue }, articleType },
         {
-          onError: () => {
+          onError: (error) => {
+            // Plan limits (e.g. the free saved-articles cap) open the upgrade dialog globally
+            if (isPaywallError(error)) return;
             toast.error('Failed to update bookmark');
           },
         }

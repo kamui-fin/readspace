@@ -132,25 +132,23 @@ export const ArticleOptionsBottomSheet = forwardRef<
                 onTranslate
               )}
 
-            {renderOption(
-              <TextSelectionIcon
-                size={22}
-                color={highlightsEnabled ? activeColor : greyColor}
-              />,
-              'AI Highlights',
-              isGeneratingHighlights
-                ? 'Generating...'
-                : hasHighlightedContent
-                  ? highlightsEnabled
-                    ? 'Tap to hide highlights'
-                    : 'Tap to show highlights'
-                  : 'Skim the key points',
-              hasHighlightedContent
-                ? () => onToggleHighlights(!highlightsEnabled)
-                : onGenerateHighlights,
-              highlightsEnabled,
-              isGeneratingHighlights
-            )}
+            {!isNewsletter &&
+              renderOption(
+                <TextSelectionIcon size={22} color={highlightsEnabled ? activeColor : greyColor} />,
+                'AI Highlights',
+                isGeneratingHighlights
+                  ? 'Generating...'
+                  : hasHighlightedContent
+                    ? highlightsEnabled
+                      ? 'Tap to hide highlights'
+                      : 'Tap to show highlights'
+                    : 'Skim the key points',
+                hasHighlightedContent
+                  ? () => onToggleHighlights(!highlightsEnabled)
+                  : onGenerateHighlights,
+                highlightsEnabled,
+                isGeneratingHighlights
+              )}
 
             {!isNewsletter &&
               onOpenInBrowser &&

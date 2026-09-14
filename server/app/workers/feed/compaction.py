@@ -9,7 +9,7 @@ from app.core.constants import (
     MIN_ARTICLES_PER_FEED,
     UNREAD_RETENTION_DAYS,
 )
-from app.crud.article.actions import delete_old_article_contents, expire_basic_read_later_entries
+from app.crud.article.actions import delete_old_article_contents, purge_stale_user_entries
 from app.crud.feed.subscription import compact_unread_subscriptions
 from app.workers.common import worker_db
 
@@ -29,7 +29,11 @@ async def compact_unread_articles() -> dict[str, int]:
 
 
 async def compact_old_articles() -> dict[str, int]:
-    """Hard delete old article content and expire basic users old read-later items."""
+    """Purge stale user entries and hard delete old article content.
+
+    Saved articles are never expired for any tier - Basic users are capped on count at save
+    time instead (see enforce_saved_articles_limit).
+    """
     logger.info(
         "Starting article compaction",
         retention=ARTICLE_RETENTION_DAYS,
@@ -37,9 +41,8 @@ async def compact_old_articles() -> dict[str, int]:
     )
 
     async with worker_db() as db:
-        # 1. Expire basic user old saved read-later articles (30 days)
-        expired_saved = await expire_basic_read_later_entries(db, retention_days=30)
-        logger.info("Expired basic user read-later entries", expired=expired_saved)
+        # 1. Purge user entries with no remaining interaction (never touches saved entries)
+        purged_entries = await purge_stale_user_entries(db)
 
         # 2. Hard delete old article content
         deleted_count = await delete_old_article_contents(
@@ -48,5 +51,5 @@ async def compact_old_articles() -> dict[str, int]:
             min_articles_per_feed=MIN_ARTICLES_PER_FEED,
         )
 
-    logger.info("Article compaction completed", deleted=deleted_count, expired_read_later=expired_saved)
-    return {"deleted_articles": deleted_count, "expired_read_later": expired_saved}
+    logger.info("Article compaction completed", deleted=deleted_count, purged_user_entries=purged_entries)
+    return {"deleted_articles": deleted_count, "purged_user_entries": purged_entries}

@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.article import UserEntry
 from app.models.feed import FeedSubscription
 from app.models.user import Profile
 
@@ -31,6 +32,14 @@ async def get_current_usage(db: AsyncSession, user_id: UUID, resource: str) -> i
         query = select(func.count()).select_from(FeedSubscription).where(FeedSubscription.user_id == user_id)
         result = await db.execute(query)
         return result.scalar() or 0
+
+    if resource == "max_saved_articles":
+        # Same predicate as the read-later list, so the count matches what the user sees
+        query = select(func.count()).select_from(UserEntry).where(UserEntry.user_id == user_id, UserEntry.is_saved)
+        result = await db.execute(query)
+        return result.scalar() or 0
+
+    return 0
 
 
 async def update_profile(db: AsyncSession, *, user_id: UUID, is_onboarded: bool | None = None) -> Profile | None:
