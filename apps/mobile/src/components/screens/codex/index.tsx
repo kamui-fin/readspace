@@ -10,8 +10,8 @@ import {
   useCodexToday,
   useGenerateCodexDigest,
 } from '@readspace/shared';
-import { useCallback, useState } from 'react';
-import { View } from 'react-native';
+import { useCallback, useEffect, useReducer, useState } from 'react';
+import { AppState, View } from 'react-native';
 import { CodexGenerating } from './components/codex-generating';
 import { CodexSkeleton } from './components/codex-skeleton';
 import {
@@ -37,6 +37,17 @@ export function CodexScreen() {
   const [notEntitled, setNotEntitled] = useState<{ reason: string; errorCode: string } | null>(
     null
   );
+  const [, rerenderOnResume] = useReducer((tick: number) => tick + 1, 0);
+
+  // JS timers are paused while backgrounded, so the shared hook's expiry timer may be late.
+  // A plain re-render on resume is enough — its `select` re-checks expiry locally, with no
+  // network request; the refetch itself comes from that timer once it fires.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') rerenderOnResume();
+    });
+    return () => subscription.remove();
+  }, []);
 
   const handleGenerate = useCallback(() => {
     // Local gate — shows the Pro upsell instead of a wasted request for out-of-quota Basic.

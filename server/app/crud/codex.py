@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import CODEX_STALE_IN_FLIGHT_MINUTES
+from app.core.resource_limits import CODEX_QUOTA_WINDOW_HOURS
 from app.models.codex import CodexDigest, CodexPreferences
 from app.models.enums import CodexDigestPhase, CodexDigestStatus
 from app.models.feed import FeedSubscription
@@ -140,6 +141,24 @@ async def get_latest_digest(db: AsyncSession, user_id: UUID) -> CodexDigest | No
     )
     digest = result.scalar_one_or_none()
     await _expire_if_stale(db, digest)
+    return digest
+
+
+async def get_current_digest(db: AsyncSession, user_id: UUID, *, now: datetime | None = None) -> CodexDigest | None:
+    """The user's latest digest, but only while it's still current - i.e. requested within the
+    trailing CODEX_QUOTA_WINDOW_HOURS (server clock). Past that it's yesterday's edition and is
+    treated as absent, so clients fall back to the "Ready to generate?" state. The shelf life
+    deliberately matches the quota window: a digest disappears exactly when the generation it
+    spent ages out and a fresh one can be built.
+
+    Display-only - quota logic keeps using `get_latest_digest`, which ignores age.
+    """
+    digest = await get_latest_digest(db, user_id)
+    if digest is None:
+        return None
+    now = now or datetime.now(timezone.utc)
+    if digest.requested_at <= now - timedelta(hours=CODEX_QUOTA_WINDOW_HOURS):
+        return None
     return digest
 
 

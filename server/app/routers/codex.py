@@ -104,9 +104,10 @@ async def get_today_digest(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
 ) -> CodexDigestResponse:
-    """Return the latest digest row for the user, any status."""
+    """Return the user's current digest row, any status. A digest older than the quota window
+    (see `crud_codex.get_current_digest`) is yesterday's edition and 404s like no digest at all."""
     user_id = UUID(current_user.sub)
-    digest = await crud_codex.get_latest_digest(db, user_id)
+    digest = await crud_codex.get_current_digest(db, user_id)
     if not digest:
         raise NotFoundError(message="No Codex digest found yet", error_code="CODEX_DIGEST_NOT_FOUND")
     return digest

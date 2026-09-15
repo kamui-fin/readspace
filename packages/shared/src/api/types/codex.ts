@@ -92,6 +92,11 @@ export interface CodexDigestResponse {
   status: CodexDigestStatus;
   progress_phase: CodexDigestPhase | null;
   requested_at: string;
+  /**
+   * When this stops being today's digest (requested_at + the server's rolling quota window,
+   * ~22h). GET /codex/today 404s from then on; clients hide a cached copy at this moment.
+   */
+  expires_at: string;
   generated_at: string | null;
   model: string | null;
   window_hours: number | null;

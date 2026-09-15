@@ -1,10 +1,11 @@
 """Codex Digest schemas - LLM structured I/O and HTTP request/response shapes."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
+from app.core.resource_limits import CODEX_QUOTA_WINDOW_HOURS
 from app.models.enums import CodexDigestPhase, CodexDigestStatus
 from app.typing.common import response_config
 from app.typing.entries import EntryListItem
@@ -191,6 +192,14 @@ class CodexDigestResponse(BaseModel):
     clusters_found: int | None = None
     payload: CodexDigestPayload | None = None
     error: str | None = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def expires_at(self) -> datetime:
+        """When this digest stops being "today's" (requested_at + CODEX_QUOTA_WINDOW_HOURS).
+        GET /codex/today 404s from this moment on; clients use it to drop a cached digest on
+        time instead of waiting for their next refetch."""
+        return self.requested_at + timedelta(hours=CODEX_QUOTA_WINDOW_HOURS)
 
 
 class CodexGenerateResponse(CodexDigestResponse):

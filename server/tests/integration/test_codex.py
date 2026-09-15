@@ -378,6 +378,72 @@ class TestCodexTodayEndpoint:
         assert response.status_code == 200
         assert response.json()["status"] == "in_progress"
 
+    async def test_today_hides_digest_older_than_window(
+        self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
+    ):
+        """A digest requested more than CODEX_QUOTA_WINDOW_HOURS ago is yesterday's news - GET
+        /today must 404 so every client falls back to the "Ready to generate?" empty state
+        instead of serving a stale edition."""
+        from app.core.resource_limits import CODEX_QUOTA_WINDOW_HOURS
+        from app.crud import codex as crud_codex
+
+        today = datetime.now(timezone.utc).date()
+        digest = await crud_codex.create_pending_digest(db_session, test_user.id, today)
+        await crud_codex.finalize_digest(
+            db_session,
+            digest.id,
+            CodexDigestStatus.COMPLETED,
+            payload={
+                "gist": "Old.",
+                "scale_setter": "Nothing much happened.",
+                "developments": [],
+                "worth_reading": [],
+                "closing_line": "0 developments found.",
+            },
+        )
+        await db_session.commit()
+        await _backdate_requested_at(db_session, digest.id, hours_ago=CODEX_QUOTA_WINDOW_HOURS + 0.05)
+        await db_session.commit()
+
+        response = await async_client.get("/api/codex/today")
+
+        assert response.status_code == 404
+
+    async def test_today_serves_digest_inside_window_with_expiry(
+        self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
+    ):
+        """A digest still inside the window is served, carrying `expires_at` (requested_at +
+        CODEX_QUOTA_WINDOW_HOURS) so clients can drop it the moment it ages out."""
+        from app.core.resource_limits import CODEX_QUOTA_WINDOW_HOURS
+        from app.crud import codex as crud_codex
+
+        today = datetime.now(timezone.utc).date()
+        digest = await crud_codex.create_pending_digest(db_session, test_user.id, today)
+        await crud_codex.finalize_digest(
+            db_session,
+            digest.id,
+            CodexDigestStatus.COMPLETED,
+            payload={
+                "gist": "Fresh.",
+                "scale_setter": "Nothing much happened.",
+                "developments": [],
+                "worth_reading": [],
+                "closing_line": "0 developments found.",
+            },
+        )
+        await db_session.commit()
+        await _backdate_requested_at(db_session, digest.id, hours_ago=CODEX_QUOTA_WINDOW_HOURS - 0.1)
+        await db_session.commit()
+
+        response = await async_client.get("/api/codex/today")
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["id"] == str(digest.id)
+        requested_at = datetime.fromisoformat(body["requested_at"])
+        expires_at = datetime.fromisoformat(body["expires_at"])
+        assert expires_at - requested_at == timedelta(hours=CODEX_QUOTA_WINDOW_HOURS)
+
 
 @pytest.mark.asyncio
 class TestCodexPipelineViaTask:

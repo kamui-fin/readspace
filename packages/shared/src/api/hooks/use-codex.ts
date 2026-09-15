@@ -5,6 +5,7 @@ import {
   type UseMutationOptions,
   type UseQueryOptions,
 } from '@tanstack/react-query';
+import { useEffect, useReducer } from 'react';
 import { ApiClient, ApiError } from '../client';
 import { queryKeys } from '../query-keys';
 import {
@@ -26,6 +27,18 @@ export function isCodexDigestTerminal(status: CodexDigestStatus): boolean {
 }
 
 /**
+ * True once a digest has aged past its `expires_at`, i.e. it's yesterday's edition. The server
+ * already 404s it from that moment; this lets clients drop a cached copy on time instead of
+ * waiting on their next refetch.
+ */
+export function isCodexDigestExpired(
+  digest: CodexDigestResponse,
+  now: number = Date.now()
+): boolean {
+  return Date.parse(digest.expires_at) <= now;
+}
+
+/**
  * Poll cadence while a digest is in flight. PENDING is a queue state that flips as soon as a
  * worker picks the task up (often <1s, and a "quiet day" can go PENDING → SKIPPED almost
  * immediately), so poll it tightly — otherwise the "Building…" screen lingers for a full
@@ -40,8 +53,13 @@ const CODEX_POLL_MS: Record<'pending' | 'in_progress', number> = {
 /**
  * Poll the user's latest Codex digest. Polls while the digest is PENDING / IN_PROGRESS (see
  * CODEX_POLL_MS) and stops once it reaches a terminal status (completed/failed/skipped).
- * A 404 (no digest ever requested) resolves to `null` rather than throwing, so callers can
- * render the empty state without a try/catch.
+ * A 404 (no current digest) resolves to `null` rather than throwing, so callers can render the
+ * empty state without a try/catch.
+ *
+ * A digest never outlives its `expires_at`: `select` nulls out an expired cached copy on every
+ * render (so a stale digest can't paint even for a frame from cache), and a timer re-renders
+ * and refetches at the exact expiry moment while the screen stays mounted. Until then a
+ * finished digest is treated as fresh, so it costs no network traffic beyond that one refetch.
  */
 export function useCodexToday(
   options?: Omit<
@@ -54,7 +72,10 @@ export function useCodexToday(
     'queryKey' | 'queryFn'
   >
 ) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const [, forceRender] = useReducer((tick: number) => tick + 1, 0);
+
+  const query = useQuery({
     queryKey: queryKeys.codexToday(),
     queryFn: async () => {
       try {
@@ -73,15 +94,40 @@ export function useCodexToday(
     },
     // Generation is a ~1min server job — users routinely switch tabs while it runs.
     // Keep polling in a backgrounded tab so they return to a finished digest rather
-    // than a frozen "Building…" screen, and re-sync on focus as a backstop.
+    // than a frozen "Building…" screen.
     refetchIntervalInBackground: true,
-    refetchOnWindowFocus: (query) => {
+    // A finished digest can't change until it expires, so it stays fresh until `expires_at` —
+    // focus/mount/resume don't re-download it, and the first one after expiry refetches once.
+    // In-flight and empty (null) states stay immediately stale, as before.
+    staleTime: (query) => {
       const data = query.state.data;
-      return !!data && !isCodexDigestTerminal(data.status);
+      if (!data || !isCodexDigestTerminal(data.status)) return 0;
+      return Math.max(Date.parse(data.expires_at) - Date.now(), 0);
     },
+    // Re-sync on focus only while generating (backstop for throttled polling) or once expired.
+    // `true` still defers to staleTime, so a fresh finished digest is never refetched.
+    refetchOnWindowFocus: (query) => !!query.state.data,
     retry: false,
     ...options,
+    // After the options spread on purpose — expiry is not something a caller can opt out of.
+    // Inline, so it re-runs on every render against the current clock.
+    select: (data) => (data && isCodexDigestExpired(data) ? null : data),
   });
+
+  const expiresAt = query.data?.expires_at;
+  useEffect(() => {
+    if (!expiresAt) return;
+    const timer = setTimeout(
+      () => {
+        forceRender();
+        void queryClient.invalidateQueries({ queryKey: queryKeys.codexToday() });
+      },
+      Math.max(Date.parse(expiresAt) - Date.now(), 0)
+    );
+    return () => clearTimeout(timer);
+  }, [expiresAt, queryClient]);
+
+  return query;
 }
 
 /**
