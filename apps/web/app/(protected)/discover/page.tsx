@@ -1,4 +1,3 @@
-import "@/lib/api-client"
 import DiscoverView from "@/components/features/discover/DiscoverView"
 
 export const metadata = {

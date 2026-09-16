@@ -1,7 +1,14 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "stream",
-  "globalEnv": ["NODE_ENV"],
+  "globalEnv": [
+    "NODE_ENV",
+    "POLAR_ACCESS_TOKEN",
+    "POLAR_WEBHOOK_SECRET",
+    "REVENUECAT_WEBHOOK_SECRET",
+    "SENTRY_AUTH_TOKEN",
+    "SUPABASE_SERVICE_ROLE_KEY"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
