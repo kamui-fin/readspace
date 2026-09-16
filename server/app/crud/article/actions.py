@@ -12,6 +12,28 @@ from app.models.article import ArticleContent, FeedArticle, UserEntry
 from app.models.feed import FeedSubscription
 from app.typing.entries import EntryUpdate
 
+
+async def store_extracted_content(
+    db: AsyncSession,
+    *,
+    content_id: UUID,
+    extracted_content: str | None,
+) -> None:
+    """
+    Persist the result of a full-text extraction against the shared content row.
+
+    ``extracted_at`` is stamped even when ``extracted_content`` is None, which records
+    that extraction was attempted and failed so the article is not re-scraped on every
+    open. Content rows are keyed by article URL, so this cache is shared across users.
+    """
+    await db.execute(
+        update(ArticleContent)
+        .where(ArticleContent.id == content_id)
+        .values(extracted_content=extracted_content, extracted_at=datetime.now(timezone.utc))
+    )
+    await db.flush()
+
+
 # ============================================================================
 # USER ENTRY STATE MANAGEMENT
 # ============================================================================

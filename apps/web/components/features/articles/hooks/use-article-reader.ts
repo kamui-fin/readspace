@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
     type Article,
     ContentView,
@@ -41,16 +41,30 @@ export function useArticleReader({
         article.extracted_content ? ContentView.Extracted : ContentView.Original
     )
 
-    // Auto-switch to extracted view when content becomes available
-    const prevExtractedContentRef = useRef(article.extracted_content)
+    // Prefer extracted content as soon as the server has it. The article arrives in two
+    // stages — a list summary (never carries `extracted_content`) then the detail fetch —
+    // so the initial `useState` above usually resolves to Original and this effect is what
+    // actually lands the reader on the full text. It must not be gated on a "previous
+    // value" ref: the reader is remounted per article (`key={article.id}`), so such a ref
+    // initialises to the *current* value and the switch never fires. Tracking whether the
+    // user has chosen a view themselves is both correct and what mobile already does.
+    const hasUserChosenView = useRef(false)
     useEffect(() => {
-        if (article.extracted_content && !prevExtractedContentRef.current) {
+        if (article.extracted_content && !hasUserChosenView.current) {
             setContentView(ContentView.Extracted)
         }
-        prevExtractedContentRef.current = article.extracted_content
     }, [article.extracted_content])
 
-    const ai = useArticleAI({ article, contentView, setContentView })
+    const selectContentView = useCallback((view: ContentView) => {
+        hasUserChosenView.current = true
+        setContentView(view)
+    }, [])
+
+    const ai = useArticleAI({
+        article,
+        contentView,
+        setContentView: selectContentView,
+    })
 
     const interactions = useArticleInteractions({
         article,
@@ -85,15 +99,16 @@ export function useArticleReader({
         return `${contentView}-${article.id}`
     }, [contentView, article.id, ai.translatedLanguage])
 
-    const activeTab =
-        isLoading || ai.isExtracting ? ContentView.Extracted : contentView
-
+    // The toolbar reflects the view actually being shown. It used to claim "Extracted"
+    // whenever the article was loading, which made the Full Text tab flash selected during
+    // the detail fetch and then snap back to Original the moment it resolved — a visible
+    // revert that looked like a failed extraction.
     return {
         ...ai,
         ...interactions,
         contentView,
-        setContentView,
-        activeTab,
+        setContentView: selectContentView,
+        activeTab: contentView,
         contentKey,
         clientReadTime,
         isBusy: !!isLoading || ai.isExtracting || ai.isTranslating,

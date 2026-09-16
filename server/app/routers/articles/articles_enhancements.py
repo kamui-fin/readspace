@@ -8,10 +8,11 @@ import structlog
 from fastapi import APIRouter, Body, Depends, Query
 
 from app.core.custom_exceptions import NotFoundError, ValidationError
+from app.crud.article.actions import store_extracted_content
 from app.db.session import get_db_factory
 from app.services.ai.service import generate_highlights, generate_summary, translate_content, translate_metadata
 from app.services.articles.scrape import extract_full_content
-from app.services.articles.service import get_article_details
+from app.services.articles.service import get_article_details, is_extraction_worthwhile
 from app.services.feeds.service import SessionFactory
 from app.services.user.auth import get_current_user
 from app.services.user.resource_limits import (
@@ -110,8 +111,21 @@ async def extract_full_text(
     """
     logger.bind(article_id=str(article_id), user_id=user.sub)
 
-    # 1. Daily scrape quota (free tier: 5/day, pro/admin: unlimited). A user-initiated extraction
-    #    gets the 429 that opens the paywall; background extraction falls back silently.
+    # 1. Verify Article
+    article = await get_article_or_404(db_factory, article_id, UUID(user.sub), is_clipped=clipped)
+
+    if not article.link:
+        raise ValidationError(message="Article has no source URL available")
+
+    # 2. Serve a stored extraction without scraping again or charging the quota. One scrape
+    #    is shared by every user who opens the same article.
+    if article.extracted_content:
+        logger.info("Serving stored extraction", article_id=str(article_id))
+        return ExtractionResponse(content=article.extracted_content)
+
+    # 3. Daily scrape quota (free tier: 5/day, pro/admin: unlimited). A user-initiated
+    #    extraction gets the 429 that opens the paywall; background extraction falls back
+    #    silently so the reader simply stays on the feed's own content.
     async with db_factory() as db:
         if auto:
             allowed = await check_daily_scrape_limit(db, UUID(user.sub))
@@ -123,14 +137,18 @@ async def extract_full_text(
         logger.info("Skipping background extraction: daily scrape quota reached", article_id=str(article_id))
         return ExtractionResponse(content=None)
 
-    # 2. Verify Article
-    article = await get_article_or_404(db_factory, article_id, UUID(user.sub), is_clipped=clipped)
-
-    if not article.link:
-        raise ValidationError(message="Article has no source URL available")
-
-    # 3. Extract (Service handles errors/exceptions)
+    # 4. Extract (Service handles errors/exceptions)
     content, error = await extract_full_content(str(article.link), article.title)
+
+    # 5. Persist the attempt either way, so a failed scrape isn't retried on every tap.
+    if article.content_id:
+        worthwhile = not error and is_extraction_worthwhile(content, article.content)
+        async with db_factory() as db:
+            await store_extracted_content(
+                db,
+                content_id=article.content_id,
+                extracted_content=content if worthwhile else None,
+            )
 
     if error:
         # Mapping extraction specific logic error to HTTP 400

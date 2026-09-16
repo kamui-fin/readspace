@@ -131,6 +131,9 @@ class ArticleTransformer:
             link=content.link,
             description=content.description,  # Full description
             content=content.content,  # Full content
+            extracted_content=content.extracted_content,
+            content_id=feed_article.content_id,
+            extraction_attempted=content.extracted_at is not None,
             image_url=content.image_url,
             author=content.author,
             source_domain=extract_domain_from_url(content.link),
@@ -191,6 +194,9 @@ class ArticleTransformer:
             link=content.link,
             description=content.description,
             content=content.content,
+            extracted_content=content.extracted_content,
+            content_id=content.id,
+            extraction_attempted=content.extracted_at is not None,
             image_url=content.image_url,
             author=content.author,
             source_domain=extract_domain_from_url(content.link),

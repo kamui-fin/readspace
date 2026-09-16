@@ -94,9 +94,15 @@ ARTICLE_RETENTION_DAYS = 7  # Delete articles older than 30 days (beyond minimum
 MIN_ARTICLES_PER_FEED = 50  # Keep at least 50 newest articles per feed
 
 # Content Extraction
-MIN_CONTENT_LENGTH = 500  # Minimum character length to consider content complete
+# Visible-text length at or above which feed-supplied content is treated as the full article.
+# Deliberately well above a typical truncated teaser ("two sentences + Read more", ~200-600
+# chars): anything shorter is a candidate for full-text extraction from the source URL.
+MIN_CONTENT_LENGTH = 1500  # Minimum visible-text length to consider content complete
 AUTO_EXTRACT_ON_FETCH = True  # Extract content automatically when fetching articles. TODO: This should be user-specific
 CONTENT_EXTRACTION_TIMEOUT = 5  # seconds - timeout for fetching and extracting content
+# Extracted text must beat the feed's own content by this factor to be worth storing; a scrape
+# that returns no more than the feed already gave us is noise (paywall stub, cookie wall).
+EXTRACTION_MIN_GAIN_RATIO = 1.2
 FAVICON_FETCH_TIMEOUT = 10  # seconds - timeout for fetching canonical URL and favicon
 
 # Daily Usage Counters (Redis)

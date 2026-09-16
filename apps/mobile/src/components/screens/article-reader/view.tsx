@@ -120,18 +120,14 @@ export function ArticleScreen({
       ? translateData.translated_content
       : currentContent;
 
-  // `auto` = background extraction on open: over the free quota it quietly yields no content
-  // (the reader stays on RSS) instead of a 429 that would pop the paywall
-  const extractFullText = useCallback(
-    async (auto = false) => {
-      return extractMutation.mutateAsync({
-        articleId: articleId || '',
-        articleUrl: article?.link || '',
-        auto,
-      });
-    },
-    [articleId, article?.link, extractMutation]
-  );
+  // User-initiated extraction only (tapping "Full Text"), so a spent quota surfaces the
+  // paywall rather than failing quietly. Extraction on open is the server's job.
+  const extractFullText = useCallback(async () => {
+    return extractMutation.mutateAsync({
+      articleId: articleId || '',
+      articleUrl: article?.link || '',
+    });
+  }, [articleId, article?.link, extractMutation]);
 
   const generateSummary = useCallback(async () => {
     const languageKey =
@@ -172,31 +168,11 @@ export function ArticleScreen({
     return [...recent, ...others];
   }, [recentLanguages]);
 
-  // Auto-extract content if not already extracted and article has loaded
-  useEffect(() => {
-    if (
-      article &&
-      !article.extracted_content &&
-      article.article_type === 'feed' &&
-      article.link &&
-      !article.link.startsWith('newsletter://') &&
-      extractMutation.status === 'idle'
-    ) {
-      // Trigger extraction automatically
-      const timeoutId = setTimeout(() => {
-        // If extraction takes too long, log warning but don't error
-        if (extractMutation.isPending) {
-          console.warn('Article extraction is taking longer than expected');
-        }
-      }, 5000);
-
-      extractFullText(true)
-        .catch((error) => {
-          console.warn('Failed to auto-extract article content:', error);
-        })
-        .finally(() => clearTimeout(timeoutId));
-    }
-  }, [article, extractMutation.status, extractFullText]);
+  // No client-side auto-extraction: GET /articles/{id} already returns `extracted_content`
+  // for articles whose feed content is only a teaser, and persists it so later opens are
+  // served from the database. Firing a background extract here as well meant two scrapes
+  // (and two quota charges) for a single open. Tapping "Full Text" still extracts on
+  // demand via `extractFullText()` for anything the server chose not to extract.
 
   // Mark as read on mount (only if subscribed to the feed)
   useEffect(() => {

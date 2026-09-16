@@ -94,8 +94,14 @@ class EntryDetail(ContentFields, UserStateFields, FeedContextFields):
     description: str | None = None
     content: str | None = None
 
-    # Auto-extraction fields (added by service layer)
+    # Full text scraped from the source URL when the feed only supplied a teaser.
     extracted_content: str | None = None
+    # Shared article_contents row backing this entry. Internal: lets the service layer
+    # persist an extraction against the row without a second lookup. Excluded from responses.
+    content_id: UUID | None = Field(default=None, exclude=True)
+    # Whether extraction has already been attempted for this article (successfully or not).
+    # Internal: stops a paywalled or unscrapable article being retried on every open.
+    extraction_attempted: bool = Field(default=False, exclude=True)
 
 
 # ================= API Requests =================

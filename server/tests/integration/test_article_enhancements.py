@@ -368,7 +368,7 @@ class TestGenerateHighlightsService:
         original = "<p>The quick brown fox jumps over the lazy dog near the river.</p>"
 
         with (
-            patch("app.services.ai.service._get_client", return_value=AsyncMock()),
+            patch("app.services.ai.service.get_gemini_client", return_value=AsyncMock()),
             patch(
                 "app.services.ai.service._call_gemini",
                 new=AsyncMock(return_value="<p>A completely unrelated made-up sentence about space travel.</p>"),
@@ -391,7 +391,7 @@ class TestGenerateHighlightsService:
         )
 
         with (
-            patch("app.services.ai.service._get_client", return_value=AsyncMock()),
+            patch("app.services.ai.service.get_gemini_client", return_value=AsyncMock()),
             patch("app.services.ai.service._call_gemini", new=AsyncMock(return_value=malicious)),
         ):
             article_id = str(uuid4())

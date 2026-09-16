@@ -35,6 +35,13 @@ class ArticleContent(Base):
     tags = Column(ARRAY(Text), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
+    # Full text scraped from `link` when the feed only supplied a teaser. Keyed by content_hash
+    # (the article URL), so one scrape serves every user who opens the same article.
+    extracted_content = Column(Text, nullable=True)
+    # When extraction last ran — set even when it produced nothing usable, so a failed or
+    # paywalled article isn't re-scraped on every open.
+    extracted_at = Column(DateTime(timezone=True), nullable=True)
+
     # Relationships
     feed_articles = relationship("FeedArticle", back_populates="content", cascade="all, delete-orphan")
     user_entries = relationship("UserEntry", back_populates="content", cascade="all, delete-orphan")

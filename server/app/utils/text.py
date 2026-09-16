@@ -7,6 +7,8 @@ import structlog
 from bs4 import BeautifulSoup
 from iso639 import Lang
 
+from app.core.constants import MIN_CONTENT_LENGTH
+
 logger = structlog.get_logger(__name__)
 
 # CJK covers Chinese, Japanese, Korean ranges
@@ -107,14 +109,33 @@ def build_excerpt(content: str | None, max_length: int, min_length: int) -> str:
     return text[: max_length - 1].rsplit(" ", 1)[0].rstrip(",;:") + "…"
 
 
-def is_content_complete(content: str | None, threshold: int = 500) -> bool:
-    """Heuristic: Is this a full article or just a summary?"""
+def visible_text_length(content: str | None) -> int:
+    """
+    Length of the readable text in ``content``, ignoring markup.
+
+    Raw HTML length is a poor proxy for how much article a feed actually gave us: a
+    200-character teaser wrapped in tracking pixels and share widgets can run to
+    several kilobytes of markup.
+    """
     if not content:
-        return False
-    # If it has paragraph tags and decent length, it's likely complete
-    if "<p>" in content and len(content) > 200:
-        return True
-    return len(content) >= threshold
+        return 0
+
+    soup = BeautifulSoup(content, "html.parser")
+    for tag in soup.find_all(EXCERPT_SKIPPED_TAGS):
+        tag.decompose()
+    return len(WHITESPACE_PATTERN.sub(" ", soup.get_text(separator=" ")).strip())
+
+
+def is_content_complete(content: str | None, threshold: int = MIN_CONTENT_LENGTH) -> bool:
+    """
+    Heuristic: is this the full article, or just the feed's teaser?
+
+    Measures *visible* text against ``threshold``. Previously any content containing a
+    ``<p>`` tag and more than 200 characters of markup counted as complete, which
+    classified nearly every truncated "…Read more" teaser as a full article and meant
+    full-text extraction almost never ran.
+    """
+    return visible_text_length(content) >= threshold
 
 
 def is_cjk_text(text: str) -> bool:
