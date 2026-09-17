@@ -15,6 +15,10 @@
   ·
   <a href="https://readspace.ai">Landing page</a>
   ·
+  <a href="https://apps.apple.com/us/app/readspace-rss-news-reader/id6790224641">iOS</a>
+  ·
+  <a href="https://play.google.com/store/apps/details?id=com.readspace.rss">Android</a>
+  ·
   <a href="https://chromewebstore.google.com/detail/readspace/ppadpdoicnolpjnflfladjllhmkonedi">Chrome</a>
   ·
   <a href="https://addons.mozilla.org/en-us/firefox/addon/readspace/">Firefox</a>
@@ -79,7 +83,8 @@ Readspace also brings saved webpages and extracted article content into the same
 - **Web:** Available at [app.readspace.ai](https://app.readspace.ai) or as part of a self-hosted deployment
 - **Chrome:** [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/readspace/ppadpdoicnolpjnflfladjllhmkonedi)
 - **Firefox:** [Install from Firefox Add-ons](https://addons.mozilla.org/en-us/firefox/addon/readspace/)
-- **iOS and Android:** Currently in closed beta testing and store review, with public releases expected within two weeks
+- **iOS:** [Download on the App Store](https://apps.apple.com/us/app/readspace-rss-news-reader/id6790224641)
+- **Android:** [Get it on Google Play](https://play.google.com/store/apps/details?id=com.readspace.rss)
 
 The browser extensions and mobile clients can connect to a self-hosted Readspace instance using only its instance URL.
 

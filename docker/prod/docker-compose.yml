@@ -291,6 +291,9 @@ services:
       timeout: 5s
       interval: 5s
       retries: 3
+      # storage-api migrates the DB before it listens; without a grace window the 3 x 5s
+      # probes expire ~30s in and api (gated on storage: service_healthy) never starts.
+      start_period: 120s
 
   imgproxy:
     image: darthsim/imgproxy:v3.30.1

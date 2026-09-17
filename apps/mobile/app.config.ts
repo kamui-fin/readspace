@@ -27,7 +27,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name,
     slug: 'readspace',
-    version: '1.0.0',
+    version: '1.0.1',
     platforms: ['ios', 'android'],
     assetBundlePatterns: ['**/*'],
     orientation: 'portrait',

@@ -136,9 +136,9 @@
       </a>
     </div>
     <div style="margin:14px 0 0;display:flex;flex-wrap:wrap;gap:4px;justify-content:center">
-      <a href="#" data-coming-soon data-draw-trigger class="pill-platform">
+      <a href="https://apps.apple.com/us/app/readspace-rss-news-reader/id6790224641" target="_blank" rel="noopener" data-draw-trigger class="pill-platform">
         <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2.5h6a1.5 1.5 0 0 1 1.5 1.5v12A1.5 1.5 0 0 1 13 17.5H7A1.5 1.5 0 0 1 5.5 16V4A1.5 1.5 0 0 1 7 2.5z"></path><path d="M9 15.2h2"></path></svg>iOS</a>
-      <a href="#" data-coming-soon data-draw-trigger class="pill-platform">
+      <a href="https://play.google.com/store/apps/details?id=com.readspace.rss" target="_blank" rel="noopener" data-draw-trigger class="pill-platform">
         <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8.5a5 5 0 0 1 10 0v6a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 5 14.5z"></path><path d="M7 5.2 6 3.4M13 5.2l1-1.8"></path></svg>Android</a>
       <a href="https://app.readspace.ai" data-draw-trigger class="pill-platform">
         <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.3"></circle><path d="M2.7 10h14.6M10 2.7c1.9 2 2.9 4.5 2.9 7.3s-1 5.3-2.9 7.3c-1.9-2-2.9-4.5-2.9-7.3S8.1 4.7 10 2.7z"></path></svg>Web app</a>
@@ -158,7 +158,7 @@
     </div>
     <div data-hero-stage style="position:relative">
     <div data-hero-panel="feed" class="hero-panel is-active">
-    <div style="position:relative;border-radius:26px;overflow:hidden;background:linear-gradient(168deg,#E6EEDB,#F2F6E9 62%,#EDF2E2);padding:clamp(16px,3.2vw,46px) clamp(14px,3vw,44px) 0">
+    <div class="hero-desktop-frame">
     <div data-tilt style="position:relative;border-radius:14px;background:#fff;box-shadow:0 40px 90px -40px rgba(24,48,30,.35),0 2px 6px rgba(24,48,30,.05);overflow:hidden">
       <div style="display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid #EEEFE4;background:#F6FAF6">
         <span style="width:10px;height:10px;border-radius:50%;background:#E2E7DE"></span>
@@ -172,12 +172,12 @@
       </picture>
     </div>
     </div>
-    <div style="position:absolute;right:2%;bottom:-52px;width:196px;display:none" data-phone-hero>
-      <img src="./assets/img/main_feed_mobile.webp" alt="The Readspace iOS app showing Your feed" width="438" height="904" loading="lazy" decoding="async" style="display:block;width:100%;height:auto">
+    <div class="hero-phone">
+      <img src="./assets/img/main_feed_mobile.webp" alt="The Readspace iOS app showing Your feed" width="438" height="904" loading="lazy" decoding="async">
     </div>
     </div>
     <div data-hero-panel="digest" class="hero-panel">
-    <div style="position:relative;border-radius:26px;overflow:hidden;background:linear-gradient(168deg,#E6EEDB,#F2F6E9 62%,#EDF2E2);padding:clamp(16px,3.2vw,46px) clamp(14px,3vw,44px) 0">
+    <div class="hero-desktop-frame">
     <div data-tilt style="position:relative;border-radius:14px;background:#fff;box-shadow:0 40px 90px -40px rgba(24,48,30,.35),0 2px 6px rgba(24,48,30,.05);overflow:hidden">
       <div style="display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid #EEEFE4;background:#F6FAF6">
         <span style="width:10px;height:10px;border-radius:50%;background:#E2E7DE"></span>
@@ -188,8 +188,8 @@
       <img src="./assets/img/daily_digest_web.webp" alt="The Readspace web app showing the Daily Digest, with sidebar, developments, and worth-reading sidebar" width="2246" height="1324" loading="lazy" decoding="async" style="display:block;width:100%;height:auto">
     </div>
     </div>
-    <div style="position:absolute;right:2%;bottom:-52px;width:196px;display:none" data-phone-hero>
-      <img src="./assets/img/daily_digest_mobile.webp" alt="The Readspace iOS app showing the Daily Digest" width="438" height="904" loading="lazy" decoding="async" style="display:block;width:100%;height:auto">
+    <div class="hero-phone">
+      <img src="./assets/img/daily_digest_mobile.webp" alt="The Readspace iOS app showing the Daily Digest" width="438" height="904" loading="lazy" decoding="async">
     </div>
     </div>
     </div>
@@ -253,114 +253,84 @@
     <h2 style="margin:16px auto 0;max-width:24ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.03;letter-spacing:-.02em;color:#171C18">Find the sources you already care about.</h2>
     <p style="margin:20px auto 0;max-width:52ch;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">Search more than 120,000 publications, blogs, and writers, paste a website, or import your subscriptions from another reader. Follow what you want; ignore the rest.</p>
   </div>
-  <div style="max-width:1180px;margin:20px auto 0;padding:0 24px;position:relative">
-    <div style="position:relative;height:330px;overflow:hidden">
-      <div style="position:absolute;left:50%;bottom:-360px;transform:translateX(-50%);width:820px;height:820px;border-radius:50%;background:#F3F5E9;border:1px solid #E9EBDC"></div>
-      <div style="position:absolute;left:50%;bottom:-280px;transform:translateX(-50%);width:620px;height:620px;border-radius:50%;background:#F0F2E6;border:1px solid #E6E8D9"></div>
-      <div style="position:absolute;left:50%;bottom:-200px;transform:translateX(-50%);width:420px;height:420px;border-radius:50%;background:#EBEEDF;border:1px solid #E2E4D4"></div>
-      <div style="position:absolute;left:24.7%;bottom:169px;width:52px;height:52px;border-radius:50%;background:#fff;border:1px solid #E6E8D8;box-shadow:0 12px 24px -12px rgba(24,48,30,.5);display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/bbc.jpg" alt="BBC News" width="570" height="366" loading="lazy" decoding="async" style="width:82%;height:82%;object-fit:contain"></div>
-      <div style="position:absolute;left:70.7%;bottom:169px;width:52px;height:52px;border-radius:50%;background:#fff;border:1px solid #E6E8D8;box-shadow:0 12px 24px -12px rgba(24,48,30,.5);display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/wsj.jpg" alt="WSJ" width="80" height="46" loading="lazy" decoding="async" style="width:82%;height:82%;object-fit:contain"></div>
-      <div style="position:absolute;left:31.2%;bottom:142px;width:46px;height:46px;border-radius:50%;background:#fff;border:1px solid #E6E8D8;box-shadow:0 12px 24px -14px rgba(24,48,30,.4);display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/guardian.jpg" alt="The Guardian" width="80" height="92" loading="lazy" decoding="async" style="width:82%;height:82%;object-fit:contain"></div>
-      <div style="position:absolute;left:64.8%;bottom:142px;width:46px;height:46px;border-radius:50%;background:#fff;border:1px solid #E6E8D8;box-shadow:0 12px 24px -14px rgba(24,48,30,.4);display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/npr.jpg" alt="NPR" width="96" height="33" loading="lazy" decoding="async" style="width:82%;height:82%;object-fit:contain"></div>
-      <div style="position:absolute;left:36.5%;bottom:202px;width:46px;height:46px;border-radius:50%;background:#fff;border:1px solid #E6E8D8;box-shadow:0 12px 24px -14px rgba(24,48,30,.4);display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/cnbc.jpg" alt="CNBC" width="100" height="53" loading="lazy" decoding="async" style="width:82%;height:82%;object-fit:contain"></div>
-      <div style="position:absolute;left:59.5%;bottom:202px;width:46px;height:46px;border-radius:50%;background:#fff;border:1px solid #E6E8D8;box-shadow:0 12px 24px -14px rgba(24,48,30,.4);display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/espn.jpg" alt="ESPN" width="62" height="62" loading="lazy" decoding="async" style="width:82%;height:82%;object-fit:contain"></div>
-      <div style="position:absolute;left:21.7%;bottom:235px;width:40px;height:40px;border-radius:50%;background:#fff;border:1px solid #E6E8D8;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/techcrunch.webp" alt="TechCrunch" width="176" height="200" loading="lazy" decoding="async" style="width:82%;height:82%;object-fit:contain"></div>
-      <div style="position:absolute;left:74.7%;bottom:235px;width:40px;height:40px;border-radius:50%;background:#fff;border:1px solid #E6E8D8;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/verge.jpg" alt="The Verge" width="152" height="136" loading="lazy" decoding="async" style="width:82%;height:82%;object-fit:contain"></div>
-      <div style="position:absolute;left:40.3%;bottom:95px;width:40px;height:40px;border-radius:50%;background:#fff;border:1px solid #E6E8D8;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/arstechnica.png" alt="Ars Technica" width="60" height="60" loading="lazy" decoding="async" style="width:82%;height:82%;object-fit:contain"></div>
-      <div style="position:absolute;left:56.2%;bottom:95px;width:40px;height:40px;border-radius:50%;background:#fff;border:1px solid #E6E8D8;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/economist.jpg" alt="The Economist" width="54" height="74" loading="lazy" decoding="async" style="width:82%;height:82%;object-fit:contain"></div>
-      <div style="position:absolute;left:29.9%;bottom:263px;width:34px;height:34px;border-radius:50%;background:#fff;border:1px solid #EEEFE4;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/wired.png" alt="WIRED" width="616" height="750" loading="lazy" decoding="async" style="width:82%;height:82%;object-fit:contain"></div>
-      <div style="position:absolute;left:67.0%;bottom:263px;width:34px;height:34px;border-radius:50%;background:#fff;border:1px solid #EEEFE4;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/fortune.jpg" alt="Fortune" width="100" height="100" loading="lazy" decoding="async" style="width:82%;height:82%;object-fit:contain"></div>
-      <div style="position:absolute;left:18.5%;bottom:73px;width:34px;height:34px;border-radius:50%;background:#fff;border:1px solid #EEEFE4;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/ft.jpg" alt="Financial Times" width="80" height="48" loading="lazy" decoding="async" style="width:82%;height:82%;object-fit:contain"></div>
-      <div style="position:absolute;left:78.5%;bottom:73px;width:34px;height:34px;border-radius:50%;background:#fff;border:1px solid #EEEFE4;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/cbs.jpg" alt="CBS" width="100" height="100" loading="lazy" decoding="async" style="width:82%;height:82%;object-fit:contain"></div>
-      <div style="position:absolute;left:15.0%;bottom:229px;width:32px;height:32px;border-radius:50%;background:#fff;border:1px solid #EEEFE4;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/theatlantic.png" alt="The Atlantic" width="152" height="152" loading="lazy" decoding="async" style="width:78%;height:78%;object-fit:contain"></div>
-      <div style="position:absolute;left:82.2%;bottom:229px;width:32px;height:32px;border-radius:50%;background:#fff;border:1px solid #EEEFE4;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/vogue.png" alt="Vogue" width="504" height="512" loading="lazy" decoding="async" style="width:78%;height:78%;object-fit:contain"></div>
-      <div style="position:absolute;left:45.1%;bottom:284px;width:32px;height:32px;border-radius:50%;background:#fff;border:1px solid #EEEFE4;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/nature.png" alt="Nature" width="180" height="180" loading="lazy" decoding="async" style="width:78%;height:78%;object-fit:contain"></div>
-      <div style="position:absolute;left:52.1%;bottom:284px;width:32px;height:32px;border-radius:50%;background:#fff;border:1px solid #EEEFE4;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="./assets/img/favicons/hackernews.svg" alt="Hacker News" width="18" height="18" loading="lazy" decoding="async" style="width:78%;height:78%;object-fit:contain"></div>
-      <div style="position:absolute;left:0;right:0;bottom:0;height:56px;background:linear-gradient(180deg,rgba(250,250,244,0),#FAFAF4)"></div>
+  <div class="orbit-wrap">
+    <div class="orbit-stage">
+      <div class="orbit-ring orbit-ring-1"></div>
+      <div class="orbit-ring orbit-ring-2"></div>
+      <div class="orbit-ring orbit-ring-3"></div>
+      <div class="orbit-icon" style="--x:24.7%;--y:169px;--s:52px;--mx:20.00%;--my:20.4%;--ms:13.33%"><img src="./assets/img/favicons/bbc.jpg" alt="BBC News" width="570" height="366" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:70.7%;--y:169px;--s:52px;--mx:66.67%;--my:20.4%;--ms:13.33%"><img src="./assets/img/favicons/wsj.jpg" alt="WSJ" width="80" height="46" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:31.2%;--y:142px;--s:46px;--mx:34.50%;--my:44.0%;--ms:11.59%"><img src="./assets/img/favicons/guardian.jpg" alt="The Guardian" width="80" height="92" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:64.8%;--y:142px;--s:46px;--mx:54.00%;--my:44.0%;--ms:11.59%"><img src="./assets/img/favicons/npr.jpg" alt="NPR" width="96" height="33" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:36.5%;--y:202px;--s:46px;--mx:20.58%;--my:63.6%;--ms:9.86%"><img src="./assets/img/favicons/cnbc.jpg" alt="CNBC" width="100" height="53" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:59.5%;--y:202px;--s:46px;--mx:69.57%;--my:63.6%;--ms:9.86%"><img src="./assets/img/favicons/espn.jpg" alt="ESPN" width="62" height="62" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:21.7%;--y:235px;--s:40px;--mx:6.96%;--my:45.6%;--ms:10.43%"><img src="./assets/img/favicons/techcrunch.webp" alt="TechCrunch" width="176" height="200" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:74.7%;--y:235px;--s:40px;--mx:82.61%;--my:45.6%;--ms:10.43%"><img src="./assets/img/favicons/verge.jpg" alt="The Verge" width="152" height="136" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:40.3%;--y:95px;--s:40px" data-orbit-wide><img src="./assets/img/favicons/arstechnica.png" alt="Ars Technica" width="60" height="60" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:56.2%;--y:95px;--s:40px" data-orbit-wide><img src="./assets/img/favicons/economist.jpg" alt="The Economist" width="54" height="74" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:29.9%;--y:263px;--s:34px;--mx:36.23%;--my:78.8%;--ms:8.70%"><img src="./assets/img/favicons/wired.png" alt="WIRED" width="616" height="750" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:67.0%;--y:263px;--s:34px" data-orbit-wide><img src="./assets/img/favicons/fortune.jpg" alt="Fortune" width="100" height="100" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:18.5%;--y:73px;--s:34px" data-orbit-wide><img src="./assets/img/favicons/ft.jpg" alt="Financial Times" width="80" height="48" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:78.5%;--y:73px;--s:34px" data-orbit-wide><img src="./assets/img/favicons/cbs.jpg" alt="CBS" width="100" height="100" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:15.0%;--y:229px;--s:32px" data-orbit-wide><img src="./assets/img/favicons/theatlantic.png" alt="The Atlantic" width="152" height="152" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:82.2%;--y:229px;--s:32px" data-orbit-wide><img src="./assets/img/favicons/vogue.png" alt="Vogue" width="504" height="512" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:45.1%;--y:284px;--s:32px" data-orbit-wide><img src="./assets/img/favicons/nature.png" alt="Nature" width="180" height="180" loading="lazy" decoding="async"></div>
+      <div class="orbit-icon" style="--x:52.1%;--y:284px;--s:32px;--mx:55.07%;--my:78.8%;--ms:8.70%"><img src="./assets/img/favicons/hackernews.svg" alt="Hacker News" width="18" height="18" loading="lazy" decoding="async"></div>
+      <div class="orbit-fade"></div>
     </div>
-    <img src="./readspace.svg" alt="Readspace" width="104" height="104" loading="lazy" decoding="async" style="position:absolute;z-index:20;left:50%;top:246px;transform:translateX(-50%);width:104px;height:104px;border-radius:24px;box-shadow:0 20px 40px -14px rgba(24,48,30,.55);display:block" data-logo>
-    <div style="display:none;position:absolute;z-index:20;left:50%;top:246px;transform:translateX(-50%);width:104px;height:104px;border-radius:24px;background:#232222;color:#fff;align-items:center;justify-content:center;font-family:'EB Garamond',serif;font-size:46px;box-shadow:0 20px 40px -14px rgba(24,48,30,.55)" data-logo-fallback>R</div>
-    <div style="margin-top:52px;text-align:center;font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#646D64"><span data-count-to="120000" data-count-suffix="+">0</span> feeds indexed</div>
+    <img src="./readspace.svg" alt="Readspace" width="104" height="104" loading="lazy" decoding="async" class="orbit-mark" data-logo>
+    <div class="orbit-mark orbit-mark-fallback" data-logo-fallback>R</div>
+    <div class="orbit-caption"><span data-count-to="120000" data-count-suffix="+">0</span> feeds indexed</div>
   </div>
 
-  <div style="max-width:900px;margin:36px auto 0;padding:0 24px">
-    <div>
-      <div style="display:flex;align-items:center;gap:13px;border-radius:12px;background:#F2F4EA;padding:15px 18px">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA497" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-        <span style="font-size:14.5px;color:#5E665F">Search for a website or paste RSS link</span>
-        <span style="margin-left:auto;flex:none;display:flex;align-items:center;justify-content:center;color:#9AA497"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a13.5 13.5 0 0 0 0 18 13.5 13.5 0 0 0 0-18"></path><path d="M3 12h18"></path></svg></span>
-      </div>
-      <div style="margin-top:24px;display:flex;flex-wrap:wrap;gap:9px;justify-content:center">
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8"></path><path d="M15 18h-5"></path><path d="M10 6h8v4h-8V6Z"></path></svg>News &amp; Politics</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"></path><path d="m6 8-4 4 4 4"></path><path d="m14.5 4-5 16"></path></svg>Software Engineering</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"></path><path d="m6 8-4 4 4 4"></path><path d="m14.5 4-5 16"></path></svg>Tech &amp; Digital</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>Business &amp; Finance</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"></path><path d="M3 22h18"></path><path d="M14 22a7 7 0 1 0 0-14h-1"></path><path d="M9 14h2"></path><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"></path><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"></path></svg>Science &amp; Nature</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>Sports</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="10" y1="11" y2="11"></line><line x1="8" x2="8" y1="9" y2="13"></line><line x1="15" x2="15.01" y1="12" y2="12"></line><line x1="18" x2="18.01" y1="10" y2="10"></line><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"></path></svg>Gaming</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="10" y1="11" y2="11"></line><line x1="8" x2="8" y1="9" y2="13"></line><line x1="15" x2="15.01" y1="12" y2="12"></line><line x1="18" x2="18.01" y1="10" y2="10"></line><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"></path></svg>Entertainment</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg>Society &amp; History</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.622 17.897-10.68-2.913"></path><path d="M18.376 2.622a1 1 0 1 1 3.002 3.002L17.36 9.643a.5.5 0 0 0 0 .707l.944.944a2.41 2.41 0 0 1 0 3.408l-.944.944a.5.5 0 0 1-.707 0L8.354 7.348a.5.5 0 0 1 0-.707l.944-.944a2.41 2.41 0 0 1 3.408 0l.944.944a.5.5 0 0 0 .707 0z"></path><path d="M9 8c-1.804 2.71-3.97 3.46-6.583 3.948a.507.507 0 0 0-.302.819l7.32 8.883a1 1 0 0 0 1.185.204C12.735 20.405 16 16.792 16 15"></path></svg>Arts &amp; Culture</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path></svg>Travel</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"></path><path d="M14 2v2"></path><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"></path><path d="M6 2v2"></path></svg>Food &amp; Drink</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>Health &amp; Wellness</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg>Style &amp; Shopping</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Home &amp; Hobbies</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Family &amp; Relationships</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Identity &amp; Community</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>Industry &amp; Professions</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>Automotive</span>
-        <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #E4ECDF;background:#fff;border-radius:999px;padding:9px 16px;font-size:13.5px;font-weight:500;color:#5C6559;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>Regional &amp; Local</span>
-      </div>
-    </div>
-    <div style="margin-top:34px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px;text-align:left">
-      <div class="spotlight-card" style="border:1px solid #E2E4D6;border-radius:8px;background:#F7F8F1;padding:22px 24px">
-        <div style="font-size:17px;font-weight:600;letter-spacing:-.015em;color:#1F2620">Follow it from the page you're on</div>
-        <div style="margin-top:8px;font-size:15px;line-height:1.55;color:#5E665F;max-width:36ch">Found a writer worth hearing from again? The browser extension finds the feed for you — no hunting for an RSS link.</div>
-        <div style="margin-top:18px;border-radius:10px;overflow:hidden;border:1px solid #E7E8DA">
-          <img src="./assets/img/extension-badge.webp" alt="The Readspace browser extension's Subscribe to Feed dialog, detected automatically from the current page" width="446" height="546" loading="lazy" decoding="async" style="width:100%;height:auto;display:block">
+  <div style="max-width:1020px;margin:36px auto 0;padding:0 24px">
+    <div class="spotlight-grid">
+      <div class="spotlight-card category-card">
+        <div style="font-size:17px;font-weight:600;letter-spacing:-.015em;color:#1F2620">Browse by category</div>
+        <div style="margin-top:8px;font-size:15px;line-height:1.55;color:#5E665F;max-width:52ch">Not sure where to start? Every feed is shelved into twenty categories, so you can pick a subject and follow the best sources in it.</div>
+        <div class="category-grid">
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8"></path><path d="M15 18h-5"></path><path d="M10 6h8v4h-8V6Z"></path></svg>News</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"></path><path d="m6 8-4 4 4 4"></path><path d="m14.5 4-5 16"></path></svg>Software</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"></path><path d="m6 8-4 4 4 4"></path><path d="m14.5 4-5 16"></path></svg>Tech</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>Business</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"></path><path d="M3 22h18"></path><path d="M14 22a7 7 0 1 0 0-14h-1"></path><path d="M9 14h2"></path><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"></path><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"></path></svg>Science</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>Sports</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="10" y1="11" y2="11"></line><line x1="8" x2="8" y1="9" y2="13"></line><line x1="15" x2="15.01" y1="12" y2="12"></line><line x1="18" x2="18.01" y1="10" y2="10"></line><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"></path></svg>Gaming</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="10" y1="11" y2="11"></line><line x1="8" x2="8" y1="9" y2="13"></line><line x1="15" x2="15.01" y1="12" y2="12"></line><line x1="18" x2="18.01" y1="10" y2="10"></line><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"></path></svg>Entertainment</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg>Society</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.622 17.897-10.68-2.913"></path><path d="M18.376 2.622a1 1 0 1 1 3.002 3.002L17.36 9.643a.5.5 0 0 0 0 .707l.944.944a2.41 2.41 0 0 1 0 3.408l-.944.944a.5.5 0 0 1-.707 0L8.354 7.348a.5.5 0 0 1 0-.707l.944-.944a2.41 2.41 0 0 1 3.408 0l.944.944a.5.5 0 0 0 .707 0z"></path><path d="M9 8c-1.804 2.71-3.97 3.46-6.583 3.948a.507.507 0 0 0-.302.819l7.32 8.883a1 1 0 0 0 1.185.204C12.735 20.405 16 16.792 16 15"></path></svg>Culture</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path></svg>Travel</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"></path><path d="M14 2v2"></path><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"></path><path d="M6 2v2"></path></svg>Food</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>Health</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg>Style</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Hobbies</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Family</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Identity</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>Industry</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>Automotive</span>
+          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>Regional</span>
         </div>
       </div>
-      <div class="spotlight-card" style="border:1px solid #E2E4D6;border-radius:8px;background:#F7F8F1;padding:22px 24px;display:flex;flex-direction:column">
-        <div style="font-size:17px;font-weight:600;letter-spacing:-.015em;color:#1F2620">Already use RSS?</div>
-        <div style="margin-top:8px;font-size:15px;line-height:1.55;color:#5E665F;max-width:36ch">Bring every subscription across with an OPML file — and export yours the same way, any time.</div>
-        <div style="margin-top:18px;border-radius:10px;background:#fff;border:1px solid #E7E8DA;padding:20px;flex:1;display:flex;flex-direction:column">
-          <div style="display:flex;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid #F0F1E8">
-            <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="#38663F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M6.5 8.5L10 12l3.5-3.5M4 15.5h12"></path></svg>
-            <div style="min-width:0;flex:1;font-family:'Geist Mono',ui-monospace;font-size:14px;color:#3E463F;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">feedly-export.opml</div>
-            <span style="font-family:'Geist Mono',ui-monospace;font-size:12.5px;color:#38663F;font-weight:500;flex:none">214 feeds</span>
-          </div>
-          <div style="margin-top:18px;display:flex;flex-direction:column;gap:22px;flex:1;justify-content:space-between">
-            <div>
-              <div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500;color:#3E463F"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#9AA497" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5a1 1 0 0 1 1-1h4l1.5 2h7a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1z"></path></svg>Tech</div>
-              <div style="margin-top:11px;margin-left:24px;display:flex;flex-direction:column;gap:10px">
-                <div style="display:flex;align-items:center;gap:9px"><span style="width:18px;height:18px;border-radius:5px;background:#FDEEDB;display:flex;align-items:center;justify-content:center;flex:none"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="#E8A33D" stroke-width="2.2" stroke-linecap="round"><circle cx="5" cy="15" r="1.6" fill="#E8A33D" stroke="none"></circle><path d="M4 9.5a6.5 6.5 0 0 1 6.5 6.5"></path><path d="M4 4.5a12 12 0 0 1 12 12"></path></svg></span><span style="font-size:14.5px;color:#5C6B59">The Verge</span></div>
-                <div style="display:flex;align-items:center;gap:9px"><span style="width:18px;height:18px;border-radius:5px;background:#FDEEDB;display:flex;align-items:center;justify-content:center;flex:none"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="#E8A33D" stroke-width="2.2" stroke-linecap="round"><circle cx="5" cy="15" r="1.6" fill="#E8A33D" stroke="none"></circle><path d="M4 9.5a6.5 6.5 0 0 1 6.5 6.5"></path><path d="M4 4.5a12 12 0 0 1 12 12"></path></svg></span><span style="font-size:14.5px;color:#5C6B59">Stratechery</span></div>
-                <div style="display:flex;align-items:center;gap:9px"><span style="width:18px;height:18px;border-radius:5px;background:#FDEEDB;display:flex;align-items:center;justify-content:center;flex:none"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="#E8A33D" stroke-width="2.2" stroke-linecap="round"><circle cx="5" cy="15" r="1.6" fill="#E8A33D" stroke="none"></circle><path d="M4 9.5a6.5 6.5 0 0 1 6.5 6.5"></path><path d="M4 4.5a12 12 0 0 1 12 12"></path></svg></span><span style="font-size:14.5px;color:#5C6B59">Ars Technica</span></div>
-              </div>
-            </div>
-            <div>
-              <div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500;color:#3E463F"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#9AA497" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5a1 1 0 0 1 1-1h4l1.5 2h7a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1z"></path></svg>Politics</div>
-              <div style="margin-top:11px;margin-left:24px;display:flex;flex-direction:column;gap:10px">
-                <div style="display:flex;align-items:center;gap:9px"><span style="width:18px;height:18px;border-radius:5px;background:#FDEEDB;display:flex;align-items:center;justify-content:center;flex:none"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="#E8A33D" stroke-width="2.2" stroke-linecap="round"><circle cx="5" cy="15" r="1.6" fill="#E8A33D" stroke="none"></circle><path d="M4 9.5a6.5 6.5 0 0 1 6.5 6.5"></path><path d="M4 4.5a12 12 0 0 1 12 12"></path></svg></span><span style="font-size:14.5px;color:#5C6B59">The Guardian</span></div>
-                <div style="display:flex;align-items:center;gap:9px"><span style="width:18px;height:18px;border-radius:5px;background:#FDEEDB;display:flex;align-items:center;justify-content:center;flex:none"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="#E8A33D" stroke-width="2.2" stroke-linecap="round"><circle cx="5" cy="15" r="1.6" fill="#E8A33D" stroke="none"></circle><path d="M4 9.5a6.5 6.5 0 0 1 6.5 6.5"></path><path d="M4 4.5a12 12 0 0 1 12 12"></path></svg></span><span style="font-size:14.5px;color:#5C6B59">The Economist</span></div>
-              </div>
-            </div>
-            <div>
-              <div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500;color:#3E463F"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#9AA497" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5a1 1 0 0 1 1-1h4l1.5 2h7a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1z"></path></svg>Culture</div>
-              <div style="margin-top:11px;margin-left:24px;display:flex;flex-direction:column;gap:10px">
-                <div style="display:flex;align-items:center;gap:9px"><span style="width:18px;height:18px;border-radius:5px;background:#FDEEDB;display:flex;align-items:center;justify-content:center;flex:none"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="#E8A33D" stroke-width="2.2" stroke-linecap="round"><circle cx="5" cy="15" r="1.6" fill="#E8A33D" stroke="none"></circle><path d="M4 9.5a6.5 6.5 0 0 1 6.5 6.5"></path><path d="M4 4.5a12 12 0 0 1 12 12"></path></svg></span><span style="font-size:14.5px;color:#5C6B59">The Atlantic</span></div>
-                <div style="display:flex;align-items:center;gap:9px"><span style="width:18px;height:18px;border-radius:5px;background:#FDEEDB;display:flex;align-items:center;justify-content:center;flex:none"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="#E8A33D" stroke-width="2.2" stroke-linecap="round"><circle cx="5" cy="15" r="1.6" fill="#E8A33D" stroke="none"></circle><path d="M4 9.5a6.5 6.5 0 0 1 6.5 6.5"></path><path d="M4 4.5a12 12 0 0 1 12 12"></path></svg></span><span style="font-size:14.5px;color:#5C6B59">WIRED</span></div>
-              </div>
-            </div>
-            <div>
-              <div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500;color:#3E463F"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="#9AA497" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5a1 1 0 0 1 1-1h4l1.5 2h7a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1z"></path></svg>Ideas</div>
-              <div style="margin-top:11px;margin-left:24px;display:flex;flex-direction:column;gap:10px">
-                <div style="display:flex;align-items:center;gap:9px"><span style="width:18px;height:18px;border-radius:5px;background:#FDEEDB;display:flex;align-items:center;justify-content:center;flex:none"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="#E8A33D" stroke-width="2.2" stroke-linecap="round"><circle cx="5" cy="15" r="1.6" fill="#E8A33D" stroke="none"></circle><path d="M4 9.5a6.5 6.5 0 0 1 6.5 6.5"></path><path d="M4 4.5a12 12 0 0 1 12 12"></path></svg></span><span style="font-size:14.5px;color:#5C6B59">Noahpinion</span></div>
-                <div style="display:flex;align-items:center;gap:9px"><span style="width:18px;height:18px;border-radius:5px;background:#FDEEDB;display:flex;align-items:center;justify-content:center;flex:none"><svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="#E8A33D" stroke-width="2.2" stroke-linecap="round"><circle cx="5" cy="15" r="1.6" fill="#E8A33D" stroke="none"></circle><path d="M4 9.5a6.5 6.5 0 0 1 6.5 6.5"></path><path d="M4 4.5a12 12 0 0 1 12 12"></path></svg></span><span style="font-size:14.5px;color:#5C6B59">Craig Mod</span></div>
-              </div>
-            </div>
-            <div style="font-size:13px;color:#5E665F">+ 205 more across 12 folders</div>
+      <div class="spotlight-card bento-card">
+        <div class="bento-title">Follow it from the page you're on</div>
+        <div class="bento-sub">Found a writer worth hearing from again? The browser extension finds the feed for you — no hunting for an RSS link.</div>
+        <div class="bento-visual">
+          <img src="./assets/img/extension-badge.webp" alt="The Readspace browser extension's Subscribe to Feed dialog, detected automatically from the current page" width="446" height="546" loading="lazy" decoding="async">
+        </div>
+      </div>
+      <div class="spotlight-card bento-card">
+        <div class="bento-title">Already use RSS?</div>
+        <div class="bento-sub">Drop in an OPML file and every subscription comes across, folders and all — and you can export yours the same way, any time.</div>
+        <div class="opml-drop">
+          <span class="opml-drop-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V3M6.5 6.5 10 3l3.5 3.5M3.5 13v2.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V13"></path></svg>
+          </span>
+          <div class="opml-drop-title">Drop your OPML file here</div>
+          <div class="opml-drop-hint">.opml or .xml, straight out of Feedly, Inoreader, or NetNewsWire</div>
+          <div class="opml-file">
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="#9AA497" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5H6a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 6 17.5h8a1.5 1.5 0 0 0 1.5-1.5V6.5z"></path><path d="M11.5 2.5v4h4"></path></svg>
+            <span class="opml-file-name">feedly-export.opml</span>
+            <span class="opml-file-count">214 feeds</span>
           </div>
         </div>
       </div>
@@ -387,8 +357,8 @@
         <div style="border-radius:16px;background:#fff;box-shadow:0 34px 70px -44px rgba(24,48,30,.32);overflow:hidden">
           <img src="./assets/img/read_later_desktop.webp" alt="Saving an article to Readspace from the browser extension, with a reading priority and a note" width="755" height="653" loading="lazy" decoding="async" style="display:block;width:100%;height:auto">
         </div>
-        <div data-phone-hero style="display:none;position:absolute;right:-130px;bottom:-52px;width:206px">
-          <img src="./assets/img/read_later_mobile.webp" alt="Saved articles in the Readspace iOS app, shown on an iPhone" width="438" height="904" loading="lazy" decoding="async" style="display:block;width:100%;height:auto">
+        <div class="saved-phone">
+          <img src="./assets/img/read_later_mobile.webp" alt="Saved articles in the Readspace iOS app, shown on an iPhone" width="438" height="904" loading="lazy" decoding="async">
         </div>
       </div>
     </div>
@@ -406,9 +376,9 @@
 
     <div data-reveal class="feature-visual" style="display:flex;justify-content:center">
       <div style="position:relative;width:100%;max-width:720px">
-        <img src="./assets/img/just_read_desktop.webp" alt="An article open in the Readspace reader view, shown on a MacBook" width="2048" height="1241" loading="lazy" decoding="async" style="display:block;width:100%;height:auto">
-        <div data-phone-hero style="display:none;position:absolute;right:-130px;bottom:-52px;width:206px">
-          <img src="./assets/img/just_read_mobile.webp" alt="An article open in the Readspace iOS reader view, shown on an iPhone" width="438" height="904" loading="lazy" decoding="async" style="display:block;width:100%;height:auto">
+        <img class="reader-desktop" src="./assets/img/just_read_desktop.webp" alt="An article open in the Readspace reader view, shown on a MacBook" width="2048" height="1241" loading="lazy" decoding="async">
+        <div class="reader-phone">
+          <img src="./assets/img/just_read_mobile.webp" alt="An article open in the Readspace iOS reader view, shown on an iPhone" width="438" height="904" loading="lazy" decoding="async">
         </div>
       </div>
     </div>
@@ -470,31 +440,33 @@
       <p style="margin:20px 0 0;font-size:17px;line-height:1.6;color:#4D554E;max-width:48ch;text-wrap:pretty">No more hunting through Gmail for the issue you meant to read — newsletters show up in your feed, right alongside everything else you follow.</p>
     </div>
     <div>
-      <div style="border:1px solid #E2E4D6;border-radius:20px;background:linear-gradient(168deg,#EAF0DE,#F4F7EE);padding:20px">
-        <div style="border-radius:14px;background:#fff;border:1px solid #EDEFE2;box-shadow:0 26px 50px -32px rgba(24,48,30,.32);padding:26px 28px">
-          <div style="font-weight:600;font-size:18px;letter-spacing:-.01em;color:#1B211C">Newsletter Ingestion</div>
-          <div style="margin-top:6px;font-size:13.5px;line-height:1.5;color:#5E665F">Subscribe to mailing lists directly using your private email alias.</div>
+      <div class="newsletter-frame">
+        <div class="newsletter-card">
+          <div class="nl-card-head">
+            <div style="font-weight:600;font-size:18px;letter-spacing:-.01em;color:#1B211C">Newsletter Ingestion</div>
+            <div style="margin-top:6px;font-size:13.5px;line-height:1.5;color:#5E665F">Subscribe to mailing lists directly using your private email alias.</div>
+          </div>
 
-          <div style="margin-top:22px;display:flex;gap:13px;align-items:flex-start">
-            <span style="width:20px;height:20px;border-radius:50%;background:#E3EBDC;color:#38663F;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">1</span>
+          <div class="nl-step">
+            <span class="nl-step-num">1</span>
             <div style="min-width:0;flex:1">
               <div style="font-weight:600;font-size:14px;color:#1F2620">Copy your private email address</div>
-              <div style="margin-top:9px;border:1px solid #E2E4D6;background:#F7F8F1;border-radius:8px;padding:9px 12px">
-                <span style="font-family:'Geist Mono',ui-monospace;font-size:12px;color:#38663F;overflow-wrap:anywhere">you.a1b2c3d4@newsletters.readspace.ai</span>
+              <div class="nl-alias">
+                <span>you.a1b2c3d4@newsletters.readspace.ai</span>
               </div>
             </div>
           </div>
 
-          <div style="margin-top:18px;display:flex;gap:13px;align-items:flex-start">
-            <span style="width:20px;height:20px;border-radius:50%;background:#E3EBDC;color:#38663F;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">2</span>
+          <div class="nl-step">
+            <span class="nl-step-num">2</span>
             <div style="min-width:0;flex:1">
               <div style="font-weight:600;font-size:14px;color:#1F2620">Subscribe on any website</div>
               <div style="margin-top:4px;font-size:13px;line-height:1.55;color:#818A80">Paste this private email address in the subscription form of Substack, Mailchimp, or any other publication.</div>
             </div>
           </div>
 
-          <div style="margin-top:18px;display:flex;gap:13px;align-items:flex-start">
-            <span style="width:20px;height:20px;border-radius:50%;background:#E3EBDC;color:#38663F;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none">3</span>
+          <div class="nl-step">
+            <span class="nl-step-num">3</span>
             <div style="min-width:0;flex:1">
               <div style="font-weight:600;font-size:14px;color:#1F2620">Read in Readspace</div>
               <div style="margin-top:4px;font-size:13px;line-height:1.55;color:#818A80">The first email received will automatically create the feed and place it in your <span style="color:#38663F;font-weight:500">Newsletters</span> folder.</div>
@@ -588,7 +560,7 @@
         <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">5 article extractions / scrapes per day</span></div>
         <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">3 Daily Digests a month</span></div>
         <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Search across 120k+ sources</span></div>
-        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Web app &amp; browser extension — iOS and Android coming soon</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Web, iOS, Android &amp; browser extensions</span></div>
       </div>
       <div style="font-size:12.5px;line-height:1.5;color:#9AA497"></div>
     </div>
@@ -709,8 +681,8 @@
       <div style="font-size:13.5px;font-weight:600;color:#1F2620;letter-spacing:-.01em">Get started</div>
       <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px;align-items:flex-start">
         <a href="https://app.readspace.ai" class="footer-link">Web app</a>
-        <a href="#" data-coming-soon class="footer-link">iOS</a>
-        <a href="#" data-coming-soon class="footer-link">Android</a>
+        <a href="https://apps.apple.com/us/app/readspace-rss-news-reader/id6790224641" target="_blank" rel="noopener" class="footer-link">iOS</a>
+        <a href="https://play.google.com/store/apps/details?id=com.readspace.rss" target="_blank" rel="noopener" class="footer-link">Android</a>
         <a href="https://chromewebstore.google.com/detail/readspace/ppadpdoicnolpjnflfladjllhmkonedi" target="_blank" rel="noopener" class="footer-link">Chrome extension</a>
         <a href="https://addons.mozilla.org/en-US/firefox/addon/readspace/" target="_blank" rel="noopener" class="footer-link">Firefox extension</a>
       </div>

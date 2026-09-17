@@ -103,7 +103,13 @@ export const useFollowingStore = create<FollowingStore>()(
       },
 
       reset: () => {
-        set(initialState);
+        // Reset user-specific state without marking the already-loaded store as
+        // unhydrated. Hydration only runs once per app launch, so resetting this
+        // flag on sign-out leaves filter controls stale until the next restart.
+        set((state) => ({
+          ...initialState,
+          _hasHydrated: state._hasHydrated,
+        }));
       },
     }),
     {

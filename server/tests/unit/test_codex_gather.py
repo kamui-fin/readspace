@@ -1,13 +1,14 @@
 """Unit tests for Codex Digest Phase 0 pure logic (no DB) - dedupe, capping, age formatting."""
 
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
 
 from app.core.constants import CODEX_MAX_PER_FEED
-from app.services.codex.gather import _cap_and_dedupe, _normalize_title, _relative_age, fetch_full_texts
+from app.services.codex.gather import _cap_and_dedupe, _normalize_title, _relative_age, fetch_full_texts, gather_catalog
 from app.typing.entries import EntryListItem
 
 pytestmark = pytest.mark.unit
@@ -142,6 +143,61 @@ class TestCapAndDedupe:
         survivors = _cap_and_dedupe([older, newer])
 
         assert [item.title for item in survivors] == ["New", "Old"]
+
+
+class TestGatherCatalog:
+    @pytest.mark.asyncio
+    async def test_gathers_all_300_articles_across_pages(self, monkeypatch):
+        now = datetime.now(timezone.utc)
+        items = [_make_item(title=f"Story {i}", published_at=now - timedelta(seconds=i)) for i in range(300)]
+        get_articles = AsyncMock(
+            side_effect=[
+                SimpleNamespace(items=items[:100], has_more=True, next_cursor="page2"),
+                SimpleNamespace(items=items[100:200], has_more=True, next_cursor="page3"),
+                SimpleNamespace(items=items[200:], has_more=False, next_cursor=None),
+            ]
+        )
+        monkeypatch.setattr("app.services.codex.gather.get_articles", get_articles)
+
+        result = await gather_catalog(AsyncMock(), uuid4(), now=now)
+
+        assert result.total_articles == 300
+        assert len(result.catalog) == 300
+        assert get_articles.await_count == 3
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("filter_reason", ["duplicate", "per_feed", "excluded"])
+    async def test_filtered_articles_do_not_consume_catalog_budget(self, monkeypatch, filter_reason):
+        monkeypatch.setattr("app.services.codex.gather.CODEX_MAX_ARTICLES", 3)
+        monkeypatch.setattr("app.services.codex.gather.CODEX_MAX_PER_FEED", 1)
+        now = datetime.now(timezone.utc)
+        first = _make_item(title="First", published_at=now)
+        dropped = _make_item(title="Dropped", published_at=now - timedelta(seconds=1))
+        excluded = set()
+        if filter_reason == "duplicate":
+            dropped.title = first.title
+        elif filter_reason == "per_feed":
+            dropped.feed_id = first.feed_id
+        else:
+            excluded.add(dropped.feed_id)
+        second = _make_item(title="Second", published_at=now - timedelta(seconds=2))
+        third = _make_item(title="Third", published_at=now - timedelta(seconds=3))
+        extra = _make_item(title="Extra", published_at=now - timedelta(seconds=4))
+        get_articles = AsyncMock(
+            side_effect=[
+                SimpleNamespace(items=[first, dropped, second], has_more=True, next_cursor="page2"),
+                SimpleNamespace(items=[third, extra], has_more=True, next_cursor="page3"),
+            ]
+        )
+        monkeypatch.setattr("app.services.codex.gather.get_articles", get_articles)
+
+        result = await gather_catalog(AsyncMock(), uuid4(), now=now, excluded_feed_ids=excluded)
+
+        assert result.total_articles == 3
+        assert [item["title"] for item in result.catalog] == ["First", "Second", "Third"]
+        assert get_articles.await_count == 2
+        assert get_articles.await_args_list[1].args[2].cursor == "page2"
+        assert get_articles.await_args_list[1].kwargs["published_until"] == now
 
 
 class TestFetchFullTexts:

@@ -117,28 +117,6 @@
     });
   });
 
-  // "Coming soon" modal for store links not yet live
-  var modal = document.createElement('div');
-  modal.className = 'modal-backdrop';
-  modal.innerHTML =
-    '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="coming-soon-title">' +
-      '<div class="modal-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.3"></circle><path d="M10 5.5v5l3 2"></path></svg></div>' +
-      '<div class="modal-title" id="coming-soon-title">Coming soon!</div>' +
-      '<div class="modal-body">The native app isn\'t out yet &mdash; the web app works great in the meantime.</div>' +
-      '<button type="button" class="modal-close">Got it</button>' +
-    '</div>';
-  document.body.appendChild(modal);
-  var closeModal = function () { modal.classList.remove('is-open'); };
-  modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
-  modal.querySelector('.modal-close').addEventListener('click', closeModal);
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
-  root.querySelectorAll('[data-coming-soon]').forEach(function (el) {
-    el.addEventListener('click', function (e) {
-      e.preventDefault();
-      modal.classList.add('is-open');
-    });
-  });
-
   // FAQ chevron rotation
   root.querySelectorAll('.faq-item').forEach(function (d) {
     d.addEventListener('toggle', function () {
@@ -228,7 +206,6 @@
   var wide = function () {
     var w = window.innerWidth;
     root.querySelectorAll('[data-sidebar]').forEach(function (e) { e.style.display = w > 820 ? 'flex' : 'none'; });
-    root.querySelectorAll('[data-phone-hero]').forEach(function (e) { e.style.display = w > 900 ? 'block' : 'none'; });
     root.querySelectorAll('[data-foliage]').forEach(function (e) { e.style.display = w > 880 ? 'block' : 'none'; });
     root.querySelectorAll('[data-gistgrid]').forEach(function (e) {
       e.style.gridTemplateColumns = w > 1000 ? '1.4fr 1fr 1fr' : (w > 640 ? 'repeat(2,minmax(0,1fr))' : '1fr');

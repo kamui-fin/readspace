@@ -31,6 +31,16 @@ x-server-env: &server-env
   CORS_ORIGIN: ${WEB_URL}
 
 services:
+  # Override of the vendored supabase/docker-compose.yml service (Compose merges healthcheck
+  # keys across -f files, so test/interval/retries stay upstream's). storage-api runs its
+  # tenant migrations against Postgres before it listens on :5000, and upstream sets no
+  # start_period — so the 3 x 5s probes elapse ~30s after start and Compose marks it
+  # unhealthy. On a first `launch.sh`, image builds saturate the disk, storage loses that
+  # race, and every app service gated on `storage: service_healthy` is left in Created.
+  storage:
+    healthcheck:
+      start_period: 120s
+
   redis:
     image: redis:alpine
     container_name: readspace_redis

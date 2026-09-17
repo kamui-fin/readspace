@@ -85,8 +85,9 @@ async def gather_catalog(
     excluded_feed_ids = excluded_feed_ids or set()
 
     raw_items: list[EntryListItem] = []
+    survivors: list[EntryListItem] = []
     cursor: str | None = None
-    while len(raw_items) < CODEX_MAX_ARTICLES:
+    while len(survivors) < CODEX_MAX_ARTICLES:
         page = await get_articles(
             db,
             user_id,
@@ -95,15 +96,17 @@ async def gather_catalog(
             published_until=now,
             load_full_content=False,
         )
-        raw_items.extend(EntryListItem.model_validate(item) for item in page.items)
+        raw_items.extend(
+            item
+            for raw_item in page.items
+            if (item := EntryListItem.model_validate(raw_item)).feed_id not in excluded_feed_ids
+        )
+        # Filtered rows must not consume the catalog budget: keep paging until
+        # enough usable articles survive or the publication window is exhausted.
+        survivors = _cap_and_dedupe(raw_items)
         if not page.has_more or not page.next_cursor:
             break
         cursor = page.next_cursor
-
-    if excluded_feed_ids:
-        raw_items = [item for item in raw_items if item.feed_id not in excluded_feed_ids]
-
-    survivors = _cap_and_dedupe(raw_items)
 
     catalog: list[dict[str, Any]] = []
     items_by_id: dict[int, EntryListItem] = {}

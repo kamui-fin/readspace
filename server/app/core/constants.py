@@ -124,9 +124,8 @@ SUMMARY_MAX_OUTPUT_TOKENS = 4000  # Headroom for long features / CJK; not the bo
 
 # Codex Digest
 CODEX_INGEST_WINDOW_HOURS = 24  # Fixed lookback window for v1
-# Phase 1 catalog cap — cost / context safety valve. Temporarily capped at 100 (down from the
-# design doc's 1000) while validating the pipeline end-to-end; raise once cost is modeled.
-CODEX_MAX_ARTICLES = 100
+# Phase 1 catalog cap, applied after folder exclusions, per-feed capping, and title dedupe.
+CODEX_MAX_ARTICLES = 1000
 CODEX_MAX_PER_FEED = 30  # Stops one hyperactive feed dominating the catalog
 CODEX_MAX_DEVELOPMENTS = 5  # Clusters synthesised and shown; the model may find more
 # Bodies fetched per cluster for Phase 2. Raised above the display cap's floor so the model
