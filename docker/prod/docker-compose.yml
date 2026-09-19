@@ -470,12 +470,15 @@ services:
       # Resolves rsshub:// feed URLs; no rsshub service runs in this stack
       - RSSHUB_URL=${RSSHUB_URL:-https://rsshub.app}
 
-      # Gemini AI configuration
+      # AI configuration: Gemini for the LLM (digest, summaries, translations,
+      # enrichment), OpenAI for embeddings (Meilisearch feed search embedder)
       - ENABLE_AI=${ENABLE_AI:-true}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_SMART_MODEL=${GEMINI_SMART_MODEL:-gemini-2.5-flash}
       - GEMINI_FAST_MODEL=${GEMINI_FAST_MODEL:-gemini-2.5-flash-lite}
-      - GEMINI_EMBEDDING_MODEL=${GEMINI_EMBEDDING_MODEL:-gemini-embedding-001}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      - OPENAI_EMBEDDING_DIMENSIONS=${OPENAI_EMBEDDING_DIMENSIONS:-768}
     logging:
       driver: json-file
       options:
@@ -521,12 +524,15 @@ services:
       - OTEL_METRICS_EXPORTER=none
       - OTEL_LOGS_EXPORTER=none
       
-      # Gemini AI configuration
+      # AI configuration: Gemini for the LLM (digest, summaries, translations,
+      # enrichment), OpenAI for embeddings (Meilisearch feed search embedder)
       - ENABLE_AI=${ENABLE_AI:-true}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_SMART_MODEL=${GEMINI_SMART_MODEL:-gemini-2.5-flash}
       - GEMINI_FAST_MODEL=${GEMINI_FAST_MODEL:-gemini-2.5-flash-lite}
-      - GEMINI_EMBEDDING_MODEL=${GEMINI_EMBEDDING_MODEL:-gemini-embedding-001}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      - OPENAI_EMBEDDING_DIMENSIONS=${OPENAI_EMBEDDING_DIMENSIONS:-768}
 
   scheduler:
     image: readspace-server:local
@@ -561,12 +567,15 @@ services:
       - OTEL_METRICS_EXPORTER=none
       - OTEL_LOGS_EXPORTER=none
       
-      # Gemini AI configuration
+      # AI configuration: Gemini for the LLM (digest, summaries, translations,
+      # enrichment), OpenAI for embeddings (Meilisearch feed search embedder)
       - ENABLE_AI=${ENABLE_AI:-true}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_SMART_MODEL=${GEMINI_SMART_MODEL:-gemini-2.5-flash}
       - GEMINI_FAST_MODEL=${GEMINI_FAST_MODEL:-gemini-2.5-flash-lite}
-      - GEMINI_EMBEDDING_MODEL=${GEMINI_EMBEDDING_MODEL:-gemini-embedding-001}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      - OPENAI_EMBEDDING_DIMENSIONS=${OPENAI_EMBEDDING_DIMENSIONS:-768}
 
 volumes:
   alloy-data:

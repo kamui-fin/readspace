@@ -30,11 +30,15 @@ class Settings(BaseSettings):
     # AI Configuration
     ENABLE_AI: bool = True  # Master switch for all AI functionality
 
-    # Gemini Configuration (Primary AI service)
+    # Gemini Configuration (LLM: summaries, translations, enrichment, similarity reasoning)
     GEMINI_API_KEY: str = ""
     GEMINI_SMART_MODEL: str = "gemini-3.6-flash"  # For complex reasoning (e.g. enrichment)
     GEMINI_FAST_MODEL: str = "gemini-3.5-flash-lite"  # For high-volume continuous parsing (summaries, translation)
-    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"  # For embeddings
+
+    # OpenAI Configuration (Embeddings only, e.g. Meilisearch's REST embedder for feed search)
+    OPENAI_API_KEY: str = ""
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
+    OPENAI_EMBEDDING_DIMENSIONS: int = 768
 
     # RSShub Configuration (validated URL)
     RSSHUB_URL: str = "http://localhost:1200"  # Default RSShub instance URL

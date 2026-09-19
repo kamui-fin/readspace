@@ -78,6 +78,45 @@ async def check_index_exists(client: AsyncClient, index_name: str) -> bool:
         raise
 
 
+def build_openai_embedder_config(settings: Settings) -> dict:
+    """
+    Build the Meilisearch REST embedder config for OpenAI embeddings.
+
+    Meilisearch's generic `rest` embedder source is used (rather than the
+    dedicated `openAi` source) so the request payload can pin `dimensions`
+    explicitly, keeping the vector size stable regardless of model choice.
+
+    Args:
+        settings: Application settings
+
+    Returns:
+        Embedder config dict for the Meilisearch "default" embedder
+
+    Raises:
+        RuntimeError: If OPENAI_API_KEY is not configured
+    """
+    if not settings.OPENAI_API_KEY:
+        raise RuntimeError("OPENAI_API_KEY must be set to configure the Meilisearch embedder")
+
+    return {
+        "source": "rest",
+        "url": "https://api.openai.com/v1/embeddings",
+        "dimensions": settings.OPENAI_EMBEDDING_DIMENSIONS,
+        "documentTemplate": "{{doc.title}} {{doc.description}}",
+        "request": {
+            "model": settings.OPENAI_EMBEDDING_MODEL,
+            "input": ["{{text}}", "{{..}}"],
+            "dimensions": settings.OPENAI_EMBEDDING_DIMENSIONS,
+        },
+        "response": {
+            "data": [{"embedding": "{{embedding}}"}, "{{..}}"],
+        },
+        "headers": {
+            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+        },
+    }
+
+
 async def configure_meilisearch_index(
     client: AsyncClient,
     index_name: str,
@@ -105,9 +144,7 @@ async def configure_meilisearch_index(
     if not embedders_only:
         # Check if already configured (unless force is True)
         if not force and await check_index_exists(client, index_name):
-            logger.info(
-                "meilisearch_index_already_configured_skipping", index=index_name
-            )
+            logger.info("meilisearch_index_already_configured_skipping", index=index_name)
             return
 
     # Create or get existing index
@@ -131,37 +168,7 @@ async def configure_meilisearch_index(
             logger.error("cannot_sync_embeddings_ai_disabled")
             raise RuntimeError("ENABLE_AI must be true to sync embeddings")
 
-        settings_dict = {
-            "embedders": {
-                "default": {
-                    "source": "rest",
-                    "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents",
-                    "dimensions": 768,
-                    "documentTemplate": "{{doc.title}} {{doc.description}}",
-                    "request": {
-                        "requests": [
-                            {
-                                "model": "models/gemini-embedding-001",
-                                "content": {"parts": [{"text": "{{text}}"}]},
-                                "outputDimensionality": 768
-                            },
-                            "{{..}}"
-                        ]
-                    },
-                    "response": {
-                        "embeddings": [
-                            {
-                                "values": "{{embedding}}"
-                            },
-                            "{{..}}"
-                        ]
-                    },
-                    "headers": {
-                        "x-goog-api-key": settings.GEMINI_API_KEY
-                    }
-                }
-            }
-        }
+        settings_dict = {"embedders": {"default": build_openai_embedder_config(settings)}}
         logger.info("syncing_embeddings_only", index=index_name)
     else:
         # Base settings configuration
@@ -229,35 +236,7 @@ async def configure_meilisearch_index(
 
         # Configure embedders only if AI is enabled
         if settings.ENABLE_AI:
-            settings_dict["embedders"] = {
-                "default": {
-                    "source": "rest",
-                    "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents",
-                    "dimensions": 768,
-                    "documentTemplate": "{{doc.title}} {{doc.description}}",
-                    "request": {
-                        "requests": [
-                            {
-                                "model": "models/gemini-embedding-001",
-                                "content": {"parts": [{"text": "{{text}}"}]},
-                                "outputDimensionality": 768
-                            },
-                            "{{..}}"
-                        ]
-                    },
-                    "response": {
-                        "embeddings": [
-                            {
-                                "values": "{{embedding}}"
-                            },
-                            "{{..}}"
-                        ]
-                    },
-                    "headers": {
-                        "x-goog-api-key": settings.GEMINI_API_KEY
-                    }
-                }
-            }
+            settings_dict["embedders"] = {"default": build_openai_embedder_config(settings)}
             logger.info("ai_enabled_configuring_embedders", index=index_name)
         else:
             settings_dict["embedders"] = {}
@@ -334,9 +313,7 @@ async def sync_embeddings() -> None:
 
     if not settings.ENABLE_AI:
         logger.error("ai_not_enabled")
-        raise RuntimeError(
-            "ENABLE_AI must be set to true in your environment to sync embeddings"
-        )
+        raise RuntimeError("ENABLE_AI must be set to true in your environment to sync embeddings")
 
     client = get_client(settings)
     index_name = settings.MEILISEARCH_INDEX_NAME
@@ -346,14 +323,10 @@ async def sync_embeddings() -> None:
     exists = await check_index_exists(client, index_name)
     if not exists:
         logger.error("index_not_found_cannot_sync")
-        raise RuntimeError(
-            "Index must exist before syncing embeddings. Run init first."
-        )
+        raise RuntimeError("Index must exist before syncing embeddings. Run init first.")
 
     # Update settings to add embedders
-    await configure_meilisearch_index(
-        client, index_name, settings, force=False, embedders_only=True
-    )
+    await configure_meilisearch_index(client, index_name, settings, force=False, embedders_only=True)
 
     logger.info(
         "embeddings_sync_initiated",

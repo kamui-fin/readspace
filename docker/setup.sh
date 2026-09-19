@@ -250,12 +250,24 @@ ENABLE_AI_INPUT=${ENABLE_AI_INPUT:-"Y"}
 
 if [[ "$ENABLE_AI_INPUT" =~ ^[Yy]$ ]]; then
     ENABLE_AI="true"
+
+    echo ""
+    echo "AI has two separate providers:"
+    echo "  • LLM (digest, summaries, translations, enrichment) — Gemini"
+    echo "  • Embeddings (feed search similarity, powering Meilisearch) — OpenAI"
+    echo ""
     echo "Get a Gemini API key at: https://aistudio.google.com/app/apikey"
-    read -p "Gemini API key (or press Enter to configure later): " GEMINI_API_KEY
+    read -p "Gemini API key (LLM, or press Enter to configure later): " GEMINI_API_KEY
     GEMINI_API_KEY=${GEMINI_API_KEY:-""}
+
+    echo ""
+    echo "Get an OpenAI API key at: https://platform.openai.com/api-keys"
+    read -p "OpenAI API key (embeddings, or press Enter to configure later): " OPENAI_API_KEY
+    OPENAI_API_KEY=${OPENAI_API_KEY:-""}
 else
     ENABLE_AI="false"
     GEMINI_API_KEY=""
+    OPENAI_API_KEY=""
 fi
 
 
@@ -614,10 +626,16 @@ MEILISEARCH_INDEX_NAME=feeds
 
 # AI Configuration
 ENABLE_AI=${ENABLE_AI}
+
+# Gemini (LLM: digest, summaries, translations, enrichment)
 GEMINI_API_KEY=${GEMINI_API_KEY}
 GEMINI_SMART_MODEL=gemini-3.6-flash
 GEMINI_FAST_MODEL=gemini-3.5-flash-lite
-GEMINI_EMBEDDING_MODEL=gemini-embedding-001
+
+# OpenAI (Embeddings only: powers the Meilisearch feed search embedder)
+OPENAI_API_KEY=${OPENAI_API_KEY}
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+OPENAI_EMBEDDING_DIMENSIONS=768
 
 # RSShub Configuration
 RSSHUB_URL=${RSSHUB_URL}
@@ -648,10 +666,16 @@ MEILISEARCH_INDEX_NAME=feeds
 
 # AI Configuration
 ENABLE_AI=${ENABLE_AI}
+
+# Gemini (LLM: digest, summaries, translations, enrichment)
 GEMINI_API_KEY=${GEMINI_API_KEY}
 GEMINI_SMART_MODEL=gemini-3.6-flash
 GEMINI_FAST_MODEL=gemini-3.5-flash-lite
-GEMINI_EMBEDDING_MODEL=gemini-embedding-001
+
+# OpenAI (Embeddings only: powers the Meilisearch feed search embedder)
+OPENAI_API_KEY=${OPENAI_API_KEY}
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+OPENAI_EMBEDDING_DIMENSIONS=768
 
 # RSShub Configuration
 RSSHUB_URL=${RSSHUB_URL}
