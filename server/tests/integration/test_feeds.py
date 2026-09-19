@@ -434,6 +434,39 @@ class TestFeedGet:
         assert data["title"] == test_feed.title
 
     @pytest.mark.asyncio
+    async def test_get_feed_exposes_global_title_alongside_custom_title(
+        self,
+        async_client: AsyncClient,
+        test_feed: Feed,
+        test_user: Profile,
+        test_folder: Folder,
+        db_session: AsyncSession,
+    ):
+        """A subscription's custom_title must not hide the feed's global title.
+
+        Admin tooling diffs edits against global_title; if only the overridden
+        title were returned, a global title edit would be silently dropped.
+        """
+        global_title = test_feed.title
+        subscription = FeedSubscription(
+            user_id=test_user.id,
+            feed_id=test_feed.id,
+            folder_id=test_folder.id,
+            custom_title="My Personal Name",
+        )
+        db_session.add(subscription)
+        await db_session.flush()
+
+        response = await async_client.get(f"/api/feeds/{test_feed.id}")
+
+        assert response.status_code == 200
+        data = response.json()
+        # `title` keeps the per-user override for display...
+        assert data["title"] == "My Personal Name"
+        # ...while `global_title` still reports the real feed title.
+        assert data["global_title"] == global_title
+
+    @pytest.mark.asyncio
     async def test_get_feed_not_subscribed(self, async_client: AsyncClient, test_feed: Feed):
         """Test getting feed user is not subscribed to returns preview mode."""
         response = await async_client.get(f"/api/feeds/{test_feed.id}")

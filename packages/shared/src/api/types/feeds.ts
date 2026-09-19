@@ -82,6 +82,13 @@ export interface FeedDetail extends FeedSummary {
 
   is_subscribed: boolean;
 
+  /**
+   * The feed's global title, never overridden by a subscription's custom_title.
+   * `title` carries the per-user override for display; admin tooling must edit
+   * and diff against this field instead.
+   */
+  global_title?: string | null;
+
   // Timestamps
   created_at: string;
   last_updated_at: string | null;

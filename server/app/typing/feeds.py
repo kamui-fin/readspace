@@ -128,6 +128,11 @@ class FeedDetail(FeedSummary):
     # Subscription status (for preview mode)
     is_subscribed: bool = False
 
+    # The feed's global title, never overridden by a subscription's custom_title.
+    # `title` carries the per-user override for display; admin tooling must edit
+    # and diff against this field instead, or the global title silently never changes.
+    global_title: str | None = None
+
     # Timestamps
     created_at: datetime
     last_updated_at: datetime | None = None

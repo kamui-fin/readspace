@@ -161,6 +161,9 @@ async def get_feed(
     # 5. Merge Data
     feed_detail = FeedDetail.model_validate(feed, from_attributes=True)
     feed_detail.is_subscribed = subscription is not None
+    # Preserve the global title separately: `title` below may be replaced by the
+    # user's own custom_title, which would otherwise be indistinguishable from it.
+    feed_detail.global_title = feed.title
     if subscription and subscription.custom_title:
         feed_detail.title = subscription.custom_title
 

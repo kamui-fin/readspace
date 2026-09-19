@@ -73,7 +73,10 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(formSchema as any),
         defaultValues: {
-            title: feed.title || "",
+            // Intentionally blank until the feed detail loads: the `feed` prop's
+            // title may be a subscription custom_title, and seeding it here would
+            // let a personal name be saved as the global one.
+            title: "",
             description: feed.description || "",
             language: feed.language || "",
             top_level_category: feed.top_level_category || "",
@@ -88,7 +91,9 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
     useEffect(() => {
         if (feedDetail && !form.formState.isDirty) {
             form.reset({
-                title: feedDetail.title || "",
+                // global_title, not title: `title` may be this admin's own
+                // custom_title, which must never be written back as the global one.
+                title: feedDetail.global_title ?? "",
                 description: feedDetail.description || "",
                 language: feedDetail.language || "",
                 top_level_category: feedDetail.top_level_category || "",
@@ -120,15 +125,27 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
     })
 
     const onSubmit = (values: FormValues) => {
+        // The global title only arrives with feedDetail. Submitting before it
+        // loads would diff against the subscription's custom_title and could
+        // save that personal name as the global one.
+        if (!feedDetail) {
+            toast.error("Still loading feed details, please try again")
+            return
+        }
+
         const updates: Record<string, string | number | undefined> = {}
 
-        const currentFeed = feedDetail || feed
+        const currentFeed = feedDetail
         const effectiveInitialRank = getCuratedRank(
             currentFeed.frontend_rank_override
         )
 
-        // Only include changed fields
-        if (values.title !== currentFeed.title) updates.title = values.title
+        // Only include changed fields. Title diffs against the global title:
+        // currentFeed.title may be this admin's custom_title, and comparing
+        // against it would both drop real edits and let a personal name be
+        // saved globally.
+        const currentGlobalTitle = currentFeed.global_title ?? ""
+        if (values.title !== currentGlobalTitle) updates.title = values.title
         if (values.description !== currentFeed.description)
             updates.description = values.description
         if (values.language !== (currentFeed.language || ""))
@@ -154,6 +171,7 @@ export function EditFeedForm({ feed, onClose }: EditFeedFormProps) {
         }
 
         if (Object.keys(updates).length === 0) {
+            toast.info("No changes to save")
             onClose()
             return
         }
