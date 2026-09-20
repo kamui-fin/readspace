@@ -6,6 +6,30 @@ Rules of engagement live in `apps/mobile/CLAUDE.md`. This file is the work plan.
 
 ---
 
+## Status board (update on every commit)
+
+Legend: ✅ done · 🟡 code-done, **needs device test** · 🚧 in progress · ⬜ todo · ⏭️ deliberately kept
+
+| # | Item | Status | Notes |
+|---|---|---|---|
+| 0 | Prereqs (True Sheet installed, `SUPPORTS_GLASS`, `NativeHost`) | ✅ | `@lib/constants/platform.ts`, `@components/ui/native-host` |
+| 1 | Sheet wrappers (`BottomSheet`/`Modal`/`Input`) on True Sheet | 🟡 | gorhom removed |
+| 2 | All sheet callers migrated | 🟡 | 29 files; see §2 device-test checklist |
+| 3a | Back button (SwiftUI glass `Button`) | 🟡 | `@components/ui/back-button`; 5 call sites replaced |
+| 3b | Toggle / Switch (SwiftUI `Toggle`) | 🟡 | `ui/switch/index.ios.tsx` |
+| 3c | Spinner / ProgressView | ⏭️ | brand-coloured SVG spinner used on coloured buttons + toasts; native adds nothing |
+| 3d | Label | ⬜ | lands with settings `Form` (§3.9) |
+| 4 | Confirmation dialog + alerts | 🟡 | `useNativeConfirm` (`ui/confirm-dialog`); feed-switcher ×3 + profile replaced; `lib/review` mock alert kept |
+| 5 | Menus (`Menu` for tap menus, ContextMenu spike) | ⬜ | |
+| 6 | Settings `Form`/`Section`/`Picker`/`Stepper` | ⬜ | |
+| 7 | Control group (article actions bar) | ⬜ | |
+| 8 | Discover native header + search | ⬜ | approved |
+| 9 | NativeTabs + feed switcher on long-press | ⬜ | approved; spike first |
+
+**Device-test needed (nothing here has run on a simulator yet):** sheets (all), back button glass/bordered, Toggle, ConfirmationDialog anchoring inside a True Sheet.
+
+---
+
 ## 0. Ground rules for every item
 
 1. **Platform split pattern** (already proven by `reader-corner-menu.ios.tsx`): `foo/index.tsx` (Android/default, current implementation) + `foo/foo.ios.tsx` (SwiftUI) + `foo/foo.types.ts` (shared props contract). Callers never branch on `Platform`.

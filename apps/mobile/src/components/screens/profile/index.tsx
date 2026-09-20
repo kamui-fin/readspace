@@ -1,4 +1,3 @@
-import { openStoreReview } from '@lib/review';
 import {
   CodexSettingsBottomSheet,
   type CodexSettingsBottomSheetRef,
@@ -15,6 +14,7 @@ import { SettingsValueChip } from '@components/screens/profile/ui/settings-value
 // import { ToastTester } from '@components/screens/profile/ui/toast-tester';
 import { UserProfile } from '@components/screens/profile/ui/user-profile';
 import { Chip } from '@components/ui/chip';
+import { useNativeConfirm } from '@components/ui/confirm-dialog';
 import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -32,6 +32,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { CLOUD_CONFIG } from '@lib/constants/config';
+import { openStoreReview } from '@lib/review';
 import { exportFeedsToOPML } from '@lib/utils/opml';
 import { getUserAvatarSeed, getUserDisplayName } from '@lib/utils/user';
 import { useFeeds } from '@readspace/shared';
@@ -45,8 +46,8 @@ import {
   StarsIcon,
   TrashBinTrashIcon,
 } from '@solar-icons/react-native/linear';
-import { Plane3Icon } from '@solar-icons/react-native/outline/plane-3';
 import { LikeIcon } from '@solar-icons/react-native/outline/like';
+import { Plane3Icon } from '@solar-icons/react-native/outline/plane-3';
 import { useSettingsStore } from '@stores/settings';
 import { type Theme, useThemeStore } from '@stores/theme';
 import { useUpgradeDialog } from '@stores/upgrade-dialog';
@@ -54,13 +55,14 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Linking, ScrollView, View } from 'react-native';
+import { Linking, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function ProfileScreen() {
   const router = useRouter(); // Still needed for Reading History button
   const { signOut, user } = useSession();
   const { isPro, isRcPro, presentCustomerCenter } = useRevenueCat();
+  const { confirm, dialog: confirmDialog } = useNativeConfirm();
   const { open: openUpgrade } = useUpgradeDialog();
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
@@ -239,17 +241,13 @@ export function ProfileScreen() {
                   if (isRcPro) {
                     presentCustomerCenter();
                   } else {
-                    Alert.alert(
-                      'Manage Subscription',
-                      'This subscription was purchased on the web. Please manage your billing via the web version of Readspace.',
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        {
-                          text: 'Open Web',
-                          onPress: () => Linking.openURL(CLOUD_CONFIG.READSPACE_APP_URL),
-                        },
-                      ]
-                    );
+                    confirm({
+                      title: 'Manage Subscription',
+                      message:
+                        'This subscription was purchased on the web. Please manage your billing via the web version of Readspace.',
+                      confirmLabel: 'Open Web',
+                      onConfirm: () => Linking.openURL(CLOUD_CONFIG.READSPACE_APP_URL),
+                    });
                   }
                 }}
                 isLast={true}
@@ -398,6 +396,7 @@ export function ProfileScreen() {
 
       <CodexSettingsBottomSheet ref={codexSettingsSheetRef} />
       <DeleteAccountModal ref={deleteAccountSheetRef} />
+      {confirmDialog}
     </View>
   );
 }
