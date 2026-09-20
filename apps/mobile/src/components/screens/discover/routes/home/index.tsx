@@ -7,12 +7,14 @@ import {
   FolderPickerBottomSheet,
   type FolderPickerBottomSheetRef,
 } from '@components/bottom-sheets/folder-picker';
-import { Plus } from '@components/icons/svg';
+import { Languages, Plus } from '@components/icons/svg';
+import { LanguagePicker } from '@components/screens/discover/ui/language-picker.dropdown';
 import { RecentSearches } from '@components/screens/discover/ui/recent-searches';
 import { SearchBar } from '@components/screens/discover/ui/search-bar.input';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useDiscoverController } from '@hooks/useDiscoverController';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import {
@@ -24,7 +26,11 @@ import { COLORS } from '@lib/constants/colors';
 import { createSearchClient, FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import type { FeedSummary } from '@readspace/shared';
 import { MOBILE_CATEGORY_NAMES, POPULAR_CATEGORIES, useCreateFeed } from '@readspace/shared';
-import { discoverLanguageToCode, getDiscoverLanguage } from '@stores/discover-preferences';
+import {
+  type DiscoverLanguage,
+  discoverLanguageToCode,
+  useDiscoverPreferences,
+} from '@stores/discover-preferences';
 import { useSearchHistory } from '@stores/search-history';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { MotiView } from 'moti';
@@ -112,9 +118,13 @@ function DiscoverScreenInner() {
   const contentPaddingBottom = BOTTOM_TABBAR_BASE_HEIGHT + 24;
   const trendingScrollRef = useRef<ScrollView>(null);
 
-  // Discover search is English-only for now. Shared with the similar-feeds queries via
-  // getDiscoverLanguage().
-  const languageCode = discoverLanguageToCode(getDiscoverLanguage());
+  // Discover language preference, persisted and shared with the similar-feeds /
+  // feed-preview queries via getDiscoverLanguage(). Read reactively here (via
+  // the store hook, not the static getter) so switching languages in the
+  // picker immediately re-filters trending + search results.
+  const languagePickerRef = useRef<BottomSheetModal>(null);
+  const { language: discoverLanguage, setLanguage: setDiscoverLanguage } = useDiscoverPreferences();
+  const languageCode = discoverLanguageToCode(discoverLanguage);
 
   // Fetch trending feeds using Meilisearch directly — infinite paginated, capped at MAX_TRENDING_ITEMS
   // Trending shows popular feeds from News, Tech, and Business categories only
@@ -349,14 +359,24 @@ function DiscoverScreenInner() {
                   className="tracking-heading text-primary-foreground">
                   Discover
                 </Text>
-                <Button
-                  variant="icon"
-                  size="small"
-                  className="bg-grey6"
-                  fullWidth={false}
-                  onPress={() => addFeedModalRef.current?.present()}>
-                  <Plus width={20} height={20} color={colors.grey} />
-                </Button>
+                <View className="flex-row items-center gap-2">
+                  <Button
+                    variant="icon"
+                    size="small"
+                    className="bg-grey6"
+                    fullWidth={false}
+                    onPress={() => languagePickerRef.current?.present()}>
+                    <Languages width={20} height={20} color={colors.grey} />
+                  </Button>
+                  <Button
+                    variant="icon"
+                    size="small"
+                    className="bg-grey6"
+                    fullWidth={false}
+                    onPress={() => addFeedModalRef.current?.present()}>
+                    <Plus width={20} height={20} color={colors.grey} />
+                  </Button>
+                </View>
               </View>
             </MotiView>
 
@@ -448,6 +468,12 @@ function DiscoverScreenInner() {
       <CreateFolderModal ref={createFolderModalRef} />
       <AddFeedBottomSheet ref={addFeedModalRef} onConfirm={handleAddFeedConfirm} />
       <FolderPickerBottomSheet ref={folderPickerModalRef} onFolderSelect={handleFolderSelect} />
+      <LanguagePicker
+        ref={languagePickerRef}
+        title="Search language"
+        initialLanguage={discoverLanguage}
+        onLanguageChange={(language) => setDiscoverLanguage(language as DiscoverLanguage)}
+      />
     </View>
   );
 }

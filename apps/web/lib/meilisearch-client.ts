@@ -61,7 +61,9 @@ interface SearchParams {
         semanticRatio: number
         embedder?: string
     }
+    rankingScoreThreshold?: number
     showRankingScore?: boolean
+    meiliSearchParams?: Record<string, unknown>
 }
 
 // ============================================================================
@@ -191,15 +193,33 @@ function applyHybridSearchParams(
     request: SearchRequest,
     hybridConfig: HybridSearchConfig
 ): SearchRequest {
+    const hybridPayload = {
+        semanticRatio: hybridConfig.semanticRatio,
+        embedder: hybridConfig.embedder || "default",
+    }
+
+    const meiliSearchParams: Record<string, unknown> = {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...((request.params as any)?.meiliSearchParams || {}),
+        hybrid: hybridPayload,
+        showRankingScore: true,
+    }
+
+    if (hybridConfig.rankingScoreThreshold !== undefined) {
+        meiliSearchParams.rankingScoreThreshold =
+            hybridConfig.rankingScoreThreshold
+    }
+
     return {
         ...request,
         params: {
             ...request.params,
-            hybrid: {
-                semanticRatio: hybridConfig.semanticRatio,
-                embedder: hybridConfig.embedder || "default",
-            },
+            hybrid: hybridPayload,
             showRankingScore: true,
+            ...(hybridConfig.rankingScoreThreshold !== undefined && {
+                rankingScoreThreshold: hybridConfig.rankingScoreThreshold,
+            }),
+            meiliSearchParams,
         },
     }
 }
@@ -312,5 +332,7 @@ export const meilisearchClient = new MeiliSearch({
 // Re-export hybrid search utilities from shared package
 export {
     createHybridSearchParams,
+    DEFAULT_SEMANTIC_RATIO,
+    DEFAULT_RANKING_SCORE_THRESHOLD,
     type HybridSearchConfig,
 } from "@readspace/shared"

@@ -1,23 +1,51 @@
-import type { Language } from '@components/screens/discover/ui/search-bar.input';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
-/**
- * Discover search is English-only for now — there is no UI to change it, and this always
- * resolves to English regardless of any language preference persisted by an older app version.
- */
-export const getDiscoverLanguage = (): Language => 'english';
+/** Languages selectable in Discover search — kept intentionally small (matches web). */
+export type DiscoverLanguage = 'english' | 'chinese';
+
+interface DiscoverPreferencesState {
+  language: DiscoverLanguage;
+}
+
+interface DiscoverPreferencesActions {
+  setLanguage: (language: DiscoverLanguage) => void;
+}
+
+export type DiscoverPreferencesStore = DiscoverPreferencesState & DiscoverPreferencesActions;
+
+export const useDiscoverPreferences = create<DiscoverPreferencesStore>()(
+  persist(
+    (set) => ({
+      language: 'english',
+
+      setLanguage: (language) => {
+        set({ language });
+      },
+    }),
+    {
+      name: 'readspace-discover-preferences',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        language: state.language,
+      }),
+    }
+  )
+);
+
+/** Synchronous accessor for the persisted discover language preference. */
+export const getDiscoverLanguage = (): DiscoverLanguage =>
+  useDiscoverPreferences.getState().language;
 
 /**
  * Map a discover language label to the ISO code used in Meilisearch `language`
- * filters. Returns `null` for "all" (no language filter should be applied).
+ * filters.
  */
-export function discoverLanguageToCode(language: Language): string | null {
+export function discoverLanguageToCode(language: DiscoverLanguage): string {
   switch (language) {
-    case 'all':
-      return null;
     case 'chinese':
       return 'zh';
-    case 'japanese':
-      return 'ja';
     default:
       return 'en';
   }

@@ -13,26 +13,110 @@
  * - Pagination support
  */
 
-import { useMemo } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 import { InstantSearch } from "react-instantsearch"
 
 import { DiscoverContent } from "@/components/features/discover/DiscoverContent"
+import { createDiscoverRouting } from "@/components/features/discover/lib/discover-router"
+import { usePersistentState } from "@/hooks/use-persistent-state"
 import { createSearchClient, FEEDS_INDEX_NAME } from "@/lib/meilisearch-client"
+import { createHybridSearchParams, type HybridSearchConfig } from "@readspace/shared"
+
+function getInitialAiState(): boolean {
+    if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search)
+        if (params.has("ai")) {
+            return params.get("ai") === "1"
+        }
+    }
+    return false
+}
 
 /**
  * Client-side discover page wrapper that sets up InstantSearch.
+ *
+ * AI search state lives here (above InstantSearch) because it has to be
+ * available to `createSearchClient()` when the client is constructed —
+ * hybrid params are injected at the search-client-proxy level, not via
+ * `<Configure>`, so they can't be supplied further down the tree.
  */
 export default function DiscoverView() {
-    // Create the search client once.
-    const { searchClient } = useMemo(() => createSearchClient(), [])
+    const [aiSearchEnabled, setAiSearchEnabled] = usePersistentState(
+        "discover-ai-search",
+        getInitialAiState()
+    )
+
+    // Sync from URL if present on mount or popstate
+    useEffect(() => {
+        if (typeof window === "undefined") return
+        const params = new URLSearchParams(window.location.search)
+        if (params.has("ai")) {
+            const isAi = params.get("ai") === "1"
+            if (isAi !== aiSearchEnabled) {
+                setAiSearchEnabled(isAi)
+            }
+        }
+    }, [aiSearchEnabled, setAiSearchEnabled])
+
+    useEffect(() => {
+        const handlePopState = () => {
+            const params = new URLSearchParams(window.location.search)
+            if (params.has("ai")) {
+                setAiSearchEnabled(params.get("ai") === "1")
+            }
+        }
+        window.addEventListener("popstate", handlePopState)
+        return () => window.removeEventListener("popstate", handlePopState)
+    }, [setAiSearchEnabled])
+
+    const handleAiSearchToggle = useCallback(
+        (enabled: boolean) => {
+            setAiSearchEnabled(enabled)
+            if (typeof window !== "undefined") {
+                const url = new URL(window.location.href)
+                if (enabled) {
+                    url.searchParams.set("ai", "1")
+                } else {
+                    url.searchParams.delete("ai")
+                }
+                window.history.replaceState(null, "", url.toString())
+            }
+        },
+        [setAiSearchEnabled]
+    )
+
+    // getHybridConfig is read fresh on every search call, so the toggle can
+    // flip without recreating the search client (and losing InstantSearch's
+    // internal state). A ref keeps the callback identity stable.
+    const aiSearchEnabledRef = useRef(aiSearchEnabled)
+    aiSearchEnabledRef.current = aiSearchEnabled
+
+    const getHybridConfig = useCallback((): HybridSearchConfig | undefined => {
+        return aiSearchEnabledRef.current
+            ? createHybridSearchParams()
+            : undefined
+    }, [])
+
+    // Create the search client once — it reads the current toggle state via
+    // getHybridConfig on each request rather than being recreated per toggle.
+    const { searchClient } = useMemo(
+        () => createSearchClient(getHybridConfig),
+        [getHybridConfig]
+    )
+
+    const routing = useMemo(() => createDiscoverRouting(), [])
 
     return (
         <InstantSearch
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             searchClient={searchClient as any}
             indexName={FEEDS_INDEX_NAME}
+            routing={routing}
         >
-            <DiscoverContent />
+            <DiscoverContent
+                aiSearchEnabled={aiSearchEnabled}
+                onAiSearchToggle={handleAiSearchToggle}
+            />
         </InstantSearch>
     )
 }

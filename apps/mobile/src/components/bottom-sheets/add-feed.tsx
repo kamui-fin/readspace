@@ -65,7 +65,9 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
     const colors = COLORS[isDark ? 'dark' : 'light'];
     const { isPro } = useRevenueCat();
     const { open: openUpgrade } = useUpgradeDialog();
-    const isSelfHosted = useSettingsStore((state) => state.settings.instance_type === 'self-hosted');
+    const isSelfHosted = useSettingsStore(
+      (state) => state.settings.instance_type === 'self-hosted'
+    );
 
     // Tab animation state
     const [containerWidth, setContainerWidth] = useState(0);

@@ -54,6 +54,7 @@ export interface FeedBase {
   image_url: string | null;
   author: string | null;
   content_type: ContentType | null;
+  tags?: string[];
   tags_native: string[];
 }
 

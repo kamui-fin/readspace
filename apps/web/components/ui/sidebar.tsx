@@ -193,7 +193,7 @@ const SidebarProvider = React.forwardRef<
                 <TooltipProvider delayDuration={0}>
                     <div
                         className={cn(
-                            "group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full",
+                            "group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full md:has-data-[variant=inset]:h-svh md:has-data-[variant=inset]:overflow-hidden",
                             className
                         )}
                         ref={ref}
@@ -487,7 +487,7 @@ const SidebarInset = React.forwardRef<
         <main
             className={cn(
                 "bg-background relative flex min-h-svh flex-1 flex-col",
-                "peer-data-[variant=inset]:min-h-[calc(100svh-1rem)] md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm",
+                "peer-data-[variant=inset]:min-h-[calc(100svh-1rem)] md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:h-[calc(100svh-1rem)] md:peer-data-[variant=inset]:max-h-[calc(100svh-1rem)] md:peer-data-[variant=inset]:overflow-hidden",
                 className
             )}
             ref={ref}

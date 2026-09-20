@@ -1,7 +1,9 @@
 import NextImage from "next/image"
+import { useEffect, useState } from "react"
 import {
     useInfiniteHits,
     useInstantSearch,
+    useSearchBox,
     useStats,
 } from "react-instantsearch"
 
@@ -28,6 +30,10 @@ interface SearchResultsProps {
     previewError?: string | null
     /** Whether preview fetch failed */
     isPreviewError?: boolean
+    /** Whether user is actively typing in instant search mode */
+    isInstantTyping?: boolean
+    /** Callback when an instant search request finishes */
+    onSearchDone?: () => void
 }
 
 function createPreviewFeedData(
@@ -44,6 +50,7 @@ function createPreviewFeedData(
         language: previewFeed.language ?? "en",
         author: previewFeed.author ?? null,
         content_type: (previewFeed.content_type as ContentType) ?? null,
+        tags: previewFeed.tags ?? [],
         tags_native: previewFeed.tags_native ?? [],
         description: previewFeed.description,
     }
@@ -63,15 +70,40 @@ export function SearchResults({
     previewFeed,
     isPreviewLoading,
     previewError,
+    isInstantTyping = false,
+    onSearchDone,
 }: SearchResultsProps) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { hits: items, showMore, isLastPage } = useInfiniteHits({} as any)
     const { nbHits } = useStats()
-    const { status } = useInstantSearch()
+    const { refine: refineQuery } = useSearchBox()
+    const { status, error } = useInstantSearch()
 
     // Don't show "no results" while the search is still loading OR while preview is loading
     const isLoading =
         status === "loading" || status === "stalled" || isPreviewLoading
+    const isError = status === "error"
+
+    const [isPaginating, setIsPaginating] = useState(false)
+
+    useEffect(() => {
+        if (status === "idle" || status === "error") {
+            setIsPaginating(false)
+            onSearchDone?.()
+        }
+    }, [status, onSearchDone])
+
+    const handleShowMore = () => {
+        setIsPaginating(true)
+        showMore()
+    }
+
+    // Active search/filter loading (re-fires skeletons on new filters, queries, or categories)
+    const isSearchLoading = isLoading && !isPaginating
+
+    // Disable skeletons for instant as-you-type search in keyword mode when results already exist
+    const shouldShowSkeletons =
+        isSearchLoading && !(isInstantTyping && items.length > 0)
 
     // Prepare preview feed data if available
     let previewFeedData:
@@ -113,22 +145,46 @@ export function SearchResults({
 
             {/* Results Header - Show for both results and empty state (if not loading), but hide if showing preview */}
             {!previewFeedData && (
-                <div className="flex items-center justify-between mb-2 pl-5 pr-2">
-                    <div className="text-[#91998C] dark:text-muted-foreground text-sm">
-                        {nbHits} {nbHits === 1 ? "result" : "results"}
-                    </div>
+                <div className="flex items-center justify-between mb-3 px-0.5 min-h-[28px]">
+                    {shouldShowSkeletons ? (
+                        <div className="h-4 w-24 bg-muted/60 dark:bg-muted/40 animate-pulse rounded" />
+                    ) : (
+                        <div className="text-xs md:text-sm font-medium text-muted-foreground">
+                            {nbHits.toLocaleString()} {nbHits === 1 ? "feed" : "feeds"} found
+                        </div>
+                    )}
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={onClearSearch}
-                        className="h-8 px-3 text-sm text-[#91998C] hover:text-[#6A994E] hover:bg-[#F3F9EF] dark:text-muted-foreground dark:hover:text-primary dark:hover:bg-accent"
+                        className="h-7 px-2.5 text-xs text-muted-foreground hover:text-[#6A994E] hover:bg-[#F3F9EF] dark:hover:text-primary dark:hover:bg-accent rounded-md cursor-pointer transition-colors"
                     >
-                        Clear
+                        Reset filters
                     </Button>
                 </div>
             )}
 
-            {items.length === 0 && !isLoading && !previewFeedData ? (
+            {!previewFeedData && shouldShowSkeletons ? (
+                /* Skeleton rows while a search/category/filter request is in flight. */
+                <div className="flex flex-col divide-y divide-border/40">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                        <FeedCardSkeleton key={i} />
+                    ))}
+                </div>
+            ) : !previewFeedData && isError ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                    <h3 className="text-xl font-medium mb-3 text-foreground dark:text-foreground">
+                        Something went wrong
+                    </h3>
+                    <p className="text-muted-foreground text-center max-w-md mb-6">
+                        {error?.message ||
+                            "We couldn't load search results. Please try again."}
+                    </p>
+                    <Button variant="outline" onClick={onClearSearch}>
+                        Try again
+                    </Button>
+                </div>
+            ) : items.length === 0 && !isLoading && !isError && !previewFeedData ? (
                 <div className="flex flex-col items-center justify-center py-16">
                     <div className="mb-6">
                         <NextImage
@@ -165,6 +221,7 @@ export function SearchResults({
                                 content_type:
                                     (hitData.content_type as ContentType) ??
                                     null,
+                                tags: hitData.tags ?? [],
                                 tags_native: hitData.tags_native ?? [],
                                 top_level_category: hitData.top_level_category
                                     ? (hitData.top_level_category as FeedCategory)
@@ -179,7 +236,8 @@ export function SearchResults({
                                 <FeedCard
                                     key={hitData.id}
                                     feed={feedSummary}
-                                    className="py-8"
+                                    className="py-4 md:py-5"
+                                    onTagClick={refineQuery}
                                 />
                             )
                         })}
@@ -190,10 +248,11 @@ export function SearchResults({
                         <div className="flex justify-center mt-8 mb-4">
                             <Button
                                 variant="outline"
-                                onClick={() => showMore()}
+                                onClick={handleShowMore}
+                                disabled={isLoading}
                                 className="h-9 px-6 hover:bg-[#F3F9EF] dark:hover:bg-accent text-[#91998C] hover:text-[#6A994E] dark:hover:text-primary transition-colors cursor-pointer"
                             >
-                                Load More
+                                {isPaginating ? "Loading..." : "Load More"}
                             </Button>
                         </div>
                     )}

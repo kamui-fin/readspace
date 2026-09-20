@@ -15,8 +15,6 @@ import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export type Language = 'all' | 'english' | 'chinese' | 'japanese';
-
 export interface LanguageOption {
   value: string;
   label: string;
@@ -30,11 +28,14 @@ export interface LanguagePickerProps {
   title?: string;
 }
 
+/**
+ * Default language options — kept intentionally small (matches web's
+ * DISCOVER_LANGUAGES). Callers that need a different set (e.g. article
+ * translation) pass their own `languages` prop.
+ */
 const DEFAULT_LANGUAGES: LanguageOption[] = [
   { value: 'english', label: 'English' },
-  { value: 'all', label: 'All languages' },
   { value: 'chinese', label: '中文' },
-  { value: 'japanese', label: '日本語' },
 ];
 
 export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(

@@ -71,6 +71,9 @@ services:
       - MEILI_ENV=${MEILI_ENV:-production}
       - MEILI_MASTER_KEY=${MEILISEARCH_MASTER_KEY}
       - MEILI_HTTP_ADDR=0.0.0.0:7700
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
       interval: 30s

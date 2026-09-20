@@ -102,3 +102,6 @@ ds-bundle/
 .design-sync/.cache/
 .design-sync/learnings/
 .design-sync/node_modules
+
+# Meilisearch dumps (large, and embed live API keys in embedder config)
+*.dump

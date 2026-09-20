@@ -6,8 +6,6 @@ import { MotiView } from 'moti';
 import { forwardRef, useCallback } from 'react';
 import { Platform, TextInput, type TextInputProps, TouchableOpacity, View } from 'react-native';
 
-export type Language = 'all' | 'english' | 'chinese' | 'japanese';
-
 export interface SearchBarProps extends Omit<TextInputProps, 'onSubmitEditing' | 'ref'> {
   onClear?: () => void;
   onSubmit?: () => void;
@@ -124,7 +122,13 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
         <MotiView
           animate={{ opacity: hasText ? 1 : 0, scale: hasText ? 1 : 0.9 }}
           transition={{ type: 'timing', duration: 180 }}
-          style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center', marginRight: 4 }}
+          style={{
+            width: 44,
+            height: 44,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: 4,
+          }}
           pointerEvents={hasText ? 'auto' : 'none'}>
           <TouchableOpacity onPress={handleClear} activeOpacity={0.6} style={{ padding: 8 }}>
             <CloseCircleIcon size={20} color={colors.grey} />

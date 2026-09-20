@@ -74,7 +74,7 @@ export function NewsletterSection() {
             {/* Minimalist text link trigger */}
             <button
                 onClick={handleTriggerClick}
-                className="mt-6 text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 cursor-pointer group font-medium"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 cursor-pointer group font-medium"
             >
                 <MailOpen className="w-3.5 h-3.5" />
                 <span>Subscribe to newsletters via email</span>

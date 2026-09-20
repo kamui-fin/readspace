@@ -2,12 +2,6 @@ import { BaseFeedCard } from "./BaseFeedCard"
 import { EditFeedDialog } from "./EditFeedDialog"
 import { Button } from "@/components/ui/button"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -22,8 +16,9 @@ import {
     useAdminDeleteFeed,
     type FeedSummary,
     type FeedDiscoveryResult,
+    type ContentType,
 } from "@readspace/shared"
-import { Eye, MoreVertical, Pencil, Sparkles, Trash2 } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 
@@ -32,7 +27,7 @@ interface FeedCardProps {
     className?: string
     showFollowButton?: boolean
     showSimilarButton?: boolean
-    showPreviewButton?: boolean
+    onTagClick?: (tag: string) => void
 }
 
 export function FeedCard({
@@ -40,7 +35,7 @@ export function FeedCard({
     className,
     showFollowButton = true,
     showSimilarButton = true,
-    showPreviewButton = true,
+    onTagClick,
 }: FeedCardProps) {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
@@ -53,77 +48,51 @@ export function FeedCard({
         }
     }
 
-    // Dropdown menu for additional actions
-    const dropdownActions = (showPreviewButton ||
-        showSimilarButton ||
-        isAdmin) && (
-        <>
-            {/* Desktop version */}
-            <div className="hidden md:block">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                        >
-                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                            <span className="sr-only">More options</span>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        {showPreviewButton && (
-                            <Link
-                                href={`/feeds/${feed.id}/articles`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                <DropdownMenuItem>
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    Preview
-                                </DropdownMenuItem>
-                            </Link>
-                        )}
-                        {showSimilarButton && (
-                            <Link
-                                href={`/feeds/${feed.id}/similar`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                <DropdownMenuItem>
-                                    <Sparkles className="mr-2 h-4 w-4" />
-                                    View Similar Feeds
-                                </DropdownMenuItem>
-                            </Link>
-                        )}
-                        {isAdmin && (
-                            <>
-                                <DropdownMenuItem
-                                    onSelect={() => setIsEditDialogOpen(true)}
-                                >
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onSelect={(e) => {
-                                        e.preventDefault()
-                                        setIsDeleteConfirmOpen(true)
-                                    }}
-                                    className="text-destructive focus:text-destructive"
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                </DropdownMenuItem>
-                            </>
-                        )}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
+    // Header actions (Admin actions)
+    const cardActions = isAdmin ? (
+        <div className="flex items-center gap-1">
+            <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                onClick={() => setIsEditDialogOpen(true)}
+                title="Edit feed"
+                aria-label="Edit feed"
+            >
+                <Pencil className="h-4 w-4" />
+                <span className="sr-only">Edit feed</span>
+            </Button>
+            <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setIsDeleteConfirmOpen(true)}
+                title="Delete feed"
+                aria-label="Delete feed"
+            >
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">Delete feed</span>
+            </Button>
+        </div>
+    ) : null
 
-            {/* Mobile version - shown below description */}
-            {/* Note: BaseFeedCard doesn't support mobile-specific positioning yet */}
-        </>
-    )
+    // Footer actions ("More like this →" link)
+    const similarHref = feed.id
+        ? `/feeds/${feed.id}/similar${feed.title ? `?title=${encodeURIComponent(feed.title)}` : ""}`
+        : "#"
+
+    const footerActions =
+        showSimilarButton && feed.id ? (
+            <Link
+                href={similarHref}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1 group py-0.5 cursor-pointer"
+            >
+                <span>More like this</span>
+                <span className="transition-transform duration-150 group-hover:translate-x-0.5">
+                    →
+                </span>
+            </Link>
+        ) : null
 
     // Normalize the feed to FeedSummary type
     const normalizedFeed: FeedSummary & { description?: string | null } =
@@ -139,7 +108,8 @@ export function FeedCard({
                   description: (feed as FeedDiscoveryResult).description,
                   language: feed.language ?? "en",
                   author: feed.author ?? null,
-                  content_type: (feed.content_type as any) ?? null,
+                  content_type: (feed.content_type as ContentType) ?? null,
+                  tags: feed.tags ?? [],
                   tags_native: feed.tags_native ?? [],
               }
 
@@ -149,7 +119,9 @@ export function FeedCard({
                 feed={normalizedFeed}
                 variant="default"
                 className={className}
-                headerActions={dropdownActions}
+                headerActions={cardActions}
+                footerActions={footerActions}
+                onTagClick={onTagClick}
                 showFollowButton={showFollowButton}
             />
 
@@ -169,7 +141,7 @@ export function FeedCard({
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete Feed</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to delete "{feed.title}"? This
+                            Are you sure you want to delete &quot;{feed.title}&quot;? This
                             action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
