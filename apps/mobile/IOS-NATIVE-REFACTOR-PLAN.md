@@ -18,7 +18,7 @@ Legend: ✅ done · 🟡 code-done, **needs device test** · 🚧 in progress ·
 | 3a | Back button (SwiftUI glass `Button`) | 🟡 | `@components/ui/back-button`; 5 call sites replaced |
 | 3b | Toggle / Switch (SwiftUI `Toggle`) | 🟡 | `ui/switch/index.ios.tsx` |
 | 3c | Spinner / ProgressView | ⏭️ | brand-coloured SVG spinner used on coloured buttons + toasts; native adds nothing |
-| 3d | Label | ⬜ | lands with settings `Form` (§3.9) |
+| 3d | Label | ✅ | SF-symbol `Label` semantics come from `Button`/`Picker` `systemImage` rows in the settings `Form` and menus |
 | 4 | Confirmation dialog + alerts | 🟡 | `useNativeConfirm` (`ui/confirm-dialog`); feed-switcher ×3 + profile replaced; `lib/review` mock alert kept |
 | 5 | Menus | ⏭️/✅ | Deleted unused `ui/context-menu`. Feed-switcher row menus stay on zeego (already native `UIMenu`; SwiftUI would be a Host per row). Profile theme menu became a `Picker` in the settings Form. Reader corner menu was already SwiftUI. |
 | 6 | Settings `Form` / `Section` / `Picker` / `Button` | 🟡 | `profile/ui/settings-view` (RN + `.ios` Form); `ProfileScreen` now builds section data. Codex-settings toggles use the native `Toggle` via `Switch`. |
