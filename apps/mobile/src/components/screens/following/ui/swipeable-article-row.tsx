@@ -4,7 +4,7 @@ import { BookmarkIcon, LetterIcon, LetterOpenedIcon } from '@solar-icons/react-n
 import * as Haptics from 'expo-haptics';
 import type { ReactNode } from 'react';
 import { useWindowDimensions, View } from 'react-native';
-import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -106,10 +106,10 @@ export function SwipeableArticleRow({
     Haptics.impactAsync(style);
   };
 
-  const pan = usePanGesture({
-    activeOffsetX: [-ACTIVATE_OFFSET_X, ACTIVATE_OFFSET_X],
-    failOffsetY: [-FAIL_OFFSET_Y, FAIL_OFFSET_Y],
-    onUpdate: (e) => {
+  const pan = Gesture.Pan()
+    .activeOffsetX([-ACTIVATE_OFFSET_X, ACTIVATE_OFFSET_X])
+    .failOffsetY([-FAIL_OFFSET_Y, FAIL_OFFSET_Y])
+    .onUpdate((e) => {
       const raw = e.translationX;
       const clamped = !canSwipeRight && raw > 0 ? 0 : raw;
       const distance = Math.abs(clamped);
@@ -131,20 +131,21 @@ export function SwipeableArticleRow({
         hasTriggeredHaptic.value = false;
         scheduleOnRN(buzz, Haptics.ImpactFeedbackStyle.Light);
       }
-    },
-    onDeactivate: (e) => {
+    })
+    .onEnd((_e, success) => {
       const x = translateX.value;
-      if (!e.canceled && Math.abs(x) >= TRIGGER_DISTANCE) {
+      if (success && Math.abs(x) >= TRIGGER_DISTANCE) {
         if (x > 0 && onToggleRead) {
           scheduleOnRN(onToggleRead);
         } else if (x < 0) {
           scheduleOnRN(onToggleSaved);
         }
       }
+    })
+    .onFinalize(() => {
       hasTriggeredHaptic.value = false;
       translateX.value = withSpring(0, SNAP_BACK_SPRING);
-    },
-  });
+    });
 
   const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: translateX.value }] }));
 

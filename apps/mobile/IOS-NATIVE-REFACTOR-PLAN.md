@@ -27,7 +27,7 @@ Legend: ✅ done · 🟡 code-done, **needs device test** · 🚧 in progress ·
 | 6d | Onboarding `Stepper` (page wizard) | ⏭️ | not a numeric stepper; custom paging UI |
 | 7 | Control group (article actions) | 🟡 | `article-action-group` (RN + `.ios` `ControlGroup` in `GlassEffectContainer` on iOS 26) |
 | 8 | Discover native header + search | 🟡 | `discover-chrome` (RN pill on Android, `.ios` = native nav header + `headerSearchBarOptions`); screen drives it through a `DiscoverSearchHandle` |
-| 9 | NativeTabs | 🟡 | `(tabs)/_layout.ios.tsx`; double-tap events via `useTabDoubleTap`; feed switcher opens from the Following title (custom expand tab is Android-only now); Profile tab uses an SF symbol, not the avatar |
+| 9 | NativeTabs | 🟡 | `(tabs)/_layout.ios.tsx`; double-tap events via `useTabDoubleTap`; feed switcher opens from a Library-icon button in the Following header, replacing the unread count on iOS, and from the title (custom expand tab is Android-only now); Profile tab uses an SF symbol, not the avatar |
 
 **Device-test needed (nothing here has run on a simulator yet):** sheets (all), back button glass/bordered, Toggle, ConfirmationDialog anchoring inside a True Sheet, settings `Form` height/scroll + colours (dark/light) + Picker menu, Stepper/segmented in the reader sheet, ControlGroup/GlassEffectContainer layout in the reader bar.
 

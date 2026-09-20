@@ -266,7 +266,7 @@ def _is_older_than_grace(created_at: str | None, now: datetime) -> bool:
     return now - created > timedelta(hours=FAVICON_ORPHAN_GRACE_HOURS)
 
 
-async def sweep_orphan_favicons(dry_run: bool = True) -> int:
+async def sweep_orphan_favicons(dry_run: bool = True, name_prefix: str = "") -> int:
     """
     Delete bucket objects that no feed references.
 
@@ -277,6 +277,7 @@ async def sweep_orphan_favicons(dry_run: bool = True) -> int:
 
     Args:
         dry_run: When True, only count what would be deleted
+        name_prefix: Only consider objects whose name starts with this (targeted runs and tests)
 
     Returns:
         Number of orphaned objects found (deleted unless dry_run)
@@ -291,7 +292,9 @@ async def sweep_orphan_favicons(dry_run: bool = True) -> int:
     orphans = [
         o["name"]
         for o in objects
-        if o.get("name") and o["name"] not in referenced and _is_older_than_grace(o.get("created_at"), now)
+        if o.get("name", "").startswith(name_prefix)
+        and o["name"] not in referenced
+        and _is_older_than_grace(o.get("created_at"), now)
     ]
 
     if not dry_run:

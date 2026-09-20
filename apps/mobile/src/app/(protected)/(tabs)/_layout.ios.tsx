@@ -8,8 +8,8 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
  * iOS 26, system blur below, native haptics/animation and SF Symbols. Android keeps the custom
  * floating bar in `_layout.tsx`.
  *
- * The feed switcher no longer has a tab-bar entry point (the custom bar's expand tab): it opens
- * from the Following screen's title, which already presented the same sheet.
+ * The feed switcher has no tab-bar entry point here (native tab items can't act as buttons). It
+ * opens from a button in the Following header, which replaces the unread count on iOS.
  */
 export default function TabsLayout() {
   const isDark = useIsDarkMode();

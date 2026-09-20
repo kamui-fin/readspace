@@ -6,3 +6,9 @@ export const SUPPORTS_GLASS =
 
 /** iOS screens use the native navigation header (large title, `UISearchController`). */
 export const USES_NATIVE_HEADER = Platform.OS === 'ios';
+
+/**
+ * iOS uses the native tab bar, which has no tab-bar entry point for the feed switcher, so the
+ * Following header carries the switcher button there instead of the unread count.
+ */
+export const USES_NATIVE_TABS = Platform.OS === 'ios';
