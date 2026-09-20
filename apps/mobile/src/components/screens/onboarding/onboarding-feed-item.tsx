@@ -1,4 +1,5 @@
-import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
+import { createFeedFallback } from '@components/ui/feed-fallback-icon';
+import { FeedIcon } from '@components/ui/feed-icon';
 import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
@@ -8,8 +9,8 @@ import { stripHtml } from '@lib/utils/html';
 import { useCreateFeed, useDeleteFeed } from '@readspace/shared';
 import { AddCircleIcon, CheckCircleIcon } from '@solar-icons/react-native/bold-duotone';
 import * as Haptics from 'expo-haptics';
-import { useState } from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { useMemo } from 'react';
+import { Pressable, View } from 'react-native';
 
 export interface OnboardingFeedItemProps {
   feedId: string;
@@ -32,7 +33,7 @@ export const OnboardingFeedItem = ({
   onSubscribed,
   onUnsubscribed,
 }: OnboardingFeedItemProps) => {
-  const [imageError, setImageError] = useState(false);
+  const fallbackComponent = useMemo(() => createFeedFallback(title), [title]);
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
 
@@ -81,16 +82,7 @@ export const OnboardingFeedItem = ({
         style={{
           backgroundColor: colors.grey5,
         }}>
-        {iconUrl && !imageError ? (
-          <Image
-            source={{ uri: iconUrl }}
-            className="h-full w-full"
-            resizeMode="cover"
-            onError={() => setImageError(true)}
-          />
-        ) : (
-          <FeedFallbackIcon feedName={title} size={48} borderRadius={8} />
-        )}
+        <FeedIcon url={iconUrl} size={48} borderRadius={8} fallbackComponent={fallbackComponent} />
       </View>
 
       {/* Content */}

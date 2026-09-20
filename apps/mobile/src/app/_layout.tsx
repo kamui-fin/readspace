@@ -1,4 +1,4 @@
-import 'global.css';
+import '../../global.css';
 import { SessionProvider, useSession } from '@contexts/auth-context';
 import { RevenueCatProvider } from '@contexts/revenuecat-context';
 import { ThemeProvider } from '@contexts/theme-provider';
@@ -33,7 +33,6 @@ import {
   GeistMono_600SemiBold,
   GeistMono_700Bold,
 } from '@expo-google-fonts/geist-mono';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { ApiError } from '@readspace/shared';
@@ -271,20 +270,18 @@ function RootNavigator() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }} className={clsx(isDark && 'dark')}>
       <KeyboardProvider>
-        <BottomSheetModalProvider>
-          <ToastProvider>
-            <StatusBar style={isDark ? 'light' : 'dark'} />
-            {/* <OfflineBanner /> (@components/ui/offline-banner) is hidden for now */}
-            <Stack
-              key={isDark ? 'dark' : 'light'}
-              screenOptions={{ headerShown: false, contentStyle: { backgroundColor } }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(protected)" />
-              <Stack.Screen name="(auth)" />
-            </Stack>
-            <UpgradePaywallModal />
-          </ToastProvider>
-        </BottomSheetModalProvider>
+        <ToastProvider>
+          <StatusBar style={isDark ? 'light' : 'dark'} />
+          {/* <OfflineBanner /> (@components/ui/offline-banner) is hidden for now */}
+          <Stack
+            key={isDark ? 'dark' : 'light'}
+            screenOptions={{ headerShown: false, contentStyle: { backgroundColor } }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(protected)" />
+            <Stack.Screen name="(auth)" />
+          </Stack>
+          <UpgradePaywallModal />
+        </ToastProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>
   );

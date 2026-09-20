@@ -1,64 +1,72 @@
 import { AddFeedBottomSheet, type AddFeedBottomSheetRef } from '@components/bottom-sheets/add-feed';
 import {
-  CreateFolderModal,
-  type CreateFolderModalRef,
-} from '@components/bottom-sheets/create-folder';
-import {
   FolderPickerBottomSheet,
   type FolderPickerBottomSheetRef,
 } from '@components/bottom-sheets/folder-picker';
 import { Languages, Plus } from '@components/icons/svg';
+import { CategoriesList } from '@components/screens/discover/ui/categories.list';
+import { DiscoverBrowseView } from '@components/screens/discover/ui/discover-browse.view';
 import { LanguagePicker } from '@components/screens/discover/ui/language-picker.dropdown';
-import { RecentSearches } from '@components/screens/discover/ui/recent-searches';
 import { SearchBar } from '@components/screens/discover/ui/search-bar.input';
+import { SearchOptionsButton } from '@components/screens/discover/ui/search-options.button';
+import { SearchOptionsSheet } from '@components/screens/discover/ui/search-options.sheet';
+import { SearchResults } from '@components/screens/discover/ui/search-results.list';
+import { SearchSuggestionsPanel } from '@components/screens/discover/ui/search-suggestions.panel';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { useDiscoverController } from '@hooks/useDiscoverController';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { useTrendingFeeds } from '@hooks/useTrendingFeeds';
 import {
   BOTTOM_TABBAR_BASE_HEIGHT,
-  MAX_TRENDING_ITEMS,
-  TRENDING_PAGE_SIZE,
+  MIN_SEARCH_HISTORY_LENGTH,
+  SEARCH_HISTORY_COMMIT_MS,
 } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { createSearchClient, FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
-import type { FeedSummary } from '@readspace/shared';
-import { MOBILE_CATEGORY_NAMES, POPULAR_CATEGORIES, useCreateFeed } from '@readspace/shared';
+import { createSearchClient, FEEDS_INDEX_NAME } from '@lib/meilisearch-client';
+import { createHybridSearchParams, MOBILE_CATEGORY_NAMES, useCreateFeed } from '@readspace/shared';
 import {
   type DiscoverLanguage,
   discoverLanguageToCode,
+  getDiscoverSearchMode,
   useDiscoverPreferences,
 } from '@stores/discover-preferences';
 import { useSearchHistory } from '@stores/search-history';
-import { useInfiniteQuery } from '@tanstack/react-query';
 import { MotiView } from 'moti';
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { Configure, InstantSearch, useInfiniteHits, useInstantSearch } from 'react-instantsearch';
-import type { TextInput as RNTextInput } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Configure, InstantSearch } from 'react-instantsearch';
 import {
   DeviceEventEmitter,
   Keyboard,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   Pressable,
-  ScrollView,
+  type TextInput as RNTextInput,
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { Easing } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CategoriesList } from '@/components/screens/discover/ui/categories.list';
-import { SearchResults } from '@/components/screens/discover/ui/search-results.list';
-import { TrendingSection } from '@/components/screens/discover/ui/trending-section.list';
 
 const CATEGORIES = Object.keys(MOBILE_CATEGORY_NAMES);
 
-type ViewState = 'default' | 'category' | 'search' | 'focused';
+/** Extra breathing room under the tab bar so the last row isn't flush against it. */
+const CONTENT_PADDING_BOTTOM = BOTTOM_TABBAR_BASE_HEIGHT + 24;
 
 export function DiscoverScreen() {
-  const { searchClient } = useMemo(() => createSearchClient(), []);
+  /**
+   * Hybrid (Smart) params are injected inside the search client, not via
+   * `<Configure>`, so the client needs to read the mode at request time. It
+   * reads the persisted store synchronously on every search, which keeps the
+   * client itself stable — recreating it would reset InstantSearch's state.
+   */
+  const { searchClient } = useMemo(
+    () =>
+      createSearchClient(() =>
+        getDiscoverSearchMode() === 'smart' ? createHybridSearchParams() : undefined
+      ),
+    []
+  );
 
   return (
     <InstantSearch
@@ -71,40 +79,66 @@ export function DiscoverScreen() {
 }
 
 function DiscoverScreenInner() {
-  const [_isSearchFocused, setIsSearchFocused] = useState(false);
-  const [viewState, setViewState] = useState<ViewState>('default');
-  const [_, startTransition] = useTransition();
-
-  const {
-    query: searchQuery,
-    activeCategory: selectedCategory,
-    hasActiveSearch,
-    handleCategoryClick: controllerHandleCategoryClick,
-    refineQuery,
-    clearSearch: controllerClearSearch,
-  } = useDiscoverController();
-
-  // Local, synchronously-updated mirror of the search text. The TextInput must
-  // always be bound to this instead of `searchQuery` — `searchQuery` only
-  // updates once the startTransition below flushes, and on Android a
-  // controlled TextInput whose `value` prop lags behind the native EditText's
-  // buffer fights the IME (dropped/duplicated characters, cursor jumps). iOS
-  // tolerates the lag; Android does not.
-  const [searchInputValue, setSearchInputValue] = useState(searchQuery);
-
-  const addFeedModalRef = useRef<AddFeedBottomSheetRef>(null);
-  const folderPickerModalRef = useRef<FolderPickerBottomSheetRef>(null);
-  const [pendingAddFeedUrl, setPendingAddFeedUrl] = useState<string | null>(null);
-
-  const searchBarRef = useRef<RNTextInput>(null);
-  const categoryScrollRef = useRef<ScrollView>(null);
-  const createFolderModalRef = useRef<CreateFolderModalRef>(null);
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+  const insets = useSafeAreaInsets();
+
+  const searchBarRef = useRef<RNTextInput>(null);
+  const addFeedModalRef = useRef<AddFeedBottomSheetRef>(null);
+  const folderPickerModalRef = useRef<FolderPickerBottomSheetRef>(null);
+  const languagePickerRef = useRef<SheetRef>(null);
+  const optionsSheetRef = useRef<SheetRef>(null);
+
+  const [pendingAddFeedUrl, setPendingAddFeedUrl] = useState<string | null>(null);
+
   const { searches: recentSearches, addSearch, clearHistory } = useSearchHistory();
   const createFeed = useCreateFeed();
 
-  // Focus search bar on bottom tab double tap
+  // Language scopes both search and trending, so it stays a screen-level control
+  // in the header rather than a search-only setting.
+  const { language: discoverLanguage, setLanguage: setDiscoverLanguage } = useDiscoverPreferences();
+  const languageCode = discoverLanguageToCode(discoverLanguage);
+  const languageFilter = `language = ${languageCode || 'en'}`;
+
+  const {
+    mode,
+    query,
+    hasSearchText,
+    inputValue,
+    searchMode,
+    setSearchMode,
+    selectedCategory,
+    selectedContentTypes,
+    contentTypeOptions,
+    hits,
+    hasMore,
+    loadMore,
+    isPending,
+    showSkeletons,
+    isError,
+    focusSearch,
+    blurSearch,
+    changeQuery,
+    submitSearch,
+    clearQuery,
+    exitSearch,
+    selectCategory,
+    toggleContentType,
+    clearContentTypes,
+    resetSearch,
+  } = useDiscoverController(languageFilter);
+
+  const trending = useTrendingFeeds({ languageCode, enabled: mode === 'browse' });
+
+  // Record a search once the user rests on it (see SEARCH_HISTORY_COMMIT_MS).
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (isPending || trimmed.length < MIN_SEARCH_HISTORY_LENGTH) return;
+    const timer = setTimeout(() => addSearch(trimmed), SEARCH_HISTORY_COMMIT_MS);
+    return () => clearTimeout(timer);
+  }, [query, isPending, addSearch]);
+
+  // Focus the search bar when the Discover tab is double-tapped.
   useEffect(() => {
     const subscription = DeviceEventEmitter.addListener('bottom-tab-double-tap:discover', () => {
       searchBarRef.current?.focus();
@@ -112,117 +146,77 @@ function DiscoverScreenInner() {
     return () => subscription.remove();
   }, []);
 
-  // Compute bottom padding to account for tab bar
-  // Tab bar height = BOTTOM_TABBAR_BASE_HEIGHT + 0.8 * safeAreaBottom (from BottomTabbar component)
-  // Add extra spacing (24px) for better visual separation
-  const contentPaddingBottom = BOTTOM_TABBAR_BASE_HEIGHT + 24;
-  const trendingScrollRef = useRef<ScrollView>(null);
+  const dismissKeyboard = useCallback(() => {
+    searchBarRef.current?.blur();
+    Keyboard.dismiss();
+  }, []);
 
-  // Discover language preference, persisted and shared with the similar-feeds /
-  // feed-preview queries via getDiscoverLanguage(). Read reactively here (via
-  // the store hook, not the static getter) so switching languages in the
-  // picker immediately re-filters trending + search results.
-  const languagePickerRef = useRef<BottomSheetModal>(null);
-  const { language: discoverLanguage, setLanguage: setDiscoverLanguage } = useDiscoverPreferences();
-  const languageCode = discoverLanguageToCode(discoverLanguage);
+  const handleSubmit = useCallback(() => {
+    const trimmed = inputValue.trim();
+    if (!trimmed) return;
+    addSearch(trimmed);
+    submitSearch(trimmed);
+    dismissKeyboard();
+  }, [inputValue, addSearch, submitSearch, dismissKeyboard]);
 
-  // Fetch trending feeds using Meilisearch directly — infinite paginated, capped at MAX_TRENDING_ITEMS
-  // Trending shows popular feeds from News, Tech, and Business categories only
-  const {
-    data: trendingInfiniteData,
-    isLoading: isTrendingLoading,
-    isFetchingNextPage: isTrendingFetchingNextPage,
-    fetchNextPage: fetchTrendingNextPage,
-    hasNextPage: trendingHasNextPage,
-    error: trendingError,
-  } = useInfiniteQuery({
-    queryKey: ['trending', languageCode],
-    queryFn: async ({ pageParam = 0 }) => {
-      const categoryFilter = POPULAR_CATEGORIES.map((cat) => `top_level_category = "${cat}"`).join(
-        ' OR '
-      );
-      const filter = languageCode
-        ? [`language = ${languageCode} AND (${categoryFilter})`]
-        : [categoryFilter];
-
-      const res = await meilisearchClient.index(FEEDS_INDEX_NAME).search('', {
-        limit: TRENDING_PAGE_SIZE,
-        offset: pageParam,
-        filter,
-        sort: ['frontend_rank_override:asc', 'popularity_score:desc'],
-      });
-      return { hits: res.hits as unknown as FeedSummary[], offset: pageParam };
+  const handleRecentSearchPress = useCallback(
+    (recent: string) => {
+      addSearch(recent);
+      submitSearch(recent);
+      dismissKeyboard();
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => {
-      const totalFetched = allPages.reduce((sum, p) => sum + p.hits.length, 0);
-      if (lastPage.hits.length < TRENDING_PAGE_SIZE || totalFetched >= MAX_TRENDING_ITEMS) {
-        return undefined;
-      }
-      return lastPage.offset + TRENDING_PAGE_SIZE;
-    },
-    enabled: viewState === 'default',
-  });
-
-  // Flatten pages into a single list, capped at MAX_TRENDING_ITEMS
-  const trendingData = useMemo(() => {
-    const all = trendingInfiniteData?.pages.flatMap((p) => p.hits) || [];
-    return all.slice(0, MAX_TRENDING_ITEMS);
-  }, [trendingInfiniteData]);
-
-  const showTrendingSkeleton = isTrendingLoading && (!trendingData || trendingData.length === 0);
-
-  const handleTrendingScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (!trendingHasNextPage || isTrendingFetchingNextPage) return;
-      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-      const paddingToBottom = 200;
-      const isNearBottom =
-        layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
-      if (isNearBottom) {
-        fetchTrendingNextPage();
-      }
-    },
-    [trendingHasNextPage, isTrendingFetchingNextPage, fetchTrendingNextPage]
+    [addSearch, submitSearch, dismissKeyboard]
   );
 
-  const { items: hits, isLastPage, showMore } = useInfiniteHits();
-  const { status } = useInstantSearch();
+  const handleClear = useCallback(() => {
+    clearQuery();
+    searchBarRef.current?.focus();
+  }, [clearQuery]);
 
-  // InstantSearch handles both search and category filtering
-  const displayFeeds = (hits as any) || [];
-  const isSearchLoading = status === 'loading' || status === 'stalled';
-  const showSearchSkeleton = isSearchLoading && displayFeeds.length === 0;
+  /**
+   * Back arrow. Drops the query first and only falls through to a full reset
+   * once there's no query left, so backing out of a search you ran inside a
+   * category returns you to that category instead of the landing screen.
+   */
+  const handleBack = useCallback(() => {
+    dismissKeyboard();
+    if (inputValue || query) {
+      exitSearch();
+    } else {
+      resetSearch();
+    }
+  }, [inputValue, query, exitSearch, resetSearch, dismissKeyboard]);
+
+  /**
+   * The sheet slides up over the keyboard, so the keyboard has to go — but
+   * dismissing it blurs the field, and an empty field would then drop the
+   * screen back to browsing behind the open sheet. This flag makes that one
+   * blur a no-op.
+   */
+  const isOpeningOptionsRef = useRef(false);
+
+  const handleOpenOptions = useCallback(() => {
+    isOpeningOptionsRef.current = true;
+    dismissKeyboard();
+    optionsSheetRef.current?.present();
+  }, [dismissKeyboard]);
+
+  const handleOptionsDismiss = useCallback(() => {
+    isOpeningOptionsRef.current = false;
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    if (isOpeningOptionsRef.current) return;
+    if (!inputValue.trim()) blurSearch();
+  }, [inputValue, blurSearch]);
 
   const handleCategoryPress = useCallback(
     (category: string) => {
-      controllerHandleCategoryClick(category);
-      categoryScrollRef.current?.scrollTo({ x: 0, animated: true });
-      startTransition(() => {
-        setViewState('category');
-      });
+      dismissKeyboard();
+      selectCategory(category);
     },
-    [controllerHandleCategoryClick]
+    [selectCategory, dismissKeyboard]
   );
-
-  const orderedCategories = selectedCategory
-    ? [String(selectedCategory), ...CATEGORIES.filter((c) => c !== selectedCategory)]
-    : CATEGORIES;
-
-  const half = Math.ceil(orderedCategories.length / 2);
-  const categoriesRow1 = orderedCategories.slice(0, half);
-  const categoriesRow2 = orderedCategories.slice(half);
-
-  const handleSearchSubmit = useCallback(() => {
-    if (!searchInputValue.trim()) return;
-    addSearch(searchInputValue);
-    setIsSearchFocused(false);
-    searchBarRef.current?.blur();
-    Keyboard.dismiss();
-    startTransition(() => {
-      setViewState('search');
-    });
-  }, [searchInputValue, addSearch]);
 
   const handleAddFeedConfirm = useCallback((url: string) => {
     setPendingAddFeedUrl(url);
@@ -237,94 +231,53 @@ function DiscoverScreenInner() {
 
       try {
         await toast.promise(
-          createFeed.mutateAsync({
-            url: urlToSubscribe,
-            folder_id: folderId || undefined,
-          }),
+          createFeed.mutateAsync({ url: urlToSubscribe, folder_id: folderId || undefined }),
           {
             loading: 'Subscribing to feed...',
             success: 'Subscribed successfully!',
             error: 'Failed to subscribe to feed',
           }
         );
-      } catch (e) {
-        console.log('Error subscribing to feed:', e);
+      } catch (error) {
+        console.log('Error subscribing to feed:', error);
       }
     },
     [pendingAddFeedUrl, createFeed]
   );
 
-  const handleSearchChange = useCallback(
-    (text: string) => {
-      setSearchInputValue(text);
-      startTransition(() => {
-        refineQuery(text);
-      });
-    },
-    [refineQuery]
+  const isBrowsing = mode === 'browse';
+  const hasContentTypeFilters = selectedContentTypes.length > 0;
+
+  /**
+   * Category browsing keeps its rail so you can hop between categories; a text
+   * search hides it — categories are a different axis there and would only add
+   * chrome above the answers.
+   */
+  const resultsHeader = useMemo(
+    () =>
+      hasSearchText ? null : (
+        <View className="pb-3">
+          <CategoriesList
+            categories={CATEGORIES}
+            selectedCategory={selectedCategory}
+            onCategoryPress={handleCategoryPress}
+            showHeader={false}
+          />
+        </View>
+      ),
+    [hasSearchText, selectedCategory, handleCategoryPress]
   );
 
-  const handleSearchFocus = useCallback(() => {
-    setIsSearchFocused(true);
-    setViewState('focused');
-  }, []);
-
-  const handleSearchCancel = useCallback(() => {
-    setIsSearchFocused(false);
-    setSearchInputValue('');
-    searchBarRef.current?.blur();
-    Keyboard.dismiss();
-    controllerClearSearch();
-    startTransition(() => {
-      setViewState(selectedCategory ? 'category' : 'default');
-    });
-  }, [controllerClearSearch, selectedCategory]);
-
-  const handleClearSearch = useCallback(() => {
-    setIsSearchFocused(true);
-    setSearchInputValue('');
-    searchBarRef.current?.focus();
-    startTransition(() => {
-      refineQuery('');
-      setViewState('focused');
-    });
-  }, [refineQuery]);
-
-  const handleRecentSearchPress = useCallback(
-    (query: string) => {
-      addSearch(query);
-      setIsSearchFocused(false);
-      setSearchInputValue(query);
-      searchBarRef.current?.blur();
-      Keyboard.dismiss();
-      startTransition(() => {
-        refineQuery(query);
-        setViewState('search');
-      });
-    },
-    [addSearch, refineQuery]
-  );
-
-  const showCancelButton = viewState !== 'default';
-
-  const handleOutsidePress = useCallback(() => {
-    Keyboard.dismiss();
-  }, []);
-
-  const handleClearCategory = useCallback(() => {
-    controllerClearSearch();
-    startTransition(() => {
-      setViewState(searchInputValue ? 'search' : 'default');
-    });
-  }, [controllerClearSearch, searchInputValue]);
-
-  const insets = useSafeAreaInsets();
-
-  // Whether user is actively typing (show instant results instead of recent searches)
-  const hasTypedQuery = searchInputValue.trim().length > 0;
-
-  // Language filter for Configure — applied as raw Meilisearch filter
-  const languageFilter = `language = ${languageCode || 'en'}`;
+  const emptyAction =
+    hasSearchText && searchMode === 'keywords' ? (
+      <Button
+        variant="secondary"
+        size="small"
+        fullWidth={false}
+        onPress={() => setSearchMode('smart')}>
+        Try Smart search
+      </Button>
+    ) : undefined;
 
   return (
     <View
@@ -335,137 +288,123 @@ function DiscoverScreenInner() {
         attributesToHighlight={['title', 'description']}
         filters={languageFilter}
       />
-      <TouchableWithoutFeedback onPress={handleOutsidePress}>
-        <View className="flex-1">
-          {/* Fixed Header & SearchBar Wrapper */}
-          <View>
-            {/* Discover Header - slides/collapses beautifully when search is active */}
-            <MotiView
-              animate={{
-                opacity: viewState === 'default' ? 1 : 0,
-                height: viewState === 'default' ? 62 : 0,
-                scale: viewState === 'default' ? 1 : 0.95,
-              }}
-              transition={{
-                type: 'timing',
-                duration: 250,
-                easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-              }}
-              style={{ overflow: 'hidden' }}>
-              <View className="flex-row items-center justify-between px-6 pb-2 pt-3">
-                <Text
-                  size="3xl"
-                  fontFamily="geist-bold"
-                  className="tracking-heading text-primary-foreground">
-                  Discover
-                </Text>
-                <View className="flex-row items-center gap-2">
-                  <Button
-                    variant="icon"
-                    size="small"
-                    className="bg-grey6"
-                    fullWidth={false}
-                    onPress={() => languagePickerRef.current?.present()}>
-                    <Languages width={20} height={20} color={colors.grey} />
-                  </Button>
-                  <Button
-                    variant="icon"
-                    size="small"
-                    className="bg-grey6"
-                    fullWidth={false}
-                    onPress={() => addFeedModalRef.current?.present()}>
-                    <Plus width={20} height={20} color={colors.grey} />
-                  </Button>
-                </View>
-              </View>
-            </MotiView>
 
-            {/* Sticky Search Bar - always mounted for seamless, non-janky morph animations */}
-            <View className="px-6 pb-4 pt-2">
-              <Pressable onPress={(e) => e.stopPropagation()}>
-                <SearchBar
-                  ref={searchBarRef}
-                  value={searchInputValue}
-                  onChangeText={handleSearchChange}
-                  onFocus={handleSearchFocus}
-                  onClear={handleClearSearch}
-                  onCancel={handleSearchCancel}
-                  onSubmit={handleSearchSubmit}
-                  showCancelButton={showCancelButton}
-                  autoFocus={false}
-                />
-              </Pressable>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View className="flex-1">
+          {/* Header collapses out of the way as soon as search takes over */}
+          <MotiView
+            animate={{
+              opacity: isBrowsing ? 1 : 0,
+              height: isBrowsing ? 62 : 0,
+              scale: isBrowsing ? 1 : 0.95,
+            }}
+            transition={{
+              type: 'timing',
+              duration: 250,
+              easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+            }}
+            style={{ overflow: 'hidden' }}>
+            <View className="flex-row items-center justify-between px-6 pb-2 pt-3">
+              <Text
+                size="3xl"
+                fontFamily="geist-bold"
+                className="tracking-heading text-primary-foreground">
+                Discover
+              </Text>
+              <View className="flex-row items-center gap-2">
+                <Button
+                  variant="icon"
+                  size="small"
+                  className="bg-grey6"
+                  fullWidth={false}
+                  onPress={() => languagePickerRef.current?.present()}>
+                  <Languages width={20} height={20} color={colors.grey} />
+                </Button>
+                <Button
+                  variant="icon"
+                  size="small"
+                  className="bg-grey6"
+                  fullWidth={false}
+                  onPress={() => addFeedModalRef.current?.present()}>
+                  <Plus width={20} height={20} color={colors.grey} />
+                </Button>
+              </View>
             </View>
+          </MotiView>
+
+          {/* Always mounted so focus/blur morphs stay smooth */}
+          <View className="px-6 pb-4 pt-2">
+            <Pressable onPress={(event) => event.stopPropagation()}>
+              <SearchBar
+                ref={searchBarRef}
+                value={inputValue}
+                onChangeText={changeQuery}
+                onFocus={focusSearch}
+                onBlur={handleBlur}
+                onClear={handleClear}
+                onCancel={handleBack}
+                onSubmit={handleSubmit}
+                showCancelButton={!isBrowsing}
+                autoFocus={false}
+                trailingAction={
+                  isBrowsing ? null : <SearchOptionsButton onPress={handleOpenOptions} />
+                }
+              />
+            </Pressable>
           </View>
 
-          {/* Content Area */}
           <View className="flex-1">
-            {viewState === 'focused' && !hasTypedQuery ? (
-              /* Recent Searches - only when focused with no query */
-              <RecentSearches
+            {mode === 'suggestions' ? (
+              <SearchSuggestionsPanel
                 recentSearches={recentSearches}
                 onRecentSearchPress={handleRecentSearchPress}
                 onClearHistory={clearHistory}
-                contentPaddingBottom={contentPaddingBottom}
-                colors={colors}
+                contentPaddingBottom={CONTENT_PADDING_BOTTOM}
               />
-            ) : viewState === 'default' ? (
-              /* Default Feed Content */
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                className="flex-1"
-                ref={trendingScrollRef}
-                keyboardShouldPersistTaps="always"
-                onScroll={handleTrendingScroll}
-                scrollEventThrottle={16}
-                contentContainerStyle={{
-                  paddingBottom: contentPaddingBottom,
-                }}>
-                {/* Categories, scrolls with content */}
-                <View className="mb-2">
-                  <CategoriesList
-                    selectedCategory={selectedCategory as string | null}
-                    categoriesRow1={categoriesRow1}
-                    categoriesRow2={categoriesRow2}
-                    onCategoryPress={handleCategoryPress}
-                    onClearCategory={handleClearCategory}
-                    categoryScrollRef={categoryScrollRef}
-                  />
-                </View>
-
-                {/* Trending section */}
-                <TrendingSection
-                  showTrendingSkeleton={showTrendingSkeleton}
-                  trendingError={trendingError}
-                  trendingData={trendingData}
-                  hasNextPage={trendingHasNextPage}
-                  isFetchingNextPage={isTrendingFetchingNextPage}
-                />
-              </ScrollView>
-            ) : (
-              /* Search/Category Results */
-              <SearchResults
-                showSearchSkeleton={showSearchSkeleton}
-                hits={displayFeeds}
-                contentPaddingBottom={contentPaddingBottom}
-                selectedCategory={selectedCategory as string | null}
-                categoriesRow1={categoriesRow1}
-                categoriesRow2={categoriesRow2}
+            ) : mode === 'browse' ? (
+              <DiscoverBrowseView
+                categories={CATEGORIES}
                 onCategoryPress={handleCategoryPress}
-                onClearCategory={handleClearCategory}
-                categoryScrollRef={categoryScrollRef}
-                searchQuery={searchQuery}
-                showCategoriesList={selectedCategory !== null}
-                hasMore={!isLastPage}
-                onLoadMore={showMore}
+                trendingFeeds={trending.feeds}
+                trendingError={trending.error}
+                showTrendingSkeleton={trending.showSkeleton}
+                hasNextPage={Boolean(trending.hasNextPage)}
+                isFetchingNextPage={trending.isFetchingNextPage}
+                onLoadMoreTrending={trending.fetchNextPage}
+                contentPaddingBottom={CONTENT_PADDING_BOTTOM}
+              />
+            ) : (
+              <SearchResults
+                hits={hits as any}
+                showSkeletons={showSkeletons}
+                isError={isError}
+                hasMore={hasMore}
+                onLoadMore={loadMore}
+                contentPaddingBottom={CONTENT_PADDING_BOTTOM}
+                listHeader={resultsHeader}
+                resetKey={`${query}|${selectedCategory ?? ''}|${selectedContentTypes.join(',')}`}
+                emptyAction={emptyAction}
+                emptyHint={
+                  searchMode === 'smart'
+                    ? 'Smart search looks for meaning, so try describing what you want to read.'
+                    : undefined
+                }
               />
             )}
           </View>
         </View>
       </TouchableWithoutFeedback>
 
-      {/* Modals & Bottom Sheets */}
-      <CreateFolderModal ref={createFolderModalRef} />
+      <SearchOptionsSheet
+        ref={optionsSheetRef}
+        onDismiss={handleOptionsDismiss}
+        searchMode={searchMode}
+        onSearchModeChange={setSearchMode}
+        options={contentTypeOptions}
+        onToggle={toggleContentType}
+        onReset={clearContentTypes}
+        canReset={hasContentTypeFilters}
+      />
       <AddFeedBottomSheet ref={addFeedModalRef} onConfirm={handleAddFeedConfirm} />
       <FolderPickerBottomSheet ref={folderPickerModalRef} onFolderSelect={handleFolderSelect} />
       <LanguagePicker

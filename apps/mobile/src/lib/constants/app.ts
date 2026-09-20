@@ -14,6 +14,17 @@ export const REFRESH_SPINNER_HEADER_OVERLAP = 44;
 // the "mark as read & remove" checkmark and advances to the next saved article.
 export const READ_LATER_READER_MODE = 'read-later';
 
+/**
+ * How long a settled query has to stay the active one before it's written to
+ * search history. Keyword search runs as you type and is often never submitted,
+ * so history can't hang off submit alone — resting on a query is what marks it
+ * intentional, and the delay keeps every prefix along the way out of the list.
+ */
+export const SEARCH_HISTORY_COMMIT_MS = 1200;
+
+/** Shortest query worth remembering. */
+export const MIN_SEARCH_HISTORY_LENGTH = 3;
+
 export const MAX_TRENDING_ITEMS = 100;
 export const TRENDING_PAGE_SIZE = 20;
 

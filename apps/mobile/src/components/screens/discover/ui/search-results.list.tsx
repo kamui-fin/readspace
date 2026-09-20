@@ -4,24 +4,24 @@ import { Skeleton } from '@components/ui/skeleton';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import type { FeedSummary } from '@readspace/shared';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { ScrollView, View } from 'react-native';
-import { CategoriesList } from './categories.list';
+import { type ReactElement, type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
+import { View } from 'react-native';
 
 interface SearchResultsProps {
-  showSearchSkeleton: boolean;
   hits: FeedSummary[];
+  /** Placeholder rows for an in-flight search whose answer isn't on screen yet. */
+  showSkeletons: boolean;
+  isError: boolean;
+  hasMore: boolean;
+  onLoadMore: () => void;
   contentPaddingBottom: number;
-  selectedCategory: string | null;
-  categoriesRow1: string[];
-  categoriesRow2: string[];
-  onCategoryPress: (category: string) => void;
-  onClearCategory: () => void;
-  categoryScrollRef: React.RefObject<ScrollView | null>;
-  searchQuery: string;
-  showCategoriesList?: boolean;
-  hasMore?: boolean;
-  onLoadMore?: () => void;
+  /** Filter chrome; scrolls away with the results rather than pinning. */
+  listHeader?: ReactElement | null;
+  /** Identifies the current search — changing it scrolls the list back to the top. */
+  resetKey: string;
+  /** Optional CTA rendered under the empty state (e.g. "Try Smart search"). */
+  emptyAction?: ReactNode;
+  emptyHint?: string;
 }
 
 interface SearchListItem extends Partial<FeedSummary> {
@@ -30,98 +30,84 @@ interface SearchListItem extends Partial<FeedSummary> {
   is_preview?: boolean;
 }
 
+const SKELETON_COUNT = 8;
+
+function FeedRowSkeleton() {
+  return (
+    <View className="flex-row items-center gap-4 px-6 py-3">
+      <Skeleton variant="rectangle" width={48} height={48} className="rounded-lg" />
+      <View className="flex-1 gap-2">
+        <Skeleton variant="text" width="70%" height={20} />
+        <Skeleton variant="text" width="100%" height={16} />
+        <Skeleton variant="text" width="80%" height={16} />
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Feed results list for search and category browsing.
+ *
+ * Skeletons are injected as list *data* rather than swapped in as a separate
+ * component so the underlying LegendList never unmounts between states — a
+ * remount forces a fresh layout measurement pass and shows up as a blank frame.
+ */
 export function SearchResults({
-  showSearchSkeleton,
   hits,
-  contentPaddingBottom,
-  selectedCategory,
-  categoriesRow1,
-  categoriesRow2,
-  onCategoryPress,
-  onClearCategory,
-  categoryScrollRef,
-  searchQuery,
-  showCategoriesList = false,
-  hasMore = false,
+  showSkeletons,
+  isError,
+  hasMore,
   onLoadMore,
+  contentPaddingBottom,
+  listHeader,
+  resetKey,
+  emptyAction,
+  emptyHint,
 }: SearchResultsProps) {
   const listRef = useRef<any>(null);
   const isDark = useIsDarkMode();
   const scrollOffsetRef = useRef(0);
 
-  const firstHitId = hits?.[0]?.id || '';
-
-  // We keep the list component mounted (key only changes on dark/light mode) to prevent costly
-  // native list recreation and layout measurement passes. This eliminates blank flashes when
-  // switching categories, loading skeletons, or displaying results.
-  const listKey = useMemo(() => {
-    return isDark ? 'dark' : 'light';
-  }, [isDark]);
-
-  // Combine hits and skeletons into one unified data source for InfiniteScrollList.
-  // This keeps the list component mounted, preventing measurement & rendering issues.
   const listItems = useMemo<SearchListItem[]>(() => {
-    if (showSearchSkeleton) {
-      return Array.from({ length: 8 }, (_, i) => ({
-        id: `search-skeleton-${i}`,
+    if (showSkeletons) {
+      return Array.from({ length: SKELETON_COUNT }, (_, index) => ({
+        id: `search-skeleton-${index}`,
         isSkeleton: true,
       }));
     }
     return (hits || []).filter(Boolean);
-  }, [showSearchSkeleton, hits]);
+  }, [showSkeletons, hits]);
 
-  const listItemsLength = listItems.length;
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset scroll top when category or search query changes
   useEffect(() => {
-    // Only reset scroll position to top if the user has actually scrolled.
-    // Calling scrollToOffset(0) unconditionally when already at top triggers
-    // incorrect layout calculations/measurements in LegendList during rendering.
+    // Only scroll if the user actually moved: calling scrollToOffset(0) while
+    // already at the top makes LegendList re-measure mid-render and flicker.
     if (scrollOffsetRef.current > 0) {
       try {
         listRef.current?.scrollToOffset({ offset: 0, animated: false });
         scrollOffsetRef.current = 0;
       } catch {
-        // Ignore if list/ref is not ready
+        // Ignore if the list ref isn't ready yet.
       }
     }
-  }, [selectedCategory, searchQuery]);
+  }, [resetKey]);
 
   const handleScroll = useCallback((event: any) => {
     scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
   }, []);
 
   const renderFooter = useCallback(() => {
-    if (!hasMore || showSearchSkeleton) return null;
+    if (!hasMore || showSkeletons) return null;
     return (
-      <View className="gap-4 px-6 pt-3">
-        {Array.from({ length: 3 }, (_, i) => `search-footer-skeleton-${i}`).map((key) => (
-          <View key={key} className="flex-row items-center gap-4 py-2">
-            <Skeleton variant="rectangle" width={48} height={48} className="rounded-lg" />
-            <View className="flex-1 gap-2">
-              <Skeleton variant="text" width="70%" height={20} />
-              <Skeleton variant="text" width="100%" height={16} />
-              <Skeleton variant="text" width="80%" height={16} />
-            </View>
-          </View>
+      <View className="pt-1">
+        {Array.from({ length: 3 }, (_, index) => (
+          <FeedRowSkeleton key={`search-footer-skeleton-${index}`} />
         ))}
       </View>
     );
-  }, [hasMore, showSearchSkeleton]);
+  }, [hasMore, showSkeletons]);
 
   const renderItem = useCallback((item: SearchListItem) => {
-    if (item.isSkeleton) {
-      return (
-        <View className="flex-row items-center gap-4 px-6 py-3">
-          <Skeleton variant="rectangle" width={48} height={48} className="rounded-lg" />
-          <View className="flex-1 gap-2">
-            <Skeleton variant="text" width="70%" height={20} />
-            <Skeleton variant="text" width="100%" height={16} />
-            <Skeleton variant="text" width="80%" height={16} />
-          </View>
-        </View>
-      );
-    }
+    if (item.isSkeleton) return <FeedRowSkeleton />;
 
     return (
       <FeedListItem
@@ -133,59 +119,61 @@ export function SearchResults({
         feedUrl={item.url || undefined}
         className="px-6"
         isPreview={item.is_preview}
+        showFollowButton={false}
       />
     );
   }, []);
 
   const renderEmpty = useCallback(() => {
-    // If showSearchSkeleton is true, listItems will contain skeleton items, so list won't be empty.
-    // If showSearchSkeleton is false and there are no hits, we show "No feeds found matching your search"
+    if (isError) {
+      return (
+        <View className="items-center px-10 pt-20">
+          <Text size="base" fontFamily="geist-semibold" className="text-black text-center">
+            Search is unavailable
+          </Text>
+          <Text size="sm" fontFamily="geist" className="text-grey mt-2 text-center">
+            Check your connection and try again.
+          </Text>
+        </View>
+      );
+    }
+
     return (
-      <View className="flex-1 items-center px-6 pt-24">
-        <Text size="base" fontFamily="geist" className="text-grey text-center">
-          No feeds found matching your search
+      <View className="items-center px-10 pt-20">
+        <Text size="base" fontFamily="geist-semibold" className="text-black text-center">
+          No feeds found
         </Text>
+        <Text size="sm" fontFamily="geist" className="text-grey mt-2 text-center">
+          {emptyHint ?? 'Try a different wording, or browse by category.'}
+        </Text>
+        {emptyAction && <View className="mt-5">{emptyAction}</View>}
       </View>
     );
-  }, []);
+  }, [isError, emptyAction, emptyHint]);
 
   return (
-    <View className="flex-1">
-      {showCategoriesList && (
-        <View className="mb-4 mt-3">
-          <CategoriesList
-            selectedCategory={selectedCategory}
-            categoriesRow1={categoriesRow1}
-            categoriesRow2={categoriesRow2}
-            onCategoryPress={onCategoryPress}
-            onClearCategory={onClearCategory}
-            categoryScrollRef={categoryScrollRef}
-          />
-        </View>
-      )}
-      <InfiniteScrollList
-        ref={listRef}
-        key={listKey}
-        data={listItems}
-        estimatedItemSize={80}
-        drawDistance={1500}
-        initialContainerPoolRatio={20}
-        recycleItems={false}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={renderEmpty}
-        ListFooterComponent={renderFooter}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        keyboardDismissMode="on-drag"
-        keyboardShouldPersistTaps="handled"
-        hasMore={hasMore}
-        onEndReached={onLoadMore}
-        contentContainerStyle={{
-          paddingBottom: contentPaddingBottom,
-        }}
-      />
-    </View>
+    <InfiniteScrollList
+      ref={listRef}
+      // Keyed only on theme: any other key change remounts the native list.
+      key={isDark ? 'dark' : 'light'}
+      data={listItems}
+      estimatedItemSize={80}
+      drawDistance={1500}
+      initialContainerPoolRatio={20}
+      recycleItems={false}
+      renderItem={renderItem}
+      keyExtractor={(item) => item.id}
+      showsVerticalScrollIndicator={false}
+      ListHeaderComponent={listHeader ?? undefined}
+      ListEmptyComponent={renderEmpty}
+      ListFooterComponent={renderFooter}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
+      hasMore={hasMore}
+      onEndReached={onLoadMore}
+      contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
+    />
   );
 }

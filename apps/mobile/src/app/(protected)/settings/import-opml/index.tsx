@@ -4,7 +4,7 @@ import { OPMLStatusCard } from '@components/screens/profile/ui/opml-status-card'
 import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { readFileContent, validateOPMLFile } from '@lib/utils/opml';
@@ -31,7 +31,7 @@ export default function ImportOPMLScreen() {
 
   const queryClient = useQueryClient();
 
-  const importSheetRef = useRef<BottomSheetModal>(null);
+  const importSheetRef = useRef<SheetRef>(null);
   const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [feedCount, setFeedCount] = useState(0);
   const [isPicking, setIsPicking] = useState(false);

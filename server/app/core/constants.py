@@ -15,6 +15,14 @@ MEILISEARCH_DEFAULT_SEARCH_KEY_NAME = "Default Search API Key"  # Created by Mei
 
 # Supabase Storage Constants
 FAVICONS_BUCKET_NAME = "favicons"  # Public bucket; API serves /storage/v1/object/public/favicons/<path>
+FAVICON_MAX_PX = 256  # Stored favicons are PNGs fitted within this square (crisp at 80px @3x)
+FAVICON_MAX_INPUT_BYTES = 8 * 1024 * 1024  # Refuse to decode/rasterize source images larger than this
+FAVICON_CACHE_CONTROL_SECONDS = 365 * 24 * 60 * 60  # Object keys are uuid4, so content is immutable
+FAVICON_CONTENT_TYPE = "image/png"
+FAVICON_BACKFILL_CONCURRENCY = 8  # Parallel download/convert/upload workers during backfill
+FAVICON_BACKFILL_SYNC_BATCH = 200  # Feeds per Meilisearch batch after backfill
+FAVICON_ORPHAN_GRACE_HOURS = 24  # Never sweep objects newer than this (upload precedes the feeds row update)
+FAVICON_STORAGE_LIST_PAGE = 100  # Storage list/remove page size
 
 # Taskiq Constants
 TASKIQ_METRICS_DIR = Path(gettempdir()) / "taskiq_worker"  # Prometheus multiprocess metrics dir

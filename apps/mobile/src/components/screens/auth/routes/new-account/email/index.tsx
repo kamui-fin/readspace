@@ -1,8 +1,8 @@
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { EmailSchema } from '@lib/validation/auth-schemas';
 import { type AppSettings, useSettingsStore } from '@stores/settings';
 import { Formik, type FormikProps } from 'formik';
@@ -13,7 +13,7 @@ import { toFormikValidationSchema } from 'zod-formik-adapter';
 interface EmailStepProps {
   initialEmail?: string;
   onEmailChange?: (email: string) => void;
-  selfHostSettingsRef?: React.RefObject<BottomSheetModal | null>;
+  selfHostSettingsRef?: React.RefObject<SheetRef | null>;
 }
 
 type EmailFormValues = { email: string };

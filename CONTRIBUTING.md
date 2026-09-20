@@ -8,8 +8,8 @@ Before starting a large change, check the [existing issues](https://github.com/k
 
 - [Git](https://git-scm.com/)
 - [Docker Engine](https://docs.docker.com/engine/install/) or Docker Desktop with Docker Compose
-- [Node.js 18 or newer](https://nodejs.org/). CI currently uses Node.js 20.
-- [Bun 1.3.x](https://bun.sh/). The repository currently pins Bun 1.3.0.
+- [Node.js 22.13 or newer](https://nodejs.org/). Node.js 24 LTS is recommended and used in CI.
+- [Bun 1.3.14 or newer](https://bun.sh/). The repository and EAS builds pin Bun 1.4.2.
 - [Python 3.10 or newer](https://www.python.org/). Python 3.13 is recommended because it matches CI.
 - [Poetry 2.x](https://python-poetry.org/)
 - Bash, `curl`, `jq`, and OpenSSL for the Docker setup scripts

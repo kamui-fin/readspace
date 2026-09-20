@@ -1,3 +1,4 @@
+import { openStoreReview } from '@lib/review';
 import {
   CodexSettingsBottomSheet,
   type CodexSettingsBottomSheetRef,
@@ -10,6 +11,7 @@ import { Discord, Github } from '@components/icons/svg';
 import { Header } from '@components/navigation/header';
 import { SettingsGroup } from '@components/screens/profile/ui/settings-group';
 import { SettingsItem } from '@components/screens/profile/ui/settings-item';
+import { SettingsValueChip } from '@components/screens/profile/ui/settings-value.chip';
 // import { ToastTester } from '@components/screens/profile/ui/toast-tester';
 import { UserProfile } from '@components/screens/profile/ui/user-profile';
 import { Chip } from '@components/ui/chip';
@@ -31,18 +33,20 @@ import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { CLOUD_CONFIG } from '@lib/constants/config';
 import { exportFeedsToOPML } from '@lib/utils/opml';
+import { getUserAvatarSeed, getUserDisplayName } from '@lib/utils/user';
 import { useFeeds } from '@readspace/shared';
 import { CloudIcon, CrownIcon, ServerIcon, ShieldCheckIcon } from '@solar-icons/react-native/bold';
 import {
   ArchiveUpMinimalisticIcon,
   DownloadIcon,
   HistoryIcon,
-  LinkIcon,
   Logout2Icon,
   PaletteIcon,
   StarsIcon,
   TrashBinTrashIcon,
 } from '@solar-icons/react-native/linear';
+import { Plane3Icon } from '@solar-icons/react-native/outline/plane-3';
+import { LikeIcon } from '@solar-icons/react-native/outline/like';
 import { useSettingsStore } from '@stores/settings';
 import { type Theme, useThemeStore } from '@stores/theme';
 import { useUpgradeDialog } from '@stores/upgrade-dialog';
@@ -99,6 +103,8 @@ export function ProfileScreen() {
       setIsLoggingOut(false);
     }
   };
+
+  const themeLabel = theme.charAt(0).toUpperCase() + theme.slice(1);
 
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);
@@ -184,10 +190,11 @@ export function ProfileScreen() {
           {displayUser && (
             <View className="mb-8 flex-row items-center justify-between">
               <UserProfile
-                name={displayUser.user_metadata?.full_name || 'User'}
+                name={getUserDisplayName(displayUser)}
                 email={displayUser.email || ''}
                 avatarUrl={displayUser.user_metadata?.avatar_url}
-                className="flex-1"
+                avatarSeed={getUserAvatarSeed(displayUser)}
+                className="mr-3 flex-1"
               />
               {isPro ? (
                 <View
@@ -252,60 +259,54 @@ export function ProfileScreen() {
 
           {/* Preferences Section */}
           <SettingsGroup title="Preferences" className="mb-6">
-            <DropdownMenuRoot>
-              <DropdownMenuTrigger>
-                <SettingsItem
-                  label="Theme"
-                  variant="select"
-                  value={theme.charAt(0).toUpperCase() + theme.slice(1)}
-                  leftIcon={<PaletteIcon size={22} color={colors.black} />}
-                />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuCheckboxItem
-                  key="system"
-                  value={theme === 'system' ? 'on' : 'off'}
-                  onValueChange={() => handleThemeChange('system')}
-                  className="px-4 py-3">
-                  <DropdownMenuItemIcon
-                    ios={{
-                      name: 'paintbrush.pointed',
-                    }}
-                  />
-                  <DropdownMenuItemTitle size="lg" fontFamily="geist">
-                    System
-                  </DropdownMenuItemTitle>
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  key="light"
-                  value={theme === 'light' ? 'on' : 'off'}
-                  onValueChange={() => handleThemeChange('light')}
-                  className="px-4 py-3">
-                  <DropdownMenuItemIcon
-                    ios={{
-                      name: 'sun.max',
-                    }}
-                  />
-                  <DropdownMenuItemTitle size="lg" fontFamily="geist">
-                    Light
-                  </DropdownMenuItemTitle>
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  key="dark"
-                  value={theme === 'dark' ? 'on' : 'off'}
-                  onValueChange={() => handleThemeChange('dark')}
-                  className="px-4 py-3">
-                  <DropdownMenuItemIcon
-                    ios={{
-                      name: 'moon',
-                    }}
-                  />
-                  <DropdownMenuItemTitle size="lg" fontFamily="geist">
-                    Dark
-                  </DropdownMenuItemTitle>
-                </DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenuRoot>
+            {/* The menu trigger is scoped to the value chip, not the row: iOS lifts
+                whatever it opens from, and lifting a full-width row leaves a
+                visible hole in the group while the menu is down. */}
+            <SettingsItem
+              label="Theme"
+              variant="select"
+              value={themeLabel}
+              leftIcon={<PaletteIcon size={22} color={colors.black} />}
+              trailing={
+                <DropdownMenuRoot>
+                  <DropdownMenuTrigger asChild>
+                    <SettingsValueChip value={themeLabel} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuCheckboxItem
+                      key="system"
+                      value={theme === 'system' ? 'on' : 'off'}
+                      onValueChange={() => handleThemeChange('system')}
+                      className="px-4 py-3">
+                      <DropdownMenuItemIcon ios={{ name: 'paintbrush.pointed' }} />
+                      <DropdownMenuItemTitle size="lg" fontFamily="geist">
+                        System
+                      </DropdownMenuItemTitle>
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      key="light"
+                      value={theme === 'light' ? 'on' : 'off'}
+                      onValueChange={() => handleThemeChange('light')}
+                      className="px-4 py-3">
+                      <DropdownMenuItemIcon ios={{ name: 'sun.max' }} />
+                      <DropdownMenuItemTitle size="lg" fontFamily="geist">
+                        Light
+                      </DropdownMenuItemTitle>
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      key="dark"
+                      value={theme === 'dark' ? 'on' : 'off'}
+                      onValueChange={() => handleThemeChange('dark')}
+                      className="px-4 py-3">
+                      <DropdownMenuItemIcon ios={{ name: 'moon' }} />
+                      <DropdownMenuItemTitle size="lg" fontFamily="geist">
+                        Dark
+                      </DropdownMenuItemTitle>
+                    </DropdownMenuCheckboxItem>
+                  </DropdownMenuContent>
+                </DropdownMenuRoot>
+              }
+            />
 
             <SettingsItem
               label="Daily Digest Settings"
@@ -340,9 +341,20 @@ export function ProfileScreen() {
           {/* Other Section */}
           <SettingsGroup title="Other" className="mb-6">
             <SettingsItem
-              label="Contact Us"
+              label="Leave a Review"
               variant="link"
-              leftIcon={<LinkIcon size={22} color={colors.black} />}
+              leftIcon={<LikeIcon size={22} color={colors.black} />}
+              onPress={() => {
+                void openStoreReview().catch(() =>
+                  toast.error('Cannot open the store review page')
+                );
+              }}
+            />
+
+            <SettingsItem
+              label="Contact & Feedback"
+              variant="link"
+              leftIcon={<Plane3Icon size={22} color={colors.black} />}
               onPress={handleWebsitePress}
             />
 

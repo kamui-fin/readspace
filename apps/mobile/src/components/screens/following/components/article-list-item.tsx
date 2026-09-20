@@ -8,7 +8,6 @@ import type { ListItem } from '@lib/utils/article';
 import type { Article } from '@readspace/shared';
 import { formatRelativeDate } from '@readspace/shared';
 import { Link } from 'expo-router';
-import { useState } from 'react';
 import { View } from 'react-native';
 
 interface ArticleListItemProps {
@@ -33,8 +32,6 @@ export function ArticleListItem({
   lastRefreshedAt,
   isReadLaterMode = false,
 }: ArticleListItemProps) {
-  const [hasMarkedRead, setHasMarkedRead] = useState(false);
-
   const article = item.type === 'article' && item.data ? item.data : null;
   const isClipped = article?.article_type === 'clipped' || false;
 
@@ -86,7 +83,11 @@ export function ArticleListItem({
         <ArticleItemCard
           article={article}
           // Read state is meaningless in Read Later (like web), so don't dim there
-          isRead={hideReadState || isReadLaterMode ? false : article.is_read || hasMarkedRead}
+          // Purely cache-driven: the reader fires mark-as-read on open, and the
+          // mutation's optimistic update dims this card. A local "looks read"
+          // flag used to stand in for that and would stick even when the request
+          // never went out.
+          isRead={hideReadState || isReadLaterMode ? false : article.is_read}
           imageUrl={displayImageUrl}
           title={article.title || undefined}
           // Like web, a clip's personal note takes the description's place
@@ -102,11 +103,6 @@ export function ArticleListItem({
           className="px-4"
           showTopDivider={false}
           showBottomDivider={false}
-          onPress={() => {
-            if (!article.is_read) {
-              setHasMarkedRead(true);
-            }
-          }}
           onMarkAsRead={(article) => {
             onToggleRead(article.id, article.is_read || false, article.article_type as any);
           }}

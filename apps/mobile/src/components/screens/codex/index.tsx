@@ -1,3 +1,5 @@
+import { recordReviewActivity } from '@lib/review';
+import { useIsFocused } from 'expo-router/react-navigation';
 import { Header } from '@components/navigation/header';
 import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
@@ -32,11 +34,20 @@ export function CodexScreen() {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const { data: digest, isLoading, error } = useCodexToday();
+  const isFocused = useIsFocused();
   const generate = useGenerateCodexDigest();
   const { checkAndTriggerUpgrade } = useLimitChecker();
   const [notEntitled, setNotEntitled] = useState<{ reason: string; errorCode: string } | null>(
     null
   );
+  useEffect(() => {
+    if (
+      isFocused && !isLoading && !error && !notEntitled &&
+      digest?.status === CodexDigestStatus.COMPLETED && digest.payload
+    ) {
+      void recordReviewActivity(undefined, true);
+    }
+  }, [isFocused, isLoading, error, notEntitled, digest]);
   const [, rerenderOnResume] = useReducer((tick: number) => tick + 1, 0);
 
   // JS timers are paused while backgrounded, so the shared hook's expiry timer may be late.

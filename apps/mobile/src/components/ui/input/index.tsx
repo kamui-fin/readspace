@@ -1,5 +1,4 @@
 import { Text } from '@components/ui/text';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useOnFocus } from '@hooks/useOnFocus';
 import { COLORS } from '@lib/constants/colors';
@@ -203,12 +202,13 @@ export const Input = forwardRef((props: InputProps, ref: any) => {
   return <InputBase {...props} ref={ref} TextInputComponent={ReactNativeTextInput} />;
 });
 
-export const BottomSheetInput = forwardRef((props: InputProps, ref: any) => {
-  return <InputBase {...props} ref={ref} TextInputComponent={BottomSheetTextInput} />;
-});
+/**
+ * Kept as an alias so sheet call sites read clearly. True Sheet handles keyboard avoidance
+ * natively, so inputs inside sheets are plain `TextInput`s.
+ */
+export const BottomSheetInput = Input;
 
 Input.displayName = 'Input';
-BottomSheetInput.displayName = 'BottomSheetInput';
 
 // This component adds appropriate padding to match our design system and increase the pressable area
 // Usage - with rightElement and leftElement

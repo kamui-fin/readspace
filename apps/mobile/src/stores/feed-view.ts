@@ -1,3 +1,4 @@
+import { FOLLOWING_TAB, NO_ACTIVE_TAB } from '@lib/constants/tabs';
 import { create } from 'zustand';
 import { useFollowingStore } from './following';
 
@@ -7,7 +8,7 @@ interface FeedViewState {
   viewType: ViewType;
   selectedId: string | null;
   selectedName: string | null;
-  activeTab: number; // 0=All, 1=Today, 2=Saved, 3=Recent, -1=none when feed/folder selected
+  activeTab: number; // FOLLOWING_TAB index, or NO_ACTIVE_TAB while a feed/folder is selected
   isPreviewMode: boolean; // True when viewing an unsubscribed feed
   previewSourceRoute: string | null; // Route to return to when exiting preview mode
 }
@@ -27,7 +28,7 @@ const initialState: FeedViewState = {
   viewType: 'default',
   selectedId: null,
   selectedName: null,
-  activeTab: 0,
+  activeTab: FOLLOWING_TAB.ALL,
   isPreviewMode: false,
   previewSourceRoute: null,
 };
@@ -36,36 +37,36 @@ export const useFeedViewStore = create<FeedViewStore>((set) => ({
   ...initialState,
 
   selectFeed: (feedId, feedName) => {
-    useFollowingStore.getState().setActiveTab(0);
+    useFollowingStore.getState().setActiveTab(FOLLOWING_TAB.ALL);
     set({
       viewType: 'feed',
       selectedId: feedId,
       selectedName: feedName,
-      activeTab: -1,
+      activeTab: NO_ACTIVE_TAB,
       isPreviewMode: false,
       previewSourceRoute: null,
     });
   },
 
   selectFolder: (folderId, folderName) => {
-    useFollowingStore.getState().setActiveTab(0);
+    useFollowingStore.getState().setActiveTab(FOLLOWING_TAB.ALL);
     set({
       viewType: 'folder',
       selectedId: folderId,
       selectedName: folderName,
-      activeTab: -1,
+      activeTab: NO_ACTIVE_TAB,
       isPreviewMode: false,
       previewSourceRoute: null,
     });
   },
 
   selectFeedPreview: (feedId, feedName, sourceRoute) => {
-    useFollowingStore.getState().setActiveTab(0);
+    useFollowingStore.getState().setActiveTab(FOLLOWING_TAB.ALL);
     set({
       viewType: 'feedPreview',
       selectedId: feedId,
       selectedName: feedName,
-      activeTab: -1,
+      activeTab: NO_ACTIVE_TAB,
       isPreviewMode: true,
       previewSourceRoute: sourceRoute || null,
     });
@@ -87,7 +88,7 @@ export const useFeedViewStore = create<FeedViewStore>((set) => ({
       viewType: 'default',
       selectedId: null,
       selectedName: null,
-      activeTab: 0,
+      activeTab: FOLLOWING_TAB.ALL,
       isPreviewMode: false,
       previewSourceRoute: null,
     });

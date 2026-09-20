@@ -1,4 +1,5 @@
 import type React from 'react';
+import type { ColorValue } from 'react-native';
 
 interface SvgIconProps {
   width?: number;
@@ -12,7 +13,7 @@ interface TabBarIconProps {
   name?: string;
   focused?: boolean;
   size?: number;
-  color?: string;
+  color?: ColorValue;
 }
 
 export function TabBarIcon({ component: SvgComponent, name, focused, ...props }: TabBarIconProps) {
@@ -21,7 +22,7 @@ export function TabBarIcon({ component: SvgComponent, name, focused, ...props }:
       <SvgComponent
         width={props.size || 24}
         height={props.size || 24}
-        color={props.color}
+        color={typeof props.color === 'string' ? props.color : undefined}
         filled={focused}
       />
     );

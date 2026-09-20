@@ -7,20 +7,33 @@ export interface UserProfileProps {
   name: string;
   email: string;
   avatarUrl?: string;
+  /** Stable per-account seed for the generated avatar — see `getUserAvatarSeed`. */
+  avatarSeed?: string;
   className?: string;
 }
 
-export function UserProfile({ name, email, avatarUrl, className }: UserProfileProps) {
+export function UserProfile({ name, email, avatarUrl, avatarSeed, className }: UserProfileProps) {
   return (
     <View className={clsx('flex-row items-center gap-4', className)}>
-      <Avatar name={name} imageUrl={avatarUrl} size={64} />
+      <Avatar name={name} seed={avatarSeed} imageUrl={avatarUrl} size={56} />
 
-      {/* User Info */}
-      <View className="flex-1">
-        <Text size="xl" fontFamily="geist-semibold" className="text-black">
+      {/* `min-w-0` lets the flex child actually shrink, which is what makes
+          numberOfLines truncate instead of pushing the Pro badge off-screen. */}
+      <View className="min-w-0 flex-1">
+        <Text
+          size="lg"
+          fontFamily="geist-semibold"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          className="text-black">
           {name}
         </Text>
-        <Text size="lg" fontFamily="geist" className="text-grey dark:text-grey">
+        <Text
+          size="sm"
+          fontFamily="geist"
+          numberOfLines={1}
+          ellipsizeMode="middle"
+          className="text-grey dark:text-grey mt-0.5">
           {email}
         </Text>
       </View>

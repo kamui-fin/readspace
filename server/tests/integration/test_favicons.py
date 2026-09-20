@@ -113,6 +113,9 @@ async def test_extract_and_upload_favicon_real(favicon_server):
             assert response.status_code == 200, f"Failed to download from {full_url}"
             # Check for PNG signature since re-encoding might change bytes
             assert response.content.startswith(b"\x89PNG"), "Downloaded content is not a PNG"
+            assert response.headers["content-type"].startswith("image/png")
+            assert "max-age=" in response.headers.get("cache-control", ""), "Favicon must be cacheable"
+            assert result.image_url.endswith(".png")
         except Exception as e:
             pytest.fail(f"Download check failed: {e}")
 

@@ -3,6 +3,7 @@ import { Button } from '@components/ui/button';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { DEVICE_CORNER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { FOLLOWING_TAB } from '@lib/constants/tabs';
 import { BookmarkIcon, CalendarIcon, InboxIcon, SortIcon } from '@solar-icons/react-native/bold';
 import clsx from 'clsx';
 import { View } from 'react-native';
@@ -12,10 +13,14 @@ import {
   tabsRowVariants,
 } from '@/components/navigation/header/constants/header-variants';
 
+/**
+ * Rendered left-to-right; the array index IS the tab index, so this order must
+ * stay in lockstep with `FOLLOWING_TAB` in `@lib/constants/tabs`.
+ */
 export const buttonConfigs = [
-  { label: 'All', icon: InboxIcon },
-  { label: 'Today', icon: CalendarIcon },
-  { label: 'Saved', icon: BookmarkIcon },
+  { label: 'Today', icon: CalendarIcon, index: FOLLOWING_TAB.TODAY },
+  { label: 'All', icon: InboxIcon, index: FOLLOWING_TAB.ALL },
+  { label: 'Saved', icon: BookmarkIcon, index: FOLLOWING_TAB.SAVED },
 ];
 
 interface HeaderTabsProps {
@@ -46,12 +51,12 @@ export function HeaderTabs({
       style={{ backgroundColor: tabRowBgColor }}>
       <View className={clsx(tabsContainerVariants())}>
         <View className={clsx(tabsGroupVariants())}>
-          {buttonConfigs.map((btn, index) => (
+          {buttonConfigs.map((btn) => (
             <Tab
               key={btn.label}
               label={btn.label}
-              active={activeTab === index}
-              onPress={() => onTabChange?.(index)}
+              active={activeTab === btn.index}
+              onPress={() => onTabChange?.(btn.index)}
               icon={btn.icon}
             />
           ))}

@@ -14,6 +14,24 @@ export const CURATED_CONTENT_TYPES: ContentType[] = [
 ]
 
 /**
+ * Every content type, in the order they're offered as filters: the curated
+ * high-signal ones first, then the long tail. Clients that show the full set
+ * (e.g. the mobile filter sheet) use this; clients with room for only a few
+ * (web's inline chip rail) use CURATED_CONTENT_TYPES.
+ */
+export const ALL_CONTENT_TYPES: ContentType[] = [
+    ...CURATED_CONTENT_TYPES,
+    ContentType.AGGREGATOR,
+    ContentType.CORPORATE_BLOG,
+    ContentType.DOCUMENTATION_WIKI,
+    ContentType.EDUCATION_RESEARCH,
+    ContentType.OPEN_SOURCE_ACTIVITY,
+    ContentType.GOVERNMENT_INSTITUTIONAL,
+    ContentType.MARKETPLACE_LISTINGS,
+    ContentType.STATUS_CHANGELOG,
+]
+
+/**
  * Human-readable display names for feed content types.
  */
 export const CONTENT_TYPE_DISPLAY_NAMES: Record<ContentType, string> = {

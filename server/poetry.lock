@@ -5123,6 +5123,74 @@ files = [
 requests = ">=1.0.0"
 
 [[package]]
+name = "resvg-py"
+version = "0.5.0"
+description = ""
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "resvg_py-0.5.0-cp310-abi3-android_24_arm64_v8a.whl", hash = "sha256:2715f2b88ce2cf91f57ff37bb34c5909c8007de431d488e9c3ebf6cf2d69c91b"},
+    {file = "resvg_py-0.5.0-cp310-abi3-android_24_x86_64.whl", hash = "sha256:9901e2f9ce53e7535d2676123c8d4894bff040f52821e54192605b5dd4fb5af9"},
+    {file = "resvg_py-0.5.0-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:9d3f5c2544d6b5f74847513e07e6ab6a70f9e7f0d8a141bc16bd4b0c555f4234"},
+    {file = "resvg_py-0.5.0-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:7b43f942157f5d16126e108dab8ab37e4bc2b198099e5f6274b753a3b1ac7b6e"},
+    {file = "resvg_py-0.5.0-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1e66216f78c84a27d34ce75f4535d8e26565771be4f1848ddc71e8a7ce78973a"},
+    {file = "resvg_py-0.5.0-cp310-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:977921f22b0a3283e6cd121339a2aff51d0df3b542ce7a5f96fa3a87f8d65106"},
+    {file = "resvg_py-0.5.0-cp310-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:9da8e52d7d5d16b288aa47fa830fd66301a6b6f135f9f37fa9f4854b7a722e6d"},
+    {file = "resvg_py-0.5.0-cp310-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:200baa4a01b6779d7b6f3fa31e5eabfc5ab594a1317d75853ee73c5229686599"},
+    {file = "resvg_py-0.5.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:84f2378ecc7a8e38b03429efaefc816daec1b1970114909a6f973393b297c91b"},
+    {file = "resvg_py-0.5.0-cp310-abi3-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:9ebcc40941811b49001ad4e721aa87f489b74c0132ff3fcbceed97305c944749"},
+    {file = "resvg_py-0.5.0-cp310-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:7c3e8c2324fc2bcf03c1010b7987adf5ff4ce43e8fc1a7c9b8271cbbcca6ba37"},
+    {file = "resvg_py-0.5.0-cp310-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:4a5db1a607059a48f5d4c20c7363e4888e001b11a04465d36e3ca77a511651eb"},
+    {file = "resvg_py-0.5.0-cp310-abi3-musllinux_1_2_i686.whl", hash = "sha256:d54a8c85e7d6f4ba55f39c2330c7830d8c98a7dc205ca3c2ca069f9b11cb01c4"},
+    {file = "resvg_py-0.5.0-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:feee1ee6c2c0b64018c046a7604240c233c6cf14496e475238370c7d9a9db455"},
+    {file = "resvg_py-0.5.0-cp310-abi3-win32.whl", hash = "sha256:45b2e66f76e7649155dc768c3cd1f5a94907d0086c2bde22da14c9ecbf9eda9a"},
+    {file = "resvg_py-0.5.0-cp310-abi3-win_amd64.whl", hash = "sha256:1f6b8956c4143dbfe107bcd35799d0dfd778a40a8cd537893c0bf489898a6c3c"},
+    {file = "resvg_py-0.5.0-cp310-abi3-win_arm64.whl", hash = "sha256:8016e2006c09953570af466e7674c398c1f255cb00022152b15e18f9e8ca3af8"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-macosx_10_12_x86_64.whl", hash = "sha256:5547fc79ee600ee0e40ad01cdeb36140a74e85cfad2722973dae654db3667fcd"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:4bd8da85e5332aded549894d7fe4aec6f19a681ecda3385acbfdf1a1c67bc8da"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1447c10535c4fa122bb20f702da5d23ad5053cdff831aa2d6f6b482ebab12485"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:c1ed526890579f8bf1afcf6c17f29c22659196c57b2c760e485f15dfc93dca64"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:cfe18bc3d36cc885190f450d5f0d26473c5cecb86b28bcb714f7a025e1cfd5c2"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:b8481cdbaf7fea5dbf2bfe57e86201c6a40193c462e365729185c66849b5966a"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:12cdd0349ebd8efaade78f74fc3fc08fcdd3f21f7152fb199a561176a64581bf"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:c184cad5c3593dbe655ef9f304068fa941646947d94767dbd1afcbf094c8dae5"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:75e6822b492c66d85f03a6f2510ac69902ff0509a2a86cd50ef30ebb73c714ea"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-musllinux_1_2_armv7l.whl", hash = "sha256:1abaadac95daa2907e3fa0f668c90a099d4bfffe0a6fa7cf36d30c607bfd5797"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-musllinux_1_2_i686.whl", hash = "sha256:92cdc56331224980b85c1604c7da9bef37737657cf123d88e920ca10a07c6a11"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:403fed36186bbe4ef4eb3ec1d5fabe003a1c90ad71f145ca0e9b9f7f80e70696"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-win32.whl", hash = "sha256:c7fad8f8c28e770da8783dc429bfa0d71f2abe740be2f8d726308a669a392919"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-win_amd64.whl", hash = "sha256:b0284c50c7e3b009e97e5c64a2d31e02b8bb36cd066d947fda9e43f480ca19f7"},
+    {file = "resvg_py-0.5.0-cp314-cp314t-win_arm64.whl", hash = "sha256:5c026b67b79604f32865e132ef68ff25633b8668e35b29ad412fcef906c0c39a"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-macosx_10_12_x86_64.whl", hash = "sha256:51fa0564ad1a3e82307c1aed7222b66edeb3b8c595251709f929b0a819109da1"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-macosx_11_0_arm64.whl", hash = "sha256:1f91870d5315168093d546777fccece4406ad2053c1908f5ceab3c39f2c49e7c"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d597eef189a8e728c8026417ea51b61720c83d2ed262b508362c4309cd57bc8a"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:5befa08450f4248b9670e054f446065d0fc33c1a4ff302baaacc205ddee97b3c"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:17640c3bb2f4498a6aa61d256ec21257b32e68fd2564b509c4919f5171561b99"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:0fca2d6b28938e7fa7553a7f9c5f330b908c7fd8c50f4fe3d175ddcc5e958879"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8c4cc14543c29b753db751eace1dadcf0d58d77aa58be5370393bcfbcc1cbc2f"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:869e4ab0b8f4a403d6fac93d2c4e3df79488b9f6fd053ba0f4fa4ed45d456fe5"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-musllinux_1_2_aarch64.whl", hash = "sha256:f322d7bf0ddab60156d6cf1883718b726c1c210bd7623e253756986798c5c83e"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-musllinux_1_2_armv7l.whl", hash = "sha256:55d65708e2dee0de77cccc0d03d21cd148a491c2bc6ef25542081db8eee74923"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-musllinux_1_2_i686.whl", hash = "sha256:04b32b1e2d7a848124d9b96bc7446ceae71ea144d950007e93c4a382f7ee134c"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-musllinux_1_2_x86_64.whl", hash = "sha256:7fc91829a4d12d80071e9f4f191a9f459adf310919cbdf1377711b30dfa996b5"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-win32.whl", hash = "sha256:f0c834262db96eac4d5767e1025c21efefa0ed0359bded8dfd4b79fc7549694f"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-win_amd64.whl", hash = "sha256:011111a4c3f46d409e989fe88ec783a3ffae1f3877092ab0351aaf2167fe399d"},
+    {file = "resvg_py-0.5.0-cp315-abi3.abi3t-win_arm64.whl", hash = "sha256:66e5a7699f2b00024ed7e95ec53df05bb3da277ee5bc86f867d487e310e4d392"},
+    {file = "resvg_py-0.5.0-pp311-pypy311_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7cf22e9feaa41ac4eb781ec266b685d001bd02dccd9c28b74ca9ed2cc755891c"},
+    {file = "resvg_py-0.5.0-pp311-pypy311_pp73-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:3651dfe44c05bf3c594d2f074af06ba49a1adb0c11ed2e62f0a0ae5647d4e689"},
+    {file = "resvg_py-0.5.0-pp311-pypy311_pp73-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:e3ae9f72f7a265953c3cec67dbb849d76fe9391658820a2fd05769d858869fdd"},
+    {file = "resvg_py-0.5.0-pp311-pypy311_pp73-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:efa682ad33f8d2fa22cc1034e606fed5eee09b516c09a889b01ef07ce80a07fe"},
+    {file = "resvg_py-0.5.0-pp311-pypy311_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:326358d1a83fba3c2c373576f15ad2b4f5bc6e90aad167682e39e3e15ea72c31"},
+    {file = "resvg_py-0.5.0-pp311-pypy311_pp73-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:4beec3f2a6c59b8c3f2fa45dd167392c8074a326debad9277cb305a514546be8"},
+    {file = "resvg_py-0.5.0-pp311-pypy311_pp73-musllinux_1_2_aarch64.whl", hash = "sha256:a9f5583cf9f3d806ee802b948bf0632acd680661ca4f6e8007eac75ac3f09e1e"},
+    {file = "resvg_py-0.5.0-pp311-pypy311_pp73-musllinux_1_2_armv7l.whl", hash = "sha256:c113a655f558cd1d62616a459ad7ad61072cafdb3c997c9d8f83077a0d186af9"},
+    {file = "resvg_py-0.5.0-pp311-pypy311_pp73-musllinux_1_2_i686.whl", hash = "sha256:e9bbb65e6a969fc792b6bcff7d7f203ab58775475cf30db4577a05f62be72904"},
+    {file = "resvg_py-0.5.0-pp311-pypy311_pp73-musllinux_1_2_x86_64.whl", hash = "sha256:c2a493b6ada049cdee60b5ebe81f1eec8d36766c38962dadfd8d0ec8e5201cae"},
+    {file = "resvg_py-0.5.0.tar.gz", hash = "sha256:6d3bf8e866b4e129524d9432a809138b2d100931d8d635bc81294002abcdfd46"},
+]
+
+[[package]]
 name = "rich"
 version = "14.1.0"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
@@ -7082,4 +7150,4 @@ cffi = ["cffi (>=1.17) ; python_version >= \"3.13\" and platform_python_implemen
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4.0"
-content-hash = "cbb8e5fef57332e9df42ba05f9d49b2389866be76b711a268fbbd1b9e9a6acc5"
+content-hash = "7fecdc01c8f8c4ede79d340721bf43b9ddfeeb3a3065ac5e1004e7958d550c0c"

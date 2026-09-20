@@ -390,53 +390,121 @@ summary:focus-visible,
   .orbit-caption { margin-top: 64px; }
 }
 
-/* Discovery bento: the twenty shelves as a tidy directory tile spanning the grid,
-   rather than a ragged pill cloud that stacks one-per-row on a phone. */
-/* Two explicit columns. auto-fit made three 300px tracks in this container, so the
-   two lower cards filled 2 of 3 and left a dead column beside them. */
-.spotlight-grid {
-  margin-top: 34px; display: grid; gap: 20px; text-align: left;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+/* Discovery — Smart search capture.
+   Framed exactly like the hero so the two product shots on the page read as the
+   same object: green wash, browser chrome, and the capture bleeding off the
+   bottom edge of the frame rather than sitting inside a closed box.
+   The container is narrower than the hero's because the capture is near-square —
+   at 1180px it would be a ~1000px-tall wall. */
+.discover-shot { max-width: 900px; margin: 84px auto 0; padding: 0 24px; }
+.discover-shot-lead { text-align: center; margin: 0 0 32px; }
+.smart-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid #CFE0C0; border-radius: 999px; background: #EFF5E8;
+  padding: 5px 13px 5px 10px; color: #38663F;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10.5px; font-weight: 500; letter-spacing: .13em; text-transform: uppercase;
 }
-@media (max-width: 720px) { .spotlight-grid { grid-template-columns: 1fr; } }
+.discover-shot-lead h3 {
+  margin: 18px auto 0; max-width: 18ch;
+  font-family: 'EB Garamond', ui-serif, Georgia, serif; font-weight: 500;
+  font-size: clamp(26px, 3.2vw, 40px); line-height: 1.08; letter-spacing: -.018em; color: #171C18;
+  text-wrap: balance;
+}
+.discover-shot-lead p {
+  margin: 14px auto 0; max-width: 56ch; font-size: 16.5px; line-height: 1.6; color: #4D554E; text-wrap: pretty;
+}
+.discover-frame {
+  position: relative; border-radius: 26px; overflow: hidden;
+  background: linear-gradient(168deg, #E6EEDB, #F2F6E9 62%, #EDF2E2);
+  padding: clamp(14px, 3.2vw, 40px) clamp(12px, 3vw, 40px) 0;
+}
+.discover-window {
+  position: relative; border-radius: 14px 14px 0 0; background: #fff; overflow: hidden;
+  box-shadow: 0 40px 90px -40px rgba(24,48,30,.35), 0 2px 6px rgba(24,48,30,.05);
+}
+.discover-window-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 11px 14px; border-bottom: 1px solid #EEEFE4; background: #F6FAF6;
+}
+.discover-window-dot { width: 10px; height: 10px; border-radius: 50%; background: #E2E7DE; flex: none; }
+.discover-window-url {
+  margin-left: 10px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; color: #545C55;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.discover-window img { display: block; width: 100%; height: auto; }
+@media (max-width: 600px) {
+  .discover-shot { padding: 0 16px; }
+  .discover-frame { border-radius: 20px; }
+}
 
-.bento-card {
+/* Discovery bento — the three secondary ways into a feed.
+   Every card ends in a fixed-height "well" pinned to the bottom, so a chip cloud,
+   a portrait screenshot and a dropzone stop driving three different card heights
+   (the old grid stretched the dropzone into a 600px empty box beside the
+   extension capture). Each well bleeds past the card's bottom edge — faded,
+   clipped or cropped — which reads as "there's more" without needing the height. */
+.ways-wrap { max-width: 1180px; margin: 92px auto 0; padding: 0 24px; }
+.ways-label {
+  text-align: center; font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #8A9486;
+}
+.ways-grid {
+  margin-top: 26px; display: grid; gap: 18px; text-align: left;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 880px) { .ways-grid { grid-template-columns: 1fr; } }
+
+.way-card {
   display: flex; flex-direction: column;
-  border: 1px solid #E2E4D6; border-radius: 8px; background: #F7F8F1; padding: 22px 24px;
+  border: 1px solid #E2E4D6; border-radius: 14px; background: #F7F8F1;
+  padding: 22px 22px 0; min-height: 352px;
 }
-.bento-title { font-size: 17px; font-weight: 600; letter-spacing: -.015em; color: #1F2620; }
-.bento-sub { margin: 8px 0 18px; font-size: 15px; line-height: 1.55; color: #5E665F; max-width: 42ch; }
-.bento-visual { margin: auto auto 0; max-width: 340px; width: 100%; border-radius: 10px; overflow: hidden; border: 1px solid #E7E8DA; }
-.bento-visual img { display: block; width: 100%; height: auto; }
+.way-title { font-size: 16.5px; font-weight: 600; letter-spacing: -.015em; color: #1F2620; }
+.way-sub { margin: 9px 0 0; font-size: 14.5px; line-height: 1.55; color: #5E665F; }
+.way-well { position: relative; margin-top: auto; padding-top: 22px; height: 208px; }
 
-/* OPML import: the real product screen is a drag-and-drop target, so show that
-   rather than a folder tree that ran longer than the card beside it. */
-.opml-drop {
-  position: relative; margin-top: auto; flex: 1;
+/* Twenty shelves as a pill cloud that fades out mid-card, rather than a rigid
+   20-cell grid whose repeated icons read as a rendering bug. */
+.cat-cloud {
+  display: flex; flex-wrap: wrap; align-content: flex-start; gap: 7px;
+  height: 100%; overflow: hidden;
+  -webkit-mask-image: linear-gradient(180deg, #000 52%, rgba(0,0,0,0) 94%);
+  mask-image: linear-gradient(180deg, #000 52%, rgba(0,0,0,0) 94%);
+}
+.cat-pill {
+  border: 1px solid #E4ECDF; background: #fff; border-radius: 999px;
+  padding: 7px 13px; font-size: 13px; font-weight: 500; line-height: 1.25; color: #5C6559;
+}
+
+.way-shot {
+  height: 100%; overflow: hidden;
+  border: 1px solid #E7E8DA; border-bottom: 0; border-radius: 12px 12px 0 0;
+}
+.way-shot img { display: block; width: 100%; height: auto; }
+
+.opml-mini {
+  position: relative; height: 100%;
   display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
-  border: 1.5px dashed #B2C7A2; border-radius: 12px; background: #fff; padding: 36px 22px;
+  border: 1.5px dashed #B2C7A2; border-bottom: 0; border-radius: 12px 12px 0 0;
+  background: #fff; padding: 0 18px 18px;
 }
 .opml-drop-icon {
-  width: 44px; height: 44px; border-radius: 50%; background: #E9F0E1; color: #38663F;
-  display: flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; border-radius: 50%; background: #E9F0E1; color: #38663F;
+  display: flex; align-items: center; justify-content: center; flex: none;
 }
-.opml-drop-title { margin-top: 14px; font-size: 15px; font-weight: 500; color: #1F2620; }
-.opml-drop-hint { margin-top: 6px; font-size: 13px; line-height: 1.5; color: #7C857B; max-width: 32ch; }
-.opml-browse {
-  margin-top: 16px; display: inline-flex; align-items: center;
-  border: 1px solid #E2E4D6; border-radius: 8px; background: #F7F8F1;
-  padding: 7px 14px; font-size: 13px; font-weight: 500; color: #3E463F;
-}
+.opml-drop-title { margin-top: 13px; font-size: 14.5px; font-weight: 500; color: #1F2620; }
+.opml-drop-hint { margin-top: 5px; font-size: 12.5px; line-height: 1.5; color: #7C857B; max-width: 30ch; }
 .opml-file {
-  position: absolute; top: -15px; right: 16px;
-  display: flex; align-items: center; gap: 9px; white-space: nowrap;
+  position: absolute; top: -12px; right: 12px; z-index: 1;
+  display: flex; align-items: center; gap: 8px; white-space: nowrap;
   border: 1px solid #E2E4D6; border-radius: 9px; background: #fff;
-  box-shadow: 0 16px 30px -16px rgba(24,48,30,.5); padding: 9px 13px;
+  box-shadow: 0 16px 30px -16px rgba(24,48,30,.5); padding: 8px 11px;
   transform: rotate(-4deg);
 }
-.opml-file-name { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12.5px; color: #3E463F; }
+.opml-file-name { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: #3E463F; }
 .opml-file-count {
-  font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11.5px; font-weight: 500;
+  font-family: 'Geist Mono', ui-monospace, monospace; font-size: 11px; font-weight: 500;
   color: #38663F; background: #E9F0E1; border-radius: 999px; padding: 2px 8px;
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -446,29 +514,10 @@ summary:focus-visible,
   0%, 100% { transform: rotate(-4deg) translateY(0); }
   50% { transform: rotate(-4deg) translateY(-6px); }
 }
-@media (max-width: 480px) {
-  .opml-drop { padding: 30px 16px; }
-  .opml-file { right: 10px; gap: 7px; padding: 8px 11px; }
-  .opml-file-name { font-size: 11.5px; }
-}
-.category-card {
-  grid-column: 1 / -1;
-  border: 1px solid #E2E4D6; border-radius: 8px; background: #F7F8F1; padding: 22px 24px;
-}
-.category-grid {
-  margin-top: 18px; display: grid; gap: 8px;
-  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
-}
-.category-chip {
-  display: flex; align-items: center; gap: 8px; min-width: 0;
-  border: 1px solid #E4ECDF; background: #fff; border-radius: 8px;
-  padding: 10px 12px; font-size: 13px; font-weight: 500; line-height: 1.3; color: #5C6559;
-}
-.category-chip svg { flex: none; }
-@media (max-width: 480px) {
-  .category-card { padding: 20px 18px; }
-  .category-grid { grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 7px; }
-  .category-chip { padding: 9px 10px; font-size: 12.5px; gap: 7px; }
+@media (max-width: 420px) {
+  .opml-file { right: 8px; gap: 6px; padding: 7px 9px; }
+  .opml-file-name { font-size: 11px; }
+  .opml-drop-hint { font-size: 12px; }
 }
 
 /* Newsletter ingestion: a card inside a frame inside the page leaves a phone about

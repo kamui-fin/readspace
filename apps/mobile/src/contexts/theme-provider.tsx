@@ -12,7 +12,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Set initial system color scheme
-    const initialScheme = Appearance.getColorScheme();
+    const initialScheme = Appearance.getColorScheme() ?? 'light';
     setSystemColorScheme(initialScheme);
 
     // Listen for system theme changes

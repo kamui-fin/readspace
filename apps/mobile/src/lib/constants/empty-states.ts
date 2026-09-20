@@ -1,3 +1,4 @@
+import { FOLLOWING_TAB } from '@lib/constants/tabs';
 import { BookmarkIcon, HistoryIcon, InboxIcon } from '@solar-icons/react-native/broken';
 
 export interface EmptyStateConfig {
@@ -12,22 +13,22 @@ export interface EmptyStateConfig {
 }
 
 export const EMPTY_STATE_CONFIGS: Record<number, EmptyStateConfig> = {
-  0: {
-    icon: InboxIcon,
-    title: 'Nothing to read here',
-    description: 'Explore trending topics or import your subscriptions to get started.',
-  },
-  1: {
+  [FOLLOWING_TAB.TODAY]: {
     icon: InboxIcon,
     title: 'All caught up',
     description: 'No new articles published today. Check back later for fresh updates!',
   },
-  2: {
+  [FOLLOWING_TAB.ALL]: {
+    icon: InboxIcon,
+    title: 'Nothing to read here',
+    description: 'Explore trending topics or import your subscriptions to get started.',
+  },
+  [FOLLOWING_TAB.SAVED]: {
     icon: BookmarkIcon,
     title: 'No saved articles',
     description: 'Swipe right on articles in your feed to bookmark them for later reading.',
   },
-  3: {
+  [FOLLOWING_TAB.RECENT]: {
     icon: HistoryIcon,
     title: 'No reading history',
     description: 'Articles you read will show up here so you can easily find them again.',

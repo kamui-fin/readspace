@@ -1,10 +1,9 @@
 import { Language } from '@components/icons/svg';
-import { BottomSheet } from '@components/ui/bottom-sheet';
+import { BottomSheet, type SheetRef } from '@components/ui/bottom-sheet';
 import { Text } from '@components/ui/text';
-import { type BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { DocumentTextIcon, GlobalIcon, TextSelectionIcon } from '@solar-icons/react-native/bold';
+import { DocumentTextIcon, GlobalIcon } from '@solar-icons/react-native/bold';
 import clsx from 'clsx';
 import { forwardRef, useMemo } from 'react';
 import { Pressable, View } from 'react-native';
@@ -22,17 +21,9 @@ interface ArticleOptionsBottomSheetProps {
   canExtractContent: boolean;
   isClipped: boolean;
   isNewsletter?: boolean;
-  hasHighlightedContent: boolean;
-  highlightsEnabled: boolean;
-  isGeneratingHighlights: boolean;
-  onGenerateHighlights: () => void;
-  onToggleHighlights: (enabled: boolean) => void;
 }
 
-export const ArticleOptionsBottomSheet = forwardRef<
-  BottomSheetModal,
-  ArticleOptionsBottomSheetProps
->(
+export const ArticleOptionsBottomSheet = forwardRef<SheetRef, ArticleOptionsBottomSheetProps>(
   (
     {
       currentView,
@@ -45,11 +36,6 @@ export const ArticleOptionsBottomSheet = forwardRef<
       canExtractContent,
       isClipped,
       isNewsletter = false,
-      hasHighlightedContent,
-      highlightsEnabled,
-      isGeneratingHighlights,
-      onGenerateHighlights,
-      onToggleHighlights,
     },
     ref
   ) => {
@@ -112,9 +98,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
 
     return (
       <BottomSheet ref={ref} snapPoints={snapPoints} enablePanDownToClose onDismiss={onClose}>
-        <BottomSheetScrollView
-          className="bg-background flex-1"
-          showsVerticalScrollIndicator={false}>
+        <View className="flex-1">
           {/* Actions Section */}
           <Text
             size="sm"
@@ -130,24 +114,6 @@ export const ArticleOptionsBottomSheet = forwardRef<
                 hasTranslatedContent ? 'Translate to a different language' : 'Translate Article',
                 hasTranslatedContent ? 'Change current language' : 'Pick a language',
                 onTranslate
-              )}
-
-            {!isNewsletter &&
-              renderOption(
-                <TextSelectionIcon size={22} color={highlightsEnabled ? activeColor : greyColor} />,
-                'AI Highlights',
-                isGeneratingHighlights
-                  ? 'Generating...'
-                  : hasHighlightedContent
-                    ? highlightsEnabled
-                      ? 'Tap to hide highlights'
-                      : 'Tap to show highlights'
-                    : 'Skim the key points',
-                hasHighlightedContent
-                  ? () => onToggleHighlights(!highlightsEnabled)
-                  : onGenerateHighlights,
-                highlightsEnabled,
-                isGeneratingHighlights
               )}
 
             {!isNewsletter &&
@@ -213,7 +179,7 @@ export const ArticleOptionsBottomSheet = forwardRef<
               </View>
             </>
           )}
-        </BottomSheetScrollView>
+        </View>
       </BottomSheet>
     );
   }

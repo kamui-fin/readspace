@@ -7,13 +7,13 @@ import {
   RenameFolderModal,
   type RenameFolderModalRef,
 } from '@components/bottom-sheets/rename-folder';
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Checkbox } from '@components/ui/checkbox';
 import { DropdownMenuRoot, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import {
@@ -71,7 +71,7 @@ interface ListItem {
 
 export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, object>(
   (_props, ref) => {
-    const bottomSheetRef = useRef<BottomSheetModal>(null);
+    const bottomSheetRef = useRef<SheetRef>(null);
     const createFolderModalRef = useRef<CreateFolderModalRef>(null);
     const renameFolderModalRef = useRef<RenameFolderModalRef>(null);
     const renameFeedModalRef = useRef<RenameFeedModalRef>(null);
@@ -547,8 +547,6 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
           }
           headerTitleAlign="left"
           headerTitleStyle={isSelectionMode ? { fontSize: 18 } : {}}
-          enableContentPanningGesture={true}
-          enableOverDrag
           headerLeft={headerLeftActions}
           headerRight={headerRightActions}
           snapPoints={['50%', '90%', '100%']}

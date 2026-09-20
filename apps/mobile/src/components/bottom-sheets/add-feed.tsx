@@ -1,3 +1,4 @@
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
@@ -6,7 +7,6 @@ import { Skeleton } from '@components/ui/skeleton';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useRevenueCat } from '@contexts/revenuecat-context';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
@@ -56,7 +56,7 @@ function formatContentType(contentType: string): string {
 
 export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBottomSheetProps>(
   ({ onConfirm }, ref) => {
-    const bottomSheetRef = useRef<BottomSheetModal>(null);
+    const bottomSheetRef = useRef<SheetRef>(null);
     const [mode, setMode] = useState<Mode>('rss');
     const [url, setUrl] = useState('');
     const [feedPreview, setFeedPreview] = useState<FeedDiscoveryResult | null>(null);
@@ -201,9 +201,6 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
         ref={bottomSheetRef}
         enablePanDownToClose={true}
         snapPoints={['85%']}
-        enableDynamicSizing={false}
-        keyboardBehavior="extend"
-        keyboardBlurBehavior="restore"
         footerActions={
           mode === 'rss' ? (
             <View style={{ width: '100%' }}>

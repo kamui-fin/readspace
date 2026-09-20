@@ -3,16 +3,31 @@ import { ArticleHeader } from '@components/screens/article-reader/ui/article-hea
 import { Skeleton } from '@components/ui/skeleton';
 import { ZoomableImage } from '@components/ui/zoomable-image';
 import { useFavicon } from '@hooks/useFavicon';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { COLORS } from '@lib/constants/colors';
+import { useReaderTheme } from '@hooks/useReaderTheme';
+import {
+  READER_FONT_SIZE_SCALE,
+  READER_FONT_SIZES,
+  READER_FONT_STACKS,
+  READER_LINE_HEIGHTS,
+} from '@lib/constants/reader';
 import type { Article } from '@readspace/shared';
+import { useReaderPreferences } from '@stores/reader-preferences';
 import { Image as ExpoImage } from 'expo-image';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Linking,
   Modal,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -27,170 +42,272 @@ import Animated, {
 } from 'react-native-reanimated';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 
+/** A heading lifted out of the rendered article for the outline sheet. */
+export interface OutlineItem {
+  id: string;
+  text: string;
+  level: 2 | 3;
+  /** Offset of the heading within the WebView document, in px. */
+  top: number;
+}
+
+export interface ArticleReaderHandle {
+  scrollToTop: () => void;
+  /** Scroll so a heading at `top` (document coordinates) sits below the chrome. */
+  scrollToOutlineItem: (top: number) => void;
+}
+
 export interface ArticleReaderProps {
   article: Article;
   scrollY: SharedValue<number>;
   lastScrollY: SharedValue<number>;
   scrollDirection: SharedValue<'up' | 'down'>;
+  /** 0..1 through the article. A shared value so the dock's ring can track the
+   *  scroll without re-rendering React on every frame. */
+  readingProgress?: SharedValue<number>;
   isLoadingContent?: boolean;
   highlightedContent?: string | null;
   highlightsEnabled?: boolean;
+  onOutlineChange?: (outline: OutlineItem[]) => void;
+  /** Fires only when the heading the reader is inside changes, not per scroll frame. */
+  onActiveOutlineChange?: (id: string | null) => void;
+  /** A plain tap on the page — not on a link or image, and not ending a text selection. */
+  onTap?: () => void;
 }
 
-export function ArticleReader({
-  article,
-  scrollY,
-  lastScrollY,
-  scrollDirection,
-  isLoadingContent = false,
-  highlightedContent,
-  highlightsEnabled = false,
-}: ArticleReaderProps) {
-  const isDark = useIsDarkMode();
-  const colors = COLORS[isDark ? 'dark' : 'light'];
-  const isNewsletter = article.link?.startsWith('newsletter://');
+/** Breathing room above a heading we've scrolled to, so it isn't flush with the bar. */
+const OUTLINE_SCROLL_PADDING = 24;
 
-  const webViewRef = useRef<WebView>(null);
-  const [webViewHeight, setWebViewHeight] = useState(1);
-  const [isReady, setIsReady] = useState(false);
-  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+/** Distance below the top of the viewport at which a heading counts as "current". */
+const ACTIVE_HEADING_LINE = 140;
 
-  const animatedWebViewStyle = useAnimatedStyle(() => {
-    return {
-      opacity: withTiming(isReady ? 1 : 0, { duration: 400 }),
-    };
-  });
+export const ArticleReader = forwardRef<ArticleReaderHandle, ArticleReaderProps>(
+  function ArticleReader(
+    {
+      article,
+      scrollY,
+      lastScrollY,
+      scrollDirection,
+      readingProgress,
+      isLoadingContent = false,
+      highlightedContent,
+      highlightsEnabled = false,
+      onOutlineChange,
+      onActiveOutlineChange,
+      onTap,
+    },
+    ref
+  ) {
+    const { colors, isDark } = useReaderTheme();
+    const fontSizeIndex = useReaderPreferences((state) => state.fontSizeIndex);
+    const fontFamily = useReaderPreferences((state) => state.fontFamily);
+    const lineHeight = useReaderPreferences((state) => state.lineHeight);
+    const isNewsletter = article.link?.startsWith('newsletter://');
 
-  // Handle scroll events to track position and direction
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const currentScrollY = event.nativeEvent.contentOffset.y;
-    const previousScrollY = lastScrollY.value;
+    const webViewRef = useRef<WebView>(null);
+    const scrollViewRef = useRef<ScrollView>(null);
+    /** Where the WebView starts inside the outer ScrollView — outline offsets are
+     *  document-relative, so they need this to become scroll positions. */
+    const webViewOffsetY = useRef(0);
+    const outlineRef = useRef<OutlineItem[]>([]);
+    const activeOutlineId = useRef<string | null>(null);
+    const [webViewHeight, setWebViewHeight] = useState(1);
+    const [isReady, setIsReady] = useState(false);
+    const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
-    // Update scroll position
-    scrollY.value = currentScrollY;
-
-    // Determine scroll direction
-    // Use a threshold to prevent jitter from small movements
-    const scrollThreshold = 5;
-    if (currentScrollY > previousScrollY + scrollThreshold) {
-      scrollDirection.value = 'down';
-    } else if (currentScrollY < previousScrollY - scrollThreshold) {
-      scrollDirection.value = 'up';
-    }
-
-    // Update last scroll position
-    lastScrollY.value = currentScrollY;
-  };
-
-  // Dynamic colors for dark mode
-  const textColor = colors.primary_foreground;
-  const greyColor = colors.grey;
-  const bgColor = colors.background;
-  const lightGreyColor = colors.grey6;
-  const midGreyColor = colors.grey5;
-
-  // Check if this is a clipped article
-  const isClipped = article.article_type === 'clipped';
-
-  /**
-   * Extract domain from URL for display
-   */
-  const extractDomain = (url: string): string => {
-    try {
-      return new URL(url).hostname;
-    } catch {
-      return url;
-    }
-  };
-
-  const feedTitle = article.feed_title;
-  const feedImageUrl = article.feed_icon;
-  const feedId = article.feed_id || undefined;
-
-  // For clipped articles, show domain and use created_at as saved date
-  const displaySource = isClipped ? extractDomain(article.link) : feedTitle;
-  const displayDate = isClipped
-    ? `Saved ${new Date(article.created_at).toLocaleDateString()}`
-    : article.published_at
-      ? new Date(article.published_at).toLocaleDateString()
-      : 'Unknown date';
-
-  const { iconUrl, fallbackComponent } = useFavicon({
-    url: article.link,
-    feedTitle: displaySource || undefined,
-    feedImage: feedImageUrl || undefined,
-    isClipped: isClipped,
-  });
-
-  // Calculate reading time from content with proper CJK support
-  const readTimeMinutes = useMemo(() => {
-    const contentToUse = article.extracted_content || article.content;
-    if (contentToUse) {
-      const textLength = contentToUse.replace(/<[^>]*>?/gm, '').length;
-      return Math.max(1, Math.ceil(textLength / 1000));
-    }
-    return 1;
-  }, [article.extracted_content, article.content]);
-
-  const readTime = `${readTimeMinutes} min read`;
-
-  // Remove the first image from HTML content if it matches the featured image
-  const cleanedContent = useMemo(() => {
-    // Use the content prop which respects the view mode selection (original/extracted/translated).
-    // Once AI Highlights are generated for this view, the marked-up HTML is baked in permanently —
-    // visibility toggles afterward are a CSS class flip via injectedJavaScript, not a content swap.
-    const contentToUse = highlightedContent || article.content;
-
-    if (!contentToUse || !article.image_url) {
-      return contentToUse;
-    }
-    // Normalize URLs by decoding HTML entities
-    const normalizeUrl = (url: string) => {
-      return url
-        .replace(/&amp;/g, '&')
-        .replace(/&#038;/g, '&')
-        .replace(/&quot;/g, '"')
-        .replace(/&#039;/g, "'");
-    };
-
-    const normalizedImageUrl = normalizeUrl(article.image_url);
-    let content = contentToUse;
-
-    // Remove img tags that match the featured image (but preserve figure structure)
-    const imgPattern = /<img[^>]*src=["'][^"']*["'][^>]*>/gi;
-    content = content.replace(imgPattern, (match) => {
-      const normalizedMatch = normalizeUrl(match);
-      return normalizedMatch.includes(normalizedImageUrl) ? '' : match;
+    // Android renders a view with *fractional* opacity into an offscreen hardware
+    // layer. For a WebView holding a full article that layer can exceed the GPU's
+    // max texture size, at which point the whole thing rasterises solid black and
+    // stays that way — nothing re-rasterises it. Generating AI Highlights swaps
+    // `source` (the marked-up HTML), which flips `isReady` back to false and
+    // re-runs this fade while the WebView is already at its full height: the exact
+    // conditions for it. So on Android the WebView snaps in at full opacity and
+    // the skeleton's own fade-out carries the transition. iOS has no such limit
+    // and keeps the cross-fade.
+    const shouldFadeWebView = Platform.OS === 'ios';
+    const animatedWebViewStyle = useAnimatedStyle(() => {
+      if (!shouldFadeWebView) {
+        return { opacity: isReady ? 1 : 0 };
+      }
+      return {
+        opacity: withTiming(isReady ? 1 : 0, { duration: 400 }),
+      };
     });
 
-    return content;
-  }, [article.extracted_content, article.content, article.image_url, highlightedContent]);
+    // Handle scroll events to track position and direction
+    const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+      const currentScrollY = contentOffset.y;
+      const previousScrollY = lastScrollY.value;
 
-  // Handle dark mode / theme change inside WebView dynamically
-  useEffect(() => {
-    if (webViewRef.current) {
-      webViewRef.current.injectJavaScript(`
-        document.documentElement.style.setProperty('--color-text', '${textColor}');
-        document.documentElement.style.setProperty('--color-grey', '${greyColor}');
-        document.documentElement.style.setProperty('--color-bg', '${bgColor}');
-        document.documentElement.style.setProperty('--color-grey-light', '${lightGreyColor}');
-        document.documentElement.style.setProperty('--color-grey-mid', '${midGreyColor}');
-        document.documentElement.style.setProperty('--color-secondary', '${colors.secondary}');
-        document.documentElement.style.setProperty('--color-primary', '${colors.primary}');
-        document.documentElement.style.setProperty('--color-muted-green', '${colors.muted_green}');
-        document.documentElement.style.setProperty('--color-code-text', '${isDark ? colors.secondary : colors.primary}');
-        true;
-      `);
-    }
-  }, [textColor, greyColor, bgColor, lightGreyColor, midGreyColor, colors, isDark]);
+      // Update scroll position
+      scrollY.value = currentScrollY;
 
-  // Toggle AI Highlights visibility via a class flip on the already-rendered page — no
-  // WebView reload. Re-fires on every load (isReady flips false->true on a real reload,
-  // e.g. right after highlights are first generated), which is also when the capped
-  // reading-order stagger indices get (re)applied for the sweep-in animation.
-  useEffect(() => {
-    if (webViewRef.current && isReady) {
-      webViewRef.current.injectJavaScript(`
+      // Which heading are we inside? The last one whose top has passed the
+      // reading line. Reported only on change, so the dock re-renders per
+      // section rather than per frame.
+      if (outlineRef.current.length > 0) {
+        const readingLine = currentScrollY - webViewOffsetY.current + ACTIVE_HEADING_LINE;
+        let activeId: string | null = null;
+        for (const item of outlineRef.current) {
+          if (item.top <= readingLine) activeId = item.id;
+          else break;
+        }
+        if (activeId !== activeOutlineId.current) {
+          activeOutlineId.current = activeId;
+          onActiveOutlineChange?.(activeId);
+        }
+      }
+
+      if (readingProgress) {
+        const scrollableHeight = contentSize.height - layoutMeasurement.height;
+        readingProgress.value =
+          scrollableHeight > 0 ? Math.min(Math.max(currentScrollY / scrollableHeight, 0), 1) : 0;
+      }
+
+      // Determine scroll direction
+      // Use a threshold to prevent jitter from small movements
+      const scrollThreshold = 5;
+      if (currentScrollY > previousScrollY + scrollThreshold) {
+        scrollDirection.value = 'down';
+      } else if (currentScrollY < previousScrollY - scrollThreshold) {
+        scrollDirection.value = 'up';
+      }
+
+      // Update last scroll position
+      lastScrollY.value = currentScrollY;
+    };
+
+    // Check if this is a clipped article
+    const isClipped = article.article_type === 'clipped';
+
+    /**
+     * Extract domain from URL for display
+     */
+    const extractDomain = (url: string): string => {
+      try {
+        return new URL(url).hostname;
+      } catch {
+        return url;
+      }
+    };
+
+    const feedTitle = article.feed_title;
+    const feedImageUrl = article.feed_icon;
+    const feedId = article.feed_id || undefined;
+
+    // For clipped articles, show domain and use created_at as saved date
+    const displaySource = isClipped ? extractDomain(article.link) : feedTitle;
+    const displayDate = isClipped
+      ? `Saved ${new Date(article.created_at).toLocaleDateString()}`
+      : article.published_at
+        ? new Date(article.published_at).toLocaleDateString()
+        : 'Unknown date';
+
+    const { iconUrl, fallbackComponent } = useFavicon({
+      url: article.link,
+      feedTitle: displaySource || undefined,
+      feedImage: feedImageUrl || undefined,
+      isClipped: isClipped,
+    });
+
+    // Calculate reading time from content with proper CJK support
+    const readTimeMinutes = useMemo(() => {
+      const contentToUse = article.extracted_content || article.content;
+      if (contentToUse) {
+        const textLength = contentToUse.replace(/<[^>]*>?/gm, '').length;
+        return Math.max(1, Math.ceil(textLength / 1000));
+      }
+      return 1;
+    }, [article.extracted_content, article.content]);
+
+    const readTime = `${readTimeMinutes} min read`;
+
+    // Remove the first image from HTML content if it matches the featured image
+    const cleanedContent = useMemo(() => {
+      // Use the content prop which respects the view mode selection (original/extracted/translated).
+      // Once AI Highlights are generated for this view, the marked-up HTML is baked in permanently —
+      // visibility toggles afterward are a CSS class flip via injectedJavaScript, not a content swap.
+      const contentToUse = highlightedContent || article.content;
+
+      if (!contentToUse || !article.image_url) {
+        return contentToUse;
+      }
+      // Normalize URLs by decoding HTML entities
+      const normalizeUrl = (url: string) => {
+        return url
+          .replace(/&amp;/g, '&')
+          .replace(/&#038;/g, '&')
+          .replace(/&quot;/g, '"')
+          .replace(/&#039;/g, "'");
+      };
+
+      const normalizedImageUrl = normalizeUrl(article.image_url);
+      let content = contentToUse;
+
+      // Remove img tags that match the featured image (but preserve figure structure)
+      const imgPattern = /<img[^>]*src=["'][^"']*["'][^>]*>/gi;
+      content = content.replace(imgPattern, (match) => {
+        const normalizedMatch = normalizeUrl(match);
+        return normalizedMatch.includes(normalizedImageUrl) ? '' : match;
+      });
+
+      return content;
+    }, [article.extracted_content, article.content, article.image_url, highlightedContent]);
+
+    /**
+     * Serif runs small on the x-height and mono runs wide, so the same nominal
+     * step needs a per-family nudge to feel like the same size.
+     */
+    const readerFontSize = Math.round(
+      READER_FONT_SIZES[fontSizeIndex] * READER_FONT_SIZE_SCALE[fontFamily]
+    );
+
+    /**
+     * Every runtime-controlled CSS variable in one script: page colours and
+     * reader typography. Runs before first paint (so nothing flashes at the
+     * default) and again on change (so nothing reloads).
+     */
+    const readerVariablesScript = useMemo(() => {
+      const variables: Record<string, string> = {
+        '--color-text': colors.primary_foreground,
+        '--color-grey': colors.grey,
+        '--color-bg': colors.background,
+        '--color-grey-light': colors.grey6,
+        '--color-grey-mid': colors.grey5,
+        '--color-secondary': colors.secondary,
+        '--color-primary': colors.primary,
+        '--color-muted-green': colors.muted_green,
+        '--color-code-text': isDark ? colors.secondary : colors.primary,
+        // Highlights need more paint on a dark page to read at the same strength.
+        '--rs-highlight-alpha': isDark ? '58%' : '45%',
+        '--rs-highlight-alpha-2': isDark ? '36%' : '26%',
+        '--reader-font-size': `${readerFontSize}px`,
+        '--reader-font-family': READER_FONT_STACKS[fontFamily],
+        '--reader-line-height': String(READER_LINE_HEIGHTS[lineHeight]),
+      };
+
+      // JSON.stringify quotes and escapes — font stacks contain single quotes.
+      const assignments = Object.entries(variables)
+        .map(([name, value]) => `s.setProperty('${name}', ${JSON.stringify(value)});`)
+        .join('');
+
+      return `(function(){var s=document.documentElement.style;${assignments}})();true;`;
+    }, [colors, isDark, readerFontSize, fontFamily, lineHeight]);
+
+    // Applies to the already-rendered page. `injectedJavaScriptBeforeContentLoaded`
+    // covers the first paint and any reload; this covers live changes.
+    useEffect(() => {
+      webViewRef.current?.injectJavaScript(readerVariablesScript);
+    }, [readerVariablesScript]);
+
+    // Toggle AI Highlights visibility via a class flip on the already-rendered page — no
+    // WebView reload. Re-fires on every load (isReady flips false->true on a real reload,
+    // e.g. right after highlights are first generated), which is also when the capped
+    // reading-order stagger indices get (re)applied for the sweep-in animation.
+    useEffect(() => {
+      if (webViewRef.current && isReady) {
+        webViewRef.current.injectJavaScript(`
         (function() {
           var el = document.getElementById('readspace-reader-content');
           if (!el) return true;
@@ -206,11 +323,11 @@ export function ArticleReader({
         })();
         true;
       `);
-    }
-  }, [highlightsEnabled, isReady]);
+      }
+    }, [highlightsEnabled, isReady]);
 
-  const htmlContent = useMemo(() => {
-    return `
+    const htmlContent = useMemo(() => {
+      return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -219,16 +336,26 @@ export function ArticleReader({
   <style>
     @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Geist:ital,wght@0,100..900;1,100..900&family=Geist+Mono:wght@100..900&display=swap');
 
+    /* Placeholders only. Every value below is overwritten before first paint by
+       \`readerVariablesScript\` (injectedJavaScriptBeforeContentLoaded) and again
+       whenever the theme or a reader setting changes. Keeping them out of the
+       HTML string is what lets tone and typography change *without* rebuilding
+       \`source\` — no reload, no lost scroll position, no skeleton flash. */
     :root {
-      --color-text: ${textColor};
-      --color-grey: ${greyColor};
-      --color-bg: ${bgColor};
-      --color-grey-light: ${lightGreyColor};
-      --color-grey-mid: ${midGreyColor};
-      --color-secondary: ${colors.secondary};
-      --color-primary: ${colors.primary};
-      --color-muted-green: ${colors.muted_green};
-      --color-code-text: ${isDark ? colors.secondary : colors.primary};
+      --color-text: #232222;
+      --color-grey: rgb(159, 162, 160);
+      --color-bg: rgb(255, 255, 255);
+      --color-grey-light: rgb(243, 243, 243);
+      --color-grey-mid: rgb(237, 237, 237);
+      --color-secondary: #6A994E;
+      --color-primary: #386641;
+      --color-muted-green: #D1DBCD;
+      --color-code-text: #386641;
+      --reader-font-size: 19px;
+      --reader-font-family: 'EB Garamond', Georgia, Cambria, 'Times New Roman', Times, serif;
+      --reader-line-height: 1.65;
+      --rs-highlight-alpha: 45%;
+      --rs-highlight-alpha-2: 26%;
     }
 
     html, body {
@@ -236,9 +363,9 @@ export function ArticleReader({
       color: var(--color-text);
       margin: 0;
       padding: 0;
-      ${isNewsletter ? '' : "font-family: 'EB Garamond', Georgia, Cambria, 'Times New Roman', Times, serif;"}
-      font-size: ${isNewsletter ? '16px' : '18px'};
-      line-height: 1.65;
+      ${isNewsletter ? '' : 'font-family: var(--reader-font-family);'}
+      font-size: ${isNewsletter ? '16px' : 'var(--reader-font-size)'};
+      line-height: var(--reader-line-height);
       -webkit-text-size-adjust: 100%;
     }
 
@@ -268,7 +395,7 @@ export function ArticleReader({
       -webkit-box-decoration-break: clone;
     }
     #readspace-reader-content.rs-highlights-on mark.rs-highlight {
-      --rs-highlight-color: color-mix(in srgb, var(--color-secondary) ${isDark ? '58%' : '45%'}, transparent);
+      --rs-highlight-color: color-mix(in srgb, var(--color-secondary) var(--rs-highlight-alpha), transparent);
       background-image: linear-gradient(90deg, var(--rs-highlight-color) 0%, var(--rs-highlight-color) 100%);
       background-repeat: no-repeat;
       background-size: 0% 100%;
@@ -278,7 +405,7 @@ export function ArticleReader({
       animation-delay: calc(var(--rs-highlight-index, 0) * 30ms);
     }
     #readspace-reader-content.rs-highlights-on mark.rs-highlight[data-rank="2"] {
-      --rs-highlight-color: color-mix(in srgb, var(--color-secondary) ${isDark ? '36%' : '26%'}, transparent);
+      --rs-highlight-color: color-mix(in srgb, var(--color-secondary) var(--rs-highlight-alpha-2), transparent);
     }
     @keyframes rs-highlight-sweep {
       from { background-size: 0% 100%; }
@@ -308,13 +435,13 @@ export function ArticleReader({
       p {
         margin-top: 0;
         margin-bottom: 20px;
-        font-size: 18px;
-        line-height: 1.65;
+        font-size: var(--reader-font-size);
+        line-height: var(--reader-line-height);
         word-wrap: break-word;
       }
 
       h1, h2, h3, h4, h5, h6 {
-        font-family: 'EB Garamond', Georgia, Cambria, 'Times New Roman', Times, serif;
+        font-family: var(--reader-font-family);
         color: var(--color-text);
         font-weight: 700;
         line-height: 1.25;
@@ -322,12 +449,15 @@ export function ArticleReader({
         margin-bottom: 0.5em;
       }
 
-      h1 { font-size: 32px; font-weight: 700; }
-      h2 { font-size: 28px; font-weight: 700; }
-      h3 { font-size: 24px; font-weight: 600; }
-      h4 { font-size: 20px; font-weight: 600; }
-      h5 { font-size: 18px; font-weight: 600; }
-      h6 { font-size: 16px; font-weight: 600; }
+      /* Ratios against the body size, so the whole hierarchy moves together
+         when the reader changes text size. At the 19px default these land on
+         the original 32/28/24/20/19/17px. */
+      h1 { font-size: calc(var(--reader-font-size) * 1.68); font-weight: 700; }
+      h2 { font-size: calc(var(--reader-font-size) * 1.47); font-weight: 700; }
+      h3 { font-size: calc(var(--reader-font-size) * 1.26); font-weight: 600; }
+      h4 { font-size: calc(var(--reader-font-size) * 1.05); font-weight: 600; }
+      h5 { font-size: var(--reader-font-size); font-weight: 600; }
+      h6 { font-size: calc(var(--reader-font-size) * 0.89); font-weight: 600; }
 
       strong, b {
         font-weight: 700;
@@ -361,7 +491,7 @@ export function ArticleReader({
 
       code {
         font-family: 'Geist Mono', Consolas, "Liberation Mono", Menlo, Courier, monospace;
-        font-size: 15px;
+        font-size: calc(var(--reader-font-size) * 0.82);
         background-color: var(--color-grey-mid);
         color: var(--color-code-text);
         padding: 2px 6px;
@@ -371,7 +501,7 @@ export function ArticleReader({
 
       pre {
         font-family: 'Geist Mono', Consolas, "Liberation Mono", Menlo, Courier, monospace;
-        font-size: 14px;
+        font-size: calc(var(--reader-font-size) * 0.76);
         line-height: 1.5;
         background-color: var(--color-grey-mid);
         color: var(--color-text);
@@ -389,9 +519,9 @@ export function ArticleReader({
       }
 
       blockquote {
-        font-family: 'EB Garamond', Georgia, Cambria, "Times New Roman", Times, serif;
-        font-size: 18px;
-        line-height: 1.65;
+        font-family: var(--reader-font-family);
+        font-size: var(--reader-font-size);
+        line-height: var(--reader-line-height);
         color: var(--color-text);
         font-style: italic;
         border-left: 4px solid var(--color-secondary);
@@ -418,8 +548,8 @@ export function ArticleReader({
       }
 
       li {
-        font-size: 18px;
-        line-height: 1.65;
+        font-size: var(--reader-font-size);
+        line-height: var(--reader-line-height);
         margin-bottom: 8px;
         padding-left: 4px;
       }
@@ -534,59 +664,100 @@ export function ArticleReader({
 </body>
 </html>
     `;
-  }, [
-    cleanedContent,
-    textColor,
-    greyColor,
-    bgColor,
-    lightGreyColor,
-    midGreyColor,
-    colors,
-    isNewsletter,
-    isDark,
-  ]);
+      // Deliberately depends on content and structure only. Colours and
+      // typography arrive as CSS variables at runtime, so changing either never
+      // rebuilds this string and never reloads the WebView.
+    }, [cleanedContent, isNewsletter]);
 
-  const webViewSource = useMemo(() => {
-    return { html: htmlContent, baseUrl: '' };
-  }, [htmlContent]);
+    const webViewSource = useMemo(() => {
+      return { html: htmlContent, baseUrl: '' };
+    }, [htmlContent]);
 
-  // Reset ready state when content changes
-  useEffect(() => {
-    setIsReady(false);
-    const _c = cleanedContent;
-  }, [cleanedContent]);
+    // Reset ready state when content changes
+    useEffect(() => {
+      setIsReady(false);
+      const _c = cleanedContent;
+    }, [cleanedContent]);
 
-  // Safety fallback to show content if height isn't received
-  useEffect(() => {
-    const _c = cleanedContent;
-    const timer = setTimeout(() => {
-      setIsReady(true);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [cleanedContent]);
+    // Safety fallback to show content if height isn't received
+    useEffect(() => {
+      const _c = cleanedContent;
+      const timer = setTimeout(() => {
+        setIsReady(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }, [cleanedContent]);
 
-  const injectedJS = `
+    const injectedJS = `
     (function() {
       var container = document.getElementById('readspace-reader-content');
       if (!container) return;
 
-      function sendHeight() {
-        var height = Math.ceil(container.getBoundingClientRect().height);
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'height', value: height }));
+      // Headings, for the outline sheet. Recomputed alongside the height
+      // because anything that changes the height (text size, highlights,
+      // late-loading images) also moves every heading's offset.
+      function readOutline() {
+        var nodes = container.querySelectorAll('h1, h2, h3');
+        var items = [];
+        for (var i = 0; i < nodes.length; i++) {
+          var node = nodes[i];
+          var text = (node.textContent || '').replace(/\\s+/g, ' ').trim();
+          if (!text) continue;
+          items.push({
+            id: 'rs-outline-' + i,
+            text: text.length > 90 ? text.slice(0, 89) + '\\u2026' : text,
+            level: node.tagName === 'H3' ? 3 : 2,
+            top: Math.round(node.getBoundingClientRect().top + window.scrollY)
+          });
+        }
+        return items;
       }
-      window.addEventListener('load', sendHeight);
-      
+
+      // Coalesced to one measurement per frame and deduped by height. The
+      // MutationObserver below watches attributes on the whole subtree, and the
+      // AI Highlights injection writes an inline custom property on every
+      // <mark> — without this, a highlighted article floods the bridge with
+      // identical messages, each one a React re-render on the RN side.
+      var pendingFrame = false;
+      var lastSentHeight = -1;
+      function sendMetrics() {
+        if (pendingFrame) return;
+        pendingFrame = true;
+        requestAnimationFrame(function () {
+          pendingFrame = false;
+          var height = Math.ceil(container.getBoundingClientRect().height);
+          if (height === lastSentHeight) return;
+          lastSentHeight = height;
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'metrics',
+            value: height,
+            outline: readOutline()
+          }));
+        });
+      }
+      window.addEventListener('load', sendMetrics);
+
       if (window.ResizeObserver) {
-        var ro = new ResizeObserver(sendHeight);
+        var ro = new ResizeObserver(sendMetrics);
         ro.observe(container);
       }
-      
-      var observer = new MutationObserver(sendHeight);
+
+      var observer = new MutationObserver(sendMetrics);
       observer.observe(container, { subtree: true, childList: true, attributes: true });
-      
-      setTimeout(sendHeight, 100);
-      setTimeout(sendHeight, 500);
-      setTimeout(sendHeight, 1000);
+
+      setTimeout(sendMetrics, 100);
+      setTimeout(sendMetrics, 500);
+      setTimeout(sendMetrics, 1000);
+
+      // A tap on plain content toggles the reader chrome. Links, images and
+      // interactive elements own their own taps, and a tap that finishes a text
+      // selection must not also flip the chrome under the user's finger.
+      document.addEventListener('click', function(e) {
+        var target = e.target;
+        if (target && target.closest && target.closest('a, img, button, input, select, textarea, summary, video, audio, iframe')) return;
+        if (String(window.getSelection && window.getSelection()).length > 0) return;
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'tap' }));
+      });
 
       // Intercept clicks on images
       document.addEventListener('click', function(e) {
@@ -600,141 +771,173 @@ export function ArticleReader({
     true;
   `;
 
-  const handleMessage = (event: WebViewMessageEvent) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'height') {
-        const height = Number(data.value);
-        if (height && height > 0) {
+    const handleMessage = (event: WebViewMessageEvent) => {
+      try {
+        const data = JSON.parse(event.nativeEvent.data);
+        if (data.type === 'metrics') {
+          const height = Number(data.value);
+          if (height && height > 0) {
+            setWebViewHeight(height);
+            setIsReady(true);
+          }
+          if (Array.isArray(data.outline)) {
+            outlineRef.current = data.outline as OutlineItem[];
+            onOutlineChange?.(outlineRef.current);
+          }
+        } else if (data.type === 'link') {
+          const url = data.value;
+          if (url) {
+            Linking.openURL(url).catch((err) => {
+              console.error('Failed to open URL in browser:', err);
+            });
+          }
+        } else if (data.type === 'tap') {
+          onTap?.();
+        } else if (data.type === 'image') {
+          setSelectedImageUrl(data.value);
+        }
+      } catch {
+        const height = Number(event.nativeEvent.data);
+        if (!Number.isNaN(height) && height > 0) {
           setWebViewHeight(height);
           setIsReady(true);
         }
-      } else if (data.type === 'link') {
-        const url = data.value;
-        if (url) {
-          Linking.openURL(url).catch((err) => {
-            console.error('Failed to open URL in browser:', err);
-          });
-        }
-      } else if (data.type === 'image') {
-        setSelectedImageUrl(data.value);
       }
-    } catch {
-      const height = Number(event.nativeEvent.data);
-      if (!Number.isNaN(height) && height > 0) {
-        setWebViewHeight(height);
-        setIsReady(true);
-      }
-    }
-  };
+    };
 
-  return (
-    <>
-      <ScrollView
-        className="bg-background flex-1"
-        contentContainerStyle={{
-          paddingBottom: 80,
-        }}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        showsVerticalScrollIndicator={false}>
-        {/* Featured Image with Galeria - Edge-to-edge */}
-        {article.image_url && <ArticleFeaturedImage imageUrl={article.image_url} />}
+    const scrollToTop = useCallback(() => {
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    }, []);
 
-        {/* Article Header */}
-        <ArticleHeader
-          article={article}
-          isClipped={isClipped}
-          feedId={feedId}
-          displayFaviconUrl={iconUrl}
-          fallbackComponent={fallbackComponent}
-          displaySource={displaySource || 'Unknown Source'}
-          displayDate={displayDate}
-          readTime={readTime}
-        />
+    const scrollToOutlineItem = useCallback((top: number) => {
+      scrollViewRef.current?.scrollTo({
+        y: Math.max(webViewOffsetY.current + top - OUTLINE_SCROLL_PADDING, 0),
+        animated: true,
+      });
+    }, []);
 
-        {/* Article Content - rendered inside auto-height WebView or Skeleton */}
-        <View style={{ position: 'relative', minHeight: isLoadingContent || !isReady ? 240 : 0 }}>
-          {(isLoadingContent || !isReady) && (
-            <Animated.View
-              key="content-skeleton"
-              entering={FadeIn.duration(150)}
-              exiting={FadeOut.duration(300)}
-              style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
-              className="px-6">
-              <View className="mb-4">
-                <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-                <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-                <Skeleton variant="text" height={20} width="85%" />
-              </View>
-              <View className="mb-4">
-                <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-                <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-                <Skeleton variant="text" height={20} width="70%" />
-              </View>
-              <View className="mb-4">
-                <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
-                <Skeleton variant="text" height={20} width="95%" className="mb-1.5" />
-                <Skeleton variant="text" height={20} width="60%" />
-              </View>
-            </Animated.View>
-          )}
+    useImperativeHandle(ref, () => ({ scrollToTop, scrollToOutlineItem }), [
+      scrollToTop,
+      scrollToOutlineItem,
+    ]);
 
-          {!isLoadingContent && (
-            <Animated.View style={animatedWebViewStyle}>
-              <WebView
-                ref={webViewRef}
-                scrollEnabled={isNewsletter}
-                style={{
-                  height: webViewHeight,
-                  width: '100%',
-                  backgroundColor: 'transparent',
-                }}
-                containerStyle={{
-                  backgroundColor: 'transparent',
-                }}
-                originWhitelist={['*']}
-                source={webViewSource}
-                onMessage={handleMessage}
-                injectedJavaScript={injectedJS}
-              />
-            </Animated.View>
-          )}
-        </View>
-      </ScrollView>
-      <Modal
-        visible={!!selectedImageUrl}
-        transparent={false}
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setSelectedImageUrl(null)}>
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: '#000',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-          {selectedImageUrl && <ZoomableImage uri={selectedImageUrl} />}
-          {/* Floating Close Button */}
-          <Pressable
+    return (
+      <>
+        <ScrollView
+          ref={scrollViewRef}
+          className="flex-1"
+          style={{ backgroundColor: colors.background }}
+          contentContainerStyle={{
+            paddingBottom: 80,
+          }}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}>
+          {/* Featured Image with Galeria - Edge-to-edge */}
+          {article.image_url && <ArticleFeaturedImage imageUrl={article.image_url} />}
+
+          {/* Article Header */}
+          <ArticleHeader
+            article={article}
+            isClipped={isClipped}
+            feedId={feedId}
+            displayFaviconUrl={iconUrl}
+            fallbackComponent={fallbackComponent}
+            displaySource={displaySource || 'Unknown Source'}
+            displayDate={displayDate}
+            readTime={readTime}
+          />
+
+          {/* Article Content - rendered inside auto-height WebView or Skeleton */}
+          <View
+            style={{ position: 'relative', minHeight: isLoadingContent || !isReady ? 240 : 0 }}
+            onLayout={(e) => {
+              webViewOffsetY.current = e.nativeEvent.layout.y;
+            }}>
+            {(isLoadingContent || !isReady) && (
+              <Animated.View
+                key="content-skeleton"
+                entering={FadeIn.duration(150)}
+                exiting={FadeOut.duration(300)}
+                style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
+                className="px-6">
+                <View className="mb-4">
+                  <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+                  <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+                  <Skeleton variant="text" height={20} width="85%" />
+                </View>
+                <View className="mb-4">
+                  <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+                  <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+                  <Skeleton variant="text" height={20} width="70%" />
+                </View>
+                <View className="mb-4">
+                  <Skeleton variant="text" height={20} width="100%" className="mb-1.5" />
+                  <Skeleton variant="text" height={20} width="95%" className="mb-1.5" />
+                  <Skeleton variant="text" height={20} width="60%" />
+                </View>
+              </Animated.View>
+            )}
+
+            {!isLoadingContent && (
+              <Animated.View style={animatedWebViewStyle}>
+                <WebView
+                  ref={webViewRef}
+                  scrollEnabled={isNewsletter}
+                  style={{
+                    height: webViewHeight,
+                    width: '100%',
+                    backgroundColor: 'transparent',
+                  }}
+                  containerStyle={{
+                    backgroundColor: 'transparent',
+                  }}
+                  originWhitelist={['*']}
+                  source={webViewSource}
+                  onMessage={handleMessage}
+                  injectedJavaScript={injectedJS}
+                  injectedJavaScriptBeforeContentLoaded={readerVariablesScript}
+                />
+              </Animated.View>
+            )}
+          </View>
+        </ScrollView>
+        <Modal
+          visible={!!selectedImageUrl}
+          transparent={false}
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={() => setSelectedImageUrl(null)}>
+          <View
             style={{
-              position: 'absolute',
-              top: 54,
-              right: 20,
-              backgroundColor: 'rgba(255, 255, 255, 0.25)',
-              borderRadius: 20,
-              width: 36,
-              height: 36,
+              flex: 1,
+              backgroundColor: '#000',
               alignItems: 'center',
               justifyContent: 'center',
-              zIndex: 99,
-            }}
-            onPress={() => setSelectedImageUrl(null)}>
-            <Text style={{ color: '#fff', fontSize: 20, fontWeight: '600', marginTop: -2 }}>×</Text>
-          </Pressable>
-        </View>
-      </Modal>
-    </>
-  );
-}
+            }}>
+            {selectedImageUrl && <ZoomableImage uri={selectedImageUrl} />}
+            {/* Floating Close Button */}
+            <Pressable
+              style={{
+                position: 'absolute',
+                top: 54,
+                right: 20,
+                backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                borderRadius: 20,
+                width: 36,
+                height: 36,
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 99,
+              }}
+              onPress={() => setSelectedImageUrl(null)}>
+              <Text style={{ color: '#fff', fontSize: 20, fontWeight: '600', marginTop: -2 }}>
+                ×
+              </Text>
+            </Pressable>
+          </View>
+        </Modal>
+      </>
+    );
+  }
+);

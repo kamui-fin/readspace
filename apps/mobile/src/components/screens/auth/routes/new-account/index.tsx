@@ -1,10 +1,10 @@
 import { SelfHostSettingsBottomSheet } from '@components/bottom-sheets/self-hosted-settings.bottom-sheet';
 import { Stepper, type StepperRef } from '@components/navigation/stepper';
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useSession } from '@contexts/auth-context';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useAuthErrorHandler } from '@hooks/useAuthErrorHandler';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS, SPACING } from '@lib/constants/app';
@@ -28,7 +28,7 @@ import { VerificationStep } from '@/components/screens/auth/routes/new-account/v
 
 export function SignupScreen() {
   const stepperRef = useRef<StepperRef>(null);
-  const selfHostSettingsRef = useRef<BottomSheetModal>(null);
+  const selfHostSettingsRef = useRef<SheetRef>(null);
   const { signUp } = useSession();
   const { setSelfHosted } = useSettingsStore();
   const insets = useSafeAreaInsets();

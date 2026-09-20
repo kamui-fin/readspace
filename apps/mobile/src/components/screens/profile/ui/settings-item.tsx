@@ -22,18 +22,26 @@ interface SelectSettingsItemProps extends BaseSettingsItemProps {
   variant: 'select';
   value: string;
   rightIcon?: never;
+  /**
+   * Replaces the default value + chevron. Used when the trailing control has to
+   * own the press itself — e.g. a menu trigger scoped to the chip so iOS lifts
+   * the chip instead of the whole row (see `SettingsValueChip`).
+   */
+  trailing?: React.ReactNode;
 }
 
 interface ButtonSettingsItemProps extends BaseSettingsItemProps {
   variant: 'button';
   value?: never;
   rightIcon?: never;
+  trailing?: never;
 }
 
 interface LinkSettingsItemProps extends BaseSettingsItemProps {
   variant: 'link';
   value?: never;
   rightIcon?: React.ReactNode;
+  trailing?: never;
 }
 
 export type SettingsItemProps =
@@ -47,6 +55,7 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
       label,
       variant,
       value,
+      trailing,
       leftIcon,
       rightIcon,
       className,
@@ -62,6 +71,7 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
     const renderRightContent = () => {
       switch (variant) {
         case 'select':
+          if (trailing) return trailing;
           return (
             <View className="flex-row items-center gap-2">
               <Text size={15} fontFamily="geist" className="text-grey dark:text-grey">

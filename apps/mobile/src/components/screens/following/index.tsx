@@ -14,6 +14,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useScrollReset } from '@hooks/useScrollReset';
 import { BOTTOM_TABBAR_BASE_HEIGHT, REFRESH_SPINNER_HEADER_OVERLAP } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { FOLLOWING_TAB } from '@lib/constants/tabs';
 import { createListItems, type ListItem, processArticles } from '@lib/utils/article';
 import {
   isPaywallError,
@@ -152,7 +153,7 @@ export function FollowingScreen({
   // Group articles by date and create flat list with sections and dividers.
   // Saved tab lists by when the article was saved — remap created_at → published_at
   // so createListItems groups (and the row timestamp shows) the saved date.
-  const isSavedTab = activeTab === 2 && !isViewingFeedOrFolder;
+  const isSavedTab = activeTab === FOLLOWING_TAB.SAVED && !isViewingFeedOrFolder;
   const listItems = useMemo(() => {
     if (!isSavedTab) return createListItems(allArticles);
     const remapped = allArticles.map((article) => ({
@@ -490,7 +491,7 @@ export function FollowingScreen({
           onToggleRead={handleToggleRead}
           onBookmark={handleBookmark}
           lastRefreshedAt={lastRefreshedAt}
-          isReadLaterMode={activeTab === 2 && !isViewingFeedOrFolder}
+          isReadLaterMode={activeTab === FOLLOWING_TAB.SAVED && !isViewingFeedOrFolder}
         />
       );
     },

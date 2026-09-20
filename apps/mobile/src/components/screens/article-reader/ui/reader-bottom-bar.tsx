@@ -1,0 +1,152 @@
+import { ReaderCornerMenu } from '@components/screens/article-reader/ui/reader-corner-menu';
+import {
+  READER_CORNER_BUTTON_SIZE,
+  type ReaderCornerMenuProps,
+} from '@components/screens/article-reader/ui/reader-corner-menu.types';
+import { ReadingProgressRing } from '@components/screens/article-reader/ui/reading-progress.ring';
+import { Text } from '@components/ui/text';
+import * as Haptics from 'expo-haptics';
+import { useEffect, useState } from 'react';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import Animated, {
+  FadeIn,
+  runOnJS,
+  type SharedValue,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+/** Quick on purpose — chrome should feel like it was already there. */
+const CHROME_DURATION_MS = 140;
+const CHROME_TRAVEL = 12;
+
+interface ReaderBottomBarProps extends ReaderCornerMenuProps {
+  visible: boolean;
+  /** 0..1 through the article. */
+  readingProgress: SharedValue<number>;
+  /** Heading the reader is currently inside, when the article has an outline. */
+  activeSectionLabel?: string | null;
+}
+
+/**
+ * The reader's bottom chrome, revealed by tapping the page (like Apple Books):
+ * where you are on the left, the corner menu on the right.
+ *
+ * Nothing here duplicates the top bar. The progress pill answers "how far
+ * along, and in which section?" and doubles as the table-of-contents button when
+ * the article has one; everything else lives in the corner menu so the resting
+ * state is two small objects rather than a toolbar.
+ */
+export function ReaderBottomBar({
+  visible,
+  readingProgress,
+  activeSectionLabel,
+  ...menuProps
+}: ReaderBottomBarProps) {
+  const insets = useSafeAreaInsets();
+  const [percent, setPercent] = useState(0);
+  const shown = useSharedValue(visible ? 1 : 0);
+
+  useEffect(() => {
+    shown.value = withTiming(visible ? 1 : 0, { duration: CHROME_DURATION_MS });
+  }, [visible, shown]);
+
+  // Whole percent only: rounding before it crosses onto the JS thread caps this
+  // at ~100 re-renders across an entire article instead of one per frame.
+  useAnimatedReaction(
+    () => Math.round(readingProgress.value * 100),
+    (next, previous) => {
+      if (next !== previous) runOnJS(setPercent)(next);
+    }
+  );
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: shown.value,
+    transform: [{ translateY: (1 - shown.value) * CHROME_TRAVEL }],
+  }));
+
+  const { colors, onOpenOutline, onScrollToTop } = menuProps;
+  const hasSection = !!activeSectionLabel;
+
+  const handlePillPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // With an outline the pill is a table-of-contents button; without one the
+    // only useful thing it can do is take you back to the top.
+    if (onOpenOutline) onOpenOutline();
+    else onScrollToTop();
+  };
+
+  return (
+    <Animated.View
+      pointerEvents={visible ? 'box-none' : 'none'}
+      style={[
+        {
+          position: 'absolute',
+          left: 16,
+          right: 16,
+          bottom: insets.bottom > 0 ? insets.bottom : 16,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+        },
+        animatedStyle,
+      ]}>
+      <Pressable
+        onPress={handlePillPress}
+        accessibilityLabel={onOpenOutline ? 'Table of contents' : 'Scroll to top'}
+        className="flex-shrink flex-row items-center gap-2.5 rounded-full pl-3 pr-4"
+        style={({ pressed }) => ({
+          height: READER_CORNER_BUTTON_SIZE,
+          backgroundColor: colors.card,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.grey4,
+          opacity: pressed ? 0.6 : 1,
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOpacity: 0.08,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 4 },
+            },
+            android: { elevation: 4 },
+          }),
+        })}>
+        <ReadingProgressRing
+          progress={percent / 100}
+          color={colors.secondary}
+          trackColor={colors.grey4}
+        />
+        <Text size={13} fontFamily="geist-semibold" style={{ color: colors.grey2 }}>
+          {percent}%
+        </Text>
+        {hasSection && (
+          <>
+            <View
+              style={{ width: StyleSheet.hairlineWidth, height: 16, backgroundColor: colors.grey4 }}
+            />
+            {/* Keyed so a new section fades in instead of snapping. */}
+            <Animated.View
+              key={activeSectionLabel}
+              entering={FadeIn.duration(140)}
+              style={{ flexShrink: 1 }}>
+              <Text
+                size={13}
+                fontFamily="geist-medium"
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={{ color: colors.grey }}>
+                {activeSectionLabel}
+              </Text>
+            </Animated.View>
+          </>
+        )}
+      </Pressable>
+
+      <ReaderCornerMenu {...menuProps} />
+    </Animated.View>
+  );
+}

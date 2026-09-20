@@ -3,7 +3,7 @@ import { COLORS } from '@lib/constants/colors';
 import { CloseCircleIcon } from '@solar-icons/react-native/bold';
 import { ArrowLeftIcon, MagnifierIcon } from '@solar-icons/react-native/linear';
 import { MotiView } from 'moti';
-import { forwardRef, useCallback } from 'react';
+import { forwardRef, type ReactNode, useCallback } from 'react';
 import { Platform, TextInput, type TextInputProps, TouchableOpacity, View } from 'react-native';
 
 export interface SearchBarProps extends Omit<TextInputProps, 'onSubmitEditing' | 'ref'> {
@@ -15,6 +15,8 @@ export interface SearchBarProps extends Omit<TextInputProps, 'onSubmitEditing' |
   showCancelButton?: boolean;
   /** showClearButton is kept for API compat but clear is now shown automatically when value is non-empty */
   showClearButton?: boolean;
+  /** Single trailing control rendered inside the pill, after the clear button. */
+  trailingAction?: ReactNode;
 }
 
 export const SearchBar = forwardRef<TextInput, SearchBarProps>(
@@ -26,6 +28,7 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
       containerClassName,
       showCancelButton = false,
       showClearButton = false,
+      trailingAction,
       value,
       onFocus,
       onBlur,
@@ -118,22 +121,36 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
           {...props}
         />
 
-        {/* Right icon: clear X, shown only while typing */}
+        {/* Right side: clear X while typing, then the caller's single control */}
         <MotiView
-          animate={{ opacity: hasText ? 1 : 0, scale: hasText ? 1 : 0.9 }}
+          animate={{ opacity: hasText ? 1 : 0, scale: hasText ? 1 : 0.9, width: hasText ? 36 : 0 }}
           transition={{ type: 'timing', duration: 180 }}
-          style={{
-            width: 44,
-            height: 44,
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginRight: 4,
-          }}
+          style={{ height: 44, justifyContent: 'center', alignItems: 'center' }}
           pointerEvents={hasText ? 'auto' : 'none'}>
           <TouchableOpacity onPress={handleClear} activeOpacity={0.6} style={{ padding: 8 }}>
             <CloseCircleIcon size={20} color={colors.grey} />
           </TouchableOpacity>
         </MotiView>
+
+        {trailingAction ? (
+          <>
+            {/* Hairline between "clear my text" and "change how search works" —
+                without it the two glyphs read as one crowded cluster. */}
+            <MotiView
+              animate={{ opacity: hasText ? 1 : 0 }}
+              transition={{ type: 'timing', duration: 180 }}
+              style={{
+                width: 1,
+                height: 18,
+                marginRight: 2,
+                backgroundColor: isDark ? COLORS.dark.grey4 : COLORS.light.grey3,
+              }}
+            />
+            <View style={{ marginRight: 4 }}>{trailingAction}</View>
+          </>
+        ) : (
+          <View style={{ width: 8 }} />
+        )}
       </View>
     );
   }

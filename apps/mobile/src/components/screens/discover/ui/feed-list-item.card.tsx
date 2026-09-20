@@ -18,6 +18,8 @@ export interface FeedListItemProps extends PressableProps {
   feedId: string;
   feedUrl?: string; // For onboarding flow
   isPreview?: boolean;
+  /** Hide the trailing follow button (search results lean on the detail screen instead). */
+  showFollowButton?: boolean;
   showFolderPicker?: boolean; // If false, use onFollowRequest instead
   onFollowRequest?: (feedUrl: string) => void | Promise<void>; // For onboarding flow
   onUnfollowRequest?: (feedId: string) => void | Promise<void>; // For onboarding flow
@@ -34,6 +36,7 @@ export const FeedListItem = ({
   feedId,
   feedUrl,
   isPreview = false,
+  showFollowButton = true,
   showFolderPicker = true,
   onFollowRequest,
   onUnfollowRequest,
@@ -68,15 +71,17 @@ export const FeedListItem = ({
       </View>
 
       {/* Follow Button */}
-      <FollowButton
-        feedId={feedId}
-        feedUrl={feedUrl}
-        isFollowing={isFollowing}
-        showFolderPicker={showFolderPicker}
-        onFollowRequest={onFollowRequest}
-        onUnfollowRequest={onUnfollowRequest}
-        disabled={disabled}
-      />
+      {showFollowButton && (
+        <FollowButton
+          feedId={feedId}
+          feedUrl={feedUrl}
+          isFollowing={isFollowing}
+          showFolderPicker={showFolderPicker}
+          onFollowRequest={onFollowRequest}
+          onUnfollowRequest={onUnfollowRequest}
+          disabled={disabled}
+        />
+      )}
     </Pressable>
   );
 

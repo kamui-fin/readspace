@@ -3,8 +3,9 @@ import { RSSIcon } from '@components/icons/svg';
 import { Header } from '@components/navigation/header';
 import { FollowingScreen } from '@components/screens/following';
 import { FilterActionButton } from '@components/screens/following/ui/filter-action.button';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { FOLLOWING_TAB, NO_ACTIVE_TAB } from '@lib/constants/tabs';
 import { useFeeds, useUnreadCounts } from '@readspace/shared';
 import { FolderIcon } from '@solar-icons/react-native/bold-duotone';
 import { useFeedViewStore } from '@stores/feed-view';
@@ -33,7 +34,7 @@ export default function FollowingRoute() {
     return safeAreaTop + 106;
   }, [safeAreaTop]);
   const [headerHeight, setHeaderHeight] = useState(initialHeaderHeight);
-  const feedSwitcherRef = useRef<BottomSheetModal>(null);
+  const feedSwitcherRef = useRef<SheetRef>(null);
 
   // Get selected feed/folder name from feed view store
   const viewType = useFeedViewStore((state) => state.viewType);
@@ -43,7 +44,7 @@ export default function FollowingRoute() {
   const isViewingFeedOrFolder =
     viewType === 'feed' || viewType === 'folder' || viewType === 'feedPreview';
   // Saved spans clipped articles too, so it isn't scoped to a feed and has no switcher
-  const isSavedTab = activeTab === 2 && !isViewingFeedOrFolder;
+  const isSavedTab = activeTab === FOLLOWING_TAB.SAVED && !isViewingFeedOrFolder;
 
   // Determine the header title based on view type
   const headerTitle = useMemo(() => {
@@ -86,13 +87,13 @@ export default function FollowingRoute() {
   const unreadCount = useMemo(() => {
     if (!unreadCountsData) return 0;
 
-    // 1. If we are in activeTab === 1 (Today)
-    if (activeTab === 1 && !isViewingFeedOrFolder) {
+    // 1. Today tab
+    if (activeTab === FOLLOWING_TAB.TODAY && !isViewingFeedOrFolder) {
       return unreadCountsData.today || 0;
     }
 
-    // 2. If activeTab === 2 (Saved), unread count doesn't apply
-    if (activeTab === 2 && !isViewingFeedOrFolder) {
+    // 2. Saved tab — unread count doesn't apply
+    if (activeTab === FOLLOWING_TAB.SAVED && !isViewingFeedOrFolder) {
       return 0;
     }
 
@@ -113,7 +114,7 @@ export default function FollowingRoute() {
       );
     }
 
-    // 5. Default case: Not viewing specific feed/folder and activeTab === 0 (All)
+    // 5. Default case: not viewing a specific feed/folder, on the All tab.
     // Sum of all unread counts
     if (unreadCountsData.feed_counts) {
       return Object.values(unreadCountsData.feed_counts).reduce(
@@ -179,16 +180,16 @@ export default function FollowingRoute() {
           return true; // Prevent default back behavior
         }
 
-        // If not on default tab (tab 0 = "All"), switch to previous tab or default tab
-        if (activeTab !== 0) {
-          const targetTab = previousTab !== null ? previousTab : 0; // Default to "All" tab
+        // If not on the default (Today) tab, switch to the previous tab or back to Today
+        if (activeTab !== FOLLOWING_TAB.TODAY) {
+          const targetTab = previousTab !== null ? previousTab : FOLLOWING_TAB.TODAY;
           setActiveTab(targetTab);
           return true; // Prevent default back behavior
         }
 
-        // On default tab (tab 0) with no feed/folder view
-        // If there's a previous tab, switch to it; otherwise prevent exit
-        if (previousTab !== null && previousTab !== 0) {
+        // On the default tab with no feed/folder view:
+        // if there's a previous tab, switch to it; otherwise prevent exit
+        if (previousTab !== null && previousTab !== FOLLOWING_TAB.TODAY) {
           setActiveTab(previousTab);
           return true; // Prevent default back behavior
         }
@@ -217,7 +218,7 @@ export default function FollowingRoute() {
         titleIcon={headerTitleIcon}
         unreadCount={unreadCount}
         scrollY={scrollY}
-        activeTab={isViewingFeedOrFolder ? -1 : activeTab}
+        activeTab={isViewingFeedOrFolder ? NO_ACTIVE_TAB : activeTab}
         onTabChange={handleTabChange}
         onHeaderHeightChange={handleHeaderHeightChange}
         actionButton={filterActionButton}

@@ -95,6 +95,7 @@ export const TrendingSection = memo(
               iconUrl={feed.image_url || undefined}
               feedUrl={feed.url || undefined}
               isFollowing={feed.is_subscribed || false}
+              showFollowButton={false}
             />
           ))}
         </View>
