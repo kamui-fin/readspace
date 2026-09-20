@@ -12,10 +12,10 @@ import { SearchOptionsButton } from '@components/screens/discover/ui/search-opti
 import { SearchOptionsSheet } from '@components/screens/discover/ui/search-options.sheet';
 import { SearchResults } from '@components/screens/discover/ui/search-results.list';
 import { SearchSuggestionsPanel } from '@components/screens/discover/ui/search-suggestions.panel';
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import type { SheetRef } from '@components/ui/bottom-sheet';
 import { useDiscoverController } from '@hooks/useDiscoverController';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useTrendingFeeds } from '@hooks/useTrendingFeeds';

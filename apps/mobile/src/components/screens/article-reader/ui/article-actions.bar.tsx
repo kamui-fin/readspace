@@ -1,5 +1,7 @@
 import { Sparkle } from '@components/icons/svg';
+import { BackButton } from '@components/ui/back-button';
 import { Button } from '@components/ui/button';
+import { COLORS } from '@lib/constants/colors';
 import type { ReaderSurfaceColors } from '@lib/constants/reader';
 import {
   BookmarkIcon,
@@ -8,7 +10,6 @@ import {
   MenuDotsIcon,
   ShareIcon,
 } from '@solar-icons/react-native/bold';
-import { ArrowLeftIcon } from '@solar-icons/react-native/linear';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -83,9 +84,7 @@ export function ArticleActionBar({
       onLayout={(e) => setBarHeight(e.nativeEvent.layout.height)}>
       <View className="flex-row items-center justify-between px-4 py-3">
         {/* Close Button */}
-        <Button variant="icon" size="small" fullWidth={false} onPress={onClose}>
-          <ArrowLeftIcon size={18} strokeWidth={2.4} color={colors.grey} />
-        </Button>
+        <BackButton onPress={onClose} color={colors.grey} isDark={colors === COLORS.dark} />
 
         {/* Right Actions */}
         <View className="flex-row items-center gap-3">

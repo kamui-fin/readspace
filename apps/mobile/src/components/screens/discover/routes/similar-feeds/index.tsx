@@ -3,6 +3,7 @@ import {
   type FolderPickerBottomSheetRef,
 } from '@components/bottom-sheets/folder-picker';
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
+import { BackButton } from '@components/ui/back-button';
 import { Button } from '@components/ui/button';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { Skeleton } from '@components/ui/skeleton';
@@ -13,7 +14,7 @@ import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import { ApiClient, useCreateFeed } from '@readspace/shared';
-import { ArrowLeftIcon, DocumentTextIcon } from '@solar-icons/react-native/linear';
+import { DocumentTextIcon } from '@solar-icons/react-native/linear';
 import { discoverLanguageToCode, getDiscoverLanguage } from '@stores/discover-preferences';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -109,9 +110,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
     <View style={{ paddingTop: insets.top }}>
       <View className="px-4 py-3">
         <View className="flex-row items-center">
-          <Button variant="icon" size="small" fullWidth={false} onPress={() => router.back()}>
-            <ArrowLeftIcon size={18} strokeWidth={2.4} color={colors.grey} />
-          </Button>
+          <BackButton onPress={() => router.back()} color={colors.grey} />
           <View className="absolute left-0 right-0 items-center">
             <Text
               size="lg"

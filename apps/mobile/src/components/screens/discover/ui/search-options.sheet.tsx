@@ -1,9 +1,9 @@
 import { SearchModeToggle } from '@components/screens/discover/ui/search-mode.toggle';
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Chip } from '@components/ui/chip';
 import { Text } from '@components/ui/text';
-import type { SheetRef } from '@components/ui/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { CONTENT_TYPE_DISPLAY_NAMES, ContentType } from '@readspace/shared';

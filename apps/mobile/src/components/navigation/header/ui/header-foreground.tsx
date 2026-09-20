@@ -1,9 +1,9 @@
 import { ExpandVertical } from '@components/icons/svg';
+import { BackButton } from '@components/ui/back-button';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { useIconColor } from '@hooks/useIconColor';
 import { COLORS } from '@lib/constants/colors';
-import { ArrowLeftIcon } from '@solar-icons/react-native/linear';
 import clsx from 'clsx';
 import { Platform, TouchableOpacity, View } from 'react-native';
 import {
@@ -68,9 +68,7 @@ export function HeaderForeground({
       <View className="w-full flex-row items-center pb-3" onLayout={onLayout}>
         {showBackButton && (
           <View className="absolute left-4 top-0 z-10">
-            <Button onPress={onBackPress} variant="icon" size="small" fullWidth={false}>
-              <ArrowLeftIcon size={18} strokeWidth={2.4} color={colors.grey} />
-            </Button>
+            <BackButton onPress={onBackPress} color={colors.grey} />
           </View>
         )}
 
@@ -92,14 +90,12 @@ export function HeaderForeground({
   return (
     <View className={clsx(foregroundVariants({ layout: 'default' }))} onLayout={onLayout}>
       {showBackButton && (
-        <Button
+        <BackButton
           onPress={onBackPress}
-          variant="icon"
-          size="small"
-          fullWidth={false}
-          className="mr-3">
-          <ArrowLeftIcon size={18} strokeWidth={2.4} color={colors.grey} />
-        </Button>
+          color={colors.grey}
+          className="mr-3"
+          style={{ marginRight: 12 }}
+        />
       )}
 
       <View className={clsx(titleContainerVariants({ layout: 'default' }))}>
