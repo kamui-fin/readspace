@@ -114,3 +114,38 @@ def test_storage_key_from_image_url(image_url: str, expected: str | None) -> Non
     from app.services.feeds.favicon_backfill import storage_key_from_image_url
 
     assert storage_key_from_image_url(image_url) == expected
+
+
+_SVG_NS = b'xmlns="http://www.w3.org/2000/svg"'
+UNIT_SVGS = [
+    b"<svg " + _SVG_NS + b' width="5mm" height="5mm" viewBox="0 0 5 5"><rect width="5" height="5"/></svg>',
+    b"<svg "
+    + _SVG_NS
+    + b' width="700.0pt" height="700.0pt" viewBox="0 0 700 700"><rect width="700" height="700"/></svg>',
+    b'<ns0:svg xmlns:ns0="http://www.w3.org/2000/svg" width="12mm" height="6mm">'
+    b'<ns0:rect width="12" height="6"/></ns0:svg>',
+]
+
+
+@pytest.mark.parametrize("svg", UNIT_SVGS)
+def test_svg_with_physical_units_renders(svg: bytes) -> None:
+    png = normalize_favicon_to_png(svg)
+    assert png is not None
+    assert max(_decode(png).size) == FAVICON_MAX_PX
+
+
+def test_already_normalized_only_for_small_png_or_jpeg() -> None:
+    from app.services.feeds.favicon_image import is_already_normalized
+
+    assert is_already_normalized(_raster((32, 32), "PNG"))
+    assert is_already_normalized(_raster((256, 200), "JPEG"))
+    assert not is_already_normalized(_raster((300, 300), "PNG"))
+    assert not is_already_normalized(PREFIXED_SVG)
+    assert not is_already_normalized(b"junk")
+
+
+def test_bmp_tiff_avif_are_converted() -> None:
+    for fmt in ("BMP", "TIFF", "AVIF"):
+        png = normalize_favicon_to_png(_raster((40, 40), fmt))
+        assert png is not None, fmt
+        assert _decode(png).format == "PNG"

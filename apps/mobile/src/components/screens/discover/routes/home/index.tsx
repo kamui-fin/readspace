@@ -3,18 +3,18 @@ import {
   FolderPickerBottomSheet,
   type FolderPickerBottomSheetRef,
 } from '@components/bottom-sheets/folder-picker';
-import { Languages, Plus } from '@components/icons/svg';
 import { CategoriesList } from '@components/screens/discover/ui/categories.list';
 import { DiscoverBrowseView } from '@components/screens/discover/ui/discover-browse.view';
+import {
+  DiscoverChrome,
+  type DiscoverSearchHandle,
+} from '@components/screens/discover/ui/discover-chrome';
 import { LanguagePicker } from '@components/screens/discover/ui/language-picker.dropdown';
-import { SearchBar } from '@components/screens/discover/ui/search-bar.input';
-import { SearchOptionsButton } from '@components/screens/discover/ui/search-options.button';
 import { SearchOptionsSheet } from '@components/screens/discover/ui/search-options.sheet';
 import { SearchResults } from '@components/screens/discover/ui/search-results.list';
 import { SearchSuggestionsPanel } from '@components/screens/discover/ui/search-suggestions.panel';
 import type { SheetRef } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
-import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useDiscoverController } from '@hooks/useDiscoverController';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
@@ -25,6 +25,7 @@ import {
   SEARCH_HISTORY_COMMIT_MS,
 } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { USES_NATIVE_HEADER } from '@lib/constants/platform';
 import { createSearchClient, FEEDS_INDEX_NAME } from '@lib/meilisearch-client';
 import { createHybridSearchParams, MOBILE_CATEGORY_NAMES, useCreateFeed } from '@readspace/shared';
 import {
@@ -34,18 +35,9 @@ import {
   useDiscoverPreferences,
 } from '@stores/discover-preferences';
 import { useSearchHistory } from '@stores/search-history';
-import { MotiView } from 'moti';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Configure, InstantSearch } from 'react-instantsearch';
-import {
-  DeviceEventEmitter,
-  Keyboard,
-  Pressable,
-  type TextInput as RNTextInput,
-  TouchableWithoutFeedback,
-  View,
-} from 'react-native';
-import { Easing } from 'react-native-reanimated';
+import { DeviceEventEmitter, Keyboard, TouchableWithoutFeedback, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CATEGORIES = Object.keys(MOBILE_CATEGORY_NAMES);
@@ -83,7 +75,7 @@ function DiscoverScreenInner() {
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const insets = useSafeAreaInsets();
 
-  const searchBarRef = useRef<RNTextInput>(null);
+  const searchBarRef = useRef<DiscoverSearchHandle>(null);
   const addFeedModalRef = useRef<AddFeedBottomSheetRef>(null);
   const folderPickerModalRef = useRef<FolderPickerBottomSheetRef>(null);
   const languagePickerRef = useRef<SheetRef>(null);
@@ -167,11 +159,6 @@ function DiscoverScreenInner() {
     },
     [addSearch, submitSearch, dismissKeyboard]
   );
-
-  const handleClear = useCallback(() => {
-    clearQuery();
-    searchBarRef.current?.focus();
-  }, [clearQuery]);
 
   /**
    * Back arrow. Drops the query first and only falls through to a full reset
@@ -282,7 +269,10 @@ function DiscoverScreenInner() {
   return (
     <View
       className="bg-background flex-1"
-      style={{ paddingTop: insets.top, backgroundColor: colors.background }}>
+      style={{
+        paddingTop: USES_NATIVE_HEADER ? 0 : insets.top,
+        backgroundColor: colors.background,
+      }}>
       <Configure
         hitsPerPage={20}
         attributesToHighlight={['title', 'description']}
@@ -291,67 +281,20 @@ function DiscoverScreenInner() {
 
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View className="flex-1">
-          {/* Header collapses out of the way as soon as search takes over */}
-          <MotiView
-            animate={{
-              opacity: isBrowsing ? 1 : 0,
-              height: isBrowsing ? 62 : 0,
-              scale: isBrowsing ? 1 : 0.95,
-            }}
-            transition={{
-              type: 'timing',
-              duration: 250,
-              easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-            }}
-            style={{ overflow: 'hidden' }}>
-            <View className="flex-row items-center justify-between px-6 pb-2 pt-3">
-              <Text
-                size="3xl"
-                fontFamily="geist-bold"
-                className="tracking-heading text-primary-foreground">
-                Discover
-              </Text>
-              <View className="flex-row items-center gap-2">
-                <Button
-                  variant="icon"
-                  size="small"
-                  className="bg-grey6"
-                  fullWidth={false}
-                  onPress={() => languagePickerRef.current?.present()}>
-                  <Languages width={20} height={20} color={colors.grey} />
-                </Button>
-                <Button
-                  variant="icon"
-                  size="small"
-                  className="bg-grey6"
-                  fullWidth={false}
-                  onPress={() => addFeedModalRef.current?.present()}>
-                  <Plus width={20} height={20} color={colors.grey} />
-                </Button>
-              </View>
-            </View>
-          </MotiView>
-
-          {/* Always mounted so focus/blur morphs stay smooth */}
-          <View className="px-6 pb-4 pt-2">
-            <Pressable onPress={(event) => event.stopPropagation()}>
-              <SearchBar
-                ref={searchBarRef}
-                value={inputValue}
-                onChangeText={changeQuery}
-                onFocus={focusSearch}
-                onBlur={handleBlur}
-                onClear={handleClear}
-                onCancel={handleBack}
-                onSubmit={handleSubmit}
-                showCancelButton={!isBrowsing}
-                autoFocus={false}
-                trailingAction={
-                  isBrowsing ? null : <SearchOptionsButton onPress={handleOpenOptions} />
-                }
-              />
-            </Pressable>
-          </View>
+          <DiscoverChrome
+            ref={searchBarRef}
+            inputValue={inputValue}
+            isBrowsing={isBrowsing}
+            onChangeText={changeQuery}
+            onFocus={focusSearch}
+            onBlur={handleBlur}
+            onClear={clearQuery}
+            onCancel={handleBack}
+            onSubmit={handleSubmit}
+            onOpenLanguage={() => languagePickerRef.current?.present()}
+            onOpenAddFeed={() => addFeedModalRef.current?.present()}
+            onOpenOptions={handleOpenOptions}
+          />
 
           <View className="flex-1">
             {mode === 'suggestions' ? (

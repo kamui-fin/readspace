@@ -23,6 +23,7 @@ _SVG_GREY_RECT_RE = re.compile(rb"<(?:[A-Za-z_][\w.-]*:)?rect[^>]*fill\s*=\s*[\"
 _SVG_ROOT_TAG_RE = re.compile(r"<(?:[A-Za-z_][\w.-]*:)?svg\b[^>]*>", re.IGNORECASE)
 _SVG_SIZE_ATTR_RE = re.compile(r"""\b(width|height)\s*=\s*["']?([\d.]+)""", re.IGNORECASE)
 _SVG_VIEWBOX_RE = re.compile(r"\bviewBox\s*=", re.IGNORECASE)
+_SVG_ROOT_SIZE_ATTR_STRIP_RE = re.compile(r"""\s(?:width|height)\s*=\s*(["']).*?\1""", re.IGNORECASE)
 _SVG_SNIFF_BYTES = 2048
 _PLACEHOLDER_MAX_BYTES = 1024
 
@@ -35,6 +36,9 @@ class ImageKind(str, Enum):
     GIF = "gif"
     WEBP = "webp"
     ICO = "ico"
+    BMP = "bmp"
+    TIFF = "tiff"
+    AVIF = "avif"
     SVG = "svg"
     UNKNOWN = "unknown"
 
@@ -59,6 +63,12 @@ def sniff_image_kind(data: bytes) -> ImageKind:
         return ImageKind.WEBP
     if data.startswith(b"\x00\x00\x01\x00"):
         return ImageKind.ICO
+    if data.startswith(b"BM"):
+        return ImageKind.BMP
+    if data[:4] in (b"II*\x00", b"MM\x00*"):
+        return ImageKind.TIFF
+    if data[4:8] == b"ftyp" and data[8:12] in (b"avif", b"avis"):
+        return ImageKind.AVIF
     if _SVG_ROOT_RE.search(data[:_SVG_SNIFF_BYTES]):
         return ImageKind.SVG
     return ImageKind.UNKNOWN
@@ -82,23 +92,34 @@ def is_generated_placeholder(data: bytes) -> bool:
     return bool(_SVG_GREY_RECT_RE.search(data) and _SVG_TEXT_RE.search(data))
 
 
-def _ensure_svg_viewbox(svg: str) -> str:
-    """Add a ``viewBox`` from width/height when the root lacks one so it can scale."""
+def _prepare_svg_size(svg: str) -> str:
+    """
+    Make ``viewBox`` the only source of size on the root element.
+
+    resvg rejects roots whose ``width``/``height`` carry physical units (``5mm``, ``700pt``)
+    with "invalid size", and cannot scale roots that lack a ``viewBox``. So synthesize a
+    ``viewBox`` from ``width``/``height`` when missing, then drop those attributes and let the
+    render width in ``_rasterize_svg`` decide the output size.
+    """
     match = _SVG_ROOT_TAG_RE.search(svg)
-    if not match or _SVG_VIEWBOX_RE.search(match.group(0)):
-        return svg
-    sizes = {name.lower(): float(value) for name, value in _SVG_SIZE_ATTR_RE.findall(match.group(0))}
-    width, height = sizes.get("width"), sizes.get("height")
-    if not width or not height:
+    if not match:
         return svg
     tag = match.group(0)
-    patched = tag[:-1].rstrip("/") + f' viewBox="0 0 {width:g} {height:g}"' + ("/>" if tag.endswith("/>") else ">")
-    return svg.replace(tag, patched, 1)
+    if not _SVG_VIEWBOX_RE.search(tag):
+        sizes = {name.lower(): float(value) for name, value in _SVG_SIZE_ATTR_RE.findall(tag)}
+        width, height = sizes.get("width"), sizes.get("height")
+        if not width or not height:
+            return svg
+        closing = "/>" if tag.endswith("/>") else ">"
+        tag_with_box = tag[: -len(closing)].rstrip() + f' viewBox="0 0 {width:g} {height:g}"' + closing
+    else:
+        tag_with_box = tag
+    return svg.replace(tag, _SVG_ROOT_SIZE_ATTR_STRIP_RE.sub("", tag_with_box), 1)
 
 
 def _rasterize_svg(data: bytes) -> Image.Image:
     """Render SVG bytes to an RGBA Pillow image no larger than FAVICON_MAX_PX."""
-    svg = _ensure_svg_viewbox(data.decode("utf-8", errors="replace"))
+    svg = _prepare_svg_size(data.decode("utf-8", errors="replace"))
     png = resvg_py.svg_to_bytes(svg_string=svg, width=FAVICON_MAX_PX, skip_system_fonts=True)
     return Image.open(io.BytesIO(bytes(png)))
 
@@ -110,6 +131,28 @@ def _open_raster(data: bytes) -> Image.Image:
         sizes = sorted(image.info.get("sizes", []) or [image.size], key=lambda s: s[0] * s[1])
         image.size = sizes[-1]  # type: ignore[misc]  # Pillow ICO plugin: set before load() to choose a frame
     return image
+
+
+def is_already_normalized(data: bytes) -> bool:
+    """
+    Whether ``data`` is already a universally renderable, appropriately sized favicon.
+
+    PNG and JPEG within FAVICON_MAX_PX render everywhere without help, so rewriting them
+    only costs writes (and re-encoding a tiny palette PNG as RGBA can even grow it).
+
+    Args:
+        data: Raw file content
+
+    Returns:
+        True if the bytes are a PNG/JPEG whose longest side is at most FAVICON_MAX_PX
+    """
+    if sniff_image_kind(data) not in (ImageKind.PNG, ImageKind.JPEG):
+        return False
+    try:
+        with Image.open(io.BytesIO(data)) as image:
+            return max(image.size) <= FAVICON_MAX_PX
+    except (UnidentifiedImageError, ValueError, OSError):
+        return False
 
 
 def normalize_favicon_to_png(data: bytes) -> bytes | None:

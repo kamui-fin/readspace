@@ -1,15 +1,16 @@
 """One-off migration of stored favicons to normalized PNGs.
 
-Legacy objects in the ``favicons`` bucket are a mix of ``ns0:``-prefixed SVGs, PNGs mislabeled
-as SVG, oversized rasters and generated grey placeholder boxes. This walks every stored key
-referenced by a feed and rewrites it:
+Legacy objects in the ``favicons`` bucket are a mix of ``ns0:``-prefixed SVGs, ICO/WebP/GIF/AVIF/BMP
+files, raster bytes mislabeled as SVG or text, oversized images and generated grey placeholder
+boxes. Stored MIME types are unreliable (the dataset importer labeled ~everything ``image/jpeg``),
+so every decision is made from the real bytes. For each stored key referenced by a feed:
 
-* generated placeholder  -> ``feeds.image_url = NULL`` (clients render their own fallback)
-* anything decodable     -> new ``<uuid>.png`` upload, feeds repointed, old object removed
-* undecodable / missing  -> left untouched and reported
+* generated placeholder            -> ``feeds.image_url = NULL`` (clients render their own fallback)
+* PNG/JPEG within FAVICON_MAX_PX   -> left alone (already renders everywhere), unless mislabeled SVG/text
+* anything else that decodes       -> new ``<uuid>.png`` upload, feeds repointed, old object removed
+* undecodable / missing            -> left untouched and reported
 
-The run is idempotent and resumable: keys already ending in ``.png`` are skipped unless
-``include_png`` is set.
+The run is idempotent and resumable: its own output is a small PNG, which is skipped next time.
 """
 
 import asyncio
@@ -19,7 +20,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import structlog
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 from supabase import AsyncClient
 
 from app.core.config import get_settings
@@ -32,13 +33,21 @@ from app.core.constants import (
 )
 from app.models.feed import Feed
 from app.services.feeds.favicon import _get_async_supabase, put_favicon_png
-from app.services.feeds.favicon_image import is_generated_placeholder, normalize_favicon_to_png
+from app.services.feeds.favicon_image import (
+    ImageKind,
+    is_already_normalized,
+    is_generated_placeholder,
+    normalize_favicon_to_png,
+    sniff_image_kind,
+)
 from app.services.feeds.meilisearch import sync_feeds_batch
 from app.workers.common import worker_db
 
 logger = structlog.get_logger(__name__)
 
 _PUBLIC_PREFIX = f"storage/v1/object/public/{FAVICONS_BUCKET_NAME}/"
+# Stored MIME types that mean "not a usable raster label" when the bytes are actually raster.
+_MISLABELED_RASTER_MIMETYPES = frozenset({"image/svg+xml", "image/svg", "text/plain"})
 
 
 @dataclass
@@ -46,7 +55,9 @@ class BackfillStats:
     """Counters describing what a backfill run did (or would do in a dry run)."""
 
     converted: int = 0
+    unchanged: int = 0
     nulled: int = 0
+    dangling: int = 0
     skipped_unusable: int = 0
     failed: int = 0
     bytes_before: int = 0
@@ -75,7 +86,17 @@ def storage_key_from_image_url(image_url: str) -> str | None:
     return key or None
 
 
-async def _load_keys_to_feed_ids(include_png: bool, limit: int | None) -> dict[str, list[UUID]]:
+async def _load_stored_mimetypes() -> dict[str, str]:
+    """Map every object name in the favicons bucket to its stored MIME type."""
+    async with worker_db() as db:
+        rows = await db.execute(
+            text("SELECT name, metadata->>'mimetype' FROM storage.objects WHERE bucket_id = :bucket"),
+            {"bucket": FAVICONS_BUCKET_NAME},
+        )
+    return {name: mimetype or "" for name, mimetype in rows.all()}
+
+
+async def _load_keys_to_feed_ids(keys: set[str] | None, limit: int | None) -> dict[str, list[UUID]]:
     """Group feed ids by the storage key their ``image_url`` points at."""
     async with worker_db() as db:
         rows = (await db.execute(select(Feed.id, Feed.image_url).where(Feed.image_url.is_not(None)))).all()
@@ -83,13 +104,13 @@ async def _load_keys_to_feed_ids(include_png: bool, limit: int | None) -> dict[s
     grouped: dict[str, list[UUID]] = defaultdict(list)
     for feed_id, image_url in rows:
         key = storage_key_from_image_url(image_url)
-        if key is None or (key.endswith(".png") and not include_png):
+        if key is None or (keys is not None and key not in keys):
             continue
         grouped[key].append(feed_id)
 
-    keys = dict(list(grouped.items())[:limit]) if limit else dict(grouped)
-    logger.info("favicon_backfill_candidates", keys=len(keys), feeds=sum(len(v) for v in keys.values()))
-    return keys
+    selected = dict(list(grouped.items())[:limit]) if limit else dict(grouped)
+    logger.info("favicon_backfill_candidates", keys=len(selected), feeds=sum(len(v) for v in selected.values()))
+    return selected
 
 
 async def _set_feed_image_url(feed_ids: list[UUID], image_url: str | None) -> None:
@@ -98,10 +119,16 @@ async def _set_feed_image_url(feed_ids: list[UUID], image_url: str | None) -> No
         await db.execute(update(Feed).where(Feed.id.in_(feed_ids)).values(image_url=image_url))
 
 
+def _is_not_found(error: Exception) -> bool:
+    """True if a storage error is a definitive 404 (as opposed to a transient failure)."""
+    return "not_found" in str(error) or "404" in str(error)
+
+
 async def _process_key(
     supabase: AsyncClient,
     key: str,
     feed_ids: list[UUID],
+    stored_mimetype: str,
     stats: BackfillStats,
     semaphore: asyncio.Semaphore,
     dry_run: bool,
@@ -111,6 +138,14 @@ async def _process_key(
         try:
             original = await supabase.storage.from_(FAVICONS_BUCKET_NAME).download(key)
         except Exception as e:
+            if _is_not_found(e):
+                # Dangling reference: the object is gone, so clients can only ever show a broken image.
+                logger.warning("favicon_backfill_dangling_reference", key=key)
+                if not dry_run:
+                    await _set_feed_image_url(feed_ids, None)
+                stats.dangling += 1
+                stats.changed_feed_ids.update(feed_ids)
+                return
             logger.warning("favicon_backfill_download_failed", key=key, error=str(e))
             stats.failed += 1
             return
@@ -123,6 +158,11 @@ async def _process_key(
                 await supabase.storage.from_(FAVICONS_BUCKET_NAME).remove([key])
             stats.nulled += 1
             stats.changed_feed_ids.update(feed_ids)
+            return
+
+        mislabeled = stored_mimetype in _MISLABELED_RASTER_MIMETYPES and sniff_image_kind(original) != ImageKind.SVG
+        if not mislabeled and is_already_normalized(original):
+            stats.unchanged += 1
             return
 
         png = await asyncio.to_thread(normalize_favicon_to_png, original)
@@ -157,24 +197,32 @@ async def _resync_meilisearch(feed_ids: set[UUID]) -> None:
         await sync_feeds_batch(settings, feeds)
 
 
-async def backfill_favicons(dry_run: bool = True, include_png: bool = False, limit: int | None = None) -> BackfillStats:
+async def backfill_favicons(
+    dry_run: bool = True, limit: int | None = None, keys: set[str] | None = None
+) -> BackfillStats:
     """
     Normalize every stored favicon to a bounded PNG and null out generated placeholders.
 
     Args:
         dry_run: When True, download and evaluate everything but write nothing
-        include_png: Also reprocess keys that already end in ``.png`` (e.g. oversized legacy PNGs)
         limit: Process at most this many distinct storage keys
+        keys: Restrict the run to these storage keys (targeted re-runs and tests)
 
     Returns:
         Counters describing the outcome
     """
     stats = BackfillStats()
-    keys = await _load_keys_to_feed_ids(include_png, limit)
+    candidates = await _load_keys_to_feed_ids(keys, limit)
+    mimetypes = await _load_stored_mimetypes()
     supabase = await _get_async_supabase()
     semaphore = asyncio.Semaphore(FAVICON_BACKFILL_CONCURRENCY)
 
-    await asyncio.gather(*(_process_key(supabase, k, ids, stats, semaphore, dry_run) for k, ids in keys.items()))
+    await asyncio.gather(
+        *(
+            _process_key(supabase, k, ids, mimetypes.get(k, ""), stats, semaphore, dry_run)
+            for k, ids in candidates.items()
+        )
+    )
 
     if not dry_run and stats.changed_feed_ids:
         await _resync_meilisearch(stats.changed_feed_ids)
@@ -183,7 +231,9 @@ async def backfill_favicons(dry_run: bool = True, include_png: bool = False, lim
         "favicon_backfill_complete",
         dry_run=dry_run,
         converted=stats.converted,
+        unchanged=stats.unchanged,
         nulled=stats.nulled,
+        dangling=stats.dangling,
         skipped_unusable=stats.skipped_unusable,
         failed=stats.failed,
         bytes_before=stats.bytes_before,

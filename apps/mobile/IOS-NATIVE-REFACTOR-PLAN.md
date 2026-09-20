@@ -26,24 +26,17 @@ Legend: ✅ done · 🟡 code-done, **needs device test** · 🚧 in progress ·
 | 6c | Search-mode toggle | ⏭️ | keeps AI sparkle affordance; native segmented pickers are text-only |
 | 6d | Onboarding `Stepper` (page wizard) | ⏭️ | not a numeric stepper; custom paging UI |
 | 7 | Control group (article actions) | 🟡 | `article-action-group` (RN + `.ios` `ControlGroup` in `GlassEffectContainer` on iOS 26) |
-| 8 | Discover native header + search | ⬜ spike | approved; see "Remaining spikes" below |
-| 9 | NativeTabs + feed switcher on long-press | ⬜ spike | approved; see "Remaining spikes" below |
+| 8 | Discover native header + search | 🟡 | `discover-chrome` (RN pill on Android, `.ios` = native nav header + `headerSearchBarOptions`); screen drives it through a `DiscoverSearchHandle` |
+| 9 | NativeTabs | 🟡 | `(tabs)/_layout.ios.tsx`; double-tap events via `useTabDoubleTap`; feed switcher opens from the Following title (custom expand tab is Android-only now); Profile tab uses an SF symbol, not the avatar |
 
 **Device-test needed (nothing here has run on a simulator yet):** sheets (all), back button glass/bordered, Toggle, ConfirmationDialog anchoring inside a True Sheet, settings `Form` height/scroll + colours (dark/light) + Picker menu, Stepper/segmented in the reader sheet, ControlGroup/GlassEffectContainer layout in the reader bar.
 
-### Remaining spikes (deliberately not done blind: need a simulator to iterate)
+### Known follow-ups from the last two items (verify on device)
 
-**8. Discover native header + search** (`(tabs)/discover/_layout.tsx` → `Stack.Screen options={{ headerShown: true, headerSearchBarOptions }}`)
-- `useDiscoverController` owns focus/blur/submit/clear/exit; map: `onChangeText` → `changeQuery`, `onSearchButtonPress` → `submitSearch`, `onCancelButtonPress` → `exitSearch`, `onFocus`/`onBlur` → `focusSearch`/`blurSearch`.
-- The `bottom-tab-double-tap:discover` listener focuses the RN input via ref; native search bar needs `ref.focus()` from `headerSearchBarOptions.ref` instead.
-- Language picker, `SearchOptionsButton` and the header chrome move to `headerRight` (or a toolbar); `SearchSuggestionsPanel` / `SearchResults` / `DiscoverBrowseView` stay as the screen body.
-- Remove `SearchBar` (`search-bar.input.tsx`) on iOS only (`.ios` split), keep for Android.
-
-**9. NativeTabs** (`(tabs)/_layout.ios.tsx`, `expo-router/unstable-native-tabs`)
-- Replaces `BottomTabbar` on iOS; SF Symbols `doc.text`, `sparkles`, `safari`, avatar for Profile (check image-icon support).
-- Blast radius to handle: `BOTTOM_TABBAR_BASE_HEIGHT` is used in ~20 places for bottom padding (native tab bar changes insets; switch those to `useSafeAreaInsets`/`contentInsetAdjustment`), and 3 `bottom-tab-double-tap:*` listeners (re-select events come from the native `onTabPress`/`tabPress` listener instead).
-- Feed switcher: open the True Sheet on long-press / re-press of "Following" (the custom morph animation is dropped).
-- Android keeps the current custom bar untouched.
+- **NativeTabs insets:** screens still pad by `BOTTOM_TABBAR_BASE_HEIGHT` (64) + safe area. If the native bar leaves visible extra gap (iOS < 26) or content hides under it, replace those ~20 usages with a `useTabBarInset()` hook.
+- **Discover large title** stays expanded (lists are not the header's tracked scroll view); switch `headerLargeTitle` off if you prefer the compact title.
+- **Native search text sync:** JS-driven changes (recent-search tap, clear) are pushed with `setText`/`clearText`; watch for a stray `onChangeText` echo.
+- **Profile tab avatar** is not available in `NativeTabs` yet (SF symbol used).
 
 ---
 
