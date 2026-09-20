@@ -8,21 +8,15 @@ import {
 } from '@components/bottom-sheets/delete-account';
 import { Discord, Github } from '@components/icons/svg';
 import { Header } from '@components/navigation/header';
-import { SettingsGroup } from '@components/screens/profile/ui/settings-group';
-import { SettingsItem } from '@components/screens/profile/ui/settings-item';
-import { SettingsValueChip } from '@components/screens/profile/ui/settings-value.chip';
+import {
+  type SettingsPickerOption,
+  type SettingsSection,
+  SettingsView,
+} from '@components/screens/profile/ui/settings-view';
 // import { ToastTester } from '@components/screens/profile/ui/toast-tester';
 import { UserProfile } from '@components/screens/profile/ui/user-profile';
 import { Chip } from '@components/ui/chip';
 import { useNativeConfirm } from '@components/ui/confirm-dialog';
-import {
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItemIcon,
-  DropdownMenuItemTitle,
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-} from '@components/ui/dropdown-menu';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useSession } from '@contexts/auth-context';
@@ -57,6 +51,12 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const THEME_OPTIONS: SettingsPickerOption[] = [
+  { value: 'system', label: 'System', systemImage: 'circle.lefthalf.filled' },
+  { value: 'light', label: 'Light', systemImage: 'sun.max' },
+  { value: 'dark', label: 'Dark', systemImage: 'moon' },
+];
 
 export function ProfileScreen() {
   const router = useRouter(); // Still needed for Reading History button
@@ -106,8 +106,6 @@ export function ProfileScreen() {
     }
   };
 
-  const themeLabel = theme.charAt(0).toUpperCase() + theme.slice(1);
-
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);
     toast.success(`Theme changed to ${newTheme}`);
@@ -154,42 +152,202 @@ export function ProfileScreen() {
     }
   }, [feeds, folders]);
 
+  const handleManageSubscription = () => {
+    if (isRcPro) {
+      presentCustomerCenter();
+      return;
+    }
+    confirm({
+      title: 'Manage Subscription',
+      message:
+        'This subscription was purchased on the web. Please manage your billing via the web version of Readspace.',
+      confirmLabel: 'Open Web',
+      onConfirm: () => Linking.openURL(CLOUD_CONFIG.READSPACE_APP_URL),
+    });
+  };
+
   const githubColor = isDark ? '#ffffff' : '#161614';
   const discordColor = '#5865F2';
 
+  const sections: SettingsSection[] = [
+    {
+      key: 'subscription',
+      rows: [
+        isPro
+          ? {
+              type: 'action',
+              kind: 'button',
+              key: 'manage-subscription',
+              label: 'Manage Subscription',
+              icon: <ShieldCheckIcon size={22} color={colors.secondary} />,
+              systemImage: 'checkmark.shield',
+              onPress: handleManageSubscription,
+            }
+          : {
+              type: 'action',
+              kind: 'button',
+              key: 'upgrade',
+              label: 'Upgrade to Pro',
+              icon: <CrownIcon size={22} color="#D4AF37" />,
+              systemImage: 'crown',
+              onPress: () => openUpgrade(),
+            },
+      ],
+    },
+    {
+      key: 'preferences',
+      title: 'Preferences',
+      rows: [
+        {
+          type: 'picker',
+          key: 'theme',
+          label: 'Theme',
+          icon: <PaletteIcon size={22} color={colors.black} />,
+          systemImage: 'paintpalette',
+          value: theme,
+          options: THEME_OPTIONS,
+          onChange: (value) => handleThemeChange(value as Theme),
+        },
+        {
+          type: 'action',
+          kind: 'button',
+          key: 'digest',
+          label: 'Daily Digest Settings',
+          icon: <StarsIcon size={22} color={colors.black} />,
+          systemImage: 'sparkles',
+          onPress: () => codexSettingsSheetRef.current?.present(),
+        },
+        {
+          type: 'action',
+          kind: 'button',
+          key: 'history',
+          label: 'Reading History',
+          icon: <HistoryIcon size={22} color={colors.black} />,
+          systemImage: 'clock.arrow.circlepath',
+          onPress: () => router.push('/(protected)/settings/recents'),
+        },
+        {
+          type: 'action',
+          kind: 'button',
+          key: 'import',
+          label: 'Import Subscriptions',
+          icon: <DownloadIcon size={22} color={colors.black} />,
+          systemImage: 'square.and.arrow.down',
+          onPress: () => router.push('/(protected)/settings/import-opml'),
+        },
+        {
+          type: 'action',
+          kind: 'button',
+          key: 'export',
+          label: 'Export OPML',
+          icon: <ArchiveUpMinimalisticIcon size={22} color={colors.black} />,
+          systemImage: 'square.and.arrow.up',
+          onPress: handleOPMLExport,
+        },
+      ],
+    },
+    {
+      key: 'other',
+      title: 'Other',
+      rows: [
+        {
+          type: 'action',
+          kind: 'link',
+          key: 'review',
+          label: 'Leave a Review',
+          icon: <LikeIcon size={22} color={colors.black} />,
+          systemImage: 'heart',
+          onPress: () => {
+            void openStoreReview().catch(() => toast.error('Cannot open the store review page'));
+          },
+        },
+        {
+          type: 'action',
+          kind: 'link',
+          key: 'contact',
+          label: 'Contact & Feedback',
+          icon: <Plane3Icon size={22} color={colors.black} />,
+          systemImage: 'paperplane',
+          onPress: handleWebsitePress,
+        },
+        {
+          type: 'action',
+          kind: 'link',
+          key: 'github',
+          label: 'GitHub',
+          icon: <Github width={20} height={20} color={iconColor} />,
+          systemImage: 'chevron.left.forwardslash.chevron.right',
+          onPress: handleGithubPress,
+        },
+        {
+          type: 'action',
+          kind: 'link',
+          key: 'discord',
+          label: 'Join the Discord',
+          icon: <Discord width={20} height={20} color={discordColor} />,
+          systemImage: 'bubble.left.and.bubble.right',
+          onPress: handleDiscordPress,
+        },
+      ],
+    },
+    {
+      key: 'account',
+      title: 'Account',
+      rows: [
+        {
+          type: 'action',
+          kind: 'link',
+          key: 'logout',
+          label: isLoggingOut ? 'Logging out...' : 'Logout',
+          icon: <Logout2Icon size={22} color={colors.red} />,
+          systemImage: 'rectangle.portrait.and.arrow.right',
+          onPress: handleLogout,
+          disabled: isLoggingOut,
+          danger: true,
+        },
+        {
+          type: 'action',
+          kind: 'link',
+          key: 'delete-account',
+          label: 'Delete Account',
+          icon: <TrashBinTrashIcon size={22} color={colors.red} />,
+          systemImage: 'trash',
+          onPress: () => deleteAccountSheetRef.current?.present(),
+          danger: true,
+        },
+      ],
+    },
+  ];
+
   return (
     <View className="bg-background flex-1" style={{ backgroundColor: colors.background }}>
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{
-          paddingBottom: insets.bottom + BOTTOM_TABBAR_BASE_HEIGHT + 20,
-        }}
-        showsVerticalScrollIndicator={false}>
-        {/* Header - scrolls with content */}
-        <Header
-          variant="static"
-          title="Profile"
-          titleFontWeight="semibold"
-          subtitle="Your account settings"
-          rightElement={
-            <Chip
-              label={settings.instance_type === 'cloud' ? 'Cloud' : 'Self-hosted'}
-              variant="filled"
-              size="medium"
-              selected={false}
-              icon={
-                settings.instance_type === 'cloud' ? (
-                  <CloudIcon size={14} color={isDark ? colors.grey2 : colors.grey} />
-                ) : (
-                  <ServerIcon size={14} color={isDark ? colors.grey2 : colors.grey} />
-                )
-              }
-            />
-          }
-        />
-        <View className="mt-4 px-6">
-          {/* User Profile */}
-          {displayUser && (
+      <SettingsView
+        bottomInset={insets.bottom + BOTTOM_TABBAR_BASE_HEIGHT + 20}
+        header={
+          <Header
+            variant="static"
+            title="Profile"
+            titleFontWeight="semibold"
+            subtitle="Your account settings"
+            rightElement={
+              <Chip
+                label={settings.instance_type === 'cloud' ? 'Cloud' : 'Self-hosted'}
+                variant="filled"
+                size="medium"
+                selected={false}
+                icon={
+                  settings.instance_type === 'cloud' ? (
+                    <CloudIcon size={14} color={isDark ? colors.grey2 : colors.grey} />
+                  ) : (
+                    <ServerIcon size={14} color={isDark ? colors.grey2 : colors.grey} />
+                  )
+                }
+              />
+            }
+          />
+        }
+        intro={
+          displayUser ? (
             <View className="mb-8 flex-row items-center justify-between">
               <UserProfile
                 name={getUserDisplayName(displayUser)}
@@ -220,179 +378,10 @@ export function ProfileScreen() {
                 </View>
               )}
             </View>
-          )}
-
-          {/* Subscription Section */}
-          <SettingsGroup className="mb-6">
-            {!isPro ? (
-              <SettingsItem
-                label="Upgrade to Pro"
-                variant="button"
-                leftIcon={<CrownIcon size={22} color="#D4AF37" />}
-                onPress={() => openUpgrade()}
-                isLast={true}
-              />
-            ) : (
-              <SettingsItem
-                label="Manage Subscription"
-                variant="button"
-                leftIcon={<ShieldCheckIcon size={22} color={colors.secondary} />}
-                onPress={() => {
-                  if (isRcPro) {
-                    presentCustomerCenter();
-                  } else {
-                    confirm({
-                      title: 'Manage Subscription',
-                      message:
-                        'This subscription was purchased on the web. Please manage your billing via the web version of Readspace.',
-                      confirmLabel: 'Open Web',
-                      onConfirm: () => Linking.openURL(CLOUD_CONFIG.READSPACE_APP_URL),
-                    });
-                  }
-                }}
-                isLast={true}
-              />
-            )}
-          </SettingsGroup>
-
-          {/* Preferences Section */}
-          <SettingsGroup title="Preferences" className="mb-6">
-            {/* The menu trigger is scoped to the value chip, not the row: iOS lifts
-                whatever it opens from, and lifting a full-width row leaves a
-                visible hole in the group while the menu is down. */}
-            <SettingsItem
-              label="Theme"
-              variant="select"
-              value={themeLabel}
-              leftIcon={<PaletteIcon size={22} color={colors.black} />}
-              trailing={
-                <DropdownMenuRoot>
-                  <DropdownMenuTrigger asChild>
-                    <SettingsValueChip value={themeLabel} />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuCheckboxItem
-                      key="system"
-                      value={theme === 'system' ? 'on' : 'off'}
-                      onValueChange={() => handleThemeChange('system')}
-                      className="px-4 py-3">
-                      <DropdownMenuItemIcon ios={{ name: 'paintbrush.pointed' }} />
-                      <DropdownMenuItemTitle size="lg" fontFamily="geist">
-                        System
-                      </DropdownMenuItemTitle>
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      key="light"
-                      value={theme === 'light' ? 'on' : 'off'}
-                      onValueChange={() => handleThemeChange('light')}
-                      className="px-4 py-3">
-                      <DropdownMenuItemIcon ios={{ name: 'sun.max' }} />
-                      <DropdownMenuItemTitle size="lg" fontFamily="geist">
-                        Light
-                      </DropdownMenuItemTitle>
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      key="dark"
-                      value={theme === 'dark' ? 'on' : 'off'}
-                      onValueChange={() => handleThemeChange('dark')}
-                      className="px-4 py-3">
-                      <DropdownMenuItemIcon ios={{ name: 'moon' }} />
-                      <DropdownMenuItemTitle size="lg" fontFamily="geist">
-                        Dark
-                      </DropdownMenuItemTitle>
-                    </DropdownMenuCheckboxItem>
-                  </DropdownMenuContent>
-                </DropdownMenuRoot>
-              }
-            />
-
-            <SettingsItem
-              label="Daily Digest Settings"
-              variant="button"
-              leftIcon={<StarsIcon size={22} color={colors.black} />}
-              onPress={() => codexSettingsSheetRef.current?.present()}
-            />
-
-            <SettingsItem
-              label="Reading History"
-              variant="button"
-              leftIcon={<HistoryIcon size={22} color={colors.black} />}
-              onPress={() => router.push('/(protected)/settings/recents')}
-            />
-
-            <SettingsItem
-              label="Import Subscriptions"
-              variant="button"
-              leftIcon={<DownloadIcon size={22} color={colors.black} />}
-              onPress={() => router.push('/(protected)/settings/import-opml')}
-            />
-
-            <SettingsItem
-              label="Export OPML"
-              variant="button"
-              leftIcon={<ArchiveUpMinimalisticIcon size={22} color={colors.black} />}
-              onPress={handleOPMLExport}
-              isLast={true}
-            />
-          </SettingsGroup>
-
-          {/* Other Section */}
-          <SettingsGroup title="Other" className="mb-6">
-            <SettingsItem
-              label="Leave a Review"
-              variant="link"
-              leftIcon={<LikeIcon size={22} color={colors.black} />}
-              onPress={() => {
-                void openStoreReview().catch(() =>
-                  toast.error('Cannot open the store review page')
-                );
-              }}
-            />
-
-            <SettingsItem
-              label="Contact & Feedback"
-              variant="link"
-              leftIcon={<Plane3Icon size={22} color={colors.black} />}
-              onPress={handleWebsitePress}
-            />
-
-            <SettingsItem
-              label="GitHub"
-              variant="link"
-              leftIcon={<Github width={20} height={20} color={iconColor} />}
-              onPress={handleGithubPress}
-            />
-
-            <SettingsItem
-              label="Join the Discord"
-              variant="link"
-              leftIcon={<Discord width={20} height={20} color={discordColor} />}
-              onPress={handleDiscordPress}
-              isLast={true}
-            />
-          </SettingsGroup>
-
-          {/* Account Section */}
-          <SettingsGroup title="Account" className="mb-8">
-            <SettingsItem
-              label={isLoggingOut ? 'Logging out...' : 'Logout'}
-              variant="link"
-              leftIcon={<Logout2Icon size={22} color={colors.red} />}
-              onPress={handleLogout}
-              disabled={isLoggingOut}
-              danger={true}
-            />
-            <SettingsItem
-              label="Delete Account"
-              variant="link"
-              leftIcon={<TrashBinTrashIcon size={22} color={colors.red} />}
-              onPress={() => deleteAccountSheetRef.current?.present()}
-              danger={true}
-              isLast={true}
-            />
-          </SettingsGroup>
-        </View>
-      </ScrollView>
+          ) : null
+        }
+        sections={sections}
+      />
 
       <CodexSettingsBottomSheet ref={codexSettingsSheetRef} />
       <DeleteAccountModal ref={deleteAccountSheetRef} />
