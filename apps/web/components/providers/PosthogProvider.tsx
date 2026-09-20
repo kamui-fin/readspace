@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname, useSearchParams } from "next/navigation"
-import { useEffect } from "react"
+import { Suspense, useEffect } from "react"
 import { usePostHog } from "posthog-js/react"
 
 import posthog from "posthog-js"
@@ -60,7 +60,9 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
     if (isCloudProd() && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
         return (
             <PHProvider client={posthog}>
-                <PostHogPageView />
+                <Suspense fallback={null}>
+                    <PostHogPageView />
+                </Suspense>
                 <PostHogIdentify />
                 {children}
             </PHProvider>

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Readspace",
+  "name": "Readspace – RSS Feed Finder & Read Later",
   "version": "1.1.4",
-  "description": "Save articles and follow sites instantly — bring everything you read into your calm, distraction-free Readspace inbox.",
+  "description": "Find and follow RSS or Atom feeds on any website, save articles to read later, and sync everything across web and mobile.",
   "content_security_policy": {
     "extension_pages": "default-src 'self'; img-src 'self' data: blob: http: https:; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http: https: wss:"
   },
@@ -16,7 +16,7 @@
   "host_permissions": ["http://*/*", "https://*/*"],
   "action": {
     "default_popup": "index.html",
-    "default_title": "Save to Readspace"
+    "default_title": "Readspace – RSS Feed Finder & Read Later"
   },
   "content_scripts": [
     {
