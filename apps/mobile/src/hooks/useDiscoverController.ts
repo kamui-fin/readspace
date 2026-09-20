@@ -166,7 +166,11 @@ export function useDiscoverController(languageFilter: string) {
    * mode (matching web) — swapping a full list for skeletons on every keystroke
    * reads as flicker, not as progress.
    */
-  const showSkeletons = isPending && !(isTyping && hits.length > 0);
+  // A next-page request changes status but still answers the same search. Keep its
+  // existing rows mounted so shrinking to skeletons cannot reset the scroll offset.
+  const showSkeletons =
+    (isStale || hasUnansweredInput || (isPending && hits.length === 0)) &&
+    !(isTyping && hits.length > 0);
 
   // ---------------------------------------------------------------------------
   // Actions — each one is a single synchronous batch

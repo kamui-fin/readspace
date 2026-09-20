@@ -54,8 +54,8 @@ import { SectionLabel } from './section-label';
 
 const PINNED_YELLOW = '#EAB308';
 
-/** Index into `snapPoints` below — the 90% detent the switcher opens at. */
-const DEFAULT_DETENT = 1;
+/** Index into `snapPoints` below — open halfway, with room to expand. */
+const DEFAULT_DETENT = 0;
 
 export interface FeedSwitcherBottomSheetRef {
   present: () => void;
@@ -122,7 +122,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
 
     useImperativeHandle(ref, () => ({
       present: () => {
-        // Detent 1 (90%) is the switcher's resting height. It has to be passed here rather than
+        // The opening detent has to be passed here rather than
         // as the sheet's `index`, which True Sheet reads as "present on mount".
         bottomSheetRef.current?.present(DEFAULT_DETENT);
         queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] });

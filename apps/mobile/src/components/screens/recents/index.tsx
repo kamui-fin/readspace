@@ -216,6 +216,7 @@ export function RecentsScreen() {
         onToggleRead={handleToggleRead}
         onBookmark={handleBookmark}
         hideReadState
+        disableSwipe
         lastRefreshedAt={lastRefreshedAt}
       />
     ),
@@ -254,6 +255,12 @@ export function RecentsScreen() {
       subtitle="Articles you've read"
       showBackButton={!USES_NATIVE_HEADER}
       onBackPress={() => router.back()}
+      // The static header defaults to `colors.card` and its own status-bar inset. Neither is
+      // right here: the navigation bar above already cleared the notch (so the inset was being
+      // paid twice, leaving a gap between the chevron and "Recents"), and a card-tinted band
+      // above a background-tinted list reads as a seam rather than a heading.
+      transparentBackground
+      disableSafeAreaTop={USES_NATIVE_HEADER}
     />
   );
 

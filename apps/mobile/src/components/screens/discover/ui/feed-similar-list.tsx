@@ -69,6 +69,7 @@ export function FeedSimilarList({
               isFollowing={similarFeed.is_subscribed || false}
               isPreview={similarFeed.is_preview}
               feedUrl={similarFeed.url}
+              showFollowButton={false}
               onFollowRequest={(url) => onFollowRequest(url)}
             />
           ))}

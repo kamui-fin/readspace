@@ -179,6 +179,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
           isFollowing={item.is_subscribed || false}
           isPreview={item.is_preview}
           feedUrl={item.url}
+          showFollowButton={false}
           onFollowRequest={handleFeedFollowRequest}
         />
       </View>

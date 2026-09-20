@@ -147,6 +147,7 @@ export function FeedSelectionStep({
                   iconUrl={feed.image_url || undefined}
                   isFollowing={isFollowing}
                   showFolderPicker={false}
+                  iconOnlyFollowButton
                   disableNavigation={true}
                   onFollowRequest={() => handleFeedSubscribed(feed.id, feed.url)}
                   onUnfollowRequest={() => handleFeedUnsubscribed(feed.id)}

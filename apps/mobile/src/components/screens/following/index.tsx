@@ -215,6 +215,16 @@ export function FollowingScreen({
     [updateArticle]
   );
 
+  const handleMarkAsDone = useCallback(
+    (articleId: string, articleType: 'feed' | 'clipped') => {
+      updateArticle.mutate(
+        { articleId, articleType, data: { is_read: true, is_saved: false } },
+        { onError: () => toast.error('Failed to mark as done') }
+      );
+    },
+    [updateArticle]
+  );
+
   const handleToggleRead = useCallback(
     (articleId: string, currentlyRead: boolean, articleType: 'feed' | 'clipped' = 'feed') => {
       const newValue = !currentlyRead;
@@ -490,12 +500,20 @@ export function FollowingScreen({
           item={item}
           onToggleRead={handleToggleRead}
           onBookmark={handleBookmark}
+          onMarkAsDone={handleMarkAsDone}
           lastRefreshedAt={lastRefreshedAt}
           isReadLaterMode={activeTab === FOLLOWING_TAB.SAVED && !isViewingFeedOrFolder}
         />
       );
     },
-    [handleToggleRead, handleBookmark, lastRefreshedAt, activeTab, isViewingFeedOrFolder]
+    [
+      handleToggleRead,
+      handleBookmark,
+      handleMarkAsDone,
+      lastRefreshedAt,
+      activeTab,
+      isViewingFeedOrFolder,
+    ]
   );
 
   const renderFooter = () => {

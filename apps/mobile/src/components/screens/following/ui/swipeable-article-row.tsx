@@ -1,6 +1,11 @@
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { BookmarkIcon, LetterIcon, LetterOpenedIcon } from '@solar-icons/react-native/bold';
+import {
+  BookmarkIcon,
+  CheckCircleIcon,
+  LetterIcon,
+  LetterOpenedIcon,
+} from '@solar-icons/react-native/bold';
 import * as Haptics from 'expo-haptics';
 import type { ReactNode } from 'react';
 import { useWindowDimensions, View } from 'react-native';
@@ -50,6 +55,8 @@ interface SwipeableArticleRowProps {
   onToggleRead?: () => void;
   /** Swipe left */
   onToggleSaved: () => void;
+  /** In Read Later, swipe left completes the article instead of toggling saved. */
+  onMarkAsDone?: () => void;
 }
 
 interface SwipeActionProps {
@@ -173,6 +180,7 @@ export function SwipeableArticleRow({
   isSaved,
   onToggleRead,
   onToggleSaved,
+  onMarkAsDone,
 }: SwipeableArticleRowProps) {
   const { width } = useWindowDimensions();
   const isDark = useIsDarkMode();
@@ -217,7 +225,7 @@ export function SwipeableArticleRow({
         if (x > 0 && onToggleRead) {
           scheduleOnRN(onToggleRead);
         } else if (x < 0) {
-          scheduleOnRN(onToggleSaved);
+          scheduleOnRN(onMarkAsDone ?? onToggleSaved);
         }
       }
     })
@@ -249,10 +257,16 @@ export function SwipeableArticleRow({
       <SwipeAction
         side="right"
         translateX={translateX}
-        color={SAVE_YELLOW}
-        trackColor={colors.icon_bg_yellow}
-        label={isSaved ? 'Unsave' : 'Save'}
-        icon={(color) => <BookmarkIcon size={ICON_SIZE} color={color} />}
+        color={onMarkAsDone ? colors.secondary : SAVE_YELLOW}
+        trackColor={onMarkAsDone ? colors.icon_bg_green : colors.icon_bg_yellow}
+        label={onMarkAsDone ? 'Mark as done' : isSaved ? 'Unsave' : 'Save'}
+        icon={(color) =>
+          onMarkAsDone ? (
+            <CheckCircleIcon size={ICON_SIZE} color={color} />
+          ) : (
+            <BookmarkIcon size={ICON_SIZE} color={color} />
+          )
+        }
       />
 
       <GestureDetector gesture={pan}>

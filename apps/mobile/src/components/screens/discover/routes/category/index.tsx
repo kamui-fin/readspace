@@ -200,6 +200,7 @@ function CategoryResults({
       // Until the refinement has been applied the index still holds the previous screen's
       // results, so skeletons stand in rather than showing another category's feeds.
       showSkeletons={!isRefined || (isPending && hits.length === 0)}
+      isLoading={isPending}
       isError={status === 'error'}
       hasMore={!isLastPage}
       onLoadMore={showMore}

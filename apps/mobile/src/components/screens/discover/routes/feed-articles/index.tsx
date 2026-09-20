@@ -80,6 +80,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
         <View>
           <Card
             variant="article"
+            isSaved={!!article.is_saved}
             imageUrl={article.image_url ?? undefined}
             title={article.title ?? ''}
             description={article.description ?? undefined}

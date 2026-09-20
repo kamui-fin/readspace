@@ -33,6 +33,7 @@ function WriteupRow({
   return (
     <Card
       variant="article"
+      isSaved={!!article.is_saved}
       title={article.title || article.link}
       description={article.description || undefined}
       imageUrl={article.image_url || undefined}

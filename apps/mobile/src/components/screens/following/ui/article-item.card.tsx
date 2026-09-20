@@ -19,6 +19,7 @@ export interface SwipeAction {
 
 export interface ArticleItemProps extends Omit<CardProps, 'variant'> {
   article?: Article;
+  showSavedBadge?: boolean;
   fallbackComponent?: React.FC<{ size?: number; className?: string }>;
   leftActions?: SwipeAction[]; // Actions revealed when swiping right
   rightActions?: SwipeAction[]; // Actions revealed when swiping left
@@ -38,6 +39,7 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
   (
     {
       article,
+      showSavedBadge = true,
       leftActions: leftActionsProp,
       rightActions: rightActionsProp,
       onMarkAsRead,
@@ -102,6 +104,7 @@ export const ArticleItemCard = forwardRef<React.ComponentRef<typeof Pressable>, 
           ref={ref}
           variant="article"
           {...cardProps}
+          isSaved={showSavedBadge && !!article?.is_saved}
           className={className}
           fallbackComponent={fallbackComponent}
         />

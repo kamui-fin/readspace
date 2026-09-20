@@ -1,5 +1,6 @@
 import { Button } from '@components/ui/button';
 import { Chip } from '@components/ui/chip';
+import { ExpandableText } from '@components/ui/expandable-text';
 import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
 import { FeedIcon } from '@components/ui/feed-icon';
 import { Text } from '@components/ui/text';
@@ -14,7 +15,7 @@ import {
   LayersMinimalisticIcon,
   UserCircleIcon,
 } from '@solar-icons/react-native/linear';
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback } from 'react';
 import { Linking, View } from 'react-native';
 
 interface FeedInfoHeaderProps {
@@ -45,12 +46,6 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
   colors,
   greyColor,
 }: FeedInfoHeaderProps) {
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-
-  const toggleDescription = useCallback(() => {
-    setIsDescriptionExpanded((prev) => !prev);
-  }, []);
-
   const handleUrlPress = useCallback(async () => {
     const url = feed.link || feed.url;
     if (!url) return;
@@ -151,27 +146,17 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
         </View>
       </View>
 
-      {/* Feed Description */}
+      {/* Feed Description — clamped by lines and faded out, not cut at 120 characters, which
+          landed mid-word at a different place on every device width. */}
       {trimmedDescription && (
         <View className="mb-4">
-          {trimmedDescription.length > 120 ? (
-            <Text size="sm" fontFamily="geist" className="text-grey leading-6">
-              {isDescriptionExpanded
-                ? trimmedDescription
-                : `${trimmedDescription.slice(0, 120)}... `}
-              <Text
-                size="sm"
-                fontFamily="geist-medium"
-                onPress={toggleDescription}
-                className="text-black">
-                {isDescriptionExpanded ? ' less' : 'more'}
-              </Text>
-            </Text>
-          ) : (
-            <Text size="sm" fontFamily="geist" className="text-grey leading-6">
-              {trimmedDescription}
-            </Text>
-          )}
+          <ExpandableText
+            text={trimmedDescription}
+            collapsedLines={3}
+            size="sm"
+            className="text-grey leading-6"
+            actionClassName="text-black"
+          />
         </View>
       )}
 

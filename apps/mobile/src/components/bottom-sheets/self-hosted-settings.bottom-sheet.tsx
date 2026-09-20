@@ -323,7 +323,25 @@ export const SelfHostSettingsBottomSheet = forwardRef<SheetRef, SelfHostSettings
         headerTitleAlign="left"
         snapPoints={snapPoints}
         enablePanDownToClose={true}
-        onChange={handleSheetChange}>
+        onChange={handleSheetChange}
+        footerActions={
+          <Button
+            variant="primary"
+            size="large"
+            fullWidth
+            onPress={handleSave}
+            disabled={!isValid || isValidating}
+            style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
+            {isValidating ? (
+              <View className="flex-row items-center justify-center gap-2">
+                <Spinner size="small" color={COLORS.white} />
+                <Text className="font-geist-semibold text-base text-white">Connecting...</Text>
+              </View>
+            ) : (
+              'Save and Connect'
+            )}
+          </Button>
+        }>
         <View style={{ gap: 16 }}>
           <Text className="font-geist-medium text-grey dark:text-grey text-base">
             Connect to your own Readspace instance URL
@@ -344,26 +362,6 @@ export const SelfHostSettingsBottomSheet = forwardRef<SheetRef, SelfHostSettings
             className="font-geist-mono"
             borderRadius={12}
           />
-
-          {/* Inline Action Button */}
-          <View className="mb-1 mt-4">
-            <Button
-              variant="primary"
-              size="large"
-              fullWidth
-              onPress={handleSave}
-              disabled={!isValid || isValidating}
-              style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
-              {isValidating ? (
-                <View className="flex-row items-center justify-center gap-2">
-                  <Spinner size="small" color={COLORS.white} />
-                  <Text className="font-geist-semibold text-base text-white">Connecting...</Text>
-                </View>
-              ) : (
-                'Save and Connect'
-              )}
-            </Button>
-          </View>
         </View>
       </BottomSheet>
     );

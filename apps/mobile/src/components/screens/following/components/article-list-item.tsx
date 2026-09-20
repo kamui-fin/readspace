@@ -19,7 +19,9 @@ interface ArticleListItemProps {
     articleType: 'feed' | 'clipped'
   ) => void;
   onBookmark: (articleId: string, currentlySaved: boolean, articleType: 'feed' | 'clipped') => void;
+  onMarkAsDone?: (articleId: string, articleType: 'feed' | 'clipped') => void;
   hideReadState?: boolean;
+  disableSwipe?: boolean;
   lastRefreshedAt?: number;
   /** Rendered in the Saved tab — the reader then offers "mark as read & next" */
   isReadLaterMode?: boolean;
@@ -29,7 +31,9 @@ export function ArticleListItem({
   item,
   onToggleRead,
   onBookmark,
+  onMarkAsDone,
   hideReadState = false,
+  disableSwipe = false,
   lastRefreshedAt,
   isReadLaterMode = false,
 }: ArticleListItemProps) {
@@ -74,60 +78,69 @@ export function ArticleListItem({
     // Read state is hidden/meaningless in these views, so don't offer the swipe
     const canToggleRead = !(hideReadState || isReadLaterMode);
 
+    const content = (
+      <Link
+        href={{
+          pathname: '/(protected)/articles/[id]',
+          params: {
+            id: article.id,
+            type: article.article_type,
+            ...(isReadLaterMode && { mode: READ_LATER_READER_MODE }),
+          },
+        }}
+        asChild>
+        <ArticleItemCard
+          article={article}
+          showSavedBadge={!isReadLaterMode}
+          // Read state is meaningless in Read Later (like web), so don't dim there
+          // Purely cache-driven: the reader fires mark-as-read on open, and the
+          // mutation's optimistic update dims this card. A local "looks read"
+          // flag used to stand in for that and would stick even when the request
+          // never went out.
+          isRead={hideReadState || isReadLaterMode ? false : article.is_read}
+          imageUrl={displayImageUrl}
+          title={article.title || undefined}
+          // Like web, a clip's personal note takes the description's place
+          description={isClipped && article.user_note ? undefined : article.description || undefined}
+          note={isClipped ? article.user_note || undefined : undefined}
+          badge={isClipped ? <PriorityBadge priority={article.priority} /> : undefined}
+          timestamp={timestamp}
+          faviconUrl={iconUrl}
+          fallbackComponent={fallbackComponent}
+          feedName={sourceName}
+          className="px-4"
+          showTopDivider={false}
+          showBottomDivider={false}
+          onMarkAsRead={(article) => {
+            onToggleRead(article.id, article.is_read || false, article.article_type as any);
+          }}
+          onMarkAsUnread={(article) => {
+            onToggleRead(article.id, article.is_read || false, article.article_type as any);
+          }}
+          onSaveArticle={(article) => {
+            onBookmark(article.id, article.is_saved || false, article.article_type as any);
+          }}
+        />
+      </Link>
+    );
+
+    // Omit the pan gesture entirely when it would compete with back navigation.
+    if (disableSwipe) return content;
+
     return (
       <SwipeableArticleRow
         isRead={!!article.is_read}
         isSaved={!!article.is_saved}
+        onMarkAsDone={
+          isReadLaterMode && onMarkAsDone ? () => onMarkAsDone(article.id, articleType) : undefined
+        }
         onToggleRead={
           canToggleRead
             ? () => onToggleRead(article.id, article.is_read || false, articleType)
             : undefined
         }
         onToggleSaved={() => onBookmark(article.id, article.is_saved || false, articleType)}>
-        <Link
-          href={{
-            pathname: '/(protected)/articles/[id]',
-            params: {
-              id: article.id,
-              type: article.article_type,
-              ...(isReadLaterMode && { mode: READ_LATER_READER_MODE }),
-            },
-          }}
-          asChild>
-          <ArticleItemCard
-            article={article}
-            // Read state is meaningless in Read Later (like web), so don't dim there
-            // Purely cache-driven: the reader fires mark-as-read on open, and the
-            // mutation's optimistic update dims this card. A local "looks read"
-            // flag used to stand in for that and would stick even when the request
-            // never went out.
-            isRead={hideReadState || isReadLaterMode ? false : article.is_read}
-            imageUrl={displayImageUrl}
-            title={article.title || undefined}
-            // Like web, a clip's personal note takes the description's place
-            description={
-              isClipped && article.user_note ? undefined : article.description || undefined
-            }
-            note={isClipped ? article.user_note || undefined : undefined}
-            badge={isClipped ? <PriorityBadge priority={article.priority} /> : undefined}
-            timestamp={timestamp}
-            faviconUrl={iconUrl}
-            fallbackComponent={fallbackComponent}
-            feedName={sourceName}
-            className="px-4"
-            showTopDivider={false}
-            showBottomDivider={false}
-            onMarkAsRead={(article) => {
-              onToggleRead(article.id, article.is_read || false, article.article_type as any);
-            }}
-            onMarkAsUnread={(article) => {
-              onToggleRead(article.id, article.is_read || false, article.article_type as any);
-            }}
-            onSaveArticle={(article) => {
-              onBookmark(article.id, article.is_saved || false, article.article_type as any);
-            }}
-          />
-        </Link>
+        {content}
       </SwipeableArticleRow>
     );
   }

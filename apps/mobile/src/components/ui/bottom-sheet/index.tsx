@@ -5,7 +5,7 @@ import { SUPPORTS_GLASS } from '@lib/constants/platform';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import clsx from 'clsx';
 import type { ReactElement } from 'react';
-import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomSheetProps, SheetRef } from './types';
@@ -47,8 +47,8 @@ const HEADER_SLOT_STYLE = {
  * drag, dimming and Android back-dismissal are handled natively — no back-handler hook, portal,
  * or footer store needed.
  *
- * The header and footer are real True Sheet `header` / `footer` slots (pinned above/below the
- * scroll content), so no manual padding math is required.
+ * True Sheet v3 overlays its footer on the scroll content. Measure that slot so the last row
+ * can scroll above the actions, and give opaque sheets an opaque footer surface.
  */
 export const BottomSheet = forwardRef<SheetRef, BottomSheetProps>(
   (
@@ -63,6 +63,7 @@ export const BottomSheet = forwardRef<SheetRef, BottomSheetProps>(
       secondaryAction,
       footerActions,
       footerClassName,
+      footerBottomPadding: footerBottomPaddingOverride,
       contentPaddingHorizontal = 24,
       contentScrollable = true,
       glass = false,
@@ -78,7 +79,11 @@ export const BottomSheet = forwardRef<SheetRef, BottomSheetProps>(
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
     const insets = useSafeAreaInsets();
+    // True Sheet v3 recommends only the bottom safe-area inset, and none on iPad.
+    const footerBottomPadding =
+      footerBottomPaddingOverride ?? (Platform.OS === 'ios' && Platform.isPad ? 0 : insets.bottom);
     const sheetRef = useRef<TrueSheet>(null);
+    const [footerHeight, setFooterHeight] = useState(0);
 
     useImperativeHandle(
       ref,
@@ -152,7 +157,11 @@ export const BottomSheet = forwardRef<SheetRef, BottomSheetProps>(
     const footer = footerActions ? (
       <View
         className={clsx('px-6 pt-2', footerClassName)}
-        style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
+        onLayout={({ nativeEvent }) => setFooterHeight(nativeEvent.layout.height)}
+        style={{
+          paddingBottom: footerBottomPadding,
+          backgroundColor: glass ? undefined : colors.background,
+        }}>
         {footerActions}
       </View>
     ) : undefined;
@@ -165,7 +174,7 @@ export const BottomSheet = forwardRef<SheetRef, BottomSheetProps>(
         contentContainerStyle={{
           paddingHorizontal: contentPaddingHorizontal,
           paddingTop: hasHeader ? 0 : 16,
-          paddingBottom: footerActions ? 16 : 18 + insets.bottom,
+          paddingBottom: footerActions ? footerHeight + 16 : 18 + insets.bottom,
         }}>
         {children}
       </ScrollView>
@@ -189,7 +198,7 @@ export const BottomSheet = forwardRef<SheetRef, BottomSheetProps>(
         grabberOptions={{ color: colors.grey4 }}
         header={header}
         footer={footer}
-        footerOptions={{ keyboardOffset: -insets.bottom }}
+        footerOptions={{ keyboardOffset: -footerBottomPadding }}
         onDidDismiss={onDismiss}
         onDetentChange={handleDetentChange}
         {...props}>

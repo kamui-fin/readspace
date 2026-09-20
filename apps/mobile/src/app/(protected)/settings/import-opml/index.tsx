@@ -177,7 +177,9 @@ export default function ImportOPMLScreen() {
         paddingTop: USES_NATIVE_HEADER ? 0 : insets.top,
         paddingBottom: insets.bottom,
       }}>
-      <NativeScreenHeader title={screenTitle} backTitle="Settings" />
+      {/* No back title: "‹ Settings" alongside a two-word screen title crowds the bar and
+          pushes the title off-centre. A bare chevron is what iOS does for a drill-down. */}
+      <NativeScreenHeader title={screenTitle} />
 
       {!USES_NATIVE_HEADER && (
         <Header

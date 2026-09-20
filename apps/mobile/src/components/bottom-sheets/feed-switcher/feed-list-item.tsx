@@ -1,4 +1,3 @@
-import { Button } from '@components/ui/button';
 import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
 import { FeedIcon } from '@components/ui/feed-icon';
 import { Text } from '@components/ui/text';
@@ -142,44 +141,47 @@ const FeedListItemComponent = ({
           </View>
         )}
       </View>
-
-      {!isSelectionMode && (
-        <MenuView actions={menuActions} onPressAction={handleMenuAction}>
-          <Button
-            variant="icon"
-            size="small"
-            fullWidth={false}
-            className="h-10 w-10 items-center justify-center bg-transparent dark:bg-transparent">
-            <MenuDotsIcon
-              size={20}
-              color={colors.grey2}
-              style={{ transform: [{ rotate: '90deg' }] }}
-            />
-          </Button>
-        </MenuView>
-      )}
     </>
   );
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={onPress}
+    <View
       style={[
         {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 12,
           paddingRight: 16,
-          paddingTop: 10,
-          paddingBottom: 10,
           backgroundColor: activeRowBg,
           borderRadius: 0,
         },
         style,
       ]}>
-      {content}
-    </TouchableOpacity>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={onPress}
+        onPressIn={onPressIn}
+        accessibilityRole="button"
+        style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}>
+        {content}
+      </TouchableOpacity>
+      {!isSelectionMode && (
+        <MenuView actions={menuActions} onPressAction={handleMenuAction}>
+          <View
+            pointerEvents="none"
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={`Options for ${title}`}
+            style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+            <MenuDotsIcon
+              size={20}
+              color={colors.grey2}
+              style={{ transform: [{ rotate: '90deg' }] }}
+            />
+          </View>
+        </MenuView>
+      )}
+    </View>
   );
 };
 

@@ -1,13 +1,10 @@
-import {
-  ArticleOptionsBottomSheet,
-  type ArticleViewMode,
-} from '@components/bottom-sheets/article-options';
 import { ArticleOutlineBottomSheet } from '@components/bottom-sheets/article-outline';
 import { ArticleSummaryBottomSheet } from '@components/bottom-sheets/article-summary';
 import { ReaderSettingsBottomSheet } from '@components/bottom-sheets/reader-settings';
 import type { ArticleReaderHandle, OutlineItem } from '@components/screens/article-reader/index';
 import { ArticleReader } from '@components/screens/article-reader/index';
 import { ArticleActionBar } from '@components/screens/article-reader/ui/article-actions.bar';
+import type { ArticleViewMode } from '@components/screens/article-reader/ui/article-actions.bar.types';
 import { ArticleReaderSkeleton } from '@components/screens/article-reader/ui/article-reader.skeleton';
 import { ReaderBottomBar } from '@components/screens/article-reader/ui/reader-bottom-bar';
 import type { LanguageOption } from '@components/screens/discover/ui/language-picker.dropdown';
@@ -130,7 +127,6 @@ export function ArticleScreen({
   // Bottom sheet refs
   const summaryBottomSheetRef = useRef<SheetRef>(null);
   const languagePickerRef = useRef<SheetRef>(null);
-  const optionsBottomSheetRef = useRef<SheetRef>(null);
   const readerSettingsRef = useRef<SheetRef>(null);
   const outlineSheetRef = useRef<SheetRef>(null);
 
@@ -417,10 +413,6 @@ export function ArticleScreen({
     }
   }, [article]);
 
-  const handleMenuPress = useCallback(() => {
-    optionsBottomSheetRef.current?.present();
-  }, []);
-
   const handleOpenSettings = useCallback(() => {
     readerSettingsRef.current?.present();
   }, []);
@@ -512,6 +504,12 @@ export function ArticleScreen({
     [article, articleId, currentContent, addRecentLanguage, translateMutation]
   );
 
+  // The skeleton's hero bone is gated on the article having an image — but while the detail
+  // query is pending `article` is undefined, which is exactly when the skeleton is up, so the
+  // bone never rendered and the hero popped in. The list row the reader was opened from is
+  // already in the cache and already knows, so ask it.
+  const skeletonArticle = article ?? getCachedArticleState(queryClient, articleId);
+
   const hasHighlightsForView = highlightedFor === contentSource;
 
   const handleGenerateHighlights = useCallback(() => {
@@ -593,6 +591,42 @@ export function ArticleScreen({
     [article?.extracted_content, extractedData?.content, extractFullText]
   );
 
+  const isNewsletter =
+    !!article?.link?.startsWith('newsletter://') ||
+    (article as any)?.feed_type === 'newsletter' ||
+    (article as any)?.article_type === 'newsletter';
+
+  // Memoised, and above the early return so it stays an unconditional hook. On iOS this object
+  // is a dependency of the bar's `headerRight`, which feeds `Stack.Screen options` — a fresh
+  // identity every render would rebuild the native navigation bar on every render too.
+  //
+  // Newsletters get no overflow control at all: no web page to open and one viewing mode, so
+  // the menu would be an empty gesture. Everything else gets the real thing.
+  const optionsMenu = useMemo(
+    () =>
+      isNewsletter
+        ? undefined
+        : {
+            currentView: contentSource,
+            onSelectView: handleSelectView,
+            onOpenInBrowser: isArticleLoading ? undefined : handleOpenInBrowser,
+            canExtract: !isClipped,
+            hasExtractedContent: !!article?.extracted_content || !!extractedData?.content,
+            hasTranslatedContent: !!translateData?.translated_content,
+          },
+    [
+      isNewsletter,
+      contentSource,
+      handleSelectView,
+      handleOpenInBrowser,
+      isArticleLoading,
+      isClipped,
+      article?.extracted_content,
+      extractedData?.content,
+      translateData?.translated_content,
+    ]
+  );
+
   if (isArticleMissing) {
     return (
       <View className="flex-1" style={{ backgroundColor: colors.background }}>
@@ -600,7 +634,6 @@ export function ArticleScreen({
           onClose={handleClose}
           onShare={handleShare}
           onBookmark={handleBookmark}
-          onMenuPress={() => {}}
           isBookmarked={false}
           isClipped={false}
           colors={colors}
@@ -621,11 +654,6 @@ export function ArticleScreen({
       extractMutation.isPending
     : false;
 
-  const isNewsletter =
-    !!article?.link?.startsWith('newsletter://') ||
-    (article as any)?.feed_type === 'newsletter' ||
-    (article as any)?.article_type === 'newsletter';
-
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <ArticleActionBar
@@ -633,19 +661,18 @@ export function ArticleScreen({
         onClose={handleClose}
         onShare={handleShare}
         onBookmark={showDone ? handleMarkAsDone : handleBookmark}
-        onMenuPress={isArticleLoading ? () => {} : handleMenuPress}
-        hideMenu={isNewsletter}
         onGenerateSummary={isArticleLoading ? undefined : handleGenerateSummary}
         onCopyLink={isArticleLoading ? undefined : handleCopyLink}
         isBookmarked={article?.is_saved || false}
         isClipped={isClipped}
         showDone={showDone}
+        options={optionsMenu}
         colors={colors}
       />
 
       {articleStatus === 'pending' || translateMutation.isPending ? (
         <Animated.View key="skeleton-view" exiting={FadeOut.duration(300)} className="flex-1">
-          <ArticleReaderSkeleton article={article} />
+          <ArticleReaderSkeleton article={skeletonArticle} />
         </Animated.View>
       ) : (
         <Animated.View key="content-view" entering={FadeIn.duration(400)} className="flex-1">
@@ -737,20 +764,6 @@ export function ArticleScreen({
         title="Translate to..."
         initialLanguage={targetLanguage || undefined}
         onLanguageChange={handleTranslateSelect}
-      />
-
-      {/* Options Bottom Sheet */}
-      <ArticleOptionsBottomSheet
-        ref={optionsBottomSheetRef}
-        currentView={contentSource}
-        onSelectView={handleSelectView}
-        onTranslate={() => languagePickerRef.current?.present()}
-        onOpenInBrowser={isArticleLoading ? undefined : handleOpenInBrowser}
-        hasExtractedContent={!!article?.extracted_content || !!extractedData?.content}
-        hasTranslatedContent={!!translateData?.translated_content}
-        canExtractContent={true}
-        isClipped={isClipped}
-        isNewsletter={isNewsletter}
       />
     </View>
   );

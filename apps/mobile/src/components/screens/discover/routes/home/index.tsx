@@ -287,6 +287,7 @@ function DiscoverScreenInner() {
               <SearchResults
                 hits={hits as any}
                 showSkeletons={showSkeletons}
+                isLoading={isPending}
                 isError={isError}
                 hasMore={hasMore}
                 onLoadMore={loadMore}

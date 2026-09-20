@@ -1,6 +1,6 @@
 import { ArticleActionGroup } from '@components/screens/article-reader/ui/article-action-group';
+import { ArticleOptionsMenu } from '@components/screens/article-reader/ui/article-options-menu';
 import { BackButton } from '@components/ui/back-button';
-import { GlassIconButton } from '@components/ui/glass-icon-button';
 import { BAR_ICON_SIZE } from '@lib/constants/app';
 import { MenuDotsIcon } from '@solar-icons/react-native/bold';
 import { useEffect, useState } from 'react';
@@ -20,14 +20,12 @@ export function ArticleActionBar({
   onClose,
   onShare,
   onBookmark,
-  onMenuPress,
-  hideMenu = false,
   onGenerateSummary,
   onCopyLink,
   isBookmarked,
   isClipped,
   showDone = false,
-  menuTrigger,
+  options,
   colors,
 }: ArticleActionBarProps) {
   const insets = useSafeAreaInsets();
@@ -82,15 +80,24 @@ export function ArticleActionBar({
             showDone={showDone}
           />
 
-          {!hideMenu &&
-            (menuTrigger || (
-              // Apple Mail's pattern: the overflow control opens a sheet rather than a popover,
-              // so everything that didn't fit in the bar has one predictable home.
-              <GlassIconButton
-                systemImage="ellipsis"
-                onPress={onMenuPress}
-                color={colors.grey}
-                accessibilityLabel="More options">
+          {options && (
+            // The overflow control opens a real anchored menu, not a sheet: everything it
+            // holds is either a one-shot action or a checked choice, and both are what a
+            // menu is for.
+            <ArticleOptionsMenu model={options}>
+              <View
+                pointerEvents="none"
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="More options"
+                style={{
+                  width: 44,
+                  height: 44,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 22,
+                  backgroundColor: colors.grey5,
+                }}>
                 {/* Turned a quarter turn: overflow dots read vertically, matching the iOS bar. */}
                 <MenuDotsIcon
                   size={BAR_ICON_SIZE}
@@ -98,8 +105,9 @@ export function ArticleActionBar({
                   color={colors.grey}
                   style={{ transform: [{ rotate: '90deg' }] }}
                 />
-              </GlassIconButton>
-            ))}
+              </View>
+            </ArticleOptionsMenu>
+          )}
         </View>
       </View>
     </Animated.View>

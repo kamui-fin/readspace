@@ -11,6 +11,7 @@ interface SearchResultsProps {
   hits: FeedSummary[];
   /** Placeholder rows for an in-flight search whose answer isn't on screen yet. */
   showSkeletons: boolean;
+  isLoading: boolean;
   isError: boolean;
   hasMore: boolean;
   onLoadMore: () => void;
@@ -55,6 +56,7 @@ function FeedRowSkeleton() {
 export function SearchResults({
   hits,
   showSkeletons,
+  isLoading,
   isError,
   hasMore,
   onLoadMore,
@@ -161,6 +163,8 @@ export function SearchResults({
       drawDistance={1500}
       initialContainerPoolRatio={20}
       recycleItems={false}
+      // Search refinements reorder/remove hits; anchoring a surviving row leaves gaps above it.
+      maintainVisibleContentPosition={false}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
       showsVerticalScrollIndicator={false}
@@ -173,6 +177,7 @@ export function SearchResults({
       keyboardDismissMode="on-drag"
       keyboardShouldPersistTaps="handled"
       hasMore={hasMore}
+      isLoading={isLoading || showSkeletons}
       onEndReached={onLoadMore}
       contentContainerStyle={{ paddingBottom: contentPaddingBottom }}
     />

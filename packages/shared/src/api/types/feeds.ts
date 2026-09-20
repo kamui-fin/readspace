@@ -210,6 +210,15 @@ export interface MeilisearchFeedDocument extends FeedScoringData {
   frontend_rank_override: number;
 }
 
+export interface FeedPreviewArticle {
+  title: string | null;
+  link: string;
+  description: string | null;
+  published_at: string | null;
+  image_url: string | null;
+  guid?: string | null;
+}
+
 export interface ParsedFeed {
   title: string;
   id: string | null;
@@ -223,7 +232,7 @@ export interface ParsedFeed {
   last_updated_at: string | null;
   tags: string[];
   tags_native: string[];
-  // articles: ArticleCreate[]; // Avoiding circular dependency for now or import simply
+  articles?: FeedPreviewArticle[];
   is_subscribed: boolean;
 }
 

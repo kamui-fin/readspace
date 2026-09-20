@@ -15,7 +15,9 @@ export const PasswordSchema = z.object({
 });
 
 export const PasswordConfirmationSchema = PasswordSchema.extend({
-  confirmPassword: z.string().min(1, 'Please confirm your password'),
+  confirmPassword: z
+    .string({ message: 'Please confirm your password' })
+    .min(1, 'Please confirm your password'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
@@ -33,7 +35,9 @@ export const LoginSchema = z.object({
 });
 
 export const SignUpSchema = LoginSchema.extend({
-  confirmPassword: z.string().min(1, 'Please confirm your password'),
+  confirmPassword: z
+    .string({ message: 'Please confirm your password' })
+    .min(1, 'Please confirm your password'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],

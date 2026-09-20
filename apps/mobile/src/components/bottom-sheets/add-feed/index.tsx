@@ -15,7 +15,6 @@ import { LinkMinimalistic2Icon } from '@solar-icons/react-native/bold';
 import {
   CheckCircleIcon,
   CopyIcon,
-  FeedIcon,
   LayersMinimalisticIcon,
   LetterOpenedIcon,
   UserCircleIcon,
@@ -23,18 +22,19 @@ import {
 import { useSettingsStore } from '@stores/settings';
 import { useUpgradeDialog } from '@stores/upgrade-dialog';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
   Keyboard,
   Linking,
-  Platform,
   Pressable,
   StyleSheet,
   View,
 } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { SourceModeToggle } from './source-mode.toggle';
+import { FeedArticlePreviews } from './feed-article-previews';
+import type { AddFeedMode } from './source-mode.toggle.types';
 
 export interface AddFeedBottomSheetRef {
   present: () => void;
@@ -44,8 +44,6 @@ export interface AddFeedBottomSheetRef {
 export interface AddFeedBottomSheetProps {
   onConfirm: (url: string) => void;
 }
-
-type Mode = 'rss' | 'newsletter';
 
 function formatContentType(contentType: string): string {
   return contentType
@@ -57,7 +55,7 @@ function formatContentType(contentType: string): string {
 export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBottomSheetProps>(
   ({ onConfirm }, ref) => {
     const bottomSheetRef = useRef<SheetRef>(null);
-    const [mode, setMode] = useState<Mode>('rss');
+    const [mode, setMode] = useState<AddFeedMode>('rss');
     const [url, setUrl] = useState('');
     const [feedPreview, setFeedPreview] = useState<FeedDiscoveryResult | null>(null);
     const [copied, setCopied] = useState(false);
@@ -68,24 +66,6 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
     const isSelfHosted = useSettingsStore(
       (state) => state.settings.instance_type === 'self-hosted'
     );
-
-    // Tab animation state
-    const [containerWidth, setContainerWidth] = useState(0);
-    const translation = useSharedValue(0);
-
-    useEffect(() => {
-      if (containerWidth > 0) {
-        const activeWidth = (containerWidth - 6) / 2; // Subtracting 3px padding on both sides
-        translation.value = withTiming(mode === 'rss' ? 0 : activeWidth, {
-          duration: 200,
-        });
-      }
-    }, [mode, containerWidth]);
-
-    const animatedStyle = useAnimatedStyle(() => ({
-      transform: [{ translateX: translation.value }],
-      width: containerWidth > 0 ? (containerWidth - 6) / 2 : '50%',
-    }));
 
     // Fetch newsletter token — only when on newsletter tab and user is pro
     const { data: tokenData, isLoading: isTokenLoading } = useQuery({
@@ -150,7 +130,7 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
     }, [tokenData?.email]);
 
     const handleModeSwitch = useCallback(
-      (next: Mode) => {
+      (next: AddFeedMode) => {
         if (next === 'newsletter' && !isPro) {
           // Free tier: close this sheet and go straight to the paywall
           bottomSheetRef.current?.dismiss();
@@ -187,12 +167,6 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
     // Generate fallback icon for RSS preview
     const fallbackTitle = feedPreview?.title || url;
 
-    // Toggle pill colors
-    const pillBg = isDark ? colors.grey6 : colors.grey6;
-    const activePillBg = isDark ? colors.grey4 : '#fff';
-    const activeTextColor = isDark ? '#ffffff' : colors.primary;
-    const inactiveTextColor = isDark ? colors.grey2 : colors.grey;
-
     // Use secondary (vibrant) green in dark mode for newsletter contents
     const contentGreen = isDark ? colors.secondary : colors.primary;
 
@@ -201,6 +175,12 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
         ref={bottomSheetRef}
         enablePanDownToClose={true}
         snapPoints={['85%']}
+        // The title used to be the first line of the scroll content, which put it 16pt below the
+        // grabber instead of the 30 the sheet header reserves — close enough to the grabber to
+        // look like a mistake, and it scrolled away with the form. As a real header slot it gets
+        // the sheet's own spacing and stays pinned.
+        headerTitle="Add feed"
+        headerTitleAlign="left"
         footerActions={
           mode === 'rss' ? (
             <View style={{ width: '100%' }}>
@@ -227,59 +207,7 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
             </View>
           ) : null
         }>
-        {/* Header */}
-        <Text
-          className="font-geist-bold text-primary-foreground mb-1 text-2xl"
-          style={{ letterSpacing: -0.5 }}>
-          Add feed
-        </Text>
-
-        {/* Mode Toggle */}
-        <View
-          onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
-          style={[styles.toggleContainer, { backgroundColor: pillBg }]}>
-          {containerWidth > 0 && (
-            <Animated.View
-              style={[
-                styles.togglePillActiveBg,
-                {
-                  backgroundColor: activePillBg,
-                  shadowColor: isDark ? '#000' : '#000',
-                },
-                animatedStyle,
-              ]}
-            />
-          )}
-          {(['rss', 'newsletter'] as Mode[]).map((m) => {
-            const isActive = mode === m;
-            return (
-              <Pressable key={m} onPress={() => handleModeSwitch(m)} style={styles.togglePill}>
-                {m === 'rss' ? (
-                  <FeedIcon
-                    size={13}
-                    color={isActive ? activeTextColor : inactiveTextColor}
-                    strokeWidth={1.8}
-                  />
-                ) : (
-                  <LetterOpenedIcon
-                    size={13}
-                    color={isActive ? activeTextColor : inactiveTextColor}
-                    strokeWidth={1.8}
-                  />
-                )}
-                <Text
-                  fontFamily={isActive ? 'geist-semibold' : 'geist-medium'}
-                  style={{
-                    fontSize: 13,
-                    color: isActive ? activeTextColor : inactiveTextColor,
-                    marginLeft: 5,
-                  }}>
-                  {m === 'rss' ? 'RSS Feed' : 'Newsletter'}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <SourceModeToggle mode={mode} onModeChange={handleModeSwitch} />
 
         {/* ── RSS MODE ── */}
         {mode === 'rss' && (
@@ -316,99 +244,106 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
             )}
 
             {!isPreviewing && feedPreview && (
-              <View
-                className="mt-4 flex-col gap-3 rounded-xl p-4"
-                style={{ backgroundColor: colors.grey6 }}>
-                <View className="flex-row items-start gap-3">
-                  <View
-                    className="mt-0.5 h-14 w-14 items-center justify-center overflow-hidden rounded-xl"
-                    style={{ backgroundColor: colors.grey5 }}>
-                    {feedPreview.image_url ? (
-                      <Image
-                        source={{ uri: feedPreview.image_url }}
-                        className="h-full w-full"
-                        resizeMode="cover"
-                        style={{ borderRadius: 12 }}
-                      />
-                    ) : (
-                      <FeedFallbackIcon feedName={fallbackTitle} size={56} borderRadius={12} />
-                    )}
-                  </View>
+              <>
+                <View
+                  className="mt-4 flex-col gap-3 rounded-xl p-4"
+                  style={{ backgroundColor: colors.grey6 }}>
+                  <View className="flex-row items-start gap-3">
+                    <View
+                      className="mt-0.5 h-14 w-14 items-center justify-center overflow-hidden rounded-xl"
+                      style={{ backgroundColor: colors.grey5 }}>
+                      {feedPreview.image_url ? (
+                        <Image
+                          source={{ uri: feedPreview.image_url }}
+                          className="h-full w-full"
+                          resizeMode="cover"
+                          style={{ borderRadius: 12 }}
+                        />
+                      ) : (
+                        <FeedFallbackIcon feedName={fallbackTitle} size={56} borderRadius={12} />
+                      )}
+                    </View>
 
-                  <View className="flex-1">
-                    <Text
-                      size="base"
-                      fontFamily="geist-semibold"
-                      className="mb-1.5 tracking-tight text-black dark:text-white"
-                      numberOfLines={2}>
-                      {feedPreview.title || 'Untitled Feed'}
-                    </Text>
-                    <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1.5">
-                      {feedPreview.author ? (
-                        <View className="flex-row items-center gap-1">
-                          <UserCircleIcon size={12} color={colors.grey} strokeWidth={1.8} />
-                          <Text
-                            size="sm"
-                            fontFamily="geist"
-                            style={{ color: colors.grey, fontSize: 11 }}
-                            numberOfLines={1}>
-                            {feedPreview.author}
-                          </Text>
-                        </View>
-                      ) : null}
-                      {feedPreview.content_type ? (
-                        <View className="flex-row items-center gap-1">
-                          <LayersMinimalisticIcon size={12} color={colors.grey} strokeWidth={1.8} />
-                          <Text
-                            size="sm"
-                            fontFamily="geist"
-                            style={{ color: colors.grey, fontSize: 11 }}>
-                            {formatContentType(feedPreview.content_type)}
-                          </Text>
-                        </View>
-                      ) : null}
-                      {feedPreview.language ? (
-                        <View
-                          className="rounded px-1.5 py-0.5"
-                          style={{ backgroundColor: colors.grey5 }}>
-                          <Text
-                            fontFamily="geist-medium"
-                            style={{
-                              color: colors.grey,
-                              fontSize: 8,
-                              letterSpacing: 0.3,
-                              textTransform: 'uppercase',
-                            }}>
-                            {feedPreview.language}
-                          </Text>
-                        </View>
-                      ) : null}
+                    <View className="flex-1">
+                      <Text
+                        size="base"
+                        fontFamily="geist-semibold"
+                        className="mb-1.5 tracking-tight text-black dark:text-white"
+                        numberOfLines={2}>
+                        {feedPreview.title || 'Untitled Feed'}
+                      </Text>
+                      <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1.5">
+                        {feedPreview.author ? (
+                          <View className="flex-row items-center gap-1">
+                            <UserCircleIcon size={12} color={colors.grey} strokeWidth={1.8} />
+                            <Text
+                              size="sm"
+                              fontFamily="geist"
+                              style={{ color: colors.grey, fontSize: 11 }}
+                              numberOfLines={1}>
+                              {feedPreview.author}
+                            </Text>
+                          </View>
+                        ) : null}
+                        {feedPreview.content_type ? (
+                          <View className="flex-row items-center gap-1">
+                            <LayersMinimalisticIcon
+                              size={12}
+                              color={colors.grey}
+                              strokeWidth={1.8}
+                            />
+                            <Text
+                              size="sm"
+                              fontFamily="geist"
+                              style={{ color: colors.grey, fontSize: 11 }}>
+                              {formatContentType(feedPreview.content_type)}
+                            </Text>
+                          </View>
+                        ) : null}
+                        {feedPreview.language ? (
+                          <View
+                            className="rounded px-1.5 py-0.5"
+                            style={{ backgroundColor: colors.grey5 }}>
+                            <Text
+                              fontFamily="geist-medium"
+                              style={{
+                                color: colors.grey,
+                                fontSize: 8,
+                                letterSpacing: 0.3,
+                                textTransform: 'uppercase',
+                              }}>
+                              {feedPreview.language}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
                     </View>
                   </View>
-                </View>
 
-                {feedPreview.description ? (
-                  <Text size="sm" fontFamily="geist" className="text-grey leading-5">
-                    {feedPreview.description}
-                  </Text>
-                ) : null}
-
-                {feedPreview.link || feedPreview.url ? (
-                  <Pressable
-                    onPress={handleUrlPress}
-                    className="flex-row items-center gap-1.5 self-start py-0.5">
-                    <LinkMinimalistic2Icon size={12} strokeWidth={2.4} color={colors.primary} />
-                    <Text
-                      size="sm"
-                      fontFamily="geist"
-                      className="flex-1 flex-shrink text-left"
-                      style={{ color: colors.primary, fontSize: 11 }}
-                      numberOfLines={1}>
-                      {feedPreview.link || feedPreview.url}
+                  {feedPreview.description ? (
+                    <Text size="sm" fontFamily="geist" className="text-grey leading-5">
+                      {feedPreview.description}
                     </Text>
-                  </Pressable>
-                ) : null}
-              </View>
+                  ) : null}
+
+                  {feedPreview.link || feedPreview.url ? (
+                    <Pressable
+                      onPress={handleUrlPress}
+                      className="flex-row items-center gap-1.5 self-start py-0.5">
+                      <LinkMinimalistic2Icon size={12} strokeWidth={2.4} color={colors.secondary} />
+                      <Text
+                        size="sm"
+                        fontFamily="geist"
+                        className="flex-1 flex-shrink text-left"
+                        style={{ color: colors.secondary, fontSize: 11 }}
+                        numberOfLines={1}>
+                        {feedPreview.link || feedPreview.url}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+                <FeedArticlePreviews articles={feedPreview.articles ?? []} />
+              </>
             )}
           </>
         )}
@@ -563,34 +498,6 @@ export const AddFeedBottomSheet = forwardRef<AddFeedBottomSheetRef, AddFeedBotto
 AddFeedBottomSheet.displayName = 'AddFeedBottomSheet';
 
 const styles = StyleSheet.create({
-  toggleContainer: {
-    position: 'relative',
-    flexDirection: 'row',
-    borderRadius: 12,
-    padding: 3,
-    marginTop: 16,
-    marginBottom: 16,
-  },
-  togglePillActiveBg: {
-    position: 'absolute',
-    top: 3,
-    bottom: 3,
-    left: 3,
-    borderRadius: 9,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  togglePill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 9,
-    zIndex: 1,
-  },
   steps: {
     marginTop: 8,
   },

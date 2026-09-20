@@ -101,6 +101,7 @@ export const SearchOptionsSheet = forwardRef<SheetRef, SearchOptionsSheetProps>(
         headerTitle="Search options"
         headerTitleAlign="left"
         snapPoints={['80%']}
+        footerBottomPadding={12}
         headerRight={
           <Pressable
             onPress={onReset}
@@ -120,7 +121,7 @@ export const SearchOptionsSheet = forwardRef<SheetRef, SearchOptionsSheetProps>(
             Done
           </Button>
         }>
-        <Text size="sm" fontFamily="geist-semibold" className="text-black mb-3">
+        <Text size="sm" fontFamily="geist-semibold" className="mb-3 text-black">
           Search mode
         </Text>
         <SearchModeToggle mode={searchMode} onModeChange={onSearchModeChange} />
@@ -129,7 +130,7 @@ export const SearchOptionsSheet = forwardRef<SheetRef, SearchOptionsSheetProps>(
         </Text>
 
         <View className="mt-8">
-          <Text size="sm" fontFamily="geist-semibold" className="text-black mb-1">
+          <Text size="sm" fontFamily="geist-semibold" className="mb-1 text-black">
             Content type
           </Text>
           <Text size="sm" className="text-grey mb-4" style={{ lineHeight: 20 }}>
@@ -162,10 +163,6 @@ export const SearchOptionsSheet = forwardRef<SheetRef, SearchOptionsSheetProps>(
             })}
           </View>
         </View>
-
-        {/* The footer floats over the scroll content, so the last chip row
-            needs its own clearance rather than ending flush under the button. */}
-        <View className="h-10" />
       </BottomSheet>
     );
   }

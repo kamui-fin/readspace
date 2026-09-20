@@ -22,3 +22,10 @@ export interface ReaderCornerMenuProps {
 
 /** Diameter of the corner button — shared so both platforms line up with the bottom bar. */
 export const READER_CORNER_BUTTON_SIZE = 44;
+
+/**
+ * Progress ring geometry. Sized off the button so the ring reads as the same weight of object
+ * as the glyph beside it rather than a detail floating in a pill.
+ */
+export const READER_PROGRESS_RING_SIZE = 24;
+export const READER_PROGRESS_RING_STROKE = 2.5;

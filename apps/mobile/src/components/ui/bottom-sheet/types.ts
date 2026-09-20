@@ -51,6 +51,8 @@ export interface BottomSheetProps extends BaseSheetProps {
   /** Fixed footer buttons, floating above the scroll content. */
   footerActions?: ReactNode;
   footerClassName?: string;
+  /** Override the footer's bottom padding (defaults to the device safe-area inset). */
+  footerBottomPadding?: number;
   /** Override the horizontal padding on the scroll content (default 24). Pass 0 for full-bleed. */
   contentPaddingHorizontal?: number;
   /**
