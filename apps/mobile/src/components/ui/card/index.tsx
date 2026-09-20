@@ -13,11 +13,11 @@ import type { ReactNode } from 'react';
 import { forwardRef, useMemo, useState } from 'react';
 import { Pressable, type PressableProps, View } from 'react-native';
 
-const cardVariants = cva('bg-background ', {
+const cardVariants = cva('', {
   variants: {
     variant: {
       feed: 'flex-row items-center gap-4 py-4 px-4',
-      'image-top': 'w-full rounded-2xl bg-background  overflow-hidden',
+      'image-top': 'w-full overflow-hidden rounded-2xl',
       article: 'flex-row gap-3 py-4', // Edge-to-edge article card with image on right
       'text-only': 'rounded-2xl p-4',
     },
@@ -87,8 +87,11 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
     const colors = COLORS[isDark ? 'dark' : 'light'];
 
     const containerStyle = useMemo(() => {
+      // Transparent, not `colors.background`: a card paints nothing of its own so it sits on
+      // whatever surface hosts it — the screen, or a sheet whose background differs. Variants
+      // that need their own surface set one below.
       const baseStyle: any = {
-        backgroundColor: colors.background,
+        backgroundColor: 'transparent',
       };
 
       if (variant === 'image-top') {

@@ -40,7 +40,7 @@ from app.services.feeds.favicon_image import (
     normalize_favicon_to_png,
     sniff_image_kind,
 )
-from app.services.feeds.meilisearch import sync_feeds_batch
+from app.services.feeds.meilisearch import feed_to_document, get_client
 from app.workers.common import worker_db
 
 logger = structlog.get_logger(__name__)
@@ -52,7 +52,7 @@ _MISLABELED_RASTER_MIMETYPES = frozenset({"image/svg+xml", "image/svg", "text/pl
 
 @dataclass
 class BackfillStats:
-    """Counters describing what a backfill run did (or would do in a dry run)."""
+    """Counters describing what a backfill run did."""
 
     converted: int = 0
     unchanged: int = 0
@@ -60,6 +60,7 @@ class BackfillStats:
     dangling: int = 0
     skipped_unusable: int = 0
     failed: int = 0
+    meilisearch_failed_batches: int = 0
     bytes_before: int = 0
     bytes_after: int = 0
     changed_feed_ids: set[UUID] = field(default_factory=set)
@@ -131,80 +132,99 @@ async def _process_key(
     stored_mimetype: str,
     stats: BackfillStats,
     semaphore: asyncio.Semaphore,
-    dry_run: bool,
 ) -> None:
     """Migrate one storage key and every feed that references it."""
     async with semaphore:
         try:
-            original = await supabase.storage.from_(FAVICONS_BUCKET_NAME).download(key)
+            await _migrate_key(supabase, key, feed_ids, stored_mimetype, stats)
         except Exception as e:
-            if _is_not_found(e):
-                # Dangling reference: the object is gone, so clients can only ever show a broken image.
-                logger.warning("favicon_backfill_dangling_reference", key=key)
-                if not dry_run:
-                    await _set_feed_image_url(feed_ids, None)
-                stats.dangling += 1
-                stats.changed_feed_ids.update(feed_ids)
-                return
-            logger.warning("favicon_backfill_download_failed", key=key, error=str(e))
+            logger.error("favicon_backfill_key_failed", key=key, error=str(e))
             stats.failed += 1
-            return
 
-        stats.bytes_before += len(original)
 
-        if is_generated_placeholder(original):
-            if not dry_run:
-                await _set_feed_image_url(feed_ids, None)
-                await supabase.storage.from_(FAVICONS_BUCKET_NAME).remove([key])
-            stats.nulled += 1
-            stats.changed_feed_ids.update(feed_ids)
-            return
-
-        mislabeled = stored_mimetype in _MISLABELED_RASTER_MIMETYPES and sniff_image_kind(original) != ImageKind.SVG
-        if not mislabeled and is_already_normalized(original):
-            stats.unchanged += 1
-            return
-
-        png = await asyncio.to_thread(normalize_favicon_to_png, original)
-        if png is None:
-            logger.warning("favicon_backfill_unusable", key=key, size=len(original))
-            stats.skipped_unusable += 1
-            return
-
-        stats.bytes_after += len(png)
-        if not dry_run:
-            try:
-                new_key = await put_favicon_png(supabase, png)
-                await _set_feed_image_url(feed_ids, new_key)
-                # Remove the old object only after feeds point at the new one.
-                await supabase.storage.from_(FAVICONS_BUCKET_NAME).remove([key])
-            except Exception as e:
-                logger.error("favicon_backfill_write_failed", key=key, error=str(e))
-                stats.failed += 1
-                return
-        stats.converted += 1
+async def _migrate_key(
+    supabase: AsyncClient, key: str, feed_ids: list[UUID], stored_mimetype: str, stats: BackfillStats
+) -> None:
+    """Download one object, decide what it needs, and apply it. Raises on unexpected errors."""
+    try:
+        original = await supabase.storage.from_(FAVICONS_BUCKET_NAME).download(key)
+    except Exception as e:
+        if not _is_not_found(e):
+            raise
+        # Dangling reference: the object is gone, so clients can only ever show a broken image.
+        logger.warning("favicon_backfill_dangling_reference", key=key)
+        await _set_feed_image_url(feed_ids, None)
+        stats.dangling += 1
         stats.changed_feed_ids.update(feed_ids)
+        return
+
+    stats.bytes_before += len(original)
+
+    if is_generated_placeholder(original):
+        await _set_feed_image_url(feed_ids, None)
+        await supabase.storage.from_(FAVICONS_BUCKET_NAME).remove([key])
+        stats.nulled += 1
+        stats.changed_feed_ids.update(feed_ids)
+        return
+
+    mislabeled = stored_mimetype in _MISLABELED_RASTER_MIMETYPES and sniff_image_kind(original) != ImageKind.SVG
+    if not mislabeled and is_already_normalized(original):
+        stats.unchanged += 1
+        return
+
+    png = await asyncio.to_thread(normalize_favicon_to_png, original)
+    if png is None:
+        logger.warning("favicon_backfill_unusable", key=key, size=len(original))
+        stats.skipped_unusable += 1
+        return
+
+    new_key = await put_favicon_png(supabase, png)
+    await _set_feed_image_url(feed_ids, new_key)
+    # Remove the old object only after feeds point at the new one.
+    await supabase.storage.from_(FAVICONS_BUCKET_NAME).remove([key])
+    stats.bytes_after += len(png)
+    stats.converted += 1
+    stats.changed_feed_ids.update(feed_ids)
 
 
-async def _resync_meilisearch(feed_ids: set[UUID]) -> None:
-    """Push the new ``image_url`` values into the Meilisearch discovery index."""
+async def _resync_meilisearch(feed_ids: set[UUID], stats: BackfillStats) -> None:
+    """
+    Push the new ``image_url`` values into the Meilisearch discovery index.
+
+    Unlike ``sync_feeds_batch`` (which logs and swallows errors), failures here are counted in
+    ``stats.meilisearch_failed_batches`` so the caller can tell the index is stale.
+    """
     settings = get_settings()
+    client = get_client(settings)
     ids = list(feed_ids)
-    for start in range(0, len(ids), FAVICON_BACKFILL_SYNC_BATCH):
-        chunk = ids[start : start + FAVICON_BACKFILL_SYNC_BATCH]
-        async with worker_db() as db:
-            feeds = (await db.execute(select(Feed).where(Feed.id.in_(chunk)))).scalars().all()
-        await sync_feeds_batch(settings, feeds)
+    try:
+        index = await client.get_index(settings.MEILISEARCH_INDEX_NAME)
+        for start in range(0, len(ids), FAVICON_BACKFILL_SYNC_BATCH):
+            chunk = ids[start : start + FAVICON_BACKFILL_SYNC_BATCH]
+            try:
+                async with worker_db() as db:
+                    feeds = (await db.execute(select(Feed).where(Feed.id.in_(chunk)))).scalars().all()
+                # Private newsletter feeds are never indexed.
+                documents = [feed_to_document(f) for f in feeds if not (f.url or "").startswith("newsletter://")]
+                await index.update_documents(documents)
+            except Exception as e:
+                logger.error("favicon_backfill_meilisearch_batch_failed", batch_start=start, error=str(e))
+                stats.meilisearch_failed_batches += 1
+    except Exception as e:
+        logger.error("favicon_backfill_meilisearch_unavailable", error=str(e))
+        stats.meilisearch_failed_batches += 1
+    finally:
+        await client.aclose()
 
 
-async def backfill_favicons(
-    dry_run: bool = True, limit: int | None = None, keys: set[str] | None = None
-) -> BackfillStats:
+async def backfill_favicons(limit: int | None = None, keys: set[str] | None = None) -> BackfillStats:
     """
     Normalize every stored favicon to a bounded PNG and null out generated placeholders.
 
+    Writes to storage, ``feeds.image_url`` and Meilisearch. Safe to re-run: keys it already
+    fixed are skipped, and Meilisearch is re-synced for whatever changed even if the run crashes.
+
     Args:
-        dry_run: When True, download and evaluate everything but write nothing
         limit: Process at most this many distinct storage keys
         keys: Restrict the run to these storage keys (targeted re-runs and tests)
 
@@ -217,25 +237,23 @@ async def backfill_favicons(
     supabase = await _get_async_supabase()
     semaphore = asyncio.Semaphore(FAVICON_BACKFILL_CONCURRENCY)
 
-    await asyncio.gather(
-        *(
-            _process_key(supabase, k, ids, mimetypes.get(k, ""), stats, semaphore, dry_run)
-            for k, ids in candidates.items()
+    try:
+        await asyncio.gather(
+            *(_process_key(supabase, k, ids, mimetypes.get(k, ""), stats, semaphore) for k, ids in candidates.items())
         )
-    )
-
-    if not dry_run and stats.changed_feed_ids:
-        await _resync_meilisearch(stats.changed_feed_ids)
+    finally:
+        if stats.changed_feed_ids:
+            await _resync_meilisearch(stats.changed_feed_ids, stats)
 
     logger.info(
         "favicon_backfill_complete",
-        dry_run=dry_run,
         converted=stats.converted,
         unchanged=stats.unchanged,
         nulled=stats.nulled,
         dangling=stats.dangling,
         skipped_unusable=stats.skipped_unusable,
         failed=stats.failed,
+        meilisearch_failed_batches=stats.meilisearch_failed_batches,
         bytes_before=stats.bytes_before,
         bytes_after=stats.bytes_after,
     )
@@ -266,7 +284,7 @@ def _is_older_than_grace(created_at: str | None, now: datetime) -> bool:
     return now - created > timedelta(hours=FAVICON_ORPHAN_GRACE_HOURS)
 
 
-async def sweep_orphan_favicons(dry_run: bool = True, name_prefix: str = "") -> int:
+async def sweep_orphan_favicons(name_prefix: str = "") -> int:
     """
     Delete bucket objects that no feed references.
 
@@ -276,11 +294,10 @@ async def sweep_orphan_favicons(dry_run: bool = True, name_prefix: str = "") -> 
     updates ``feeds.image_url``, so a brand-new object may be about to be referenced.
 
     Args:
-        dry_run: When True, only count what would be deleted
         name_prefix: Only consider objects whose name starts with this (targeted runs and tests)
 
     Returns:
-        Number of orphaned objects found (deleted unless dry_run)
+        Number of orphaned objects found (all of them are deleted)
     """
     async with worker_db() as db:
         image_urls = (await db.execute(select(Feed.image_url).where(Feed.image_url.is_not(None)))).scalars().all()
@@ -297,15 +314,11 @@ async def sweep_orphan_favicons(dry_run: bool = True, name_prefix: str = "") -> 
         and _is_older_than_grace(o.get("created_at"), now)
     ]
 
-    if not dry_run:
-        for start in range(0, len(orphans), FAVICON_STORAGE_LIST_PAGE):
-            await supabase.storage.from_(FAVICONS_BUCKET_NAME).remove(
-                orphans[start : start + FAVICON_STORAGE_LIST_PAGE]
-            )
+    for start in range(0, len(orphans), FAVICON_STORAGE_LIST_PAGE):
+        await supabase.storage.from_(FAVICONS_BUCKET_NAME).remove(orphans[start : start + FAVICON_STORAGE_LIST_PAGE])
 
     logger.info(
         "favicon_orphan_sweep_complete",
-        dry_run=dry_run,
         bucket_objects=len(objects),
         referenced_keys=len(referenced),
         orphans=len(orphans),

@@ -106,16 +106,10 @@ export const ArticleOptionsBottomSheet = forwardRef<SheetRef, ArticleOptionsBott
             className=" text-grey uppercase tracking-wide">
             Actions
           </Text>
+          {/* Translate lives in the reader's Aa menu, next to the other things that change how
+              the page reads. It still appears below as a *view* you can switch back to once a
+              translation exists. */}
           <View className="mb-4">
-            {!isClipped &&
-              !isNewsletter &&
-              renderOption(
-                <Language width={20} height={20} color={greyColor} />,
-                hasTranslatedContent ? 'Translate to a different language' : 'Translate Article',
-                hasTranslatedContent ? 'Change current language' : 'Pick a language',
-                onTranslate
-              )}
-
             {!isNewsletter &&
               onOpenInBrowser &&
               renderOption(

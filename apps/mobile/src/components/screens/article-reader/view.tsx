@@ -51,6 +51,8 @@ import Animated, {
 const CHROME_AUTO_HIDE_AFTER = 96;
 /** Per-frame downward travel that counts as deliberate scrolling rather than jitter. */
 const CHROME_AUTO_HIDE_TRAVEL = 4;
+/** Back within this of the top counts as "at the top", where the chrome returns on its own. */
+const CHROME_REVEAL_AT_TOP = 8;
 
 /** Fewer headings than this and an outline tells you nothing you can't already see. */
 const MIN_OUTLINE_ITEMS = 3;
@@ -72,7 +74,7 @@ export function ArticleScreen({
 }: ArticleScreenProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { colors, isDark: isReaderDark } = useReaderTheme();
+  const { colors } = useReaderTheme();
   const scrollY = useSharedValue(0);
   const lastScrollY = useSharedValue(0);
   const scrollDirection = useSharedValue<'up' | 'down'>('down');
@@ -99,9 +101,10 @@ export function ArticleScreen({
     chromeShown.value = chromeVisible ? 1 : 0;
   }, [chromeVisible, chromeShown]);
 
-  // Scrolling *down* is the reader committing to the text, so the chrome tucks
-  // away. Scrolling back up deliberately does not bring it back — that was the
-  // old sticky behaviour and it kept fighting the reader. Only a tap reveals it.
+  // Scrolling *down* is the reader committing to the text, so the chrome tucks away. Scrolling
+  // back up mid-article deliberately does not bring it back — that was the old sticky behaviour
+  // and it kept fighting the reader. Returning all the way to the top does, though: at the top
+  // you've left the text, and the header is what you came back for.
   useAnimatedReaction(
     () => scrollY.value,
     (current, previous) => {
@@ -113,6 +116,11 @@ export function ArticleScreen({
       ) {
         chromeShown.value = 0;
         runOnJS(setChromeVisible)(false);
+        return;
+      }
+      if (chromeShown.value === 0 && current <= CHROME_REVEAL_AT_TOP && current < previous) {
+        chromeShown.value = 1;
+        runOnJS(setChromeVisible)(true);
       }
     }
   );
@@ -687,7 +695,6 @@ export function ArticleScreen({
           readingProgress={readingProgress}
           activeSectionLabel={activeSectionLabel}
           colors={colors}
-          isDark={isReaderDark}
           onOpenSettings={handleOpenSettings}
           onScrollToTop={handleScrollToTop}
           onOpenOutline={hasOutline ? handleOpenOutline : undefined}
@@ -700,10 +707,11 @@ export function ArticleScreen({
                   onPress: handleGenerateHighlights,
                 }
           }
+          onTranslate={() => languagePickerRef.current?.present()}
         />
       )}
 
-      {/* Reader typography and page tone */}
+      {/* Reader typography */}
       <ReaderSettingsBottomSheet ref={readerSettingsRef} />
 
       {/* Article outline */}

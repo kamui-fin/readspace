@@ -1,7 +1,6 @@
 import { FontTilesRow } from '@components/bottom-sheets/reader-settings/font-tiles.row';
 import { PreviewCard } from '@components/bottom-sheets/reader-settings/preview.card';
 import { Section } from '@components/bottom-sheets/reader-settings/section.label';
-import { ThemeSwatchesRow } from '@components/bottom-sheets/reader-settings/theme-swatches.row';
 import { TypographyCard } from '@components/bottom-sheets/reader-settings/typography.card';
 import type { SheetRef } from '@components/ui/bottom-sheet';
 import { BottomSheet } from '@components/ui/bottom-sheet';
@@ -15,8 +14,12 @@ import { Pressable, View } from 'react-native';
  *
  * Every control writes to `useReaderPreferences`, which the reader turns into
  * CSS variables and injects into the live WebView — so changes land on the
- * article behind the sheet instantly, scroll position intact, and the preview
- * card at the top shows the same result without needing to look behind it.
+ * article behind the sheet instantly, scroll position intact.
+ *
+ * Controls first, sample last: the preview is the *result* of the two groups
+ * above it, and putting it under them means your thumb is never covering the
+ * thing the controls are changing. It also keeps the sheet's first screenful
+ * about choosing rather than about reading a paragraph of filler.
  */
 export const ReaderSettingsBottomSheet = forwardRef<SheetRef>((_props, ref) => {
   const reset = useReaderPreferences((state) => state.reset);
@@ -26,6 +29,7 @@ export const ReaderSettingsBottomSheet = forwardRef<SheetRef>((_props, ref) => {
     <BottomSheet
       ref={ref}
       headerTitle="Reader Settings"
+      headerTitleAlign="left"
       snapPoints={snapPoints}
       secondaryAction={
         <Pressable
@@ -38,18 +42,16 @@ export const ReaderSettingsBottomSheet = forwardRef<SheetRef>((_props, ref) => {
         </Pressable>
       }>
       <View className="gap-6 pb-6 pt-1">
-        <PreviewCard />
-
-        <Section title="Theme">
-          <ThemeSwatchesRow />
-        </Section>
-
-        <Section title="Select Font">
+        <Section title="Typeface">
           <FontTilesRow />
         </Section>
 
         <Section title="Typography">
           <TypographyCard />
+        </Section>
+
+        <Section title="Preview">
+          <PreviewCard />
         </Section>
       </View>
     </BottomSheet>

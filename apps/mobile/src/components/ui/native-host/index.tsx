@@ -4,7 +4,7 @@ import { type StyleProp, View, type ViewStyle } from 'react-native';
 export interface NativeHostProps {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
-  /** Force the SwiftUI colour scheme (e.g. reader sepia/dark) instead of following the app theme. */
+  /** Force the SwiftUI colour scheme instead of following the app theme. */
   isDark?: boolean;
   /** Size the host to its SwiftUI content (default true). Pass false to fill the parent. */
   matchContents?: boolean;

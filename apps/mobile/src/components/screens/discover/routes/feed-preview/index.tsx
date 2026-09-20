@@ -6,11 +6,12 @@ import { FeedInfoHeader } from '@components/screens/discover/ui/feed-info-header
 import { FeedPreviewSkeleton } from '@components/screens/discover/ui/feed-preview-skeleton';
 import { FeedRecentArticles } from '@components/screens/discover/ui/feed-recent-articles';
 import { FeedSimilarList } from '@components/screens/discover/ui/feed-similar-list';
+import { NativeScreenHeader } from '@components/ui/native-screen-header';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { USES_NATIVE_HEADER } from '@lib/constants/platform';
 import { FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import {
   ApiClient,
@@ -22,7 +23,7 @@ import {
 } from '@readspace/shared';
 import { discoverLanguageToCode, getDiscoverLanguage } from '@stores/discover-preferences';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,7 +40,6 @@ interface FeedPreviewScreenProps {
 export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPreviewScreenProps) {
   const router = useRouter();
   const segments = useSegments();
-  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const folderPickerRef = useRef<FolderPickerBottomSheetRef>(null);
   const [pendingSimilarFeedUrl, setPendingSimilarFeedUrl] = useState<string | null>(null);
 
@@ -47,6 +47,8 @@ export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPre
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const greyColor = isDark ? COLORS.dark.grey : COLORS.light.grey;
   const insets = useSafeAreaInsets();
+  // The native navigation bar already clears the status bar on iOS.
+  const contentPaddingTop = USES_NATIVE_HEADER ? 0 : insets.top;
 
   const queryClient = useQueryClient();
 
@@ -54,10 +56,6 @@ export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPre
 
   // Use preview feed data if available, otherwise use fetched data.
   const feed = fetchedFeedData;
-
-  console.log(feed);
-
-  console.log('rendering');
 
   const createFeed = useCreateFeed();
   const deleteFeed = useDeleteFeed();
@@ -162,14 +160,11 @@ export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPre
     }
   }, [isFollowing, feed, deleteFeed]);
 
-  const handleBack = useCallback(() => {
-    // If we have a returnTo param, navigate there instead of going back
-    if (returnTo) {
-      router.push(Array.isArray(returnTo) ? returnTo[0] : returnTo);
-    } else {
-      router.back();
-    }
-  }, [router, returnTo]);
+  // The screen is pushed onto whichever stack the reader is already in, so an ordinary pop is
+  // always right. It used to be handed a `returnTo` path and *push* that, because reaching it
+  // from an article jumped into the Discover tab's own stack and rebuilt it with this screen as
+  // the root — no history to pop, and so no back button at all.
+  const handleBack = useCallback(() => router.back(), [router]);
 
   const handleSimilarFeedFollowRequest = useCallback((feedUrl: string) => {
     setPendingSimilarFeedUrl(feedUrl);
@@ -249,12 +244,12 @@ export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPre
 
   const handleShowMoreArticles = useCallback(() => {
     // Navigate to feed articles view
-    router.push(`/(protected)/(tabs)/discover/feed/${feedId}/articles`);
+    router.push(`/(protected)/feed/${feedId}/articles`);
   }, [router, feedId]);
 
   const handleShowMoreSimilarFeeds = useCallback(() => {
     // Navigate to similar feeds full list
-    router.push(`/(protected)/(tabs)/discover/feed/${feedId}/similar`);
+    router.push(`/(protected)/feed/${feedId}/similar`);
   }, [router, feedId]);
 
   // Check if feed is dead (no articles published in last 6 months)
@@ -266,12 +261,19 @@ export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPre
   // Only show full skeleton when we have no data at all to display — if we already
   // have initialData (previewFeedFallback), show that immediately instead of a skeleton
   if (isFeedLoading) {
-    return <FeedPreviewSkeleton />;
+    // The header mounts with the skeleton so the navigation bar doesn't pop in once data lands.
+    return (
+      <>
+        <NativeScreenHeader />
+        <FeedPreviewSkeleton />
+      </>
+    );
   }
 
   if (!feed) {
     return (
-      <View className="bg-background flex-1" style={{ paddingTop: insets.top }}>
+      <View className="bg-background flex-1" style={{ paddingTop: contentPaddingTop }}>
+        <NativeScreenHeader />
         <View className="flex-1 items-center justify-center px-6">
           <Text size="base" fontFamily="geist" className="text-grey text-center">
             Feed not found
@@ -283,7 +285,10 @@ export function FeedPreviewScreen({ feedId, initialData: _initialData }: FeedPre
 
   return (
     <>
-      <View className="bg-background flex-1" style={{ paddingTop: insets.top }}>
+      <View className="bg-background flex-1" style={{ paddingTop: contentPaddingTop }}>
+        {/* No title: the feed's own identity block sits right below the bar, so the bar is just
+            the back button. */}
+        <NativeScreenHeader />
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{

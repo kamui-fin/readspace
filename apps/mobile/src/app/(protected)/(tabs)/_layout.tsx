@@ -6,7 +6,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { getUserAvatarSeed, getUserDisplayName } from '@lib/utils/user';
 import { CompassIcon, StarsIcon } from '@solar-icons/react-native/bold';
-import { NotesIcon } from '@solar-icons/react-native/bold-duotone';
+import { InboxIcon } from '@solar-icons/react-native/bold-duotone';
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 
@@ -28,7 +28,7 @@ export default function TabsLayout() {
           title: 'Following',
           tabBarLabel: 'Following',
           tabBarIcon: ({ color, size, focused }) => (
-            <TabBarIcon component={NotesIcon} size={size} color={color} focused={focused} />
+            <TabBarIcon component={InboxIcon} size={size} color={color} focused={focused} />
           ),
         }}
       />

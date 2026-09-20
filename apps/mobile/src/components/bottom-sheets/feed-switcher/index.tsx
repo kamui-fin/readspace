@@ -12,7 +12,6 @@ import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Checkbox } from '@components/ui/checkbox';
 import { useNativeConfirm } from '@components/ui/confirm-dialog';
-import { DropdownMenuRoot, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
@@ -48,12 +47,15 @@ import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const PINNED_YELLOW = '#EAB308';
-
 import { FolderPickerBottomSheet, type FolderPickerBottomSheetRef } from '../folder-picker';
 import { FeedListItem } from './feed-list-item';
 import { FolderGroup } from './folder-group';
 import { SectionLabel } from './section-label';
+
+const PINNED_YELLOW = '#EAB308';
+
+/** Index into `snapPoints` below — the 90% detent the switcher opens at. */
+const DEFAULT_DETENT = 1;
 
 export interface FeedSwitcherBottomSheetRef {
   present: () => void;
@@ -120,7 +122,9 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
 
     useImperativeHandle(ref, () => ({
       present: () => {
-        bottomSheetRef.current?.present();
+        // Detent 1 (90%) is the switcher's resting height. It has to be passed here rather than
+        // as the sheet's `index`, which True Sheet reads as "present on mount".
+        bottomSheetRef.current?.present(DEFAULT_DETENT);
         queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] });
         queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
       },
@@ -537,7 +541,6 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
           headerLeft={headerLeftActions}
           headerRight={headerRightActions}
           snapPoints={['50%', '90%', '100%']}
-          index={1}
           contentPaddingHorizontal={0}>
           {listData.length === 0 && favoriteFeeds.length === 0 ? (
             <View className="items-center justify-center py-12">
@@ -626,11 +629,11 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
 
         <CreateFolderModal
           ref={createFolderModalRef}
-          onSuccess={() => bottomSheetRef.current?.present()}
+          onSuccess={() => bottomSheetRef.current?.present(DEFAULT_DETENT)}
         />
         <RenameFolderModal
           ref={renameFolderModalRef}
-          onSuccess={() => bottomSheetRef.current?.present()}
+          onSuccess={() => bottomSheetRef.current?.present(DEFAULT_DETENT)}
         />
         <RenameFeedModal ref={renameFeedModalRef} />
         <FolderPickerBottomSheet

@@ -6,12 +6,14 @@ import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.car
 import { BackButton } from '@components/ui/back-button';
 import { Button } from '@components/ui/button';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
+import { NativeScreenHeader } from '@components/ui/native-screen-header';
 import { Skeleton } from '@components/ui/skeleton';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { USES_NATIVE_HEADER } from '@lib/constants/platform';
 import { FEEDS_INDEX_NAME, meilisearchClient } from '@lib/meilisearch-client';
 import { ApiClient, useCreateFeed } from '@readspace/shared';
 import { DocumentTextIcon } from '@solar-icons/react-native/linear';
@@ -106,25 +108,32 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
 
   const _feedTitle = feedData?.title || 'this feed';
 
+  // Rendered by the loading, error and loaded branches alike. On iOS the title and back button
+  // live in the real navigation bar, so the in-page row is dropped entirely.
   const headerSection = (
-    <View style={{ paddingTop: insets.top }}>
-      <View className="px-4 py-3">
-        <View className="flex-row items-center">
-          <BackButton onPress={() => router.back()} color={colors.grey} />
-          <View className="absolute left-0 right-0 items-center">
-            <Text
-              size="lg"
-              fontFamily="geist-semibold"
-              className="tracking-tight text-black"
-              numberOfLines={1}
-              ellipsizeMode="tail">
-              Similar feeds
-            </Text>
+    <>
+      <NativeScreenHeader title="Similar feeds" />
+      {!USES_NATIVE_HEADER && (
+        <View style={{ paddingTop: insets.top }}>
+          <View className="px-4 py-3">
+            <View className="flex-row items-center">
+              <BackButton onPress={() => router.back()} color={colors.grey} />
+              <View className="absolute left-0 right-0 items-center">
+                <Text
+                  size="lg"
+                  fontFamily="geist-semibold"
+                  className="tracking-tight text-black"
+                  numberOfLines={1}
+                  ellipsizeMode="tail">
+                  Similar feeds
+                </Text>
+              </View>
+              <View style={{ width: 40 }} />
+            </View>
           </View>
-          <View style={{ width: 40 }} />
         </View>
-      </View>
-    </View>
+      )}
+    </>
   );
 
   const handleFeedFollowRequest = useCallback((feedUrl: string) => {

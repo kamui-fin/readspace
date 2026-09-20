@@ -8,8 +8,8 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
  * iOS 26, system blur below, native haptics/animation and SF Symbols. Android keeps the custom
  * floating bar in `_layout.tsx`.
  *
- * The feed switcher has no tab-bar entry point here (native tab items can't act as buttons). It
- * opens from a button in the Following header, which replaces the unread count on iOS.
+ * Every trigger declares its own Label: omitting one makes UIKit fall back to the route title,
+ * so `codex` would show up in the bar instead of "Digest".
  */
 export default function TabsLayout() {
   const isDark = useIsDarkMode();
@@ -19,13 +19,13 @@ export default function TabsLayout() {
 
   return (
     <NativeTabs
-      tintColor={isDark ? colors.secondary : colors.primary}
+      tintColor={colors.secondary}
       screenListeners={({ route }) => ({
         tabPress: () => emitDoubleTap(route.name),
       })}>
       <NativeTabs.Trigger name="index" contentStyle={contentStyle}>
         <NativeTabs.Trigger.Label>Following</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'doc.text', selected: 'doc.text.fill' }} />
+        <NativeTabs.Trigger.Icon sf={{ default: 'tray.full', selected: 'tray.full.fill' }} />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="codex" contentStyle={contentStyle}>
         <NativeTabs.Trigger.Label>Digest</NativeTabs.Trigger.Label>

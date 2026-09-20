@@ -1,4 +1,4 @@
-import { Text } from '@components/ui/text';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { BookmarkIcon, LetterIcon, LetterOpenedIcon } from '@solar-icons/react-native/bold';
 import * as Haptics from 'expo-haptics';
@@ -8,9 +8,9 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
   interpolate,
+  interpolateColor,
   type SharedValue,
   useAnimatedStyle,
-  useDerivedValue,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
@@ -25,7 +25,22 @@ const FAIL_OFFSET_Y = 10;
 /** Rubber-band factor applied past the trigger distance */
 const OVERSHOOT_RESISTANCE = 0.35;
 const SNAP_BACK_SPRING = { damping: 26, stiffness: 320, mass: 0.6 } as const;
-const ICON_SIZE = 24;
+
+/** Saved is yellow app-wide — the reader's bookmark button uses the same value. */
+const SAVE_YELLOW = '#FBBC04';
+
+const ICON_SIZE = 20;
+/** Diameter of the badge that rides under the row. */
+const BADGE_SIZE = 36;
+/** Gap between the badge and the screen edge it emerges from. */
+const BADGE_INSET = 18;
+/** Badge is fully solid by this fraction of the trigger distance. */
+const BADGE_FILL_AT = 0.85;
+/**
+ * Width of the lane each badge sits in. Fixed, never animated: the badge is revealed by the row
+ * sliding off it, not by the lane growing, so nothing about this layer touches Yoga mid-gesture.
+ */
+const LANE_WIDTH = TRIGGER_DISTANCE;
 
 interface SwipeableArticleRowProps {
   children: ReactNode;
@@ -37,50 +52,112 @@ interface SwipeableArticleRowProps {
   onToggleSaved: () => void;
 }
 
-interface ActionBackgroundProps {
-  label: string;
-  color: string;
+interface SwipeActionProps {
   side: 'left' | 'right';
-  icon: ReactNode;
-  progress: SharedValue<number>;
+  /** Live row offset; the badge is driven straight off it. */
+  translateX: SharedValue<number>;
+  /** Accent for this action — yellow to save, green to mark read. */
+  color: string;
+  /** The resting, barely-there wash behind the badge. */
+  trackColor: string;
+  icon: (color: string) => ReactNode;
+  label: string;
 }
 
-/** Colored panel + icon/label revealed behind the row; icon pops once the trigger is crossed */
-function ActionBackground({ label, color, side, icon, progress }: ActionBackgroundProps) {
-  const isLeftSide = side === 'left';
+/**
+ * One swipe action: a fixed-width lane parked under the row with a single round badge in it.
+ *
+ * Nothing here is painted except the badge, and the badge's *static* opacity is 0 — the animation
+ * is the only thing that can ever make it visible. An earlier version drew a tinted strip whose
+ * width came from the animated style alone; an absolutely-positioned view with no static width
+ * sizes to its content, so every row in the list showed a green and a yellow rectangle at rest.
+ *
+ * Deliberately not a full-bleed coloured panel either: a row recolouring end to end mid-drag
+ * reads as the list breaking rather than as one action being offered.
+ */
+function SwipeAction({ side, translateX, color, trackColor, icon, label }: SwipeActionProps) {
+  const isLeft = side === 'left';
 
-  const panelStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 0.15], [0, 1], Extrapolation.CLAMP),
-  }));
+  // Travel in this direction only; the other direction leaves this badge hidden.
+  const distance = (x: number) => {
+    'worklet';
+    return Math.max(0, isLeft ? x : -x);
+  };
 
-  const contentStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(progress.value, [0.6, 1], [0.85, 1.1], Extrapolation.CLAMP) }],
-  }));
+  const badgeStyle = useAnimatedStyle(() => {
+    const progress = distance(translateX.value) / TRIGGER_DISTANCE;
+    return {
+      opacity: interpolate(progress, [0.08, 0.32], [0, 1], Extrapolation.CLAMP),
+      transform: [
+        { scale: interpolate(progress, [0.32, BADGE_FILL_AT], [0.7, 1], Extrapolation.CLAMP) },
+      ],
+      backgroundColor: interpolateColor(
+        Math.min(progress, 1),
+        [BADGE_FILL_AT - 0.35, BADGE_FILL_AT],
+        [trackColor, color]
+      ),
+    };
+  });
+
+  const glyphStyle = useAnimatedStyle(() => {
+    const progress = distance(translateX.value) / TRIGGER_DISTANCE;
+    return {
+      opacity: interpolate(
+        progress,
+        [BADGE_FILL_AT - 0.35, BADGE_FILL_AT],
+        [1, 0],
+        Extrapolation.CLAMP
+      ),
+    };
+  });
+
+  const armedGlyphStyle = useAnimatedStyle(() => {
+    const progress = distance(translateX.value) / TRIGGER_DISTANCE;
+    return {
+      opacity: interpolate(
+        progress,
+        [BADGE_FILL_AT - 0.35, BADGE_FILL_AT],
+        [0, 1],
+        Extrapolation.CLAMP
+      ),
+    };
+  });
 
   return (
-    <Animated.View
+    <View
       pointerEvents="none"
-      style={[
-        {
-          position: 'absolute',
-          top: 0,
-          bottom: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: color,
-          justifyContent: 'center',
-          alignItems: isLeftSide ? 'flex-start' : 'flex-end',
-          paddingHorizontal: 24,
-        },
-        panelStyle,
-      ]}>
-      <Animated.View style={[{ alignItems: 'center', gap: 4 }, contentStyle]}>
-        {icon}
-        <Text size="xs" fontFamily="geist-semibold" style={{ color: COLORS.white }}>
-          {label}
-        </Text>
+      accessibilityLabel={label}
+      style={{
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: isLeft ? 0 : undefined,
+        right: isLeft ? undefined : 0,
+        width: LANE_WIDTH,
+        justifyContent: 'center',
+        alignItems: isLeft ? 'flex-start' : 'flex-end',
+        paddingHorizontal: BADGE_INSET,
+      }}>
+      <Animated.View
+        style={[
+          {
+            width: BADGE_SIZE,
+            height: BADGE_SIZE,
+            borderRadius: BADGE_SIZE / 2,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: 0,
+          },
+          badgeStyle,
+        ]}>
+        {/* Two stacked glyphs cross-fade: tinted while the action is merely offered, white once
+            releasing would actually fire it. A single glyph can't animate its colour prop. */}
+        <Animated.View style={[{ position: 'absolute' }, glyphStyle]}>{icon(color)}</Animated.View>
+        <Animated.View style={[{ position: 'absolute' }, armedGlyphStyle]}>
+          {icon(COLORS.white)}
+        </Animated.View>
       </Animated.View>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -98,6 +175,8 @@ export function SwipeableArticleRow({
   onToggleSaved,
 }: SwipeableArticleRowProps) {
   const { width } = useWindowDimensions();
+  const isDark = useIsDarkMode();
+  const colors = COLORS[isDark ? 'dark' : 'light'];
   const translateX = useSharedValue(0);
   const hasTriggeredHaptic = useSharedValue(false);
   const canSwipeRight = !!onToggleRead;
@@ -149,39 +228,35 @@ export function SwipeableArticleRow({
 
   const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: translateX.value }] }));
 
-  // 0 → 1 as the row travels toward the trigger distance, per direction
-  const readProgress = useDerivedValue(() => Math.max(0, translateX.value) / TRIGGER_DISTANCE);
-  const saveProgress = useDerivedValue(() => Math.max(0, -translateX.value) / TRIGGER_DISTANCE);
-
-  const readColor = COLORS.light.primary;
-  const saveColor = COLORS.light.blue;
-
   return (
     <View className="overflow-hidden">
       {canSwipeRight && (
-        <ActionBackground
+        <SwipeAction
           side="left"
-          color={readColor}
-          label={isRead ? 'Unread' : 'Read'}
-          progress={readProgress}
-          icon={
+          translateX={translateX}
+          color={colors.secondary}
+          trackColor={colors.icon_bg_green}
+          label={isRead ? 'Mark as unread' : 'Mark as read'}
+          icon={(color) =>
             isRead ? (
-              <LetterIcon size={ICON_SIZE} color={COLORS.white} />
+              <LetterIcon size={ICON_SIZE} color={color} />
             ) : (
-              <LetterOpenedIcon size={ICON_SIZE} color={COLORS.white} />
+              <LetterOpenedIcon size={ICON_SIZE} color={color} />
             )
           }
         />
       )}
-      <ActionBackground
+      <SwipeAction
         side="right"
-        color={saveColor}
+        translateX={translateX}
+        color={SAVE_YELLOW}
+        trackColor={colors.icon_bg_yellow}
         label={isSaved ? 'Unsave' : 'Save'}
-        progress={saveProgress}
-        icon={<BookmarkIcon size={ICON_SIZE} color={COLORS.white} />}
+        icon={(color) => <BookmarkIcon size={ICON_SIZE} color={color} />}
       />
 
       <GestureDetector gesture={pan}>
+        {/* Opaque on purpose: this is what hides both badges until the row actually moves. */}
         <Animated.View style={rowStyle} className="bg-background">
           {children}
         </Animated.View>

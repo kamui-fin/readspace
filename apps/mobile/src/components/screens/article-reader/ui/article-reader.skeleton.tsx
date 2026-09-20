@@ -1,3 +1,7 @@
+import {
+  FEATURED_IMAGE_HEIGHT,
+  FEATURED_IMAGE_TOP_OFFSET,
+} from '@components/screens/article-reader/ui/article-featured-image';
 import { Divider } from '@components/ui/divider';
 import { Skeleton } from '@components/ui/skeleton';
 import type { Article } from '@readspace/shared';
@@ -13,8 +17,18 @@ export function ArticleReaderSkeleton({ article }: ArticleReaderSkeletonProps) {
 
   return (
     <View className="bg-background flex-1">
-      {/* Featured Image placeholder */}
-      <Skeleton variant="rectangle" height={200} width="100%" className="rounded-none" />
+      {/* Featured Image placeholder — height and top offset mirror ArticleFeaturedImage exactly,
+          so the real image doesn't jump into place when it swaps in. */}
+      {article?.image_url && (
+        <View style={{ marginTop: insets.top + FEATURED_IMAGE_TOP_OFFSET }}>
+          <Skeleton
+            variant="rectangle"
+            height={FEATURED_IMAGE_HEIGHT}
+            width="100%"
+            className="rounded-none"
+          />
+        </View>
+      )}
 
       {/* Article Header */}
       <View className="mb-6 px-6 pb-6 pt-6">

@@ -29,6 +29,7 @@ export function SearchSuggestionsPanel({
   const colors = COLORS[isDark ? 'dark' : 'light'];
   return (
     <ScrollView
+      contentInsetAdjustmentBehavior="automatic"
       showsVerticalScrollIndicator={false}
       className="px-6"
       keyboardShouldPersistTaps="handled"

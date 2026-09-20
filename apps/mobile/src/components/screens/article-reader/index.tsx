@@ -134,6 +134,29 @@ export const ArticleReader = forwardRef<ArticleReaderHandle, ArticleReaderProps>
       };
     });
 
+    /**
+     * Height of the scroll viewport, captured on layout. `handleScroll` gets this from the
+     * event, but a short article never fires one — see `handleContentSizeChange`.
+     */
+    const viewportHeight = useRef(0);
+
+    /**
+     * An article that fits on screen produces no scroll event at all, so progress would sit at
+     * its initial 0 forever. Content size is the one signal that always arrives.
+     *
+     * This has to recompute in *both* directions, not just latch to 1: the WebView reports its
+     * collapsed height first and only grows once the article renders, so a one-way "short means
+     * finished" rule would pin every article to 100% on open and never let go.
+     */
+    const handleContentSizeChange = (_width: number, height: number) => {
+      // Before the WebView reports its real height the page is "shorter than the viewport" in
+      // the most literal sense, which would read as finished. Wait until it has rendered.
+      if (!readingProgress || viewportHeight.current === 0 || !isReady) return;
+      const scrollableHeight = height - viewportHeight.current;
+      readingProgress.value =
+        scrollableHeight > 0 ? Math.min(Math.max(lastScrollY.value / scrollableHeight, 0), 1) : 1;
+    };
+
     // Handle scroll events to track position and direction
     const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
@@ -161,8 +184,10 @@ export const ArticleReader = forwardRef<ArticleReaderHandle, ArticleReaderProps>
 
       if (readingProgress) {
         const scrollableHeight = contentSize.height - layoutMeasurement.height;
+        // An article shorter than the viewport has nothing left to read, so it's finished — 0
+        // here would leave a permanent "0%" on a piece the reader can already see all of.
         readingProgress.value =
-          scrollableHeight > 0 ? Math.min(Math.max(currentScrollY / scrollableHeight, 0), 1) : 0;
+          scrollableHeight > 0 ? Math.min(Math.max(currentScrollY / scrollableHeight, 0), 1) : 1;
       }
 
       // Determine scroll direction
@@ -339,7 +364,7 @@ export const ArticleReader = forwardRef<ArticleReaderHandle, ArticleReaderProps>
     /* Placeholders only. Every value below is overwritten before first paint by
        \`readerVariablesScript\` (injectedJavaScriptBeforeContentLoaded) and again
        whenever the theme or a reader setting changes. Keeping them out of the
-       HTML string is what lets tone and typography change *without* rebuilding
+       HTML string is what lets typography change *without* rebuilding
        \`source\` — no reload, no lost scroll position, no skeleton flash. */
     :root {
       --color-text: #232222;
@@ -831,6 +856,10 @@ export const ArticleReader = forwardRef<ArticleReaderHandle, ArticleReaderProps>
             paddingBottom: 80,
           }}
           onScroll={handleScroll}
+          onContentSizeChange={handleContentSizeChange}
+          onLayout={(e) => {
+            viewportHeight.current = e.nativeEvent.layout.height;
+          }}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}>
           {/* Featured Image with Galeria - Edge-to-edge */}

@@ -1,26 +1,13 @@
-import { Languages, Plus } from '@components/icons/svg';
-import { SearchOptionsButton } from '@components/screens/discover/ui/search-options.button';
-import { Button } from '@components/ui/button';
+import { SearchActions } from '@components/screens/discover/ui/search-actions';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { Stack } from 'expo-router';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
-import { View } from 'react-native';
 import type { SearchBarCommands } from 'react-native-screens';
 import type { DiscoverChromeProps, DiscoverSearchHandle } from './types';
 
 export type { DiscoverChromeProps, DiscoverSearchHandle } from './types';
 
-/**
- * iOS Discover chrome: the native navigation header (UINavigationBar) with a large title, and
- * a native `UISearchController` search field (`headerSearchBarOptions`) — system cancel button,
- * keyboard handling and iOS 26 Liquid Glass — instead of our pill. Renders no RN UI itself; it
- * configures the surrounding stack screen.
- *
- * The native field keeps its own text, so JS-side changes (tapping a recent search, clearing a
- * query) are pushed into it with `setText` / `clearText`. `nativeText` remembers what the field
- * already shows so the sync never echoes a user's own typing back at them.
- */
 export const DiscoverChrome = forwardRef<DiscoverSearchHandle, DiscoverChromeProps>(
   (
     {
@@ -66,21 +53,21 @@ export const DiscoverChrome = forwardRef<DiscoverSearchHandle, DiscoverChromePro
       [onChangeText]
     );
 
+    /**
+     * Search options are always present. They used to appear only once a search was running,
+     * which meant the one screen where you'd go to change how search behaves — the landing
+     * screen, before typing — was the one screen with no way to reach them. The category screens
+     * carry the same cluster, for the same reason.
+     */
     const headerRight = useCallback(
-      () =>
-        isBrowsing ? (
-          <View className="flex-row items-center gap-2">
-            <Button variant="icon" size="small" fullWidth={false} onPress={onOpenLanguage}>
-              <Languages width={20} height={20} color={colors.grey} />
-            </Button>
-            <Button variant="icon" size="small" fullWidth={false} onPress={onOpenAddFeed}>
-              <Plus width={20} height={20} color={colors.grey} />
-            </Button>
-          </View>
-        ) : (
-          <SearchOptionsButton onPress={onOpenOptions} />
-        ),
-      [isBrowsing, colors.grey, onOpenLanguage, onOpenAddFeed, onOpenOptions]
+      () => (
+        <SearchActions
+          onOpenOptions={onOpenOptions}
+          onOpenLanguage={onOpenLanguage}
+          onOpenAddFeed={onOpenAddFeed}
+        />
+      ),
+      [onOpenLanguage, onOpenAddFeed, onOpenOptions]
     );
 
     return (
@@ -100,6 +87,15 @@ export const DiscoverChrome = forwardRef<DiscoverSearchHandle, DiscoverChromePro
             placeholder: 'What are you looking for?',
             autoCapitalize: 'none',
             hideWhenScrolling: false,
+            // `textColor`, `tintColor` and `barTintColor` are the only three RNSSearchBar
+            // implements on iOS. The placeholder and the magnifier are drawn by UIKit from the
+            // navigation bar's trait collection and cannot be set from JS at all —
+            // NAVIGATION_THEME is what keeps that trait collection in step with the app theme.
+            textColor: colors.black,
+            tintColor: colors.secondary,
+            // Our own surface rather than the default material, so the field matches the pill on
+            // Android and the cards below it.
+            barTintColor: colors.grey6,
             onChangeText: handleChangeText,
             onFocus,
             onBlur,

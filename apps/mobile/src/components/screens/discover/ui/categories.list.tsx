@@ -1,3 +1,4 @@
+import { DiscoverSectionHeader } from '@components/screens/discover/ui/discover-section-header';
 import { Chip } from '@components/ui/chip';
 import { Text } from '@components/ui/text';
 import { MOBILE_CATEGORY_NAMES } from '@readspace/shared';
@@ -93,18 +94,16 @@ export function CategoriesList({
 
   return (
     <View>
-      {showHeader && (
-        <View className="mb-4 px-6">
-          <Text size="base" fontFamily="geist-semibold" className="text-black">
-            Categories
-          </Text>
-        </View>
-      )}
+      {showHeader && <DiscoverSectionHeader title="Categories" showRule={false} />}
 
       <ScrollView
         ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
+        // The parent list runs `automatic` so the native large-title header can inset it. That
+        // behaviour is inherited by every nested UIScrollView, and on this rail it shows up as a
+        // phantom left indent and a stray indicator.
+        contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="always"
         onScroll={handleScroll}
         onLayout={handleViewportLayout}

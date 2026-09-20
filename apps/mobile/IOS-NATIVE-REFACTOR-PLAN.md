@@ -20,7 +20,7 @@ Legend: ✅ done · 🟡 code-done, **needs device test** · 🚧 in progress ·
 | 3c | Spinner / ProgressView | ⏭️ | brand-coloured SVG spinner used on coloured buttons + toasts; native adds nothing |
 | 3d | Label | ✅ | SF-symbol `Label` semantics come from `Button`/`Picker` `systemImage` rows in the settings `Form` and menus |
 | 4 | Confirmation dialog + alerts | 🟡 | `useNativeConfirm` (`ui/confirm-dialog`); feed-switcher ×3 + profile replaced; `lib/review` mock alert kept |
-| 5 | Menus | ⏭️/✅ | Deleted unused `ui/context-menu`. Feed-switcher row menus stay on zeego (already native `UIMenu`; SwiftUI would be a Host per row). Profile theme menu became a `Picker` in the settings Form. Reader corner menu was already SwiftUI. |
+| 5 | Menus | ✅ | Removed Zeego and its legacy iOS dependency chain. Shared tap menus use `@expo/ui/community/menu` (SwiftUI `Menu` on iOS, Compose `DropdownMenu` on Android); the iOS settings Form and reader corner retain their direct SwiftUI implementations. |
 | 6 | Settings `Form` / `Section` / `Picker` / `Button` | 🟡 | `profile/ui/settings-view` (RN + `.ios` Form); `ProfileScreen` now builds section data. Codex-settings toggles use the native `Toggle` via `Switch`. |
 | 6b | Reader typography: `Stepper` + segmented `Picker` | 🟡 | `text-size.control` / `line-spacing.control` (+ `.ios`) |
 | 6c | Search-mode toggle | ⏭️ | keeps AI sparkle affordance; native segmented pickers are text-only |
@@ -142,11 +142,10 @@ Legend — **Do**: migrate; **Partial**: migrate only where noted; **Keep**: no 
 - `Picker` also replaces the reader-settings segmented rows (`segmented.row`, `navigation/segmented-control`) → `pickerStyle('segmented')`, and `navigation/stepper` → SwiftUI `Stepper` (font size). Verify against reader chrome behavior first.
 - **Risk:** medium — dark mode/theme colors must map (SwiftUI `Form` background vs `COLORS.background`); test sepia/dark.
 
-### 3.10 Context menu — **Partial**
-- **Today:** `ui/context-menu` and `ui/dropdown-menu` wrap **zeego** (which is itself native `UIMenu`/`UIContextMenuInteraction`, so today's visuals are already native). Consumers: `feed-switcher` (`feed-list-item`, `folder-group`, index), `profile`, `article-actions.bar`, reader menus.
-- **Do:** tap-triggered menus (dropdown) → SwiftUI `Menu` in `Host matchContents` (pattern already shipped in `reader-corner-menu.ios.tsx`): profile language/preference chips, article actions overflow, feed switcher header.
-- **Spike then decide:** long-press row menus (`feed-list-item`, `folder-group`) → `@expo/ui` `ContextMenu` needs a Host **per row**. Measure with a 50-row feed switcher; if scroll/mount cost is visible → **Keep zeego** for row-level menus (no visual difference).
-- Then remove `zeego`, `@react-native-menu/menu`, `react-native-ios-context-menu` only if nothing depends on them.
+### 3.10 Context menu — **Done**
+- Feed and folder action buttons, Android settings pickers, and the Android reader menu use `@expo/ui/community/menu`.
+- Expo UI renders tap-triggered SwiftUI `Menu` on iOS and Compose `DropdownMenu` on Android while preserving checked, disabled, destructive, and SF Symbol action metadata.
+- Removed `ui/dropdown-menu`, `zeego`, `@react-native-menu/menu`, `react-native-ios-context-menu`, and `react-native-ios-utilities`.
 
 ### 3.11 Control group — **Do (small, targeted)**
 - SwiftUI `ControlGroup` for the grouped action clusters: `article-actions.bar` (save/share/AI/etc.) and reader toolbar clusters, wrapped in `GlassEffectContainer` on iOS 26 so buttons merge into one glass capsule. Android keeps current bar.
@@ -159,6 +158,31 @@ Legend — **Do**: migrate; **Partial**: migrate only where noted; **Keep**: no 
 ---
 
 ## 3.99 Progress log
+
+- **Reader + navigation pass (device feedback round 1):**
+  - Reader top bar: SF Symbol glyphs now carry `imageScale('large')` so they weigh the same as the
+    system back chevron; overflow is `ellipsis` + `rotationEffect(90)` (SF Symbols ships no
+    `ellipsis.vertical` — only `ellipsis.vertical.bubble`). `BACK_BUTTON_SIZE` moved 36 → 40 to
+    match the `icon`/`small` button box, and `BAR_ICON_SIZE` added for the Android bar's glyphs.
+  - Reader bottom chrome: `reader-corner-menu.ios.tsx` reinstated — a SwiftUI `Menu` on a circular
+    glass trigger, so the bottom-right control is the same object as the other floating actions.
+    Android keeps the `MenuView` trigger.
+  - **Read Aloud deleted** (`useArticleSpeech`, `ReaderSpeechState`, `expo-speech`).
+  - Reader settings: header left-aligned, preview moved to the bottom, typography rows labelled by
+    icon, and selection haptics added around the native `Stepper` / segmented `Picker` (UIKit does
+    not vibrate those on its own).
+  - `BottomSheet` header: slot-only headers (`headerLeft` with no `headerTitle`, e.g. The Gist) now
+    lay out in flow instead of being absolutely positioned against an empty title, which is what
+    clipped them along the bottom edge.
+  - Swipe actions on article rows rebuilt: a strip only as wide as the drag, one round badge,
+    yellow to save and `secondary` green to mark read — no more full-row recolour.
+  - `feed/[id]` (+ `/articles`, `/similar`) **moved out of the Discover tab stack** to
+    `(protected)/feed/[id]`. Pushing into a tab's stack from the article reader or a category
+    screen rebuilt that stack with the feed profile as its root, which is why it had no back
+    button. Trade-off: the tab bar is now hidden on the feed profile, as it already was on the
+    category screen. `returnTo` is gone with it.
+  - `feed-articles` and `recents` gained the native navigation bar / a back affordance.
+
 
 - **PR 1 + 2 (sheets) code-complete, untested on device:** `BottomSheet` / `Modal` / `Input` rebuilt on True Sheet; all 29 gorhom importers migrated; `useBottomSheetBackHandler`, `BottomSheetModalProvider` and `@gorhom/bottom-sheet` removed; `tsc` clean. **Needs a dev-client rebuild + manual pass on iOS and Android** (see §2 Verification) before merge.
 
@@ -188,7 +212,6 @@ Every PR: `bun run check-types`, `bun run check` (Biome), iOS simulator screensh
 | OPML gradient-tick progress bar, reading-progress ring | Custom brand visuals ([[feedback_visual_restraint]]) |
 | Text inputs inside sheets, Discover search input (unless native header) | Focus/keyboard/ref control |
 | `lib/review` `Alert.alert` | Non-UI code path; already native |
-| Row-level long-press menus (pending spike) | Host-per-row cost; zeego is already native UIMenu |
 | All Android UI | Out of scope by design (only the sheet library changes) |
 
 ---

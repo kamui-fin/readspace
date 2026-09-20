@@ -1,4 +1,5 @@
 import { Skeleton } from '@components/ui/skeleton';
+import { USES_NATIVE_HEADER } from '@lib/constants/platform';
 import { Dimensions, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,7 +9,10 @@ const CARD_WIDTH = SCREEN_WIDTH * 0.7;
 export function FeedPreviewSkeleton() {
   const insets = useSafeAreaInsets();
   return (
-    <View className="bg-background flex-1" style={{ paddingTop: insets.top }}>
+    // The native navigation bar already clears the status bar on iOS.
+    <View
+      className="bg-background flex-1"
+      style={{ paddingTop: USES_NATIVE_HEADER ? 0 : insets.top }}>
       <ScrollView showsVerticalScrollIndicator={false} className="pt-2">
         {/* Profile / Feed Info Header */}
         <View className="px-6">

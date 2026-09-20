@@ -90,7 +90,7 @@ export const FeedListItem = ({
   }
 
   return (
-    <Link href={`/(protected)/(tabs)/discover/feed/${feedId}`} asChild>
+    <Link href={`/(protected)/feed/${feedId}`} asChild>
       {innerPressable}
     </Link>
   );

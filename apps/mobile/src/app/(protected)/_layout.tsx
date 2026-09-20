@@ -1,8 +1,8 @@
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { COLORS } from '@lib/constants/colors';
 import { useReviewPrompt } from '@hooks/useReviewPrompt';
-import { View } from 'react-native';
+import { COLORS } from '@lib/constants/colors';
 import { Stack } from 'expo-router';
+import { View } from 'react-native';
 
 export default function ProtectedLayout() {
   const cancelReviewPrompt = useReviewPrompt();
@@ -16,6 +16,8 @@ export default function ProtectedLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="onboarding/index" />
         <Stack.Screen name="articles/[id]" />
+        <Stack.Screen name="discover-category/[category]" />
+        <Stack.Screen name="feed/[id]" />
       </Stack>
     </View>
   );

@@ -1,12 +1,14 @@
 import { OPMLImportBottomSheet } from '@components/bottom-sheets/opml-import';
 import { Header } from '@components/navigation/header';
 import { OPMLStatusCard } from '@components/screens/profile/ui/opml-status-card';
+import type { SheetRef } from '@components/ui/bottom-sheet';
+import { NativeScreenHeader } from '@components/ui/native-screen-header';
 import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import type { SheetRef } from '@components/ui/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { USES_NATIVE_HEADER } from '@lib/constants/platform';
 import { readFileContent, validateOPMLFile } from '@lib/utils/opml';
 import {
   ApiClient,
@@ -71,6 +73,18 @@ export default function ImportOPMLScreen() {
   }, [taskStatus?.status, queryClient]);
 
   const hasActiveTask = !!(currentTaskId && taskStatus);
+  const screenTitle = hasActiveTask ? 'Import Status' : 'Import Subscriptions';
+
+  // Shared by the idle target and the busy state so the card doesn't resize when you pick a file.
+  const dropZoneStyle = {
+    backgroundColor: colors.grey6,
+    borderColor: isDark ? colors.grey5 : colors.grey4,
+    borderStyle: 'dashed',
+    borderWidth: 1.5,
+    borderRadius: 20,
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  } as const;
 
   const handleImportStarted = useCallback((taskId: string) => {
     setLocalTaskId(taskId);
@@ -159,18 +173,23 @@ export default function ImportOPMLScreen() {
       className="bg-background flex-1"
       style={{
         backgroundColor: colors.background,
-        paddingTop: insets.top,
+        // The native navigation bar already clears the status bar.
+        paddingTop: USES_NATIVE_HEADER ? 0 : insets.top,
         paddingBottom: insets.bottom,
       }}>
-      <Header
-        variant="static"
-        title={hasActiveTask ? 'Import Status' : ''}
-        titleFontWeight="semibold"
-        transparentBackground={true}
-        showBackButton={true}
-        disableSafeAreaTop={true}
-        onBackPress={() => router.back()}
-      />
+      <NativeScreenHeader title={screenTitle} backTitle="Settings" />
+
+      {!USES_NATIVE_HEADER && (
+        <Header
+          variant="static"
+          title={screenTitle}
+          titleFontWeight="semibold"
+          transparentBackground={true}
+          showBackButton={true}
+          disableSafeAreaTop={true}
+          onBackPress={() => router.back()}
+        />
+      )}
 
       <ScrollView
         className="flex-1"
@@ -187,80 +206,47 @@ export default function ImportOPMLScreen() {
             />
           </Animated.View>
         ) : (
-          <View className="px-6">
-            {/* Screen Header Info */}
-            <View className="mb-6">
-              <Text size="2xl" fontFamily="geist-bold" className="mb-2 text-black dark:text-white">
-                Import Subscriptions
-              </Text>
-              <Text
-                size="sm"
-                fontFamily="geist-medium"
-                className="text-grey dark:text-grey leading-relaxed">
-                Bring your reading list with you. Upload an OPML file exported from your previous
-                RSS reader to import all your feeds at once.
-              </Text>
-            </View>
-
-            {/* Premium Upload Card */}
+          <View className="gap-3 px-6 pt-2">
+            {/* One target, one caption. The screen used to open with a heading that repeated the
+                navigation bar and a paragraph explaining what an OPML file is — neither of which
+                helps anyone who is already on an import screen holding an export from their old
+                reader. */}
             {isPicking ? (
-              <View
-                className="items-center justify-center rounded-2xl border py-12"
-                style={{
-                  backgroundColor: colors.grey6,
-                  borderColor: isDark ? colors.grey5 : colors.grey4,
-                  borderStyle: 'dashed',
-                  borderWidth: 1.5,
-                }}>
+              <View style={dropZoneStyle} className="items-center justify-center gap-3">
                 <Spinner size="medium" color={colors.secondary} />
-                <Text
-                  size="base"
-                  fontFamily="geist-semibold"
-                  className="mt-4 text-center text-black dark:text-white">
-                  Analyzing file...
-                </Text>
-                <Text
-                  size="xs"
-                  fontFamily="geist"
-                  className="text-grey dark:text-grey mt-1 text-center">
-                  Reading OPML structure and counting feeds
+                <Text size="base" fontFamily="geist-semibold" className="text-primary-foreground">
+                  Reading your file…
                 </Text>
               </View>
             ) : (
               <Pressable
                 onPress={handleOPMLImport}
-                className="items-center justify-center rounded-2xl border px-5 py-12"
-                style={({ pressed }) => ({
-                  backgroundColor: colors.grey6,
-                  borderColor: isDark ? colors.grey5 : colors.grey4,
-                  borderStyle: 'dashed',
-                  borderWidth: 1.5,
-                  opacity: pressed ? 0.85 : 1,
-                })}>
+                accessibilityRole="button"
+                accessibilityLabel="Choose a subscriptions file"
+                className="items-center justify-center gap-3"
+                style={({ pressed }) => [dropZoneStyle, { opacity: pressed ? 0.85 : 1 }]}>
                 <View
-                  className="mb-4 h-16 w-16 items-center justify-center rounded-full"
-                  style={{
-                    backgroundColor: isDark
-                      ? 'rgba(106, 153, 78, 0.15)'
-                      : 'rgba(106, 153, 78, 0.1)',
-                  }}>
-                  <DocumentTextIcon size={32} color={colors.secondary} />
+                  className="h-14 w-14 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.primary_light }}>
+                  <DocumentTextIcon size={28} color={colors.secondary} />
                 </View>
-
-                <Text
-                  size="lg"
-                  fontFamily="geist-bold"
-                  className="text-center text-black dark:text-white">
-                  Select OPML File
-                </Text>
-                <Text
-                  size="xs"
-                  fontFamily="geist-medium"
-                  className="text-grey dark:text-grey mt-1.5 text-center">
-                  Tap to browse .opml or .xml subscription files
-                </Text>
+                <View className="items-center gap-1">
+                  <Text size="lg" fontFamily="geist-semibold" className="text-primary-foreground">
+                    Choose a file
+                  </Text>
+                  <Text size="xs" fontFamily="geist-medium" className="text-grey dark:text-grey">
+                    .opml or .xml
+                  </Text>
+                </View>
               </Pressable>
             )}
+
+            <Text
+              size="xs"
+              fontFamily="geist"
+              className="text-grey dark:text-grey px-2 text-center">
+              Export one from Feedly, Inoreader, NetNewsWire — any reader with an OPML export.
+            </Text>
           </View>
         )}
       </ScrollView>

@@ -1,4 +1,4 @@
-import { ALL_CONTENT_TYPES } from '@readspace/shared';
+import { CONTENT_TYPE_ATTRIBUTE, useContentTypeFilters } from '@hooks/useContentTypeFilters';
 import { useDiscoverPreferences } from '@stores/discover-preferences';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -7,7 +7,6 @@ import {
   useInfiniteHits,
   useInstantSearch,
   useMenu,
-  useRefinementList,
   useSearchBox,
 } from 'react-instantsearch';
 
@@ -25,7 +24,6 @@ import {
 export type DiscoverMode = 'browse' | 'suggestions' | 'results';
 
 const CATEGORY_ATTRIBUTE = 'top_level_category';
-const CONTENT_TYPE_ATTRIBUTE = 'content_type';
 
 /**
  * The `SearchParameters` the currently rendered hits were produced from.
@@ -46,15 +44,14 @@ function sameValues(a: readonly string[], b: readonly string[]): boolean {
 export function useDiscoverController(languageFilter: string) {
   const { query, refine: refineQuery } = useSearchBox();
   const { refine: refineCategory } = useMenu({ attribute: CATEGORY_ATTRIBUTE, limit: 100 });
-  const { items: contentTypeItems, refine: refineContentType } = useRefinementList({
-    attribute: CONTENT_TYPE_ATTRIBUTE,
-    limit: 50,
-  });
+  const {
+    options: contentTypeOptions,
+    selected: selectedContentTypes,
+    refine: refineContentType,
+    clear: clearContentTypeRefinements,
+  } = useContentTypeFilters();
   const { items: currentRefinements } = useCurrentRefinements();
   const { refine: clearAllRefinements } = useClearRefinements();
-  const { refine: clearContentTypeRefinements } = useClearRefinements({
-    includedAttributes: [CONTENT_TYPE_ATTRIBUTE],
-  });
   const { items: hits, isLastPage, showMore } = useInfiniteHits();
   const { status, results, refresh } = useInstantSearch();
 
@@ -90,15 +87,6 @@ export function useDiscoverController(languageFilter: string) {
     () =>
       currentRefinements.find((group) => group.attribute === CATEGORY_ATTRIBUTE)?.refinements[0]
         ?.value as string | undefined,
-    [currentRefinements]
-  );
-
-  const selectedContentTypes = useMemo(
-    () =>
-      (
-        currentRefinements.find((group) => group.attribute === CONTENT_TYPE_ATTRIBUTE)
-          ?.refinements ?? []
-      ).map((refinement) => String(refinement.value)),
     [currentRefinements]
   );
 
@@ -299,22 +287,6 @@ export function useDiscoverController(languageFilter: string) {
     }
     if (query) refresh();
   }, [searchMode, query, inputValue, refineQuery, refresh]);
-
-  /**
-   * Every content type is always rendered in a fixed order, whether or
-   * not the current result set happens to contain them — a filter rail whose
-   * chips appear and disappear between searches is impossible to aim at. Counts
-   * come from the response facets; selection comes from the UI state so a tap
-   * highlights on the same frame.
-   */
-  const contentTypeOptions = useMemo(() => {
-    const byValue = new Map(contentTypeItems.map((item) => [item.value, item]));
-    return ALL_CONTENT_TYPES.map((type) => ({
-      value: type as string,
-      count: byValue.get(type)?.count ?? 0,
-      isRefined: selectedContentTypes.includes(type),
-    }));
-  }, [contentTypeItems, selectedContentTypes]);
 
   return {
     // Mode & search state

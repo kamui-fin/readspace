@@ -1,14 +1,7 @@
 import { SettingsGroup } from '@components/screens/profile/ui/settings-group';
 import { SettingsItem } from '@components/screens/profile/ui/settings-item';
 import { SettingsValueChip } from '@components/screens/profile/ui/settings-value.chip';
-import {
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItemIcon,
-  DropdownMenuItemTitle,
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-} from '@components/ui/dropdown-menu';
+import { type MenuAction, MenuView } from '@expo/ui/community/menu';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { ScrollView, View } from 'react-native';
@@ -24,6 +17,12 @@ export type {
 function PickerRow({ row, isLast }: { row: SettingsPickerRow; isLast: boolean }) {
   const current = row.options.find((option) => option.value === row.value);
   const currentLabel = current?.label ?? row.value;
+  const actions: MenuAction[] = row.options.map((option) => ({
+    id: option.value,
+    title: option.label,
+    image: option.systemImage,
+    state: row.value === option.value ? 'on' : 'off',
+  }));
 
   return (
     // The menu trigger is scoped to the value chip, not the row: iOS lifts whatever it opens
@@ -35,25 +34,11 @@ function PickerRow({ row, isLast }: { row: SettingsPickerRow; isLast: boolean })
       leftIcon={row.icon}
       isLast={isLast}
       trailing={
-        <DropdownMenuRoot>
-          <DropdownMenuTrigger asChild>
-            <SettingsValueChip value={currentLabel} />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            {row.options.map((option) => (
-              <DropdownMenuCheckboxItem
-                key={option.value}
-                value={row.value === option.value ? 'on' : 'off'}
-                onValueChange={() => row.onChange(option.value)}
-                className="px-4 py-3">
-                <DropdownMenuItemIcon ios={{ name: option.systemImage }} />
-                <DropdownMenuItemTitle size="lg" fontFamily="geist">
-                  {option.label}
-                </DropdownMenuItemTitle>
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenuRoot>
+        <MenuView
+          actions={actions}
+          onPressAction={({ nativeEvent }) => row.onChange(nativeEvent.event)}>
+          <SettingsValueChip value={currentLabel} />
+        </MenuView>
       }
     />
   );
@@ -77,7 +62,11 @@ function renderRow(row: SettingsRow, isLast: boolean) {
   );
 }
 
-/** Android / default settings layout: our own grouped rows inside a scroll view. */
+/**
+ * Settings layout on every platform: our own grouped rows inside a scroll view. The native
+ * SwiftUI `Form` variant was tried on iOS and dropped — the custom groups read better and stay
+ * identical across iOS and Android.
+ */
 export function SettingsView({ header, intro, sections, bottomInset }: SettingsViewProps) {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];

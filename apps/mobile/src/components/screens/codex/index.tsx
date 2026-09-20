@@ -1,10 +1,9 @@
-import { recordReviewActivity } from '@lib/review';
-import { useIsFocused } from 'expo-router/react-navigation';
 import { Header } from '@components/navigation/header';
 import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useLimitChecker } from '@hooks/useLimitChecker';
 import { COLORS } from '@lib/constants/colors';
+import { recordReviewActivity } from '@lib/review';
 import {
   type CodexDigestResponse,
   CodexDigestStatus,
@@ -12,6 +11,7 @@ import {
   useCodexToday,
   useGenerateCodexDigest,
 } from '@readspace/shared';
+import { useIsFocused } from 'expo-router/react-navigation';
 import { useCallback, useEffect, useReducer, useState } from 'react';
 import { AppState, View } from 'react-native';
 import { CodexGenerating } from './components/codex-generating';
@@ -42,8 +42,12 @@ export function CodexScreen() {
   );
   useEffect(() => {
     if (
-      isFocused && !isLoading && !error && !notEntitled &&
-      digest?.status === CodexDigestStatus.COMPLETED && digest.payload
+      isFocused &&
+      !isLoading &&
+      !error &&
+      !notEntitled &&
+      digest?.status === CodexDigestStatus.COMPLETED &&
+      digest.payload
     ) {
       void recordReviewActivity(undefined, true);
     }

@@ -47,6 +47,9 @@ export function DiscoverBrowseView({
     <ScrollView
       showsVerticalScrollIndicator={false}
       className="flex-1"
+      // iOS draws the large-title header and its search field OVER the screen; `automatic` is
+      // what makes UIKit inset this scroll view below them instead of starting at y=0.
+      contentInsetAdjustmentBehavior="automatic"
       keyboardShouldPersistTaps="always"
       onScroll={handleScroll}
       scrollEventThrottle={16}

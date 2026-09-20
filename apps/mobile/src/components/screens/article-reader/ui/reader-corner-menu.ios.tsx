@@ -1,47 +1,53 @@
-import { Host } from '@expo/ui';
+import { NativeHost } from '@components/ui/native-host';
 import { Button, Menu } from '@expo/ui/swift-ui';
 import {
   buttonBorderShape,
   buttonStyle,
   controlSize,
+  disabled as disabledModifier,
+  frame,
+  imageScale,
   labelStyle,
   menuIndicator,
   tint,
 } from '@expo/ui/swift-ui/modifiers';
-import { Platform } from 'react-native';
-import type { ReaderCornerMenuProps } from './reader-corner-menu.types';
+import { SUPPORTS_GLASS } from '@lib/constants/platform';
+import { READER_CORNER_BUTTON_SIZE, type ReaderCornerMenuProps } from './reader-corner-menu.types';
 
-/** Liquid Glass button styles only exist from iOS 26; older systems get the bordered fallback. */
-const SUPPORTS_GLASS = Number.parseInt(String(Platform.Version), 10) >= 26;
+export type { ReaderCornerMenuProps } from './reader-corner-menu.types';
 
 /**
- * The reader's corner menu as a real SwiftUI `Menu` — the same control Apple
- * Books uses, so it gets system blur, haptics, spring animation, and Liquid
- * Glass on iOS 26 without any of that being reimplemented.
+ * iOS reader corner menu: a SwiftUI `Menu` whose trigger is the same circular glass button as the
+ * reader's back button and the floating actions elsewhere in the app, so the bottom chrome is one
+ * native object rather than a hand-drawn "Aa" pill next to a system menu.
  *
- * The Host is forced to the reader's colour scheme rather than the system's:
- * the reader can be on sepia or dark while the app is in light mode, and the
- * menu chrome has to follow the page, not the phone.
+ * Android keeps `index.tsx` (our pressable + Expo UI's cross-platform `MenuView`), because
+ * Jetpack Compose is deliberately out of scope for this app's Android UI.
  */
 export function ReaderCornerMenu({
   colors,
-  isDark,
   onOpenSettings,
   onScrollToTop,
   onOpenOutline,
   skim,
+  onTranslate,
 }: ReaderCornerMenuProps) {
   return (
-    <Host matchContents colorScheme={isDark ? 'dark' : 'light'}>
+    <NativeHost
+      matchContents={false}
+      style={{ width: READER_CORNER_BUTTON_SIZE, height: READER_CORNER_BUTTON_SIZE }}>
       <Menu
         label="Reader menu"
-        systemImage="textformat.size"
+        systemImage="textformat"
         modifiers={[
           labelStyle('iconOnly'),
           buttonStyle(SUPPORTS_GLASS ? 'glass' : 'bordered'),
           buttonBorderShape('circle'),
           controlSize('large'),
+          imageScale('large'),
+          // An icon-only trigger has no room for SwiftUI's default menu chevron.
           menuIndicator('hidden'),
+          frame({ width: READER_CORNER_BUTTON_SIZE, height: READER_CORNER_BUTTON_SIZE }),
           tint(colors.grey),
         ]}>
         <Button label="Reader Settings" systemImage="textformat" onPress={onOpenSettings} />
@@ -51,12 +57,16 @@ export function ReaderCornerMenu({
         {skim && (
           <Button
             label={skim.generating ? 'AI Skim Mode · Generating…' : 'AI Skim Mode'}
-            systemImage={skim.active ? 'checkmark' : 'sparkles'}
-            onPress={skim.generating ? undefined : skim.onPress}
+            // A filled sparkle stands in for the checkmark a `state` row would draw: this is a
+            // plain action row, and the reader needs to see at a glance that skim is already on.
+            systemImage={skim.active ? 'sparkles.rectangle.stack.fill' : 'sparkles'}
+            onPress={skim.onPress}
+            modifiers={[disabledModifier(skim.generating)]}
           />
         )}
+        {onTranslate && <Button label="Translate" systemImage="translate" onPress={onTranslate} />}
         <Button label="Scroll to Top" systemImage="arrow.up.to.line" onPress={onScrollToTop} />
       </Menu>
-    </Host>
+    </NativeHost>
   );
 }

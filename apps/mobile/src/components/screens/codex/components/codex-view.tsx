@@ -1,6 +1,6 @@
 import { RefreshAI } from '@components/icons/svg';
-import { Button } from '@components/ui/button';
 import { Divider } from '@components/ui/divider';
+import { GlassIconButton } from '@components/ui/glass-icon-button';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
@@ -87,16 +87,15 @@ export function CodexView({ digest, onRegenerate, isRegenerating }: CodexViewPro
             </Text>
           </View>
           {onRegenerate ? (
-            <Button
-              variant="icon"
-              size="small"
-              fullWidth={false}
+            <GlassIconButton
+              systemImage="arrow.trianglehead.2.clockwise.rotate.90"
               onPress={onRegenerate}
               disabled={isRegenerating}
               loading={isRegenerating}
+              color={colors.grey}
               accessibilityLabel="Regenerate Daily Digest">
               <RefreshAI width={16} height={16} color={colors.grey} />
-            </Button>
+            </GlassIconButton>
           ) : null}
         </View>
         <Text

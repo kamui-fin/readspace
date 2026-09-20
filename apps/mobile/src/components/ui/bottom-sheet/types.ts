@@ -32,6 +32,11 @@ export interface BaseSheetProps
   onChange?: (index: number) => void;
   /** Pass `false` to lock the sheet against drag-to-dismiss and backdrop tap. */
   enablePanDownToClose?: boolean;
+  /**
+   * Opt into the native iOS 26 glass material instead of an opaque background. Off by default —
+   * see-through sheets make list content behind them hard to read.
+   */
+  glass?: boolean;
 }
 
 export interface BottomSheetProps extends BaseSheetProps {

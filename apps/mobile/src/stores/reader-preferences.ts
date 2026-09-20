@@ -3,7 +3,6 @@ import {
   READER_FONT_SIZES,
   type ReaderFontFamily,
   type ReaderLineHeight,
-  type ReaderTone,
 } from '@lib/constants/reader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
@@ -14,7 +13,6 @@ interface ReaderPreferencesState {
   fontSizeIndex: number;
   fontFamily: ReaderFontFamily;
   lineHeight: ReaderLineHeight;
-  tone: ReaderTone;
 }
 
 interface ReaderPreferencesActions {
@@ -23,7 +21,6 @@ interface ReaderPreferencesActions {
   decreaseFontSize: () => void;
   setFontFamily: (family: ReaderFontFamily) => void;
   setLineHeight: (lineHeight: ReaderLineHeight) => void;
-  setTone: (tone: ReaderTone) => void;
   reset: () => void;
 }
 
@@ -33,7 +30,6 @@ const initialState: ReaderPreferencesState = {
   fontSizeIndex: READER_DEFAULT_FONT_SIZE_INDEX,
   fontFamily: 'serif',
   lineHeight: 'normal',
-  tone: 'system',
 };
 
 const clampFontSizeIndex = (index: number) =>
@@ -51,7 +47,6 @@ export const useReaderPreferences = create<ReaderPreferencesStore>()(
         set((state) => ({ fontSizeIndex: clampFontSizeIndex(state.fontSizeIndex - 1) })),
       setFontFamily: (fontFamily) => set({ fontFamily }),
       setLineHeight: (lineHeight) => set({ lineHeight }),
-      setTone: (tone) => set({ tone }),
       reset: () => set(initialState),
     }),
     {

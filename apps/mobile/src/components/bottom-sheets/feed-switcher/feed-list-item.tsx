@@ -1,15 +1,8 @@
 import { Button } from '@components/ui/button';
-import {
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuItemIcon,
-  DropdownMenuItemTitle,
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-} from '@components/ui/dropdown-menu';
 import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
 import { FeedIcon } from '@components/ui/feed-icon';
 import { Text } from '@components/ui/text';
+import { type MenuAction, MenuView } from '@expo/ui/community/menu';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { resolveSupabaseImageUrl } from '@lib/utils/network';
@@ -69,6 +62,28 @@ const FeedListItemComponent = ({
   const feed = sub.feed;
   const faviconUrl = getFaviconUrl(feed);
   const title = sub.custom_title || feed.title;
+  const menuActions: MenuAction[] = [
+    {
+      id: 'favorite',
+      title: sub.is_favorite ? 'Remove from favorites' : 'Add to favorites',
+      image: sub.is_favorite ? 'star.fill' : 'star',
+    },
+    { id: 'rename', title: 'Rename', image: 'pencil' },
+    ...(onMoveToFolder ? [{ id: 'move', title: 'Move to folder', image: 'folder' as const }] : []),
+    {
+      id: 'unfollow',
+      title: 'Unfollow',
+      image: 'person.badge.minus',
+      attributes: { destructive: true },
+    },
+  ];
+
+  const handleMenuAction = ({ nativeEvent: { event } }: { nativeEvent: { event: string } }) => {
+    if (event === 'favorite') onToggleFavorite(sub);
+    else if (event === 'rename') onRename(sub);
+    else if (event === 'move') onMoveToFolder?.(sub);
+    else if (event === 'unfollow') onUnfollow(sub);
+  };
 
   const activeRowBg =
     isActive && !isSelectionMode
@@ -129,43 +144,19 @@ const FeedListItemComponent = ({
       </View>
 
       {!isSelectionMode && (
-        <DropdownMenuRoot>
-          <DropdownMenuTrigger>
-            <Button
-              variant="icon"
-              size="small"
-              fullWidth={false}
-              className="h-10 w-10 items-center justify-center bg-transparent dark:bg-transparent">
-              <MenuDotsIcon
-                size={20}
-                color={colors.grey2}
-                style={{ transform: [{ rotate: '90deg' }] }}
-              />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem key="favorite" onSelect={() => onToggleFavorite(sub)}>
-              <DropdownMenuItemIcon ios={{ name: sub.is_favorite ? 'star.fill' : 'star' }} />
-              <DropdownMenuItemTitle>
-                {sub.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-              </DropdownMenuItemTitle>
-            </DropdownMenuItem>
-            <DropdownMenuItem key="rename" onSelect={() => onRename(sub)}>
-              <DropdownMenuItemIcon ios={{ name: 'pencil' }} />
-              <DropdownMenuItemTitle>Rename</DropdownMenuItemTitle>
-            </DropdownMenuItem>
-            {onMoveToFolder && (
-              <DropdownMenuItem key="move" onSelect={() => onMoveToFolder(sub)}>
-                <DropdownMenuItemIcon ios={{ name: 'folder' }} />
-                <DropdownMenuItemTitle>Move to folder</DropdownMenuItemTitle>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem key="unfollow" destructive onSelect={() => onUnfollow(sub)}>
-              <DropdownMenuItemIcon ios={{ name: 'person.badge.minus' }} />
-              <DropdownMenuItemTitle>Unfollow</DropdownMenuItemTitle>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenuRoot>
+        <MenuView actions={menuActions} onPressAction={handleMenuAction}>
+          <Button
+            variant="icon"
+            size="small"
+            fullWidth={false}
+            className="h-10 w-10 items-center justify-center bg-transparent dark:bg-transparent">
+            <MenuDotsIcon
+              size={20}
+              color={colors.grey2}
+              style={{ transform: [{ rotate: '90deg' }] }}
+            />
+          </Button>
+        </MenuView>
       )}
     </>
   );

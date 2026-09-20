@@ -164,6 +164,7 @@ export function SearchResults({
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
       showsVerticalScrollIndicator={false}
+      contentInsetAdjustmentBehavior="automatic"
       ListHeaderComponent={listHeader ?? undefined}
       ListEmptyComponent={renderEmpty}
       ListFooterComponent={renderFooter}

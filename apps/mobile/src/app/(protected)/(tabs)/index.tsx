@@ -4,12 +4,10 @@ import { Header } from '@components/navigation/header';
 import { FollowingScreen } from '@components/screens/following';
 import { FilterActionButton } from '@components/screens/following/ui/filter-action.button';
 import type { SheetRef } from '@components/ui/bottom-sheet';
-import { Button } from '@components/ui/button';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { USES_NATIVE_TABS } from '@lib/constants/platform';
 import { FOLLOWING_TAB, NO_ACTIVE_TAB } from '@lib/constants/tabs';
 import { useFeeds, useUnreadCounts } from '@readspace/shared';
-import { FolderIcon, LibraryIcon } from '@solar-icons/react-native/bold-duotone';
+import { FolderIcon } from '@solar-icons/react-native/bold-duotone';
 import { useFeedViewStore } from '@stores/feed-view';
 import { useFollowingStore } from '@stores/following';
 import Constants from 'expo-constants';
@@ -72,17 +70,6 @@ export default function FollowingRoute() {
   const handleTitlePress = useCallback(() => {
     feedSwitcherRef.current?.present();
   }, []);
-
-  const feedSwitcherButton = (
-    <Button
-      variant="icon"
-      size="small"
-      fullWidth={false}
-      accessibilityLabel="Switch feed"
-      onPress={handleTitlePress}>
-      <LibraryIcon size={22} color={COLORS[isDark ? 'dark' : 'light'].grey} />
-    </Button>
-  );
 
   const handleTabChange = useCallback(
     (index: number) => {
@@ -229,8 +216,7 @@ export default function FollowingRoute() {
         variant="tabbed"
         title={headerTitle}
         titleIcon={headerTitleIcon}
-        unreadCount={USES_NATIVE_TABS ? undefined : unreadCount}
-        rightElement={USES_NATIVE_TABS ? feedSwitcherButton : undefined}
+        unreadCount={unreadCount}
         scrollY={scrollY}
         activeTab={isViewingFeedOrFolder ? NO_ACTIVE_TAB : activeTab}
         onTabChange={handleTabChange}

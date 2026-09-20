@@ -9,7 +9,6 @@ import { useOnboardingStore } from '@stores/onboarding';
 import { useSearchHistory } from '@stores/search-history';
 import { useHasSettingsHydrated, useSettingsStore } from '@stores/settings';
 import type { Session, User } from '@supabase/supabase-js';
-import { useRouter, useSegments } from 'expo-router';
 import type React from 'react';
 import { createContext, use, useEffect, useRef, useState } from 'react';
 
@@ -77,9 +76,6 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isNewSignup, setIsNewSignup] = useState(false);
   const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null);
-  const router = useRouter();
-  const segments = useSegments();
-  const isInAuthGroup = segments?.[0] === '(auth)';
 
   const isInitializing = useRef(true);
 
@@ -194,20 +190,6 @@ export function SessionProvider({ children }: SessionProviderProps) {
       subscription.unsubscribe();
     };
   }, [currentInstanceType, hasSettingsHydrated]);
-
-  // Handle explicit navigation after session state changes
-  // This ensures the router properly transitions out of (auth) routes
-  useEffect(() => {
-    if (isLoading) return;
-
-    if (session && isInAuthGroup) {
-      console.log('[AuthContext] 🔀 Session detected while in (auth) group, navigating to root');
-      router.replace('/');
-    } else if (!session && !isInAuthGroup) {
-      console.log('[AuthContext] 🔀 Session cleared while in protected route, navigating to auth');
-      router.replace('/(auth)');
-    }
-  }, [session, isInAuthGroup, isLoading, router]);
 
   const signIn = async (credentials: SignInCredentials) => {
     setIsNewSignup(false);

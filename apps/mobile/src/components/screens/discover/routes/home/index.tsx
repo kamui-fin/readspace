@@ -1,8 +1,4 @@
-import { AddFeedBottomSheet, type AddFeedBottomSheetRef } from '@components/bottom-sheets/add-feed';
-import {
-  FolderPickerBottomSheet,
-  type FolderPickerBottomSheetRef,
-} from '@components/bottom-sheets/folder-picker';
+import { AddFeedFlow, type AddFeedFlowRef } from '@components/screens/discover/ui/add-feed-flow';
 import { CategoriesList } from '@components/screens/discover/ui/categories.list';
 import { DiscoverBrowseView } from '@components/screens/discover/ui/discover-browse.view';
 import {
@@ -15,7 +11,6 @@ import { SearchResults } from '@components/screens/discover/ui/search-results.li
 import { SearchSuggestionsPanel } from '@components/screens/discover/ui/search-suggestions.panel';
 import type { SheetRef } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
-import { toast } from '@components/ui/toast';
 import { useDiscoverController } from '@hooks/useDiscoverController';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useTrendingFeeds } from '@hooks/useTrendingFeeds';
@@ -27,7 +22,7 @@ import {
 import { COLORS } from '@lib/constants/colors';
 import { USES_NATIVE_HEADER } from '@lib/constants/platform';
 import { createSearchClient, FEEDS_INDEX_NAME } from '@lib/meilisearch-client';
-import { createHybridSearchParams, MOBILE_CATEGORY_NAMES, useCreateFeed } from '@readspace/shared';
+import { createHybridSearchParams, MOBILE_CATEGORY_NAMES } from '@readspace/shared';
 import {
   type DiscoverLanguage,
   discoverLanguageToCode,
@@ -35,7 +30,8 @@ import {
   useDiscoverPreferences,
 } from '@stores/discover-preferences';
 import { useSearchHistory } from '@stores/search-history';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Configure, InstantSearch } from 'react-instantsearch';
 import { DeviceEventEmitter, Keyboard, TouchableWithoutFeedback, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -71,20 +67,17 @@ export function DiscoverScreen() {
 }
 
 function DiscoverScreenInner() {
+  const router = useRouter();
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const insets = useSafeAreaInsets();
 
   const searchBarRef = useRef<DiscoverSearchHandle>(null);
-  const addFeedModalRef = useRef<AddFeedBottomSheetRef>(null);
-  const folderPickerModalRef = useRef<FolderPickerBottomSheetRef>(null);
+  const addFeedFlowRef = useRef<AddFeedFlowRef>(null);
   const languagePickerRef = useRef<SheetRef>(null);
   const optionsSheetRef = useRef<SheetRef>(null);
 
-  const [pendingAddFeedUrl, setPendingAddFeedUrl] = useState<string | null>(null);
-
   const { searches: recentSearches, addSearch, clearHistory } = useSearchHistory();
-  const createFeed = useCreateFeed();
 
   // Language scopes both search and trending, so it stays a screen-level control
   // in the header rather than a search-only setting.
@@ -114,7 +107,6 @@ function DiscoverScreenInner() {
     submitSearch,
     clearQuery,
     exitSearch,
-    selectCategory,
     toggleContentType,
     clearContentTypes,
     resetSearch,
@@ -197,39 +189,14 @@ function DiscoverScreenInner() {
     if (!inputValue.trim()) blurSearch();
   }, [inputValue, blurSearch]);
 
+  // Categories are a destination, not a filter: tapping one pushes a screen with its own
+  // navigation bar and in-category search, instead of quietly refining the list behind you.
   const handleCategoryPress = useCallback(
     (category: string) => {
       dismissKeyboard();
-      selectCategory(category);
+      router.push(`/(protected)/discover-category/${encodeURIComponent(category)}`);
     },
-    [selectCategory, dismissKeyboard]
-  );
-
-  const handleAddFeedConfirm = useCallback((url: string) => {
-    setPendingAddFeedUrl(url);
-    folderPickerModalRef.current?.present();
-  }, []);
-
-  const handleFolderSelect = useCallback(
-    async (folderId: string | null) => {
-      if (!pendingAddFeedUrl) return;
-      const urlToSubscribe = pendingAddFeedUrl;
-      setPendingAddFeedUrl(null);
-
-      try {
-        await toast.promise(
-          createFeed.mutateAsync({ url: urlToSubscribe, folder_id: folderId || undefined }),
-          {
-            loading: 'Subscribing to feed...',
-            success: 'Subscribed successfully!',
-            error: 'Failed to subscribe to feed',
-          }
-        );
-      } catch (error) {
-        console.log('Error subscribing to feed:', error);
-      }
-    },
-    [pendingAddFeedUrl, createFeed]
+    [router, dismissKeyboard]
   );
 
   const isBrowsing = mode === 'browse';
@@ -292,7 +259,7 @@ function DiscoverScreenInner() {
             onCancel={handleBack}
             onSubmit={handleSubmit}
             onOpenLanguage={() => languagePickerRef.current?.present()}
-            onOpenAddFeed={() => addFeedModalRef.current?.present()}
+            onOpenAddFeed={() => addFeedFlowRef.current?.present()}
             onOpenOptions={handleOpenOptions}
           />
 
@@ -348,8 +315,7 @@ function DiscoverScreenInner() {
         onReset={clearContentTypes}
         canReset={hasContentTypeFilters}
       />
-      <AddFeedBottomSheet ref={addFeedModalRef} onConfirm={handleAddFeedConfirm} />
-      <FolderPickerBottomSheet ref={folderPickerModalRef} onFolderSelect={handleFolderSelect} />
+      <AddFeedFlow ref={addFeedFlowRef} />
       <LanguagePicker
         ref={languagePickerRef}
         title="Search language"

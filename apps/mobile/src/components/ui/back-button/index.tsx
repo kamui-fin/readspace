@@ -6,7 +6,7 @@ import type { BackButtonProps } from './types';
 
 export type { BackButtonProps } from './types';
 
-/** Android / default back button: our own icon button. iOS uses a native SwiftUI button. */
+/** Android / default back button: our own chevron. iOS uses the SwiftUI glass circle button. */
 export function BackButton({ onPress, color, className }: BackButtonProps) {
   const isDark = useIsDarkMode();
   const iconColor = color ?? COLORS[isDark ? 'dark' : 'light'].grey;

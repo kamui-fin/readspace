@@ -10,14 +10,14 @@ export interface ReaderSkimState {
 
 export interface ReaderCornerMenuProps {
   colors: ReaderSurfaceColors;
-  /** The reader surface is dark — drives the native menu's colour scheme. */
-  isDark: boolean;
   onOpenSettings: () => void;
   onScrollToTop: () => void;
   /** Omitted when the article has too few headings for an outline to be useful. */
   onOpenOutline?: () => void;
   /** Omitted for articles AI Skim can't run on (newsletters). */
   skim?: ReaderSkimState;
+  /** Opens the language picker. Omitted for content that can't be translated. */
+  onTranslate?: () => void;
 }
 
 /** Diameter of the corner button — shared so both platforms line up with the bottom bar. */

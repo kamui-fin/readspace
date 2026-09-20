@@ -4,6 +4,7 @@ import { COLORS } from '@lib/constants/colors';
 import { SUPPORTS_GLASS } from '@lib/constants/platform';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import clsx from 'clsx';
+import type { ReactElement } from 'react';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
 import { Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,10 +13,29 @@ import { toDetents } from './utils';
 
 export type { BottomSheetProps, SheetRef } from './types';
 
+/** Clears the native grabber, which UIKit draws over the sheet's first ~20px. */
+const HEADER_PADDING_TOP = 30;
+const HEADER_PADDING_BOTTOM = 14;
+
+/**
+ * The side slots are absolutely positioned, so they sit on top of the title rather than pushing
+ * it along. The title reserves this much room per occupied side so a long one truncates before
+ * it reaches the buttons instead of running underneath them.
+ */
+const HEADER_SLOT_RESERVE = 44;
+
+/**
+ * Minimum height for the title row when a side slot is present. Absolutely-positioned children
+ * contribute nothing to their parent's height, so without this a 40pt button in a slot is sized
+ * against the title's line box alone and hangs out of the header.
+ */
+const HEADER_SLOT_MIN_HEIGHT = 36;
+
+/** Matches the header's own vertical padding so side slots centre on the title, not the padding. */
 const HEADER_SLOT_STYLE = {
   position: 'absolute',
-  top: 0,
-  bottom: 0,
+  top: HEADER_PADDING_TOP,
+  bottom: HEADER_PADDING_BOTTOM,
   justifyContent: 'center',
   alignItems: 'center',
   zIndex: 10,
@@ -45,6 +65,7 @@ export const BottomSheet = forwardRef<SheetRef, BottomSheetProps>(
       footerClassName,
       contentPaddingHorizontal = 24,
       contentScrollable = true,
+      glass = false,
       snapPoints = ['90%'],
       enablePanDownToClose = true,
       onDismiss,
@@ -78,14 +99,43 @@ export const BottomSheet = forwardRef<SheetRef, BottomSheetProps>(
     const hasHeader = Boolean(headerTitle || headerLeft || headerRight || secondaryAction);
     const rightSlot = headerRight ?? secondaryAction;
 
-    const header = hasHeader ? (
-      <View
-        className={clsx('relative flex-row items-center py-4', headerClassName)}
-        style={{ minHeight: 56, paddingHorizontal: 24 }}>
-        {headerLeft && <View style={[HEADER_SLOT_STYLE, { left: 24 }]}>{headerLeft}</View>}
-        <View className="flex-1" style={{ justifyContent: 'center' }}>
-          {headerTitle && (
+    const headerPadding = {
+      minHeight: 56,
+      paddingHorizontal: 24,
+      paddingTop: HEADER_PADDING_TOP,
+      paddingBottom: HEADER_PADDING_BOTTOM,
+    } as const;
+
+    // No title: the slots *are* the header, so they lay out in normal flow and the row takes its
+    // height from them. Overlaying them here (the titled branch below) would leave the header
+    // sized against an empty title, which is what used to clip sheets whose whole header is a
+    // `headerLeft` — an icon and a heading, cut off along the bottom edge.
+    let header: ReactElement | undefined;
+    if (hasHeader && !headerTitle) {
+      header = (
+        <View
+          className={clsx('flex-row items-center justify-between', headerClassName)}
+          style={headerPadding}>
+          <View className="flex-shrink">{headerLeft}</View>
+          {rightSlot}
+        </View>
+      );
+    } else if (hasHeader) {
+      header = (
+        <View
+          className={clsx('relative flex-row items-center', headerClassName)}
+          style={headerPadding}>
+          {headerLeft && <View style={[HEADER_SLOT_STYLE, { left: 24 }]}>{headerLeft}</View>}
+          <View
+            className="flex-1"
+            style={{
+              justifyContent: 'center',
+              minHeight: headerLeft || rightSlot ? HEADER_SLOT_MIN_HEIGHT : undefined,
+              paddingLeft: headerLeft ? HEADER_SLOT_RESERVE : 0,
+              paddingRight: rightSlot ? HEADER_SLOT_RESERVE : 0,
+            }}>
             <Text
+              numberOfLines={1}
               className={clsx(
                 'font-geist-semibold text-primary-foreground text-2xl',
                 headerTitleAlign === 'center' ? 'text-center' : 'text-left'
@@ -93,11 +143,11 @@ export const BottomSheet = forwardRef<SheetRef, BottomSheetProps>(
               style={[{ lineHeight: 28, letterSpacing: -0.5 }, headerTitleStyle]}>
               {headerTitle}
             </Text>
-          )}
+          </View>
+          {rightSlot && <View style={[HEADER_SLOT_STYLE, { right: 24 }]}>{rightSlot}</View>}
         </View>
-        {rightSlot && <View style={[HEADER_SLOT_STYLE, { right: 24 }]}>{rightSlot}</View>}
-      </View>
-    ) : undefined;
+      );
+    }
 
     const footer = footerActions ? (
       <View
@@ -130,9 +180,12 @@ export const BottomSheet = forwardRef<SheetRef, BottomSheetProps>(
         dismissible={enablePanDownToClose}
         initialDetentIndex={index}
         scrollable={contentScrollable}
-        // Native material (glass on iOS 26+) is kept where it exists; elsewhere we paint the
-        // app background so sheets match the themed screens underneath.
-        backgroundColor={Platform.OS === 'ios' && SUPPORTS_GLASS ? undefined : colors.background}
+        // Sheets are opaque by default: content behind them (article text, feed rows) shows
+        // through the iOS 26 glass material and makes lists hard to read. Sheets that genuinely
+        // want the material opt in with `glass`.
+        backgroundColor={
+          glass && Platform.OS === 'ios' && SUPPORTS_GLASS ? undefined : colors.background
+        }
         grabberOptions={{ color: colors.grey4 }}
         header={header}
         footer={footer}

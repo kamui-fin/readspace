@@ -9,7 +9,7 @@ Usage:
     python scripts/trigger_task.py compact-unread  # Compact unread articles
     python scripts/trigger_task.py compact-old     # Delete old articles
     python scripts/trigger_task.py codex-generate <user_id>  # Generate a Codex digest
-    python scripts/trigger_task.py backfill-favicons [apply] [orphans] [N]  # Favicons -> PNG (dry run by default)
+    python scripts/trigger_task.py backfill-favicons [orphans] [N]  # Favicons -> PNG (writes!)
 
 Or using poethepoet:
     poe trigger refresh-all
@@ -104,27 +104,30 @@ async def trigger_reset_failed() -> None:
 
 
 async def trigger_backfill_favicons(*flags: str) -> None:
-    """Normalize stored favicons to PNG and null out generated placeholders.
+    """Normalize stored favicons to PNG and null out generated placeholders. WRITES to prod data.
 
-    Flags: ``apply`` (write changes; default is a dry run), ``orphans`` (instead: delete bucket
-    objects no feed references). Pass a positive integer to cap the number of storage keys processed.
+    Flags: ``orphans`` (instead: delete bucket objects no feed references). Pass a positive
+    integer to cap the number of storage keys processed.
     """
     from app.services.feeds.favicon_backfill import backfill_favicons, sweep_orphan_favicons
 
-    dry_run = "apply" not in flags
-    limit = next((int(f) for f in flags if f.isdigit()), None)
     if "orphans" in flags:
-        count = await sweep_orphan_favicons(dry_run=dry_run)
-        print(f"\nOrphan sweep ({'DRY RUN - nothing deleted' if dry_run else 'applied'}): {count} unreferenced objects")
+        count = await sweep_orphan_favicons()
+        print(f"\nOrphan sweep: deleted {count} unreferenced objects")
         return
-    logger.info("Triggering: favicon backfill", dry_run=dry_run, limit=limit)
-    stats = await backfill_favicons(dry_run=dry_run, limit=limit)
-    mode = "DRY RUN - nothing written" if dry_run else "applied"
+
+    limit = next((int(f) for f in flags if f.isdigit()), None)
+    logger.info("Triggering: favicon backfill", limit=limit)
+    stats = await backfill_favicons(limit=limit)
     print(
-        f"\nFavicon backfill ({mode}): converted={stats.converted} unchanged={stats.unchanged} "
-        f"nulled={stats.nulled} dangling={stats.dangling} unusable={stats.skipped_unusable} failed={stats.failed} "
+        f"\nFavicon backfill: converted={stats.converted} unchanged={stats.unchanged} "
+        f"nulled={stats.nulled} dangling={stats.dangling} unusable={stats.skipped_unusable} "
+        f"failed={stats.failed} meilisearch_failed_batches={stats.meilisearch_failed_batches} "
         f"bytes {stats.bytes_before} -> {stats.bytes_after}"
     )
+    if stats.failed or stats.meilisearch_failed_batches:
+        print("WARNING: some keys or Meilisearch batches failed - see logs; the run is safe to repeat")
+        sys.exit(2)
 
 
 TASKS = {
@@ -151,7 +154,7 @@ def print_usage() -> None:
     print("  batch-enrich            - Batch enrich feeds")
     print("  reset-failed            - Reset all feeds marked as 'failed-enrichment'")
     print("  codex-generate <user_id> - Generate a Codex digest for a user")
-    print("  backfill-favicons [apply] [orphans] [N] - Favicons -> PNG, or sweep orphans (dry run unless 'apply')")
+    print("  backfill-favicons [orphans] [N] - Favicons -> PNG (WRITES), or delete orphaned favicon objects")
     print("\nExample:")
     print("  python scripts/trigger_task.py refresh-all")
     print("  python scripts/trigger_task.py codex-generate 3fa85f64-5717-4562-b3fc-2c963f66afa6")

@@ -69,11 +69,8 @@ export function ArticleHeader({
         {!isClipped && feedId ? (
           <Pressable
             onPress={() => {
-              // Store current article ID in the navigation params so feed can navigate back correctly
-              router.push({
-                pathname: `/(protected)/(tabs)/discover/feed/${feedId}` as any,
-                params: { returnTo: `/(protected)/articles/${article.id}` },
-              });
+              // Same stack as the reader, so the feed profile gets a real back button.
+              router.push(`/(protected)/feed/${feedId}` as any);
             }}
             style={{
               flexDirection: 'row',

@@ -1,3 +1,4 @@
+import { DiscoverSectionHeader } from '@components/screens/discover/ui/discover-section-header';
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { Skeleton } from '@components/ui/skeleton';
 import { Text } from '@components/ui/text';
@@ -39,19 +40,13 @@ export const TrendingSection = memo(
     hasNextPage = false,
     isFetchingNextPage = false,
   }: TrendingSectionProps) => {
-    const header = (
-      <View className="mb-4 mt-8">
-        <Text size="base" fontFamily="geist-semibold" className="text-black">
-          Trending
-        </Text>
-      </View>
-    );
+    const header = <DiscoverSectionHeader title="Trending" showRule={false} />;
 
     if (showTrendingSkeleton) {
       return (
-        <View className="px-6">
+        <View>
           {header}
-          <View className="gap-3">
+          <View className="gap-3 px-6">
             {Array.from({ length: 5 }, (_, i) => (
               <SkeletonRow key={`trending-skeleton-${i}`} id={`trending-skeleton-${i}`} />
             ))}
@@ -62,9 +57,9 @@ export const TrendingSection = memo(
 
     if (trendingError) {
       return (
-        <View className="px-6">
+        <View>
           {header}
-          <Text size="base" fontFamily="geist" className="text-grey text-center">
+          <Text size="base" fontFamily="geist" className="text-grey px-6 text-center">
             Error loading trending feeds
           </Text>
         </View>
@@ -73,9 +68,9 @@ export const TrendingSection = memo(
 
     if (!trendingData || trendingData.length === 0) {
       return (
-        <View className="px-6">
+        <View>
           {header}
-          <Text size="base" fontFamily="geist" className="text-grey text-center">
+          <Text size="base" fontFamily="geist" className="text-grey px-6 text-center">
             No trending feeds available
           </Text>
         </View>
@@ -83,9 +78,9 @@ export const TrendingSection = memo(
     }
 
     return (
-      <View className="px-6">
+      <View>
         {header}
-        <View className="gap-1">
+        <View className="gap-1 px-6">
           {trendingData.map((feed) => (
             <FeedListItem
               key={feed.id}
@@ -100,7 +95,7 @@ export const TrendingSection = memo(
           ))}
         </View>
         {isFetchingNextPage && (
-          <View className="gap-3 pt-3">
+          <View className="gap-3 px-6 pt-3">
             {Array.from({ length: 3 }, (_, i) => (
               <SkeletonRow
                 key={`trending-footer-skeleton-${i}`}

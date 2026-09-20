@@ -26,17 +26,21 @@ export const ArticleSummaryBottomSheet = forwardRef<SheetRef, ArticleSummaryBott
 
     const snapPoints = useMemo(() => ['75%', '90%'], []);
 
-    // Header left with icon and title
+    // The whole header is this slot: an AI mark plus the title, set at the same size and weight
+    // the sheet's own `headerTitle` uses so it doesn't read as a different kind of heading.
     const headerLeft = useMemo(
       () => (
-        <View className="flex-row items-center gap-3">
-          <Sparkle color={colors.secondary} width={20} height={20} />
-          <Text size="xl" fontFamily="geist-semibold" className="text-primary_foreground">
+        <View className="flex-row items-center gap-2.5">
+          <Sparkle color={colors.secondary} width={22} height={22} />
+          <Text
+            numberOfLines={1}
+            className="font-geist-semibold text-primary-foreground text-2xl"
+            style={{ lineHeight: 28, letterSpacing: -0.5 }}>
             The Gist
           </Text>
         </View>
       ),
-      [colors.primary, colors.secondary, isDark]
+      [colors.secondary]
     );
 
     const markdownStyles = useMemo(
@@ -122,7 +126,7 @@ export const ArticleSummaryBottomSheet = forwardRef<SheetRef, ArticleSummaryBott
             <Text
               size="lg"
               fontFamily="geist-semibold"
-              className="text-primary_foreground mb-2 text-center">
+              className="text-primary-foreground mb-2 text-center">
               Failed to Generate Summary
             </Text>
             <Text size="base" fontFamily="geist" className="text-grey dark:text-grey text-center">

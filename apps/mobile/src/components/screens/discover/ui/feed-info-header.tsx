@@ -6,6 +6,7 @@ import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { USES_NATIVE_HEADER } from '@lib/constants/platform';
 import { Feed, FeedDiscoveryResult } from '@readspace/shared';
 import { LinkMinimalistic2Icon, TrashBinTrashIcon } from '@solar-icons/react-native/bold';
 import {
@@ -71,12 +72,14 @@ export const FeedInfoHeader = memo(function FeedInfoHeader({
 
   return (
     <View className="px-4 pb-4 pt-2">
-      {/* Back button row */}
-      <View className="mb-6 flex-row items-center">
-        <Button variant="icon" size="small" fullWidth={false} onPress={onBack}>
-          <ArrowLeftIcon size={18} strokeWidth={2.4} color={greyColor} />
-        </Button>
-      </View>
+      {/* Back button row — iOS gets the real navigation bar's back button instead. */}
+      {!USES_NATIVE_HEADER && (
+        <View className="mb-6 flex-row items-center">
+          <Button variant="icon" size="small" fullWidth={false} onPress={onBack}>
+            <ArrowLeftIcon size={18} strokeWidth={2.4} color={greyColor} />
+          </Button>
+        </View>
+      )}
 
       {/* Feed Icon + Title Row */}
       <View className="mb-4 flex-row items-center gap-4">
