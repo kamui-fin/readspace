@@ -20,13 +20,16 @@ Legend: ✅ done · 🟡 code-done, **needs device test** · 🚧 in progress ·
 | 3c | Spinner / ProgressView | ⏭️ | brand-coloured SVG spinner used on coloured buttons + toasts; native adds nothing |
 | 3d | Label | ⬜ | lands with settings `Form` (§3.9) |
 | 4 | Confirmation dialog + alerts | 🟡 | `useNativeConfirm` (`ui/confirm-dialog`); feed-switcher ×3 + profile replaced; `lib/review` mock alert kept |
-| 5 | Menus (`Menu` for tap menus, ContextMenu spike) | ⬜ | |
-| 6 | Settings `Form`/`Section`/`Picker`/`Stepper` | ⬜ | |
-| 7 | Control group (article actions bar) | ⬜ | |
+| 5 | Menus | ⏭️/✅ | Deleted unused `ui/context-menu`. Feed-switcher row menus stay on zeego (already native `UIMenu`; SwiftUI would be a Host per row). Profile theme menu became a `Picker` in the settings Form. Reader corner menu was already SwiftUI. |
+| 6 | Settings `Form` / `Section` / `Picker` / `Button` | 🟡 | `profile/ui/settings-view` (RN + `.ios` Form); `ProfileScreen` now builds section data. Codex-settings toggles use the native `Toggle` via `Switch`. |
+| 6b | Reader typography: `Stepper` + segmented `Picker` | 🟡 | `text-size.control` / `line-spacing.control` (+ `.ios`) |
+| 6c | Search-mode toggle | ⏭️ | keeps AI sparkle affordance; native segmented pickers are text-only |
+| 6d | Onboarding `Stepper` (page wizard) | ⏭️ | not a numeric stepper; custom paging UI |
+| 7 | Control group (article actions) | 🟡 | `article-action-group` (RN + `.ios` `ControlGroup` in `GlassEffectContainer` on iOS 26) |
 | 8 | Discover native header + search | ⬜ | approved |
 | 9 | NativeTabs + feed switcher on long-press | ⬜ | approved; spike first |
 
-**Device-test needed (nothing here has run on a simulator yet):** sheets (all), back button glass/bordered, Toggle, ConfirmationDialog anchoring inside a True Sheet.
+**Device-test needed (nothing here has run on a simulator yet):** sheets (all), back button glass/bordered, Toggle, ConfirmationDialog anchoring inside a True Sheet, settings `Form` height/scroll + colours (dark/light) + Picker menu, Stepper/segmented in the reader sheet, ControlGroup/GlassEffectContainer layout in the reader bar.
 
 ---
 

@@ -36,7 +36,6 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-masked-view/masked-view": "0.3.2",
     "@react-native-menu/menu": "2.0.0",
-    "@react-native-segmented-control/segmented-control": "2.5.7",
     "@readspace/shared": "workspace:*",
     "@sentry/react-native": "~7.11.0",
     "@solar-icons/react-native": "^2.1.0",

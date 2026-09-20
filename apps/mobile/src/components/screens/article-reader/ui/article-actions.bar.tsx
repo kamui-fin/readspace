@@ -1,15 +1,8 @@
-import { Sparkle } from '@components/icons/svg';
+import { ArticleActionGroup } from '@components/screens/article-reader/ui/article-action-group';
 import { BackButton } from '@components/ui/back-button';
-import { Button } from '@components/ui/button';
 import { COLORS } from '@lib/constants/colors';
 import type { ReaderSurfaceColors } from '@lib/constants/reader';
-import {
-  BookmarkIcon,
-  CheckCircleIcon,
-  CopyIcon,
-  MenuDotsIcon,
-  ShareIcon,
-} from '@solar-icons/react-native/bold';
+import { MenuDotsIcon } from '@solar-icons/react-native/bold';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -88,40 +81,17 @@ export function ArticleActionBar({
 
         {/* Right Actions */}
         <View className="flex-row items-center gap-3">
-          <Button variant="icon" size="small" fullWidth={false} onPress={onShare}>
-            <ShareIcon size={18} strokeWidth={2.4} color={colors.grey} />
-          </Button>
-
-          {!isClipped && onGenerateSummary && (
-            <Button variant="icon" size="small" fullWidth={false} onPress={onGenerateSummary}>
-              <Sparkle width={18} height={18} color={colors.grey} />
-            </Button>
-          )}
-
-          {onCopyLink && (
-            <Button variant="icon" size="small" fullWidth={false} onPress={onCopyLink}>
-              <CopyIcon size={18} strokeWidth={2.4} color={colors.grey} />
-            </Button>
-          )}
-
-          <Button
-            variant="icon"
-            size="small"
-            fullWidth={false}
-            onPress={onBookmark}
-            style={
-              !showDone && isBookmarked ? { backgroundColor: colors.icon_bg_yellow } : undefined
-            }>
-            {showDone ? (
-              <CheckCircleIcon size={18} color={colors.secondary} strokeWidth={2.4} />
-            ) : (
-              <BookmarkIcon
-                size={18}
-                color={isBookmarked ? '#FBBC04' : colors.grey}
-                strokeWidth={2.4}
-              />
-            )}
-          </Button>
+          <ArticleActionGroup
+            colors={colors}
+            isDark={colors === COLORS.dark}
+            onShare={onShare}
+            onBookmark={onBookmark}
+            onGenerateSummary={onGenerateSummary}
+            onCopyLink={onCopyLink}
+            isBookmarked={isBookmarked}
+            isClipped={isClipped}
+            showDone={showDone}
+          />
 
           {!hideMenu &&
             (menuTrigger || (
