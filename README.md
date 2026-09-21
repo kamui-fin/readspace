@@ -39,6 +39,12 @@
 ![Readspace feed and article reader](./landing/assets/img/main_feed_web-1200.webp)
 
 <p align="center">
+  <img src="./landing/assets/img/smart_discover.png" alt="Semantic search results for writers who think deeply about technology and society" width="50%" align="middle" />
+  &nbsp;
+  <img src="./landing/assets/img/read_later_desktop.webp" alt="Readspace browser extension saving an article with a priority and note" width="40%" align="middle" />
+</p>
+
+<p align="center">
   <img src="./landing/assets/img/main_feed_mobile.webp" alt="Readspace mobile feed" width="280" />
   &nbsp;&nbsp;&nbsp;&nbsp;
   <img src="./landing/assets/img/daily_digest_mobile.webp" alt="Readspace mobile daily digest" width="280" />
@@ -53,6 +59,8 @@ I follow a mix of tech writers, market newsletters, political coverage, and a ha
 
 RSS fixes most of this, but the readers built on it tend to assume you already know how RSS works. You start with an empty screen and a box asking for a feed URL, and the mobile apps are usually an afterthought. I wanted an RSS reader my mom could use without ever learning what RSS is.
 
+Readspace also makes it easier to discover new sources. Explore over 120,000 feeds with semantic search on the hosted service, from major publications to indie blogs and hidden gems across the open web.
+
 Read [the manifesto](./MANIFESTO.md) for the longer version.
 
 > **New to RSS?** RSS is an open format websites use to publish their latest posts. A reader checks the feeds you subscribe to and collects new entries in one place, with no platform deciding what appears.
@@ -61,7 +69,7 @@ Read [the manifesto](./MANIFESTO.md) for the longer version.
 
 ### Finding things to follow
 
-- **You don't start with an empty reader.** The hosted catalog indexes over 120,000 feeds: news sites, magazines, indie blogs, company blogs, newsletters, podcasts, YouTube channels, and forums. Whatever you are into, there is probably a feed for it. Search by name or topic, or browse popular feeds by category.
+- Discover publications, indie blogs, and hidden gems across 120,000+ feeds with semantic search on the hosted service.
 - See similar feeds for any source you follow
 - Paste a feed URL or a plain website, or let the browser extension find a site's feed as you browse
 - Follow sites without native feeds through RSSHub using `rsshub://` routes
