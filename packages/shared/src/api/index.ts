@@ -24,4 +24,4 @@ export {
   type AuthTokenProvider,
   type TokenRefreshProvider,
 } from './client';
-export { isPaywallError } from './core';
+export { DOWNGRADE_ACTION_REQUIRED, isDowngradeRequiredError, isPaywallError } from './core';

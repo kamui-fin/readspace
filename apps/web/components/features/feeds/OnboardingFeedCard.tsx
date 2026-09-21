@@ -41,16 +41,16 @@ export function OnboardingFeedCard({
         onSubscribed?.(feed.id)
 
         try {
-            // Trigger background refresh - user doesn't need to wait
-            refreshFeed.mutate({
-                feedId: feed.id,
-                forceRefetch: true,
-            })
-
             // Subscribe to feed with default folder (backend will handle creating default folder)
             await createFeed.mutateAsync({
                 url: feed.url,
                 folder_id: "default", // Backend will handle this
+            })
+
+            // Refresh in the background once subscribed (refresh requires a subscription)
+            refreshFeed.mutate({
+                feedId: feed.id,
+                forceRefetch: true,
             })
         } catch (error) {
             // Revert UI state on error

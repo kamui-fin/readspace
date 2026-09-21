@@ -2,6 +2,7 @@ import { QueryProvider } from "@/components/providers/QueryProvider"
 import { Metadata, Viewport } from "next"
 import {
     eb_garamond,
+    instrumentSerif,
     geistMono,
     geistSans,
     logo,
@@ -104,6 +105,7 @@ export default function RootLayout({
                     geistSans.variable,
                     geistMono.variable,
                     eb_garamond.variable,
+                    instrumentSerif.variable,
                     logo.variable,
                     notoSerifSC.variable,
                     notoSerifJP.variable,

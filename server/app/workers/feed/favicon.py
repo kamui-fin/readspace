@@ -5,9 +5,11 @@ from uuid import UUID
 import structlog
 
 from app.core.config import get_settings
+from app.core.custom_exceptions import ValidationError
 from app.crud.feed import core as feed_crud
 from app.services.feeds.favicon import extract_favicon_and_canonical_url
 from app.services.feeds.meilisearch import sync_feed
+from app.utils.security import validate_url_security
 from app.utils.urls import extract_favicon_url_for_newsletter
 from app.workers.common import worker_db_factory
 
@@ -37,6 +39,13 @@ async def fetch_feed_favicon(feed_id: UUID) -> None:
             return
 
         logger.info("Resolved favicon target URL", feed_id=str(feed_id), target_url=target_url)
+
+    # Validate against SSRF before invoking network extraction
+    try:
+        await validate_url_security(target_url, allow_rsshub=False)
+    except ValidationError as e:
+        logger.warning("Blocked background favicon extraction by SSRF policy", feed_id=str(feed_id), url=target_url, error=str(e))
+        return
 
     # Call external library and download/upload to Supabase outside the DB transaction block
     try:

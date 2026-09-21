@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     # RSShub Configuration (validated URL)
     RSSHUB_URL: str = "http://localhost:1200"  # Default RSShub instance URL
 
+    # SSRF protection: set true only if self-hosters need feeds from private/intranet hosts
+    ALLOW_PRIVATE_FEED_URLS: bool = False
+
     # Meilisearch Configuration
     MEILISEARCH_URL: str = "http://localhost:7700"
     MEILISEARCH_MASTER_KEY: SecretStr

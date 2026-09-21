@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.models.enums import UserRole
 from app.models.user import Profile
 from app.services.user.auth import get_current_user
+from app.services.user.downgrade import ensure_plan_compliance
 from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
@@ -54,3 +55,17 @@ async def get_current_admin(
             detail="Admin access required",
         )
     return profile
+
+
+async def require_plan_compliance(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    token_data: Annotated[TokenData, Depends(get_current_user)],
+) -> None:
+    """
+    Router-level dependency that blocks content endpoints for users over their plan's limits.
+
+    Raises DowngradeRequiredError (403, DOWNGRADE_ACTION_REQUIRED) until the user resolves the
+    downgrade via POST /users/downgrade/resolve. Endpoints the resolution flow itself needs
+    (profile, limits, feed list, folders) are deliberately left ungated.
+    """
+    await ensure_plan_compliance(db, UUID(token_data.sub))

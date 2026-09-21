@@ -36,7 +36,7 @@ import {
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { NAVIGATION_THEME } from '@lib/constants/navigation-theme';
-import { ApiError } from '@readspace/shared';
+import { ApiError, isDowngradeRequiredError, queryKeys } from '@readspace/shared';
 import * as Sentry from '@sentry/react-native';
 import { useHasSettingsHydrated, useSettingsStore } from '@stores/settings';
 import { useThemeStore } from '@stores/theme';
@@ -88,6 +88,12 @@ function configureSentry(enabled: boolean) {
 SplashScreen.preventAutoHideAsync();
 
 const handleGlobalError = (error: unknown) => {
+  // Downgraded while holding more than the plan allows: refetch limits (possibly cached as fine)
+  // so the protected layout swaps in the plan-change flow. `queryClient` is declared below.
+  if (isDowngradeRequiredError(error)) {
+    queryClient.invalidateQueries({ queryKey: queryKeys.userLimits() });
+    return;
+  }
   if (error instanceof ApiError && error.status === 429) {
     useUpgradeDialog.getState().open({
       title: 'Upgrade to Readspace Pro',

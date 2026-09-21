@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -119,45 +119,37 @@ def test_build_feed_update_mapping():
 
 
 @pytest.mark.asyncio
-@pytest.mark.asyncio
 async def test_extract_favicon_success():
-    with patch("app.services.feeds.favicon.get_best_favicon") as mock_get_best:
-        mock_icon = MagicMock()
-        mock_icon.url = "https://example.com/favicon.ico"
-        mock_icon.format = "ico"
-        mock_icon.width = 32
-        mock_icon.height = 32
-        mock_icon.reachable = True
+    from unittest.mock import AsyncMock
 
-        # Mock http attribute for canonical URL check
-        mock_http = MagicMock()
-        mock_http.final_url = "https://example.com"
-        mock_icon.http = mock_http
-
-        mock_get_best.return_value = mock_icon
-
-        # Mock upload_favicon_to_storage to return public URL
-        with patch("app.services.feeds.favicon.upload_favicon_to_storage") as mock_upload:
-            mock_upload.return_value = "https://supabase/favicon.ico"
-
-            result = await favicon.extract_favicon_and_canonical_url("https://example.com")
-
-            assert result.image_url == "https://supabase/favicon.ico"
+    with (
+        patch.object(favicon, "validate_url_security", new=AsyncMock()),
+        patch.object(
+            favicon,
+            "fetch_public_resource",
+            new=AsyncMock(
+                side_effect=[
+                    None,
+                    {"body": b"icon", "final_url": "https://example.com/favicon.ico", "charset": None},
+                ]
+            ),
+        ),
+        patch.object(favicon, "normalize_favicon_to_png", return_value=b"png"),
+        patch.object(favicon, "_get_async_supabase", new=AsyncMock()),
+        patch.object(favicon, "put_favicon_png", new=AsyncMock(return_value="stored.png")),
+    ):
+        result = await favicon.extract_favicon_and_canonical_url("https://example.com")
+        assert result.image_url == "stored.png"
 
 
-@pytest.mark.asyncio
 @pytest.mark.asyncio
 async def test_extract_favicon_google_fallback():
-    # Since get_best_favicon handles logic internally, we just test it returns None or partial result
-    # If get_best_favicon returns None, we get empty result.
-    # The new implementation doesn't seem to have explicit Google fallback unless get_best_favicon does it?
-    # Checking app/services/feeds/favicon.py: It does NOT have a Google fallback block visible in the file content I read earlier.
-    # It just returns FaviconResult() if get_best_favicon returns nothing.
-    # So I will remove this test or update it to test "not found" case.
+    from unittest.mock import AsyncMock
 
-    with patch("app.services.feeds.favicon.get_best_favicon") as mock_get_best:
-        mock_get_best.return_value = None
-
+    with (
+        patch.object(favicon, "validate_url_security", new=AsyncMock()),
+        patch.object(favicon, "fetch_public_resource", new=AsyncMock(return_value=None)) as fetch,
+    ):
         result = await favicon.extract_favicon_and_canonical_url("https://example.com")
-
         assert result.image_url is None
+        assert fetch.call_args.args[0] == "https://www.google.com/s2/favicons?domain=example.com&sz=256"

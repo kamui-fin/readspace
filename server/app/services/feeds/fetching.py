@@ -13,6 +13,8 @@ from app.core.constants import (
     FEED_CONTENT_CACHE_PREFIX,
     HTTP_CLIENT_POOL_LIMITS,
 )
+from app.core.custom_exceptions import ValidationError
+from app.utils.security import SSRFSafeResolver, build_ssrf_trace_config, validate_url_security
 from app.utils.urls import transform_rsshub_url
 
 logger = structlog.get_logger(__name__)
@@ -30,14 +32,15 @@ async def _get_client_session() -> aiohttp.ClientSession:
     current_loop = asyncio.get_running_loop()
 
     if _session is None or _session.closed or _session_loop is not current_loop:
+        # Standard verified SSL context by default
         ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
 
         # Limit connections to prevent resource exhaustion, enable DNS cache
-        connector = aiohttp.TCPConnector(ssl=ssl_context, limit=HTTP_CLIENT_POOL_LIMITS, ttl_dns_cache=300)
+        connector = aiohttp.TCPConnector(
+            ssl=ssl_context, limit=HTTP_CLIENT_POOL_LIMITS, ttl_dns_cache=300, resolver=SSRFSafeResolver()
+        )
 
-        _session = aiohttp.ClientSession(connector=connector)
+        _session = aiohttp.ClientSession(connector=connector, trace_configs=[build_ssrf_trace_config()])
         _session_loop = current_loop
         logger.info("Created shared aiohttp.ClientSession for event loop", loop_id=id(current_loop))
 
@@ -73,6 +76,89 @@ def _is_feed_content_type(content_type: str) -> bool:
     return "application/rss+xml" in ct or "application/atom+xml" in ct or "application/xml" in ct or "text/xml" in ct
 
 
+async def _process_response(
+    response: aiohttp.ClientResponse,
+    cache_key: str,
+) -> FetchResult:
+    """Process HTTP response into uniform FetchResult and cache if valid."""
+    # Handle 304 Not Modified
+    if response.status == 304:
+        return {
+            "content": "",
+            "headers": {str(k): str(v) for k, v in response.headers.items()},
+            "status_code": 304,
+            "not_modified": True,
+            "error": None,
+            "final_url": str(response.url),
+            "permanent_redirect": False,
+        }
+
+    # Handle error statuses
+    if response.status >= 400:
+        return _build_error_result(response.status, f"HTTP {response.status}")
+
+    # Check size limit via Content-Length if available
+    try:
+        content_length = int(response.headers.get("Content-Length", 0))
+        if content_length > MAX_FEED_SIZE_BYTES:
+            return _build_error_result(413, f"Feed content too large ({content_length} bytes)")
+    except ValueError:
+        pass
+
+    # Read content
+    try:
+        # aiohttp reads entire body into memory
+        content_bytes = await response.read()
+
+        if len(content_bytes) > MAX_FEED_SIZE_BYTES:
+            return _build_error_result(413, f"Feed content too large ({len(content_bytes)} bytes)")
+
+        # Try to decode
+        encoding = response.get_encoding()
+        try:
+            content = content_bytes.decode(encoding)
+        except Exception:
+            content = content_bytes.decode("utf-8", errors="replace")
+
+    except aiohttp.ClientPayloadError as e:
+        return _build_error_result(502, f"Payload error: {e}")
+    except Exception as e:
+        return _build_error_result(500, f"Content reading failed: {e}")
+
+    # Basic validity check (unless it's JSON)
+    content_type = response.headers.get("Content-Type", "").lower()
+    is_json = "json" in content_type
+
+    if not is_json and not content.strip():
+        return _build_error_result(204, "Empty content")
+
+    # Detect permanent redirect in history
+    # aiohttp history is a tuple of response objects
+    permanent_redirect = False
+    if response.history:
+        for r in response.history:
+            if r.status in (301, 308):
+                permanent_redirect = True
+                break
+
+    result: FetchResult = {
+        "content": content,
+        "headers": {str(k): str(v) for k, v in response.headers.items()},
+        "status_code": response.status,
+        "not_modified": False,
+        "error": None,
+        "final_url": str(response.url),
+        "permanent_redirect": permanent_redirect,
+    }
+
+    # Cache successful results (only if not conditional? or always?)
+    # If we cache, we should cache the whole result including headers
+    if response.status == 200:
+        await redis_cache.set(cache_key, result, ttl_seconds=FEED_CACHE_TTL)
+
+    return result
+
+
 async def fetch_feed_content(
     url: str,
     etag: str | None = None,
@@ -95,6 +181,13 @@ async def fetch_feed_content(
     # RSSHub Proxy Replacement
     url = transform_rsshub_url(url)
 
+    # SSRF guard (redirect hops + connect-time IPs are checked by the session)
+    try:
+        await validate_url_security(url, allow_rsshub=False)
+    except ValidationError as e:
+        logger.warning("Blocked feed fetch by SSRF policy", url=url, error=str(e))
+        return _build_error_result(400, "URL not allowed")
+
     headers = {
         "User-Agent": BROWSER_USER_AGENT,
         "Accept": "application/rss+xml,application/atom+xml,application/xml;q=0.9,text/xml;q=0.8,*/*;q=0.1",
@@ -110,83 +203,19 @@ async def fetch_feed_content(
     timeout_config = aiohttp.ClientTimeout(total=timeout, connect=10, sock_read=timeout)
 
     try:
-        async with session.get(url, headers=headers, allow_redirects=True, timeout=timeout_config) as response:
-            # Handle 304 Not Modified
-            if response.status == 304:
-                return {
-                    "content": "",
-                    "headers": {str(k): str(v) for k, v in response.headers.items()},
-                    "status_code": 304,
-                    "not_modified": True,
-                    "error": None,
-                    "final_url": str(response.url),
-                    "permanent_redirect": False,
-                }
-
-            # Handle error statuses
-            if response.status >= 400:
-                return _build_error_result(response.status, f"HTTP {response.status}")
-
-            # Check size limit via Content-Length if available
-            try:
-                content_length = int(response.headers.get("Content-Length", 0))
-                if content_length > MAX_FEED_SIZE_BYTES:
-                    return _build_error_result(413, f"Feed content too large ({content_length} bytes)")
-            except ValueError:
-                pass
-
-            # Read content
-            try:
-                # aiohttp reads entire body into memory
-                content_bytes = await response.read()
-
-                if len(content_bytes) > MAX_FEED_SIZE_BYTES:
-                    return _build_error_result(413, f"Feed content too large ({len(content_bytes)} bytes)")
-
-                # Try to decode
-                encoding = response.get_encoding()
-                try:
-                    content = content_bytes.decode(encoding)
-                except Exception:
-                    content = content_bytes.decode("utf-8", errors="replace")
-
-            except aiohttp.ClientPayloadError as e:
-                return _build_error_result(502, f"Payload error: {e}")
-            except Exception as e:
-                return _build_error_result(500, f"Content reading failed: {e}")
-
-            # Basic validity check (unless it's JSON)
-            content_type = response.headers.get("Content-Type", "").lower()
-            is_json = "json" in content_type
-
-            if not is_json and not content.strip():
-                return _build_error_result(204, "Empty content")
-
-            # Detect permanent redirect in history
-            # aiohttp history is a tuple of response objects
-            permanent_redirect = False
-            if response.history:
-                for r in response.history:
-                    if r.status in (301, 308):
-                        permanent_redirect = True
-                        break
-
-            result: FetchResult = {
-                "content": content,
-                "headers": {str(k): str(v) for k, v in response.headers.items()},
-                "status_code": response.status,
-                "not_modified": False,
-                "error": None,
-                "final_url": str(response.url),
-                "permanent_redirect": permanent_redirect,
-            }
-
-            # Cache successful results (only if not conditional? or always?)
-            # If we cache, we should cache the whole result including headers
-            if response.status == 200:
-                await redis_cache.set(cache_key, result, ttl_seconds=FEED_CACHE_TTL)
-
-            return result
+        try:
+            async with session.get(url, headers=headers, allow_redirects=True, timeout=timeout_config) as response:
+                return await _process_response(response, cache_key)
+        except aiohttp.ClientSSLError as ssl_err:
+            logger.warning(
+                "TLS verification failed, falling back to unverified TLS for legacy blog",
+                url=url,
+                error=str(ssl_err),
+            )
+            async with session.get(
+                url, headers=headers, allow_redirects=True, timeout=timeout_config, ssl=False
+            ) as response:
+                return await _process_response(response, cache_key)
 
     except (asyncio.TimeoutError, aiohttp.ClientError) as e:
         # Network errors
@@ -198,3 +227,52 @@ async def fetch_feed_content(
 
     except Exception as e:
         return _build_error_result(500, f"Unexpected error: {str(e)}")
+
+
+class DownloadedResource(TypedDict):
+    body: bytes
+    final_url: str
+    charset: str | None
+
+
+async def fetch_public_resource(
+    url: str, *, timeout: float = DEFAULT_RSS_TIMEOUT, max_bytes: int = MAX_FEED_SIZE_BYTES
+) -> DownloadedResource | None:
+    """Download a bounded body, checking initial URLs, redirect hops and connect-time IPs."""
+    try:
+        await validate_url_security(url, allow_rsshub=False)
+    except ValidationError as e:
+        logger.warning("Blocked resource fetch by SSRF policy", url=url, error=str(e))
+        return None
+
+    session = await _get_client_session()
+    timeout_config = aiohttp.ClientTimeout(total=timeout, connect=10, sock_read=timeout)
+    headers = {"User-Agent": BROWSER_USER_AGENT, "Accept": "*/*"}
+
+    try:
+        async with session.get(url, headers=headers, allow_redirects=True, timeout=timeout_config) as response:
+            if response.status != 200:
+                return None
+            body = bytearray()
+            async for chunk in response.content.iter_chunked(64 * 1024):
+                if len(body) + len(chunk) > max_bytes:
+                    return None
+                body.extend(chunk)
+            return {"body": bytes(body), "final_url": str(response.url), "charset": response.charset}
+    except (asyncio.TimeoutError, aiohttp.ClientError, ValidationError) as e:
+        logger.warning("Resource fetch failed", url=url, error=str(e))
+        return None
+
+
+def decode_resource(resource: DownloadedResource) -> str:
+    """Decode a streamed body without relying on ClientResponse's unread internal buffer."""
+    try:
+        return resource["body"].decode(resource["charset"] or "utf-8", errors="replace")
+    except LookupError:
+        return resource["body"].decode("utf-8", errors="replace")
+
+
+async def fetch_page_html(url: str, timeout: int = DEFAULT_RSS_TIMEOUT) -> str | None:
+    """Download the complete article page for extraction with a bounded, SSRF-safe request."""
+    resource = await fetch_public_resource(url, timeout=timeout)
+    return decode_resource(resource) if resource is not None else None

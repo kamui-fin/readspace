@@ -21,28 +21,39 @@ class ConfigResponse(BaseModel):
     meilisearch_search_key: str
 
 
-def select_public_search_key(keys: Sequence[Key]) -> str:
+def select_public_search_key(keys: Sequence[Key], target_index: str = "feeds") -> str:
     """
     Pick a Meilisearch key that is safe to hand to anyone.
 
     Only keys whose sole permission is ``search`` qualify - never the admin key, and never a
-    key that can also read documents, even if its name mentions search. The default search key
-    wins when several qualify.
+    key that can also read documents, even if its name mentions search.
+    Keys strictly scoped to ``target_index`` are prioritized over wildcard keys.
 
     Args:
         keys: All keys returned by Meilisearch.
+        target_index: Target index to match (default: "feeds").
 
     Returns:
         The key string, or an empty string when no search-only key exists.
     """
     search_only = [key_obj for key_obj in keys if key_obj.actions == [MEILISEARCH_SEARCH_ACTION]]
 
+    # 1. Prefer a search key strictly scoped to the target index
     for key_obj in search_only:
-        if key_obj.name == MEILISEARCH_DEFAULT_SEARCH_KEY_NAME:
+        if key_obj.indexes == [target_index]:
             return key_obj.key
 
-    if search_only:
-        return search_only[0].key
+    # 2. Prefer the default search API key if valid for the index
+    for key_obj in search_only:
+        if key_obj.name == MEILISEARCH_DEFAULT_SEARCH_KEY_NAME and (
+            key_obj.indexes == ["*"] or target_index in key_obj.indexes
+        ):
+            return key_obj.key
+
+    # 3. Fallback to any other search-only key matching the target index or wildcard
+    for key_obj in search_only:
+        if key_obj.indexes == ["*"] or target_index in key_obj.indexes:
+            return key_obj.key
 
     return ""
 
@@ -59,7 +70,7 @@ async def get_meilisearch_search_key(settings: Settings) -> str:
         )
         keys = await client.get_keys()
 
-        search_key = select_public_search_key(keys.results)
+        search_key = select_public_search_key(keys.results, target_index=settings.MEILISEARCH_INDEX_NAME)
         if not search_key:
             logger.warning("No search-only Meilisearch key found; /config will return an empty search key")
         return search_key

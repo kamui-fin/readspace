@@ -1,6 +1,8 @@
 """Main API router that aggregates all route modules."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
+from app.core.dependencies import require_plan_compliance
 
 # Article routers
 from app.routers.articles.articles import router as articles_router
@@ -33,8 +35,12 @@ from app.routers.users import router as users_router
 # Create main API router
 api_router = APIRouter()
 
+# Content routers refuse users whose holdings exceed their plan (post-downgrade) until they pick
+# what to keep. Users, feeds list/delete, folders, info and intake stay open for that flow.
+plan_gate = [Depends(require_plan_compliance)]
+
 # Include top-level routers (already have prefixes)
-api_router.include_router(discover_router)
+api_router.include_router(discover_router, dependencies=plan_gate)
 api_router.include_router(folders_router)
 api_router.include_router(users_router)
 api_router.include_router(info_router)
@@ -42,25 +48,25 @@ api_router.include_router(intake_router)
 
 # Include article routers with prefix
 # Note: Order matters! More specific routes must come before generic /{article_id} routes
-api_router.include_router(articles_views_router, prefix="/articles", tags=["Articles"])
-api_router.include_router(articles_counts_router, prefix="/articles", tags=["Articles"])
-api_router.include_router(articles_clipped_router, prefix="/articles", tags=["Articles"])
-api_router.include_router(articles_enhancements_router, prefix="/articles", tags=["Articles"])
-api_router.include_router(articles_router, prefix="/articles", tags=["Articles"])
+api_router.include_router(articles_views_router, prefix="/articles", tags=["Articles"], dependencies=plan_gate)
+api_router.include_router(articles_counts_router, prefix="/articles", tags=["Articles"], dependencies=plan_gate)
+api_router.include_router(articles_clipped_router, prefix="/articles", tags=["Articles"], dependencies=plan_gate)
+api_router.include_router(articles_enhancements_router, prefix="/articles", tags=["Articles"], dependencies=plan_gate)
+api_router.include_router(articles_router, prefix="/articles", tags=["Articles"], dependencies=plan_gate)
 
 # Include feed routers with prefix
 # Note: feeds_subscription_router must come before feeds_router to ensure POST / route is registered
-api_router.include_router(feeds_subscription_router, prefix="/feeds", tags=["Feeds"])
+api_router.include_router(feeds_subscription_router, prefix="/feeds", tags=["Feeds"], dependencies=plan_gate)
 api_router.include_router(feeds_router, prefix="/feeds", tags=["Feeds"])
 api_router.include_router(feeds_admin_router, prefix="/feeds", tags=["Feeds"])
 api_router.include_router(feeds_bulk_router, prefix="/feeds", tags=["Feeds"])
-api_router.include_router(feeds_refresh_router, prefix="/feeds", tags=["Feeds"])
+api_router.include_router(feeds_refresh_router, prefix="/feeds", tags=["Feeds"], dependencies=plan_gate)
 
 # Include OPML routers with prefix
-api_router.include_router(opml_import_router, prefix="/opml", tags=["OPML"])
+api_router.include_router(opml_import_router, prefix="/opml", tags=["OPML"], dependencies=plan_gate)
 api_router.include_router(opml_task_management_router, prefix="/opml", tags=["OPML"])
 
 # Include Codex Digest router with prefix
-api_router.include_router(codex_router, prefix="/codex", tags=["Codex"])
+api_router.include_router(codex_router, prefix="/codex", tags=["Codex"], dependencies=plan_gate)
 
 __all__ = ["api_router"]

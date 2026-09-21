@@ -23,6 +23,7 @@ from app.core.constants import (
     ALLOWED_TAGS,
     CONTENT_EXTRACTION_TIMEOUT,
 )
+from app.services.feeds import fetching
 from app.utils.urls import urls_match
 
 logger = structlog.get_logger(__name__)
@@ -157,13 +158,8 @@ def _heal_html_code_tags(soup: BeautifulSoup) -> None:
 # ==============================================================================
 
 
-def _fetch_and_extract(url: str, config: ConfigParser) -> str | None:
-    """Blocking Trafilatura operation to be run in a thread."""
-    downloaded = trafilatura.fetch_url(url, config=config)
-    if not downloaded:
-        return None
-
-    # Extract with images allowed
+def _extract_html(downloaded: str, config: ConfigParser) -> str | None:
+    """Blocking Trafilatura extraction, to be run in a thread."""
     return trafilatura.extract(downloaded, output_format="html", include_images=True, config=config)
 
 
@@ -186,9 +182,16 @@ async def extract_full_content(
     config = _get_trafilatura_config()
 
     try:
-        # 1. Fetch & Extract (Blocking I/O)
+        # 1. Fetch via the SSRF-guarded client, then extract (blocking, in a thread)
+        downloaded = await asyncio.wait_for(
+            fetching.fetch_page_html(url, timeout=CONTENT_EXTRACTION_TIMEOUT),
+            timeout=CONTENT_EXTRACTION_TIMEOUT,
+        )
+        if not downloaded:
+            return None, "Could not extract readable content"
+
         extracted_html = await asyncio.wait_for(
-            asyncio.to_thread(_fetch_and_extract, url, config),
+            asyncio.to_thread(_extract_html, downloaded, config),
             timeout=CONTENT_EXTRACTION_TIMEOUT,
         )
 

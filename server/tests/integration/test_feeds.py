@@ -574,27 +574,28 @@ class TestFeedRefresh:
         data = response.json()
         assert data == {"message": "Feed refresh completed"}
 
+        # Second refresh within cooldown window must return 429
+        response_cooldown = await async_client.post(f"/api/feeds/{test_feed.id}/refresh")
+        assert response_cooldown.status_code == 429
+        assert "recently" in response_cooldown.json()["detail"]
+
     @pytest.mark.asyncio
     async def test_refresh_feed_not_subscribed(self, async_client: AsyncClient, test_feed: Feed):
-        """Test refreshing feed user is not subscribed to."""
+        """Refreshing a feed the user is not subscribed to is forbidden (404, no existence leak)."""
         response = await async_client.post(f"/api/feeds/{test_feed.id}/refresh")
 
-        # Feed refresh now works even without subscription (preview mode)
-        assert response.status_code == 200
+        assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_refresh_feed_preview_mode(
+    async def test_refresh_feed_preview_mode_requires_subscription(
         self, async_client: AsyncClient, test_feed: Feed, db_session: AsyncSession
     ):
-        """Test refreshing feed in preview mode."""
-        # Ensure feed is committed
+        """The preview flag must not bypass the subscription check."""
         await db_session.commit()
 
         response = await async_client.post(f"/api/feeds/{test_feed.id}/refresh?preview=true")
 
-        assert response.status_code == 200
-        data = response.json()
-        assert data == {"message": "Feed refresh completed"}
+        assert response.status_code == 404
 
 
 class TestFeedDelete:

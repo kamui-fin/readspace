@@ -2,10 +2,61 @@ import { useIsDarkMode, useOnFocus, useOnHover } from '@hooks/index';
 import { COLORS } from '@lib/constants/colors';
 
 import { MotiView } from 'moti';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { Platform, Pressable, PressableProps } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Path, Svg } from 'react-native-svg';
+
+const CHECK_PATH = 'M5 12.5l4.5 4.5L19 7.5';
+// One short tween for fill + tick: reads as an instant, tactile snap rather than a bounce.
+const TICK_TRANSITION = { type: 'timing', duration: 120 } as const;
+
+interface CheckboxIndicatorProps {
+  checked: boolean;
+  disabled?: boolean;
+  size?: number;
+}
+
+/**
+ * The visual checkbox alone: a rounded square that fills with brand green and snaps a white
+ * tick in when checked. Use it inside a larger pressable row that owns the press + a11y role.
+ */
+export const CheckboxIndicator = ({ checked, disabled, size = 22 }: CheckboxIndicatorProps) => {
+  const isDark = useIsDarkMode();
+  const colors = COLORS[isDark ? 'dark' : 'light'];
+
+  return (
+    <MotiView
+      animate={{
+        backgroundColor: checked ? colors.secondary : 'transparent',
+        borderColor: checked ? colors.secondary : isDark ? colors.grey3 : colors.grey2,
+        opacity: disabled ? 0.4 : 1,
+      }}
+      transition={TICK_TRANSITION}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size * 0.32,
+        borderWidth: 1.5,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+      <MotiView
+        animate={{ opacity: checked ? 1 : 0, scale: checked ? 1 : 0.8 }}
+        transition={TICK_TRANSITION}>
+        <Svg width={size * 0.72} height={size * 0.72} viewBox="0 0 24 24" fill="none">
+          <Path
+            d={CHECK_PATH}
+            stroke="#FFFFFF"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      </MotiView>
+    </MotiView>
+  );
+};
 
 export type CheckboxProps = Omit<PressableProps, 'onChange'> & {
   onChange: (checked: boolean) => void;
@@ -13,34 +64,35 @@ export type CheckboxProps = Omit<PressableProps, 'onChange'> & {
   hitSlop?: number;
   id?: string;
   disabled?: boolean;
+  size?: number;
 };
 
-export const Checkbox = ({ checked, onChange, hitSlop = 14, disabled, ...rest }: CheckboxProps) => {
+export const Checkbox = ({
+  checked,
+  onChange,
+  hitSlop = 14,
+  disabled,
+  size,
+  ...rest
+}: CheckboxProps) => {
   const handleChange = useCallback(() => {
     onChange(!checked);
   }, [onChange, checked]);
   const isDark = useIsDarkMode();
 
-  const { onHoverIn, onHoverOut, hovered } = useOnHover();
+  const { onHoverIn, onHoverOut } = useOnHover();
   const { onFocus, onBlur, focused } = useOnFocus();
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      borderColor: hovered.value
-        ? isDark
-          ? COLORS.dark.grey2
-          : COLORS.light.grey2
-        : isDark
-          ? COLORS.dark.grey3
-          : COLORS.light.grey3,
+  const focusStyle = useAnimatedStyle(
+    () => ({
       boxShadow: focused.value
         ? isDark
-          ? '0px 0px 0px 4px rgba(78, 80, 78, 0.5)'
-          : '0px 0px 0px 4px rgba(228, 236, 223, 0.5)'
+          ? '0px 0px 0px 3px rgba(106, 153, 78, 0.35)'
+          : '0px 0px 0px 3px rgba(106, 153, 78, 0.25)'
         : undefined,
-      opacity: disabled ? 0.4 : 1,
-    };
-  }, [focused, hovered, disabled, isDark]);
+    }),
+    [focused, isDark]
+  );
 
   return (
     <Pressable
@@ -50,7 +102,7 @@ export const Checkbox = ({ checked, onChange, hitSlop = 14, disabled, ...rest }:
       onFocus={onFocus}
       onBlur={onBlur}
       role="checkbox"
-      accessibilityState={{ checked }}
+      accessibilityState={{ checked, disabled }}
       disabled={disabled}
       hitSlop={hitSlop}
       //@ts-expect-error - web only - checkbox toggle on spacebar press
@@ -61,35 +113,8 @@ export const Checkbox = ({ checked, onChange, hitSlop = 14, disabled, ...rest }:
         default: undefined,
       })}
       {...rest}>
-      <Animated.View
-        style={useMemo(
-          () => [
-            {
-              height: 24,
-              width: 24,
-              borderRadius: 4,
-              borderWidth: 1,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: isDark ? COLORS.dark.background : COLORS.light.background,
-            },
-            animatedStyle,
-          ],
-          [animatedStyle, isDark]
-        )}>
-        <MotiView
-          from={{ opacity: 0 }}
-          animate={{ opacity: checked ? 1 : 0 }}
-          transition={{ duration: 100, type: 'timing' }}>
-          <Svg width="13" height="12" viewBox="0 0 13 12" fill="none">
-            <Path
-              fillRule="evenodd"
-              clipRule="evenodd"
-              d="M12.5735 0.180762C13.0259 0.497477 13.1359 1.12101 12.8192 1.57346L5.81923 11.5735C5.64971 11.8156 5.38172 11.9704 5.08722 11.9962C4.79273 12.022 4.50193 11.9161 4.29289 11.7071L0.292893 7.7071C-0.0976311 7.31658 -0.0976311 6.68341 0.292893 6.29289C0.683417 5.90236 1.31658 5.90236 1.70711 6.29289L4.86429 9.45007L11.1808 0.426532C11.4975 -0.0259174 12.121 -0.135952 12.5735 0.180762Z"
-              fill={isDark ? COLORS.dark.black : COLORS.light.black}
-            />
-          </Svg>
-        </MotiView>
+      <Animated.View style={[{ borderRadius: 8 }, focusStyle]}>
+        <CheckboxIndicator checked={checked} disabled={disabled} size={size} />
       </Animated.View>
     </Pressable>
   );

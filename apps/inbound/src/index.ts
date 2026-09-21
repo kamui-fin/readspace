@@ -64,6 +64,16 @@ export default {
 			body: JSON.stringify(payload),
 		});
 
+		if (backendResponse.status === 429) {
+			// Recipient hit their newsletter cap: a permanent, accurate rejection (no retry)
+			return message.setReject('Recipient has reached their newsletter limit.');
+		}
+
+		if (backendResponse.status === 403) {
+			// Recipient's plan no longer includes newsletters (e.g. downgraded from Pro): permanent rejection
+			return message.setReject("Recipient's plan doesn't include newsletter delivery.");
+		}
+
 		if (!backendResponse.ok) {
 			// If your main server crashes or drops the connection, bounce the mail back to sender
 			return message.setReject('Readspace intake server error.');
@@ -73,7 +83,17 @@ export default {
 	// Add fetch handler for local HTTP testing/triggering E2E newsletter flow
 	async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
 		if (request.method !== 'POST') {
-			return new Response('Send a POST request to trigger mock email.', { status: 405 });
+			return new Response('Method Not Allowed', { status: 405 });
+		}
+
+		// Security: require matching secret to prevent public unauthenticated mock injections
+		const authHeader = request.headers.get('Authorization') || request.headers.get('X-Readspace-Secret');
+		const expectedSecret = env.WEBHOOK_SECRET;
+		if (!expectedSecret || (authHeader !== expectedSecret && authHeader !== `Bearer ${expectedSecret}`)) {
+			return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+				status: 401,
+				headers: { 'Content-Type': 'application/json' },
+			});
 		}
 
 		try {

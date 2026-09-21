@@ -11,14 +11,14 @@ from app.routers.info import select_public_search_key
 pytestmark = pytest.mark.unit
 
 
-def make_key(name: str, actions: list[str], key: str) -> Key:
+def make_key(name: str, actions: list[str], key: str, indexes: list[str] | None = None) -> Key:
     """Build a Meilisearch key model with only the fields the selector cares about."""
     return Key(
         uid=f"uid-{key}",
         name=name,
         description=None,
         actions=actions,
-        indexes=["*"],
+        indexes=indexes if indexes is not None else ["*"],
         expires_at=None,
         key=key,
         created_at=datetime.now(timezone.utc),
@@ -83,3 +83,23 @@ def test_prefers_default_name_over_other_search_only_keys() -> None:
 def test_empty_key_list_returns_empty_string() -> None:
     """No keys at all yields an empty string."""
     assert select_public_search_key([]) == ""
+
+
+def test_prefers_index_scoped_search_key_over_wildcard() -> None:
+    """A search key strictly scoped to 'feeds' is chosen over the wildcard default search key."""
+    keys = [
+        make_key(MEILISEARCH_DEFAULT_SEARCH_KEY_NAME, ["search"], "wildcard-search", indexes=["*"]),
+        make_key("feeds_public_search_key", ["search"], "scoped-search", indexes=["feeds"]),
+    ]
+
+    assert select_public_search_key(keys, target_index="feeds") == "scoped-search"
+
+
+def test_rejects_key_scoped_to_other_index() -> None:
+    """A search key scoped to another index (e.g. 'users') is never exposed for 'feeds'."""
+    keys = [
+        make_key("Default Admin API Key", ["*"], "admin-secret"),
+        make_key("users_search_key", ["search"], "users-search", indexes=["users"]),
+    ]
+
+    assert select_public_search_key(keys, target_index="feeds") == ""

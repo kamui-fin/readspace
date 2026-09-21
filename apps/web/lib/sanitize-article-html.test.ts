@@ -1,13 +1,23 @@
-import { beforeAll, describe, expect, it } from "bun:test"
+import { afterAll, beforeAll, describe, expect, it } from "bun:test"
 import { JSDOM } from "jsdom"
 
 import { sanitizeArticleHtml } from "./sanitize-article-html"
 
+const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window")
+let dom: JSDOM
+
 beforeAll(() => {
+    dom = new JSDOM("<!doctype html><html><body></body></html>")
     Object.defineProperty(globalThis, "window", {
         configurable: true,
-        value: new JSDOM("<!doctype html><html><body></body></html>").window,
+        value: dom.window,
     })
+})
+
+afterAll(() => {
+    dom.window.close()
+    if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow)
+    else Reflect.deleteProperty(globalThis, "window")
 })
 
 describe("sanitizeArticleHtml", () => {

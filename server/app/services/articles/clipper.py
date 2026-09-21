@@ -1,11 +1,12 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
+import nh3
 import structlog
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import CLIPPED_EXCERPT_MAX_LENGTH, CLIPPED_EXCERPT_MIN_LENGTH
+from app.core.constants import ALLOWED_ATTRIBUTES, ALLOWED_TAGS, CLIPPED_EXCERPT_MAX_LENGTH, CLIPPED_EXCERPT_MIN_LENGTH
 from app.crud.article.actions import set_article_state
 from app.crud.article.ingester import upsert_article_content
 from app.models.article import ArticleContent, UserEntry
@@ -39,10 +40,19 @@ async def save_article_from_url(
     """
     metadata = metadata or {}
 
+    # Sanitize untrusted content from extension/browser
+    safe_content = nh3.clean(
+        content or "",
+        tags=ALLOWED_TAGS,
+        attributes=ALLOWED_ATTRIBUTES,
+        url_schemes={"http", "https", "mailto", "data"},
+        link_rel="noopener noreferrer",
+    )
+
     # Prefer the page's SEO/og description; otherwise derive one from the article body
     description = metadata.get("description")
     if not description:
-        description = build_excerpt(content, CLIPPED_EXCERPT_MAX_LENGTH, CLIPPED_EXCERPT_MIN_LENGTH) or None
+        description = build_excerpt(safe_content, CLIPPED_EXCERPT_MAX_LENGTH, CLIPPED_EXCERPT_MIN_LENGTH) or None
         logger.debug("Derived clip description from content", url=url, has_description=description is not None)
 
     # 1. Prepare Content Data
@@ -50,7 +60,7 @@ async def save_article_from_url(
         title=title or "Untitled",
         link=url,
         guid=url,  # Use URL as GUID for clips
-        content=content,
+        content=safe_content,
         description=description,
         author=metadata.get("author"),
         image_url=metadata.get("image_url"),

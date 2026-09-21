@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.constants import NEWSLETTER_PLAN_REQUIRED_ERROR_CODE
 from app.models.article import ArticleContent, FeedArticle
 from app.models.feed import Feed, FeedSubscription
 from app.models.user import Profile
@@ -263,4 +264,152 @@ class TestNewsletterFeature:
             headers={"X-Readspace-Secret": settings.INBOUND_WEBHOOK_SECRET.get_secret_value()},
         )
         assert response.status_code == 403
-        assert "premium subscription required" in response.json()["detail"].lower()
+        detail = response.json()["detail"]
+        assert detail["error_code"] == NEWSLETTER_PLAN_REQUIRED_ERROR_CODE
+        assert "premium subscription required" in detail["message"].lower()
+
+
+TEST_NEWSLETTER_TOKEN = "limittoken123"  # noqa: S105 - synthetic fixture value
+
+
+class TestNewsletterLimitAndFolderStability:
+    """Newsletter cap and 'user moved the feed' behaviour on the intake webhook."""
+
+    @staticmethod
+    async def _make_pro(db_session: AsyncSession, user: Profile) -> dict[str, str]:
+        from app.models.enums import UserRole
+
+        user.role = UserRole.PRO
+        user.newsletter_token = TEST_NEWSLETTER_TOKEN
+        db_session.add(user)
+        await db_session.commit()
+        return {"X-Readspace-Secret": get_settings().INBOUND_WEBHOOK_SECRET.get_secret_value()}
+
+    @staticmethod
+    def _payload(sender: str, subject: str) -> dict[str, str]:
+        return {"token": TEST_NEWSLETTER_TOKEN, "from": sender, "subject": subject, "html": f"<p>{subject}</p>"}
+
+    @pytest.mark.asyncio
+    async def test_moved_newsletter_stays_in_new_folder(
+        self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
+    ):
+        """A later email must not create a second feed or pull the subscription back to Newsletters."""
+        from app.models.folder import Folder
+
+        headers = await self._make_pro(db_session, test_user)
+        user_id = test_user.id
+        sender = "news@example.com"
+
+        first = await async_client.post("/api/intake/webhook", json=self._payload(sender, "One"), headers=headers)
+        assert first.status_code == 201
+
+        feed = (
+            await db_session.execute(select(Feed).where(Feed.url == f"newsletter://{user_id}/{sender}"))
+        ).scalar_one()
+        sub = (
+            await db_session.execute(select(FeedSubscription).where(FeedSubscription.feed_id == feed.id))
+        ).scalar_one()
+
+        # User moves the newsletter into their own folder
+        target = Folder(user_id=user_id, name="Reading List")
+        db_session.add(target)
+        await db_session.flush()
+        target_id = target.id
+        sub.folder_id = target_id
+        await db_session.commit()
+
+        second = await async_client.post("/api/intake/webhook", json=self._payload(sender, "Two"), headers=headers)
+        assert second.status_code == 201
+
+        db_session.expire_all()
+        feeds = (await db_session.execute(select(Feed).where(Feed.url.like(f"newsletter://{user_id}/%")))).all()
+        subs = (
+            (await db_session.execute(select(FeedSubscription).where(FeedSubscription.user_id == user_id)))
+            .scalars()
+            .all()
+        )
+        assert len(feeds) == 1
+        assert len(subs) == 1
+        assert subs[0].folder_id == target_id
+
+    @pytest.mark.asyncio
+    async def test_newsletter_cap_blocks_new_sender_but_not_existing(
+        self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile, monkeypatch: pytest.MonkeyPatch
+    ):
+        """At the cap a new sender is rejected (no orphan Feed); existing senders keep ingesting."""
+        from app.core.resource_limits import RESOURCE_LIMITS
+
+        monkeypatch.setitem(RESOURCE_LIMITS["pro"], "max_newsletters", 1)
+        headers = await self._make_pro(db_session, test_user)
+
+        ok = await async_client.post("/api/intake/webhook", json=self._payload("a@example.com", "A1"), headers=headers)
+        assert ok.status_code == 201
+
+        blocked = await async_client.post(
+            "/api/intake/webhook", json=self._payload("b@example.com", "B1"), headers=headers
+        )
+        assert blocked.status_code == 429
+
+        orphan = await db_session.execute(select(Feed).where(Feed.url == f"newsletter://{test_user.id}/b@example.com"))
+        assert orphan.scalar_one_or_none() is None
+
+        again = await async_client.post(
+            "/api/intake/webhook", json=self._payload("a@example.com", "A2"), headers=headers
+        )
+        assert again.status_code == 201
+
+    @pytest.mark.asyncio
+    async def test_manual_subscribe_respects_newsletter_cap(
+        self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile, monkeypatch: pytest.MonkeyPatch
+    ):
+        """/intake/subscribe is subject to the same cap."""
+        from app.core.resource_limits import RESOURCE_LIMITS
+
+        monkeypatch.setitem(RESOURCE_LIMITS["pro"], "max_newsletters", 1)
+        await self._make_pro(db_session, test_user)
+
+        first = await async_client.post("/api/intake/subscribe", json={"name": "A", "sender_email": "a@example.com"})
+        assert first.status_code == 201
+        second = await async_client.post("/api/intake/subscribe", json={"name": "B", "sender_email": "b@example.com"})
+        assert second.status_code == 429
+
+    @pytest.mark.asyncio
+    async def test_unsubscribed_user_cannot_preview_newsletter(
+        self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
+    ):
+        """Security: Verify private newsletter articles cannot be previewed by other users (IDOR prevention)."""
+        from uuid import uuid4
+        from app.models.article import FeedArticle
+        from app.models.enums import UserRole
+        from app.services.user.auth import get_current_user
+        from app.typing.user import TokenData
+        from app.main import app
+
+        headers = await self._make_pro(db_session, test_user)
+        post_res = await async_client.post(
+            "/api/intake/webhook",
+            json=self._payload("private@sender.com", "Secret Newsletter"),
+            headers=headers,
+        )
+        assert post_res.status_code == 201
+
+        # Find the newly created newsletter article
+        stmt = select(FeedArticle).join(Feed).where(Feed.url == f"newsletter://{test_user.id}/private@sender.com")
+        result = await db_session.execute(stmt)
+        article = result.scalar_one()
+
+        # Create another user
+        other_user_id = uuid4()
+        other_profile = Profile(id=other_user_id, email="other@example.com", role=UserRole.BASIC)
+        db_session.add(other_profile)
+        await db_session.commit()
+
+        # Override get_current_user to simulate other_user accessing test_user's newsletter
+        app.dependency_overrides[get_current_user] = lambda: TokenData(
+            sub=str(other_user_id), email="other@example.com", role="authenticated"
+        )
+        try:
+            get_res = await async_client.get(f"/api/articles/{article.id}")
+            assert get_res.status_code == 404
+        finally:
+            app.dependency_overrides.pop(get_current_user, None)

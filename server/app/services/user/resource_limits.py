@@ -9,13 +9,14 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import redis_cache
-from app.core.constants import SCRAPE_USAGE_KEY_PREFIX, USAGE_COUNTER_TTL_SECONDS
+from app.core.constants import NEWSLETTER_LIMIT_ERROR_CODE, SCRAPE_USAGE_KEY_PREFIX, USAGE_COUNTER_TTL_SECONDS
 from app.core.custom_exceptions import NotFoundError, ResourceLimitError
 from app.core.resource_limits import CODEX_LIMITS, CODEX_QUOTA_WINDOW_HOURS, RESOURCE_LIMITS
 from app.crud import codex as crud_codex
 from app.crud.profile import get_current_usage, get_profile_by_id
 from app.models.codex import CodexDigest
 from app.models.enums import UserRole
+from app.typing.user import OverLimitResource, OverLimitState
 
 
 def _get_limit_for_role(role: str, resource: str) -> Any:
@@ -25,6 +26,44 @@ def _get_limit_for_role(role: str, resource: str) -> Any:
 
     role_limits = RESOURCE_LIMITS.get(normalized_role, RESOURCE_LIMITS["basic"])
     return role_limits.get(resource, 0)
+
+
+def _over_limit_resource(usage: int, limit: int) -> OverLimitResource:
+    """Usage vs. limit for one resource; -1 means unlimited and is never over."""
+    return OverLimitResource(usage=usage, limit=limit, over=limit != -1 and usage > limit)
+
+
+def compute_over_limit_state(role: str, subscriptions: int, newsletters: int, saved_articles: int) -> OverLimitState:
+    """
+    Compare what a user currently holds against their role's limits.
+
+    Basic users with excess subscriptions or newsletters must resolve their downgrade.
+    Existing paid holdings can exceed newly introduced caps: keep reading and management
+    available, while the add paths enforce those caps. Excess saved articles are kept as-is.
+    """
+    subs = _over_limit_resource(subscriptions, _get_limit_for_role(role, "max_subscriptions"))
+    news = _over_limit_resource(newsletters, _get_limit_for_role(role, "max_newsletters"))
+    saved = _over_limit_resource(saved_articles, _get_limit_for_role(role, "max_saved_articles"))
+    return OverLimitState(
+        downgrade_required=role.lower().split(".")[-1] not in {"pro", "admin"} and (subs.over or news.over),
+        subscriptions=subs,
+        newsletters=news,
+        saved_articles=saved,
+    )
+
+
+async def get_over_limit_state(db: AsyncSession, user_id: UUID) -> OverLimitState:
+    """Load the user's role and holdings and compute their over-limit state."""
+    profile = await get_profile_by_id(db, user_id=user_id)
+    if not profile:
+        raise NotFoundError(message="User profile not found", error_code="USER_PROFILE_NOT_FOUND")
+
+    return compute_over_limit_state(
+        str(profile.role),
+        subscriptions=await get_current_usage(db, user_id, "max_subscriptions"),
+        newsletters=await get_current_usage(db, user_id, "max_newsletters"),
+        saved_articles=await get_current_usage(db, user_id, "max_saved_articles"),
+    )
 
 
 async def enforce_subscription_limit(db: AsyncSession, user_id: UUID, additional_count: int = 1) -> None:
@@ -54,6 +93,36 @@ async def enforce_subscription_limit(db: AsyncSession, user_id: UUID, additional
                     "would_be_total": current + additional_count,
                 },
             )
+
+
+async def enforce_newsletter_limit(db: AsyncSession, user_id: UUID, additional_count: int = 1) -> None:
+    """
+    Check the newsletter cap before adding a NEW newsletter subscription.
+
+    Only call this when the user is not already subscribed to the sender - emails from an
+    existing newsletter must keep flowing at the cap.
+
+    Raises:
+        ResourceLimitError: When the new subscription would push the user over the cap.
+    """
+    # Newsletters also consume the total subscription allowance.
+    await enforce_subscription_limit(db, user_id, additional_count)
+    profile = await get_profile_by_id(db, user_id=user_id)
+    if not profile:
+        raise NotFoundError(message="User profile not found", error_code="USER_PROFILE_NOT_FOUND")
+
+    resource = "max_newsletters"
+    limit = _get_limit_for_role(str(profile.role), resource)
+    if limit == -1:
+        return
+
+    current = await get_current_usage(db, user_id, resource)
+    if current + additional_count > limit:
+        raise ResourceLimitError(
+            message=f"You've reached the limit of {limit} newsletters. Unsubscribe from one to add another.",
+            error_code=NEWSLETTER_LIMIT_ERROR_CODE,
+            details={"current_usage": current, "requested_additional": additional_count, "limit": limit},
+        )
 
 
 async def enforce_saved_articles_limit(db: AsyncSession, user_id: UUID) -> None:
@@ -278,6 +347,7 @@ async def get_user_limits_and_usage(db: AsyncSession, user_id: UUID, local_date:
     # Get current usages
     sub_usage = await get_current_usage(db, user_id, "max_subscriptions")
     saved_usage = await get_current_usage(db, user_id, "max_saved_articles")
+    newsletter_usage = await get_current_usage(db, user_id, "max_newsletters")
 
     today_str = date.today().isoformat()
     ai_usage_str = await redis_cache.get(f"ai_usage:{user_id}:{today_str}")
@@ -287,6 +357,7 @@ async def get_user_limits_and_usage(db: AsyncSession, user_id: UUID, local_date:
     scrape_usage = int(scrape_usage_str) if scrape_usage_str else 0
 
     codex_usage = await _get_codex_usage(db, user_id, role_lower, local_date)
+    over_limit = compute_over_limit_state(user_role, sub_usage, newsletter_usage, saved_usage)
 
     return {
         "role": profile.role,
@@ -294,10 +365,12 @@ async def get_user_limits_and_usage(db: AsyncSession, user_id: UUID, local_date:
         "usage": {
             "subscriptions": sub_usage,
             "saved_articles": saved_usage,
+            "newsletters": newsletter_usage,
             "daily_ai_calls": ai_usage,
             "daily_scrapes": scrape_usage,
             "codex": codex_usage,
         },
+        "over_limit": over_limit,
     }
 
 

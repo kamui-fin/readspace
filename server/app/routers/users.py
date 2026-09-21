@@ -12,9 +12,17 @@ from app.core.custom_exceptions import NotFoundError
 from app.crud import profile as crud_profile
 from app.db.session import get_db
 from app.services.user import account as account_service
+from app.services.user import downgrade as downgrade_service
 from app.services.user.auth import get_current_user
 from app.services.user.resource_limits import get_user_limits_and_usage
-from app.typing.user import ProfileResponse, ProfileUpdate, TokenData, UserLimitsResponse
+from app.typing.user import (
+    DowngradeResolveRequest,
+    DowngradeResolveResponse,
+    ProfileResponse,
+    ProfileUpdate,
+    TokenData,
+    UserLimitsResponse,
+)
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -74,6 +82,24 @@ async def get_limits(
 
     limits_and_usage = await get_user_limits_and_usage(db, user_id=UUID(current_user.sub), local_date=local_date)
     return limits_and_usage
+
+
+@router.post(
+    "/downgrade/resolve",
+    response_model=DowngradeResolveResponse,
+    summary="Keep chosen feeds after a plan downgrade and remove the rest",
+)
+async def resolve_downgrade(
+    payload: DowngradeResolveRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[TokenData, Depends(get_current_user)],
+) -> DowngradeResolveResponse:
+    """
+    Resolve an over-limit plan: keep ``keep_feed_ids`` and unsubscribe from every other feed
+    (and every newsletter, when the plan allows none). Unblocks content endpoints.
+    """
+    logger.bind(user_id=current_user.sub)
+    return await downgrade_service.resolve_downgrade(db, UUID(current_user.sub), payload.keep_feed_ids)
 
 
 @router.delete("/account", status_code=status.HTTP_204_NO_CONTENT, summary="Delete current user's account")

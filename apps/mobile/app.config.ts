@@ -41,7 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       policy: 'appVersion',
     },
     ios: {
-      supportsTablet: true,
+      supportsTablet: false,
       bundleIdentifier,
       usesAppleSignIn: true,
       // Google Sign In requires reverse client ID scheme

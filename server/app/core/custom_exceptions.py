@@ -142,6 +142,12 @@ class ResourceLimitError(ReadspaceException):
     pass
 
 
+class DowngradeRequiredError(ReadspaceException):
+    """Raised when a user's holdings exceed their plan (post-downgrade) and they must pick what to keep"""
+
+    pass
+
+
 # Exception Mapper - Maps custom exceptions to HTTP exceptions
 EXCEPTION_STATUS_MAP: dict[type[ReadspaceException], int] = {
     # Client errors (4xx)
@@ -161,6 +167,7 @@ EXCEPTION_STATUS_MAP: dict[type[ReadspaceException], int] = {
     DatabaseError: status.HTTP_500_INTERNAL_SERVER_ERROR,
     ConfigurationError: status.HTTP_500_INTERNAL_SERVER_ERROR,
     ResourceLimitError: status.HTTP_429_TOO_MANY_REQUESTS,
+    DowngradeRequiredError: status.HTTP_403_FORBIDDEN,
 }
 
 

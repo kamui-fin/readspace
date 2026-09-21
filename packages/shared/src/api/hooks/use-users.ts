@@ -6,8 +6,14 @@ import {
   type UseMutationOptions,
 } from '@tanstack/react-query';
 import { ApiClient } from '../client';
-import { queryKeys } from '../query-keys';
-import type { UserProfile, UserLimits, ProfileUpdate } from '../types/users';
+import { queryKeys, RSS_QUERY_KEYS } from '../query-keys';
+import type {
+  UserProfile,
+  UserLimits,
+  ProfileUpdate,
+  DowngradeResolveRequest,
+  DowngradeResolveResponse,
+} from '../types/users';
 
 export function useProfile(
   options?: Omit<
@@ -54,6 +60,39 @@ export function useUserLimits(
   return useQuery({
     queryKey: queryKeys.userLimits(),
     queryFn: () => ApiClient.getLimits(),
+    ...options,
+  });
+}
+
+/**
+ * Keep the chosen feeds after a plan downgrade; the server unsubscribes from everything else
+ * (and all newsletters on Free). Invalidates everything a subscription change touches, plus
+ * limits so the downgrade gate lifts only once the cache reflects the new state.
+ */
+export function useResolveDowngrade(
+  options?: UseMutationOptions<DowngradeResolveResponse, Error, DowngradeResolveRequest>
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: DowngradeResolveRequest) => ApiClient.resolveDowngrade(data),
+    // Lift the downgrade gate from the server's own post-resolve answer rather than waiting on
+    // the limits refetch below, which could otherwise leave the flow on screen.
+    onSuccess: (data) => {
+      queryClient.setQueryData<UserLimits>(queryKeys.userLimits(), (old) =>
+        old ? { ...old, over_limit: data.over_limit } : old
+      );
+    },
+    onSettled: () => {
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.userLimits() }),
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] }),
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.feedUnreadCounts() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.folders() }),
+        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA] }),
+      ]);
+    },
     ...options,
   });
 }

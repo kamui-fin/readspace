@@ -7,8 +7,9 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.constants import NEWSLETTER_URL_SCHEME
 from app.models.article import UserEntry
-from app.models.feed import FeedSubscription
+from app.models.feed import Feed, FeedSubscription
 from app.models.user import Profile
 
 
@@ -30,6 +31,18 @@ async def get_current_usage(db: AsyncSession, user_id: UUID, resource: str) -> i
     """
     if resource == "max_subscriptions":
         query = select(func.count()).select_from(FeedSubscription).where(FeedSubscription.user_id == user_id)
+        result = await db.execute(query)
+        return result.scalar() or 0
+
+    if resource == "max_newsletters":
+        query = (
+            select(func.count())
+            .select_from(FeedSubscription)
+            .join(Feed, Feed.id == FeedSubscription.feed_id)
+            # Newsletters are the virtual email feeds, identified by URL scheme. Not content_type:
+            # enrichment also tags ordinary RSS feeds (e.g. Substack) as "newsletter".
+            .where(FeedSubscription.user_id == user_id, Feed.url.startswith(NEWSLETTER_URL_SCHEME))
+        )
         result = await db.execute(query)
         return result.scalar() or 0
 

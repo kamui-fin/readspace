@@ -1,8 +1,71 @@
 import { generateOpml, parseOpml } from 'feedsmith';
 import type { Opml } from 'feedsmith/types';
+import type { Folder } from '../api/types/folders';
 
 export { generateOpml, parseOpml };
 export type { Opml };
+
+/** Virtual newsletter feeds use this URL scheme; they can't be re-imported from OPML. */
+export const NEWSLETTER_FEED_URL_SCHEME = 'newsletter://';
+
+export function isNewsletterFeedUrl(url: string): boolean {
+  return url.startsWith(NEWSLETTER_FEED_URL_SCHEME);
+}
+
+export interface FeedForOPML {
+  url: string;
+  title?: string | null;
+  link?: string | null;
+  folder_id?: string | null;
+}
+
+function toOutline(feed: FeedForOPML): Opml.Outline<Date> {
+  return {
+    text: feed.title || feed.url,
+    title: feed.title || feed.url,
+    type: 'rss',
+    xmlUrl: feed.url,
+    htmlUrl: feed.link || undefined,
+  };
+}
+
+/**
+ * Build an OPML document for the given feeds, grouped by folder name.
+ * Newsletter virtual feeds are skipped: their `newsletter://` URLs aren't importable anywhere.
+ */
+export function generateOPMLContent(feedsToExport: FeedForOPML[], folders: Folder[]): string {
+  const foldersMap = new Map<string, FeedForOPML[]>();
+
+  feedsToExport
+    .filter((feed) => !isNewsletterFeedUrl(feed.url))
+    .forEach((feed) => {
+      const folderName = folders.find((f) => f.id === feed.folder_id)?.name || 'Uncategorized';
+      if (!foldersMap.has(folderName)) {
+        foldersMap.set(folderName, []);
+      }
+      foldersMap.get(folderName)!.push(feed);
+    });
+
+  const outlines: Opml.Outline<Date>[] = [];
+  for (const [folderName, folderFeeds] of foldersMap) {
+    if (foldersMap.size > 1 || folderName !== 'Uncategorized') {
+      outlines.push({ text: folderName, title: folderName, outlines: folderFeeds.map(toOutline) });
+    } else {
+      // Put feeds directly in body if only uncategorized
+      outlines.push(...folderFeeds.map(toOutline));
+    }
+  }
+
+  return generateOpml({
+    head: { title: 'Readspace Feeds Export', dateCreated: new Date() },
+    body: { outlines },
+  });
+}
+
+/** Default export filename, e.g. `readspace-feeds-2026-09-21.opml`. */
+export function opmlExportFilename(date: Date = new Date()): string {
+  return `readspace-feeds-${date.toISOString().split('T')[0]}.opml`;
+}
 
 /**
  * Helper to visit all nodes in an OPML structure

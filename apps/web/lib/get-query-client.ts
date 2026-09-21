@@ -1,9 +1,20 @@
 import { QueryClient, QueryCache, MutationCache } from "@tanstack/react-query"
-import { ApiError } from "@readspace/shared"
+import {
+    ApiError,
+    isDowngradeRequiredError,
+    queryKeys,
+} from "@readspace/shared"
 import { useUpgradeDialog } from "@/stores/upgrade-dialog"
 
 function makeQueryClient() {
     const handleGlobalError = (error: unknown) => {
+        // The user was downgraded while holding more than their plan allows. Refetch limits so
+        // the protected layout swaps in the downgrade flow (limits may have been cached as fine).
+        if (isDowngradeRequiredError(error)) {
+            // `client` is declared below; this only runs after it's constructed.
+            client.invalidateQueries({ queryKey: queryKeys.userLimits() })
+            return
+        }
         if (error instanceof ApiError && error.status === 429) {
             useUpgradeDialog.getState().open({
                 title: "Upgrade to Readspace Pro",
@@ -14,7 +25,7 @@ function makeQueryClient() {
         }
     }
 
-    return new QueryClient({
+    const client = new QueryClient({
         queryCache: new QueryCache({
             onError: handleGlobalError,
         }),
@@ -36,6 +47,7 @@ function makeQueryClient() {
             },
         },
     })
+    return client
 }
 
 let browserQueryClient: QueryClient | undefined = undefined

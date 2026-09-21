@@ -8,7 +8,7 @@ from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, load_only
 
-from app.core.constants import INITIAL_UNREAD_COUNT
+from app.core.constants import INITIAL_UNREAD_COUNT, NEWSLETTER_URL_SCHEME
 from app.core.custom_exceptions import FeedSubscriptionError
 from app.crud.feed.core import create_feed, get_feed_by_url, normalize_url
 from app.crud.folder import upsert_batch
@@ -212,6 +212,27 @@ async def bulk_delete_subscriptions(db: AsyncSession, *, feed_ids: list[UUID], u
 
     await db.flush()
     return valid_feed_ids
+
+
+async def get_subscribed_feed_ids_by_kind(db: AsyncSession, *, user_id: UUID) -> tuple[set[UUID], set[UUID]]:
+    """
+    Split a user's subscribed feed IDs into (regular feeds, newsletter feeds).
+
+    Newsletters are the virtual email feeds (``newsletter://`` URLs), matching how the newsletter
+    cap counts them. content_type isn't used: enrichment also tags plain RSS feeds "newsletter".
+    """
+    stmt = (
+        select(FeedSubscription.feed_id, Feed.url)
+        .join(Feed, Feed.id == FeedSubscription.feed_id)
+        .where(FeedSubscription.user_id == user_id)
+    )
+    result = await db.execute(stmt)
+
+    feed_ids: set[UUID] = set()
+    newsletter_ids: set[UUID] = set()
+    for feed_id, url in result.all():
+        (newsletter_ids if url.startswith(NEWSLETTER_URL_SCHEME) else feed_ids).add(feed_id)
+    return feed_ids, newsletter_ids
 
 
 async def update_subscription(

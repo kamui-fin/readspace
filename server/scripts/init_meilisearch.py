@@ -261,7 +261,31 @@ async def configure_meilisearch_index(
             is_indexing=stats.is_indexing,
         )
     else:
+        await ensure_scoped_search_key(client, index_name)
         logger.info("meilisearch_index_configured", index=index_name)
+
+
+async def ensure_scoped_search_key(client: AsyncClient, index_name: str) -> None:
+    """Ensure a search-only API key scoped strictly to index_name exists in Meilisearch."""
+    try:
+        from meilisearch_python_sdk.models.client import KeyCreate
+
+        keys = await client.get_keys()
+        for k in keys.results:
+            if k.actions == ["search"] and k.indexes == [index_name]:
+                logger.info("scoped_search_key_already_exists", key_name=k.name)
+                return
+
+        scoped_key = KeyCreate(
+            name=f"{index_name}_public_search_key",
+            description=f"Public search-only key scoped strictly to {index_name}",
+            actions=["search"],
+            indexes=[index_name],
+        )
+        created = await client.create_key(scoped_key)
+        logger.info("scoped_search_key_created", key_name=created.name)
+    except Exception as e:
+        logger.warning("failed_to_ensure_scoped_search_key", error=str(e))
 
 
 async def init_meilisearch(check_only: bool = False) -> bool:

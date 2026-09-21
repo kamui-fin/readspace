@@ -423,6 +423,17 @@ async def get_article_by_id(
     row = result.first()
     if row is None:
         return None
+
+    feed_article, user_entry, subscription = row
+    # Security: Newsletters are private personal emails; never allow unauthorized previews
+    if (
+        allow_preview
+        and subscription is None
+        and feed_article.feed
+        and str(feed_article.feed.url).startswith("newsletter://")
+    ):
+        return None
+
     return cast(tuple[FeedArticle, UserEntry | None, FeedSubscription | None], row)
 
 

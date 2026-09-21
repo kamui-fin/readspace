@@ -2,6 +2,7 @@
 Application constants
 """
 
+import ipaddress
 from datetime import timedelta
 from pathlib import Path
 from tempfile import gettempdir
@@ -96,6 +97,15 @@ INITIAL_UNREAD_COUNT = 10  # Number of recent articles to show as unread on new 
 
 # Newsletters arrive by email into virtual feeds; their feed URL and article links use this scheme
 NEWSLETTER_URL_SCHEME = "newsletter://"
+NEWSLETTER_LIMIT_ERROR_CODE = "NEWSLETTER_LIMIT_EXCEEDED"
+NEWSLETTER_PLAN_REQUIRED_ERROR_CODE = "NEWSLETTER_PLAN_REQUIRED"  # Recipient's plan excludes newsletters
+
+# Plan Downgrade Compliance
+# A user whose current holdings exceed their role's limits (e.g. Pro -> Basic with 200 feeds)
+# must pick what to keep before content endpoints serve them again.
+DOWNGRADE_ACTION_REQUIRED_ERROR_CODE = "DOWNGRADE_ACTION_REQUIRED"
+PLAN_COMPLIANCE_CACHE_KEY_PREFIX = "plan_compliant"  # plan_compliant:{user_id}
+PLAN_COMPLIANCE_CACHE_TTL_SECONDS = 60  # Only a compliant result is cached
 
 # Article Compaction (Cleanup)
 ARTICLE_RETENTION_DAYS = 7  # Delete articles older than 30 days (beyond minimum retention)
@@ -253,3 +263,13 @@ ALLOWED_ATTRIBUTES = {
     "span": {"class"},
     "div": {"class"},
 }
+
+# --- SSRF protection (app/utils/security.py) ---
+SSRF_ALLOWED_SCHEMES = {"http", "https", "rsshub"}
+BLOCKED_HOSTNAMES = {"localhost", "0.0.0.0", "metadata.google.internal"}  # noqa: S104
+# Ranges not flagged by ipaddress' is_private/is_reserved that must still be blocked
+BLOCKED_IP_NETWORKS = (
+    ipaddress.ip_network("100.64.0.0/10"),  # carrier-grade NAT
+    ipaddress.ip_network("169.254.0.0/16"),  # link-local / cloud metadata
+    ipaddress.ip_network("fd00:ec2::/32"),  # AWS IPv6 metadata
+)

@@ -6,6 +6,8 @@ import structlog
 from url_normalize import url_normalize
 
 from app.core.config import get_settings
+from app.core.custom_exceptions import ValidationError
+from app.utils.security import SSRFSafeResolver, build_ssrf_trace_config, validate_url_security
 
 logger = structlog.get_logger(__name__)
 
@@ -223,12 +225,16 @@ async def resolve_canonical_url(url: str, timeout: int = 10) -> str:
     if not url.lower().startswith(("http://", "https://")):
         return normalize_feed_url(url)
 
-    # Setup SSL context for verify=False
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+    # SSRF guard: don't probe private/internal hosts
+    try:
+        await validate_url_security(url, allow_rsshub=False)
+    except ValidationError:
+        logger.warning("Skipping canonical URL resolution for disallowed URL", url=url)
+        return normalize_feed_url(url)
 
-    connector = aiohttp.TCPConnector(ssl=ssl_context)
+    # Setup standard verified SSL context
+    ssl_context = ssl.create_default_context()
+    connector = aiohttp.TCPConnector(ssl=ssl_context, resolver=SSRFSafeResolver())
     timeout_config = aiohttp.ClientTimeout(total=timeout)
 
     headers = {
@@ -237,20 +243,33 @@ async def resolve_canonical_url(url: str, timeout: int = 10) -> str:
     }
 
     try:
-        async with aiohttp.ClientSession(connector=connector, timeout=timeout_config, headers=headers) as session:
+        async with aiohttp.ClientSession(
+            connector=connector, timeout=timeout_config, headers=headers, trace_configs=[build_ssrf_trace_config()]
+        ) as session:
             # 1. Try HEAD first
             try:
-                async with session.head(url, allow_redirects=True) as resp:
-                    if _is_head_response_bad(resp):
-                        logger.debug(
-                            "HEAD response unreliable, using original URL",
-                            url=url,
-                            status=resp.status,
-                        )
-                        # Don't fallback to GET here, let the fetcher handle it
-                        return normalize_feed_url(url)
+                try:
+                    async with session.head(url, allow_redirects=True) as resp:
+                        if _is_head_response_bad(resp):
+                            logger.debug(
+                                "HEAD response unreliable, using original URL",
+                                url=url,
+                                status=resp.status,
+                            )
+                            # Don't fallback to GET here, let the fetcher handle it
+                            return normalize_feed_url(url)
 
-                    return normalize_feed_url(str(resp.url))
+                        return normalize_feed_url(str(resp.url))
+                except aiohttp.ClientSSLError as ssl_err:
+                    logger.warning(
+                        "TLS verification failed during canonical URL check, retrying unverified for legacy host",
+                        url=url,
+                        error=str(ssl_err),
+                    )
+                    async with session.head(url, allow_redirects=True, ssl=False) as resp:
+                        if _is_head_response_bad(resp):
+                            return normalize_feed_url(url)
+                        return normalize_feed_url(str(resp.url))
 
             except aiohttp.ClientError:
                 # Network error on HEAD, assume original URL is fine for now

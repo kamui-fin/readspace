@@ -8,7 +8,8 @@ import { isCloudProd } from "@/lib/is-cloud-prod"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { Suspense, useEffect, useRef } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { queryKeys } from "@readspace/shared"
+import { queryKeys, useUserLimits } from "@readspace/shared"
+import { DowngradeFlow } from "@/components/features/downgrade/DowngradeFlow"
 import { toast } from "react-hot-toast"
 import { Loader } from "@/components/ui/loader"
 
@@ -65,7 +66,9 @@ export default function ProtectedLayout({
 }: {
     children: React.ReactNode
 }) {
-    const { profile, isLoading } = useUserRole()
+    const { profile, isLoading: isProfileLoading } = useUserRole()
+    const { data: limits, isLoading: isLimitsLoading } = useUserLimits()
+    const isLoading = isProfileLoading || isLimitsLoading
     const router = useRouter()
     // Onboarding is a cloud-only flow — never gate self-hosted instances on it.
     const needsOnboarding = isCloudProd() && !!profile && !profile.is_onboarded
@@ -90,6 +93,19 @@ export default function ProtectedLayout({
 
     if (needsOnboarding) {
         return null
+    }
+
+    // Downgraded with more than the plan allows: the server refuses content endpoints until the
+    // user picks what to keep, so the whole app is replaced by the (non-dismissable) flow.
+    if (limits?.over_limit?.downgrade_required) {
+        return (
+            <>
+                <Suspense fallback={null}>
+                    <CheckoutRedirectHandler />
+                </Suspense>
+                <DowngradeFlow overLimit={limits.over_limit} />
+            </>
+        )
     }
 
     return (

@@ -63,10 +63,13 @@ app = FastAPI(
 # We want Logging FIRST on request
 
 # 1. CORS
+cors_origins = [o.strip() for o in settings.CORS_ORIGIN.split(",") if o.strip()]
+allow_credentials = False if cors_origins == ["*"] else True
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.CORS_ORIGIN],
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )

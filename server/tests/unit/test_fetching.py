@@ -133,3 +133,116 @@ async def test_fetch_feed_content_size_limit():
             result = await fetch_feed_content("http://example.com/feed")
             assert result["status_code"] == 413
             assert "too large" in result["error"]
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_client_session_uses_verified_ssl():
+    """Verify that _get_client_session initializes connector with a standard verified SSL context."""
+    import ssl
+
+    from app.services.feeds import fetching
+
+    # Reset any existing session
+    fetching._session = None
+    fetching._session_loop = None
+
+    session = await fetching._get_client_session()
+    connector = session.connector
+    assert connector is not None
+    # Connector's SSL context should have verification enabled
+    assert connector._ssl is not None
+    assert connector._ssl.verify_mode == ssl.CERT_REQUIRED
+    assert connector._ssl.check_hostname is True
+    await session.close()
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_fetch_feed_content_ssl_error_fallback():
+    """Verify that when an HTTPS request fails with ClientSSLError, it retries with ssl=False."""
+    import ssl
+
+    import aiohttp
+
+    with patch("app.core.redis_cache.get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = None
+
+        with patch("app.services.feeds.fetching._get_client_session", new_callable=AsyncMock) as mock_get_session:
+            mock_session = MagicMock()
+            mock_get_session.return_value = mock_session
+
+            # First call raises ClientConnectorCertificateError, second call with ssl=False succeeds
+            mock_success_response = AsyncMock()
+            mock_success_response.status = 200
+            mock_success_response.headers = {"Content-Type": "application/rss+xml"}
+            mock_success_response.read = AsyncMock(return_value=b"<rss><channel><title>Test</title></channel></rss>")
+            mock_success_response.get_encoding = MagicMock(return_value="utf-8")
+            mock_success_response.history = ()
+            mock_success_response.url = "https://legacy-blog.com/feed.xml"
+
+            success_ctx = MagicMock()
+            success_ctx.__aenter__ = AsyncMock(return_value=mock_success_response)
+            success_ctx.__aexit__ = AsyncMock(return_value=None)
+
+            cert_err = ssl.SSLCertVerificationError(1, "certificate verify failed")
+            error_ctx = MagicMock()
+
+            async def mock_error_enter(*args, **kwargs):
+                raise aiohttp.ClientConnectorCertificateError(MagicMock(), cert_err)
+
+            error_ctx.__aenter__ = mock_error_enter
+            error_ctx.__aexit__ = AsyncMock(return_value=None)
+
+            # mock_session.get side effect: first call error_ctx, second call success_ctx
+            mock_session.get.side_effect = [error_ctx, success_ctx]
+
+            with patch("app.core.redis_cache.set", new_callable=AsyncMock):
+                result = await fetch_feed_content("https://legacy-blog.com/feed.xml")
+
+            assert result["status_code"] == 200
+            assert "<title>Test</title>" in result["content"]
+            assert mock_session.get.call_count == 2
+            # Second call should have ssl=False
+            second_call_kwargs = mock_session.get.call_args_list[1][1]
+            assert second_call_kwargs.get("ssl") is False
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_resolve_canonical_url_ssl_error_fallback():
+    """Verify that resolve_canonical_url retries with ssl=False when ClientSSLError occurs."""
+    import ssl
+
+    import aiohttp
+
+    with patch("aiohttp.ClientSession") as mock_session_cls:
+        mock_session = MagicMock()
+        mock_session_cls.return_value.__aenter__.return_value = mock_session
+
+        mock_success_response = AsyncMock()
+        mock_success_response.status = 200
+        mock_success_response.url = "https://legacy-blog.com/canonical-feed"
+        mock_success_response.headers = {"content-type": "application/rss+xml"}
+
+        success_ctx = MagicMock()
+        success_ctx.__aenter__ = AsyncMock(return_value=mock_success_response)
+        success_ctx.__aexit__ = AsyncMock(return_value=None)
+
+        cert_err = ssl.SSLCertVerificationError(1, "self signed certificate")
+        error_ctx = MagicMock()
+
+        async def mock_head_error_enter(*args, **kwargs):
+            raise aiohttp.ClientConnectorCertificateError(MagicMock(), cert_err)
+
+        error_ctx.__aenter__ = mock_head_error_enter
+        error_ctx.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session.head.side_effect = [error_ctx, success_ctx]
+
+        result = await resolve_canonical_url("https://legacy-blog.com/feed")
+        assert result == "https://legacy-blog.com/canonical-feed"
+        assert mock_session.head.call_count == 2
+        # Second call should have ssl=False
+        second_call_kwargs = mock_session.head.call_args_list[1][1]
+        assert second_call_kwargs.get("ssl") is False

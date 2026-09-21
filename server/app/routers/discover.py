@@ -9,12 +9,14 @@ from uuid import UUID
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.core.custom_exceptions import ValidationError
 from app.core.dependencies import get_current_user
 from app.crud.feed.subscription import get_subscription_by_feed_id
 from app.db.session import get_db_factory
 from app.services.feeds import fetching, parsing, service
 from app.typing.feeds import ParsedFeed
 from app.typing.user import TokenData
+from app.utils.security import validate_url_security
 from app.utils.urls import normalize_feed_url
 
 logger = structlog.get_logger(__name__)
@@ -34,6 +36,12 @@ async def get_feed_preview(
     Fetches and parses an RSS feed to extract metadata without storing it.
     Also checks if the user is already subscribed to this feed.
     """
+    # Reject private/internal targets up front (SSRF)
+    try:
+        await validate_url_security(url)
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="URL not allowed") from e
+
     # Fetch feed content
     fetch_result = await fetching.fetch_feed_content(url)
     if fetch_result["error"] or not fetch_result["content"]:

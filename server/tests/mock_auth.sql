@@ -40,3 +40,8 @@ CREATE TABLE IF NOT EXISTS auth.users (
     reauthentication_sent_at timestamptz,
     deleted_at timestamptz
 );
+
+-- Stub of Supabase's auth.uid() so RLS policies referencing it can be created in tests.
+CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid
+    LANGUAGE sql STABLE
+    AS $$ SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid $$;

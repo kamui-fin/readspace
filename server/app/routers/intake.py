@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.constants import NEWSLETTER_PLAN_REQUIRED_ERROR_CODE
 from app.core.custom_exceptions import FeedSubscriptionError, NotFoundError
 from app.crud import profile as crud_profile
 from app.crud.article.ingester import create_articles_batch
@@ -25,8 +26,10 @@ from app.crud.feed.subscription import (
 from app.crud.folder import upsert_batch
 from app.db.session import get_db
 from app.models.enums import ContentType, UserRole
+from app.models.feed import Feed
 from app.routers.feeds.feeds_subscription import resolve_target_folder
 from app.services.user.auth import get_current_user
+from app.services.user.resource_limits import enforce_newsletter_limit
 from app.typing.entries import ArticleCreate
 from app.typing.feeds import FeedBase
 from app.typing.subscriptions import SubscriptionCreate, SubscriptionResponse
@@ -121,6 +124,33 @@ class TokenResponse(BaseModel):
 # ==========================================
 
 
+async def _create_newsletter_feed(db: AsyncSession, *, virtual_url: str, title: str, link: str | None = None) -> Feed:
+    """Create the virtual feed for a newsletter sender and queue its favicon fetch."""
+    feed = await feed_crud.create_feed(
+        db,
+        feed_data=FeedBase(
+            url=virtual_url,
+            title=title,
+            description=f"Newsletter subscription from {title}",
+            content_type=ContentType.NEWSLETTER,
+            language="en",
+            tags_native=[],
+            link=link,
+        ),
+    )
+    try:
+        from app.workers.feed_tasks import fetch_favicon_task
+
+        await fetch_favicon_task.kiq(feed_id=str(feed.id))
+    except Exception as e:
+        logger.warning(
+            "Failed to queue background favicon task for newsletter",
+            feed_id=str(feed.id),
+            error=str(e),
+        )
+    return feed
+
+
 @router.post(
     "/webhook",
     status_code=status.HTTP_201_CREATED,
@@ -150,11 +180,17 @@ async def webhook_intake(
     if not profile:
         raise NotFoundError("Profile not found for token")
 
-    # Guard: only allow premium users (PRO or ADMIN)
+    # Guard: only allow premium users (PRO or ADMIN). A downgraded user keeps their token so the
+    # same address works again if they re-upgrade; until then the error code lets the inbound
+    # worker bounce with an accurate reason, and senders prune the address over time.
     if profile.role not in (UserRole.PRO, UserRole.ADMIN):
+        logger.info("Rejected newsletter email for non-premium recipient", user_id=str(profile.id))
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Premium subscription required for newsletter ingestion",
+            detail={
+                "message": "Premium subscription required for newsletter ingestion",
+                "error_code": NEWSLETTER_PLAN_REQUIRED_ERROR_CODE,
+            },
         )
 
     # 3. Parse Sender email
@@ -170,38 +206,25 @@ async def webhook_intake(
     display_sender_name = payload.from_name.strip() if payload.from_name else parsed_name.strip()
     display_sender_name = display_sender_name or sender_email
 
-    # 4. Find or Create Virtual Feed
+    # 4. Find the virtual feed and the user's subscription to it. An existing subscription is
+    #    left untouched (even if the user moved it out of "Newsletters"), and only a brand-new
+    #    subscription is checked against the newsletter cap.
     virtual_url = f"newsletter://{profile.id}/{sender_email}"
     feed = await feed_crud.get_feed_by_url(db, url=virtual_url)
+    sub = await get_subscription_by_feed_id(db, feed_id=feed.id, user_id=profile.id) if feed else None
 
-    if not feed:
-        feed = await feed_crud.create_feed(
-            db,
-            feed_data=FeedBase(
-                url=virtual_url,
+    if not sub:
+        # Enforce before creating the feed so a rejected email leaves no orphan Feed row
+        await enforce_newsletter_limit(db, profile.id)
+
+        if not feed:
+            feed = await _create_newsletter_feed(
+                db,
+                virtual_url=virtual_url,
                 title=display_sender_name,
-                description=f"Newsletter subscription from {display_sender_name}",
-                content_type=ContentType.NEWSLETTER,
-                language="en",
-                tags_native=[],
                 link=payload.list_url or None,
-            ),
-        )
-        # Queue background task to fetch favicon
-        try:
-            from app.workers.feed_tasks import fetch_favicon_task
-
-            await fetch_favicon_task.kiq(feed_id=str(feed.id))
-        except Exception as e:
-            logger.warning(
-                "Failed to queue background favicon task for newsletter",
-                feed_id=str(feed.id),
-                error=str(e),
             )
 
-    # 5. Ensure user is subscribed
-    sub = await get_subscription_by_feed_id(db, feed_id=feed.id, user_id=profile.id)
-    if not sub:
         folder_map = await upsert_batch(db, folder_names=["Newsletters"], user_id=profile.id)
         folder_id = folder_map["Newsletters"]
         await create_subscription(
@@ -311,33 +334,15 @@ async def subscribe_newsletter(
 
     virtual_url = f"newsletter://{user_uuid}/{sender_email}"
 
-    # 1. Find or create virtual feed
+    # 1. Find or create virtual feed (limit checked first so a rejection leaves no orphan Feed)
     feed = await feed_crud.get_feed_by_url(db, url=virtual_url)
+    existing_sub = await get_subscription_by_feed_id(db, feed_id=feed.id, user_id=user_uuid) if feed else None
+    if not existing_sub:
+        await enforce_newsletter_limit(db, user_uuid)
     if not feed:
-        feed = await feed_crud.create_feed(
-            db,
-            feed_data=FeedBase(
-                url=virtual_url,
-                title=subscribe_in.name,
-                description=f"Newsletter subscription from {subscribe_in.name}",
-                content_type=ContentType.NEWSLETTER,
-                language="en",
-                tags_native=[],
-            ),
-        )
-        # Queue background task to fetch favicon
-        try:
-            from app.workers.feed_tasks import fetch_favicon_task
+        feed = await _create_newsletter_feed(db, virtual_url=virtual_url, title=subscribe_in.name)
 
-            await fetch_favicon_task.kiq(feed_id=str(feed.id))
-        except Exception as e:
-            logger.warning(
-                "Failed to queue background favicon task for newsletter",
-                feed_id=str(feed.id),
-                error=str(e),
-            )
-
-    # 2. Check limits & resolve folder
+    # 2. Resolve folder
     folder_id_input = subscribe_in.folder_id
     if folder_id_input == "default" or not folder_id_input or str(folder_id_input).strip() == "":
         folder_map = await upsert_batch(db, folder_names=["Newsletters"], user_id=user_uuid)

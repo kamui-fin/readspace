@@ -358,6 +358,7 @@ export const ArticleReader = forwardRef<ArticleReaderHandle, ArticleReaderProps>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: http: data: blob:; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; script-src 'unsafe-inline'; media-src https: http:; frame-src https: http:;" />
   <style>
     @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Geist:ital,wght@0,100..900;1,100..900&family=Geist+Mono:wght@100..900&display=swap');
 
@@ -811,7 +812,12 @@ export const ArticleReader = forwardRef<ArticleReaderHandle, ArticleReaderProps>
           }
         } else if (data.type === 'link') {
           const url = data.value;
-          if (url) {
+          if (
+            url &&
+            (url.startsWith('http://') ||
+              url.startsWith('https://') ||
+              url.startsWith('mailto:'))
+          ) {
             Linking.openURL(url).catch((err) => {
               console.error('Failed to open URL in browser:', err);
             });
@@ -924,6 +930,22 @@ export const ArticleReader = forwardRef<ArticleReaderHandle, ArticleReaderProps>
                   originWhitelist={['*']}
                   source={webViewSource}
                   onMessage={handleMessage}
+                  onShouldStartLoadWithRequest={(request) => {
+                    if (
+                      request.url === 'about:blank' ||
+                      request.url.startsWith('data:')
+                    ) {
+                      return true;
+                    }
+                    if (
+                      request.url.startsWith('http://') ||
+                      request.url.startsWith('https://') ||
+                      request.url.startsWith('mailto:')
+                    ) {
+                      Linking.openURL(request.url).catch(() => {});
+                    }
+                    return false;
+                  }}
                   injectedJavaScript={injectedJS}
                   injectedJavaScriptBeforeContentLoaded={readerVariablesScript}
                 />

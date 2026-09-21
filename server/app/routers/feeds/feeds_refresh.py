@@ -4,8 +4,9 @@ from typing import Annotated, Any
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.core import redis_cache
 from app.core.constants import ERROR_FEED_NOT_FOUND
 from app.core.custom_exceptions import NotFoundError
 from app.crud.feed.subscription import get_subscription_by_feed_id
@@ -59,7 +60,25 @@ async def refresh_feed_route(
     # Any log generated within this scope will have these keys.
     log = logger.bind(feed_id=str(feed_id), user_id=current_user.sub)
 
-    # 2. Business Logic
+    # 2. Authorization: only subscribers may trigger a refresh (raises 404 otherwise)
+    await verify_subscription(db_factory, feed_id, UUID(current_user.sub))
+
+    # 3. Rate limiting / Cooldown: protect feeds from refresh spam
+    lock_key = f"feed_refresh_cooldown:{feed_id}"
+    try:
+        if await redis_cache.exists(lock_key):
+            log.info("Feed refresh rejected due to cooldown", feed_id=str(feed_id))
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Feed was refreshed recently. Please wait before refreshing again.",
+            )
+        await redis_cache.set(lock_key, "1", ttl_seconds=60)
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.warning("Failed to check or set feed refresh cooldown in Redis", error=str(e))
+
+    # 4. Business Logic
     # We call the service directly. We do NOT use try/except here.
     # If refresh_feed raises FeedConnectionError, the Global Handler catches it -> 503.
     # If refresh_feed raises FeedParsingError, the Global Handler catches it -> 400.

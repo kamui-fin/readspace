@@ -14,11 +14,28 @@ export interface ApiClientConfig {
 export class ApiError extends Error {
   constructor(
     public status: number,
-    message: string
+    message: string,
+    /** Machine-readable backend error code (e.g. "DOWNGRADE_ACTION_REQUIRED"), when provided. */
+    public errorCode?: string
   ) {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+/** Backend error code: the user's holdings exceed their plan and they must pick what to keep. */
+export const DOWNGRADE_ACTION_REQUIRED = 'DOWNGRADE_ACTION_REQUIRED';
+
+/**
+ * True when the API refused a request because the user was downgraded and still holds more than
+ * their plan allows. Clients refetch user limits so the full-screen downgrade flow takes over.
+ */
+export function isDowngradeRequiredError(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.status === 403 &&
+    error.errorCode === DOWNGRADE_ACTION_REQUIRED
+  );
 }
 
 /**
@@ -103,7 +120,8 @@ async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'An error occurred' }));
 
-    throw new ApiError(response.status, parseErrorMessage(error));
+    const errorCode = typeof error?.error_code === 'string' ? error.error_code : undefined;
+    throw new ApiError(response.status, parseErrorMessage(error), errorCode);
   }
 
   if (response.status === 204) {

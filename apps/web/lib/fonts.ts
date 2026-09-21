@@ -3,6 +3,7 @@ import {
     Figtree,
     Geist,
     Geist_Mono,
+    Instrument_Serif,
     Noto_Serif_JP,
     Noto_Serif_SC,
     Noto_Serif_TC,
@@ -21,6 +22,14 @@ export const geistMono = Geist_Mono({
 export const eb_garamond = EB_Garamond({
     variable: "--font-garamond-serif",
     subsets: ["latin"],
+})
+
+/** Display serif for editorial headlines (matches the landing site). Single weight: 400. */
+export const instrumentSerif = Instrument_Serif({
+    variable: "--font-display-serif",
+    subsets: ["latin"],
+    weight: "400",
+    style: ["normal", "italic"],
 })
 
 export const logo = Figtree({

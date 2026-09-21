@@ -2,6 +2,7 @@ import { BackButton } from '@components/ui/back-button';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BACK_BUTTON_SIZE } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import clsx from 'clsx';
 import type React from 'react';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
@@ -20,6 +21,8 @@ interface StepperProps {
   initialStep?: number;
   onFirstStepBack?: () => void;
   renderHeaderRight?: () => React.ReactNode;
+  /** Smaller gap between the header row and the page, for content-dense flows. */
+  compact?: boolean;
 }
 
 export interface StepperRef {
@@ -30,7 +33,7 @@ export interface StepperRef {
 }
 
 export const Stepper = forwardRef<StepperRef, StepperProps>(
-  ({ pages, onStepChange, initialStep = 0, onFirstStepBack, renderHeaderRight }, ref) => {
+  ({ pages, onStepChange, initialStep = 0, onFirstStepBack, renderHeaderRight, compact }, ref) => {
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
     const { width } = useWindowDimensions();
@@ -126,7 +129,7 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
           </View>
 
           {/* Pages Container with Horizontal Slide */}
-          <View className="pt-22 flex-1 overflow-hidden">
+          <View className={clsx('flex-1 overflow-hidden', compact ? 'pt-6' : 'pt-22')}>
             <Animated.View
               style={{
                 flexDirection: 'row',

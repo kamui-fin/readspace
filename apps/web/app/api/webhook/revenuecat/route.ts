@@ -1,7 +1,23 @@
+import { timingSafeEqual } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase/admin"
 
+/** Constant-time string comparison to avoid leaking the secret via timing. */
+function safeEqual(a: string, b: string): boolean {
+    const bufA = Buffer.from(a)
+    const bufB = Buffer.from(b)
+    return bufA.length === bufB.length && timingSafeEqual(bufA, bufB)
+}
+
+const disabledResponse = () =>
+    NextResponse.json(
+        { error: "RevenueCat webhook is not configured" },
+        { status: 503 }
+    )
+
 export async function GET() {
+    // Self-hosted deployments without RevenueCat leave the secret unset.
+    if (!process.env.REVENUECAT_WEBHOOK_SECRET) return disabledResponse()
     return NextResponse.json({
         message:
             "RevenueCat Webhook Receiver is active. Please send POST requests.",
@@ -11,26 +27,27 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
     try {
-        // 1. Verify Authorization if secret is configured
+        // 1. Verify Authorization. Fail closed: with no secret configured
+        // (e.g. self-hosted without RevenueCat) the webhook is disabled.
         const webhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET
-        if (webhookSecret) {
-            const authHeader = req.headers.get("authorization")
-            const token = authHeader?.startsWith("Bearer ")
-                ? authHeader.substring(7)
-                : authHeader
+        if (!webhookSecret) {
+            console.warn(
+                "[RevenueCat Webhook] REVENUECAT_WEBHOOK_SECRET not set; rejecting request."
+            )
+            return disabledResponse()
+        }
 
-            if (token !== webhookSecret) {
-                console.warn(
-                    "[RevenueCat Webhook] Unauthorized request received."
-                )
-                return new NextResponse(
-                    JSON.stringify({ error: "Unauthorized" }),
-                    {
-                        status: 401,
-                        headers: { "Content-Type": "application/json" },
-                    }
-                )
-            }
+        const authHeader = req.headers.get("authorization")
+        const token = authHeader?.startsWith("Bearer ")
+            ? authHeader.substring(7)
+            : authHeader
+
+        if (!token || !safeEqual(token, webhookSecret)) {
+            console.warn("[RevenueCat Webhook] Unauthorized request received.")
+            return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
+                status: 401,
+                headers: { "Content-Type": "application/json" },
+            })
         }
 
         // 2. Parse payload

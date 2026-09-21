@@ -60,16 +60,31 @@ class TestPreviewFeed:
         """Test previewing with invalid URL."""
         response = await async_client.get("/api/discover/preview?url=not-a-valid-url")
 
-        # Should fail with either 503 (can't fetch) or 500 (error)
-        assert response.status_code in [500, 503]
+        # Rejected up front (400), or fails to fetch (503) / errors (500)
+        assert response.status_code in [400, 500, 503]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://127.0.0.1:6379",
+            "http://localhost:8008/",
+            "http://169.254.169.254/latest/meta-data/",
+            "http://[::1]/",
+        ],
+    )
+    async def test_preview_feed_blocks_internal_urls(self, async_client: AsyncClient, url: str):
+        """SSRF: internal/metadata targets must be rejected before any request is made."""
+        response = await async_client.get("/api/discover/preview", params={"url": url})
+        assert response.status_code == 400
 
     @pytest.mark.asyncio
     async def test_preview_feed_unreachable(self, async_client: AsyncClient):
         """Test previewing unreachable feed."""
         response = await async_client.get("/api/discover/preview?url=https://nonexistent-domain-12345.com/feed.xml")
 
-        # Should fail with either 503 (can't fetch) or 500 (error)
-        assert response.status_code in [500, 503]
+        # Should fail with 400 (unresolvable), 503 (can't fetch) or 500 (error)
+        assert response.status_code in [400, 500, 503]
 
     @pytest.mark.asyncio
     async def test_preview_feed_with_rsshub_url(self, async_client: AsyncClient):

@@ -1,5 +1,11 @@
-import { generateOpml, type Opml } from "@readspace/shared"
-import type { Folder } from "@readspace/shared"
+import {
+    generateOPMLContent,
+    opmlExportFilename,
+    type FeedForOPML,
+    type Folder,
+} from "@readspace/shared"
+
+export { generateOPMLContent, type FeedForOPML }
 
 /**
  * Download content as a file using browser APIs
@@ -25,78 +31,8 @@ export function downloadFile(
  * Download OPML content as a file
  */
 export function downloadOPML(opmlContent: string, filename?: string): void {
-    const timestamp = new Date().toISOString().split("T")[0]
-    const finalFilename = filename || `readspace-feeds-${timestamp}.opml`
+    const finalFilename = filename || opmlExportFilename()
     downloadFile(opmlContent, finalFilename, "application/xml")
-}
-
-export interface FeedForOPML {
-    url: string
-    title?: string | null
-    link?: string | null
-    folder_id?: string | null
-}
-
-/**
- * Generate OPML content from feeds and folders
- */
-export function generateOPMLContent(
-    feedsToExport: FeedForOPML[],
-    folders: Folder[]
-): string {
-    // Group feeds by folder
-    const foldersMap = new Map<string, FeedForOPML[]>()
-
-    feedsToExport.forEach((feed) => {
-        const folderName =
-            folders.find((f) => f.id === feed.folder_id)?.name ||
-            "Uncategorized"
-        if (!foldersMap.has(folderName)) {
-            foldersMap.set(folderName, [])
-        }
-        foldersMap.get(folderName)!.push(feed)
-    })
-
-    const outlines: Opml.Outline<Date>[] = []
-
-    // Add feeds grouped by folders
-    for (const [folderName, folderFeeds] of foldersMap) {
-        if (foldersMap.size > 1 || folderName !== "Uncategorized") {
-            const folderOutline: Opml.Outline<Date> = {
-                text: folderName,
-                title: folderName,
-                outlines: folderFeeds.map((feed) => ({
-                    text: feed.title || feed.url,
-                    title: feed.title || feed.url,
-                    type: "rss",
-                    xmlUrl: feed.url,
-                    htmlUrl: feed.link || undefined,
-                })),
-            }
-            outlines.push(folderOutline)
-        } else {
-            // Put feeds directly in body if only uncategorized
-            folderFeeds.forEach((feed) => {
-                outlines.push({
-                    text: feed.title || feed.url,
-                    title: feed.title || feed.url,
-                    type: "rss",
-                    xmlUrl: feed.url,
-                    htmlUrl: feed.link || undefined,
-                })
-            })
-        }
-    }
-
-    return generateOpml({
-        head: {
-            title: "Readspace Feeds Export",
-            dateCreated: new Date(),
-        },
-        body: {
-            outlines,
-        },
-    })
 }
 
 /**

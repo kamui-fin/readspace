@@ -19,6 +19,7 @@ import structlog
 from bs4 import BeautifulSoup, Tag
 from dateutil import parser as date_parser
 
+from app.core.constants import ALLOWED_ATTRIBUTES, ALLOWED_TAGS
 from app.typing.entries import ArticleCreate
 from app.typing.feeds import ParsedFeed
 from app.utils.text import clean_html_text
@@ -95,6 +96,8 @@ def _parse_json_feed(content: str, url: str) -> ParsedFeed:
             if not content_html:
                 content_html = item.get("content_text", "") or summary
 
+            clean_content = _sanitize_and_fix_html(str(content_html), base_url=link)
+
             published_at = datetime.now(timezone.utc)
             date_str = item.get("date_published")
             if date_str and isinstance(date_str, str):
@@ -116,7 +119,7 @@ def _parse_json_feed(content: str, url: str) -> ParsedFeed:
                     title=item_title,
                     link=link,
                     description=clean_html_text(summary)[:1000],
-                    content=str(content_html),
+                    content=clean_content,
                     published_at=published_at,
                     author=item_author_name or author_name,
                     guid=str(item.get("id", link)),
@@ -411,15 +414,22 @@ def _heal_html_code_tags(soup: BeautifulSoup) -> None:
 
 def _sanitize_and_fix_html(html_content: str, base_url: str | None) -> str:
     """
-    Fix relative URLs and normalize code tags in HTML content.
-
-    Note: HTML sanitization is already handled by feedparser when sanitize_html=True.
-    We resolve relative URLs and convert block <pre> to inline <code>.
+    Sanitize HTML content with nh3 (stripping scripts, iframes, and dangerous handlers),
+    fix relative URLs, and normalize code tags.
     """
     if not html_content:
         return ""
 
     try:
+        # Sanitize HTML for security
+        html_content = nh3.clean(
+            html_content,
+            tags=ALLOWED_TAGS,
+            attributes=ALLOWED_ATTRIBUTES,
+            url_schemes={"http", "https", "mailto", "data"},
+            link_rel="noopener noreferrer",
+        )
+
         soup = BeautifulSoup(html_content, "html.parser")
         has_changes = False
 

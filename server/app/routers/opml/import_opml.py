@@ -38,25 +38,38 @@ async def validate_and_read_opml(file: UploadFile) -> str:
     if not file.filename or not file.filename.endswith(SUPPORTED_OPML_EXTENSIONS):
         raise ValidationError(message="Invalid file type. Please upload a .opml or .xml file.")
 
-    # 2. Check Size
-    if file.size:
-        file_size_mb = file.size / (1024 * 1024)
-        if file_size_mb > MAX_OPML_FILE_SIZE_MB:
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=f"File too large. Maximum size is {MAX_OPML_FILE_SIZE_MB}MB.",
-            )
+    max_bytes = MAX_OPML_FILE_SIZE_MB * 1024 * 1024
 
-    # 3. Read Content
-    content_bytes = await file.read()
+    # 2. Check Size header if provided
+    if file.size and file.size > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large. Maximum size is {MAX_OPML_FILE_SIZE_MB}MB.",
+        )
+
+    # 3. Read Content in chunks to guard against unbounded memory consumption
+    chunk_size = 1024 * 1024  # 1MB chunk
+    chunks: list[bytes] = []
+    total_bytes = 0
+
+    try:
+        while chunk := await file.read(chunk_size):
+            total_bytes += len(chunk)
+            if total_bytes > max_bytes:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=f"File too large. Maximum size is {MAX_OPML_FILE_SIZE_MB}MB.",
+                )
+            chunks.append(chunk)
+        content_bytes = b"".join(chunks)
+    finally:
+        await file.close()
 
     # 4. Decode
     try:
         return content_bytes.decode("utf-8")
     except UnicodeDecodeError as e:
         raise ValidationError(message="File encoding error. Please ensure the OPML file is UTF-8 encoded.") from e
-    finally:
-        await file.close()
 
 
 # --- Routes ---
