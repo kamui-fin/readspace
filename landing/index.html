@@ -48,8 +48,8 @@
 <link rel="icon" type="image/svg+xml" href="./readspace.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet"></noscript>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="./assets/styles.css">
 <script>
     !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],Object.defineProperty(u,"toString",{configurable:!0,enumerable:!0,writable:!0,value:function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e}}),Object.defineProperty(u.people,"toString",{configurable:!0,enumerable:!0,writable:!0,value:function(){return u.toString(1)+".people (stub)"}}),o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagResult isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
@@ -78,7 +78,7 @@
   <div class="nav-bar">
     <a href="#top" style="display:flex;align-items:center;gap:9px;color:#1B211C;flex:none">
       <img src="./readspace.svg" alt="" width="24" height="24" style="width:24px;height:24px;display:block;border-radius:7px" data-logo>
-      <span style="display:none;width:24px;height:24px;border-radius:7px;background:#38663F;align-items:center;justify-content:center;color:#fff;font-family:'EB Garamond',serif;font-size:16px;line-height:1" data-logo-fallback>R</span>
+      <span style="display:none;width:24px;height:24px;border-radius:7px;background:#38663F;align-items:center;justify-content:center;color:#fff;font-family:'Instrument Serif',serif;font-size:16px;line-height:1" data-logo-fallback>R</span>
       <span style="font-family:'Figtree',sans-serif;font-size:17.5px;font-weight:600;letter-spacing:-.02em">readspace</span>
     </a>
     <div data-navlinks style="flex:1;display:none;align-items:center;justify-content:center;gap:4px;font-size:14px">
@@ -98,17 +98,29 @@
         </span>
       </a>
       <a href="https://app.readspace.ai" class="btn-primary">Start free</a>
+      <button type="button" class="nav-menu-btn" data-menu-btn aria-label="Open menu" aria-expanded="false" aria-controls="nav-menu">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path class="bar-top" d="M3.5 6.5h13"></path><path class="bar-bot" d="M3.5 13.5h13"></path></svg>
+      </button>
     </div>
   </div>
+  <nav id="nav-menu" class="nav-menu" data-menu aria-label="Site" hidden>
+    <a href="#digest">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+    <a href="./contact/">Contact</a>
+    <div class="nav-menu-social">
+      <a href="https://discord.gg/2Q5PtYwUQZ" target="_blank" rel="noopener">Discord</a>
+      <a href="https://github.com/kamui-fin/readspace" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </nav>
 </div>
 
+<!-- Brand icons: Font Awesome Free 6.7.2 (CC BY 4.0) https://fontawesome.com/license/free -->
 <main>
 <!-- Hero -->
-<section id="top" style="padding:78px 0 0;position:relative">
+<section id="top" class="hero-section" style="position:relative">
   <div style="position:absolute;left:0;right:0;top:0;height:780px;overflow:hidden;pointer-events:none">
-    <div style="position:absolute;left:50%;top:-540px;transform:translateX(-50%);width:1140px;height:1140px;border-radius:50%;border:1px solid #EDEEE2"></div>
-    <div style="position:absolute;left:50%;top:-420px;transform:translateX(-50%);width:880px;height:880px;border-radius:50%;border:1px solid #EFF0E4"></div>
-    <div style="position:absolute;left:50%;top:-300px;transform:translateX(-50%);width:640px;height:640px;border-radius:50%;border:1px solid #F1F2E6"></div>
+    <div class="hero-dots"></div>
     <div style="position:absolute;inset:0;background:radial-gradient(52% 42% at 50% 4%, rgba(110,156,78,.11), rgba(110,156,78,0) 72%)"></div>
     <div style="position:absolute;left:0;right:0;bottom:0;height:200px;background:linear-gradient(180deg,rgba(250,250,244,0),#FAFAF4)"></div>
   </div>
@@ -125,9 +137,9 @@
       </span>
       <span>Star it on GitHub</span>
     </a>
-    <h1 style="margin:0 auto;max-width:16ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(46px,6.8vw,88px);line-height:.98;letter-spacing:-.022em;color:#171C18;text-wrap:balance">Stay <span style="background:linear-gradient(90deg,#38663F,#6E9C4E);-webkit-background-clip:text;background-clip:text;color:transparent">informed</span> <span style="font-style:italic">without</span> staying online.</h1>
-    <p style="margin:26px auto 0;max-width:58ch;font-size:19px;line-height:1.55;color:#4D554E;text-wrap:pretty">Readspace brings the publications, writers, and newsletters you choose into one calm feed — then turns each day into a five-minute briefing.</p>
-    <div style="margin:34px 0 0;display:flex;justify-content:center">
+    <h1 style="margin:0 auto;max-width:11em;font-family:'Instrument Serif',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(56px,7.4vw,104px);line-height:.95;letter-spacing:-.008em;-webkit-text-stroke:.55px currentColor;color:#171C18;text-wrap:balance">Stay <span style="background:linear-gradient(90deg,#38663F,#6E9C4E);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke-color:#548049">informed</span> <span style="font-style:italic">without</span> staying online.</h1>
+    <p class="hero-sub" style="margin:22px auto 0;max-width:58ch;font-size:19px;line-height:1.55;color:#4D554E;text-wrap:pretty">Readspace brings the publications, writers, and newsletters you choose into one calm feed — then turns each day into a five-minute briefing.</p>
+    <div style="margin:32px 0 0;display:flex;justify-content:center">
       <a href="https://app.readspace.ai" data-arrow-trigger class="btn-hero">
         <span>Start reading for free</span>
         <span class="arrow" data-arrow>
@@ -137,19 +149,17 @@
     </div>
     <div style="margin:14px 0 0;display:flex;flex-wrap:wrap;gap:4px;justify-content:center">
       <a href="https://apps.apple.com/us/app/readspace-rss-news-reader/id6790224641" target="_blank" rel="noopener" data-draw-trigger class="pill-platform">
-        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2.5h6a1.5 1.5 0 0 1 1.5 1.5v12A1.5 1.5 0 0 1 13 17.5H7A1.5 1.5 0 0 1 5.5 16V4A1.5 1.5 0 0 1 7 2.5z"></path><path d="M9 15.2h2"></path></svg>iOS</a>
+        <svg width="14" height="14" viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"></path></svg>iOS</a>
       <a href="https://play.google.com/store/apps/details?id=com.readspace.rss" target="_blank" rel="noopener" data-draw-trigger class="pill-platform">
-        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8.5a5 5 0 0 1 10 0v6a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 5 14.5z"></path><path d="M7 5.2 6 3.4M13 5.2l1-1.8"></path></svg>Android</a>
-      <a href="https://app.readspace.ai" data-draw-trigger class="pill-platform">
-        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.3"></circle><path d="M2.7 10h14.6M10 2.7c1.9 2 2.9 4.5 2.9 7.3s-1 5.3-2.9 7.3c-1.9-2-2.9-4.5-2.9-7.3S8.1 4.7 10 2.7z"></path></svg>Web app</a>
+        <svg width="14" height="14" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6l-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"></path></svg>Android</a>
       <a href="https://chromewebstore.google.com/detail/readspace/ppadpdoicnolpjnflfladjllhmkonedi" target="_blank" rel="noopener" data-draw-trigger class="pill-platform">
-        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.2a1.8 1.8 0 0 1 3.6 0v1.1h2.6a1 1 0 0 1 1 1v2.6h-1.1a1.8 1.8 0 0 0 0 3.6h1.1v3.2a1 1 0 0 1-1 1H5.2a1 1 0 0 1-1-1V5.3a1 1 0 0 1 1-1H8z"></path></svg>Chrome</a>
+        <svg width="14" height="14" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M0 256C0 209.4 12.47 165.6 34.27 127.1L144.1 318.3C166 357.5 207.9 384 256 384C270.3 384 283.1 381.7 296.8 377.4L220.5 509.6C95.9 492.3 0 385.3 0 256zM365.1 321.6C377.4 302.4 384 279.1 384 256C384 217.8 367.2 183.5 340.7 160H493.4C505.4 189.6 512 222.1 512 256C512 397.4 397.4 511.1 256 512L365.1 321.6zM477.8 128H256C193.1 128 142.3 172.1 130.5 230.7L54.19 98.47C101 38.53 174 0 256 0C350.8 0 433.5 51.48 477.8 128V128zM168 256C168 207.4 207.4 168 256 168C304.6 168 344 207.4 344 256C344 304.6 304.6 344 256 344C207.4 344 168 304.6 168 256z"></path></svg>Chrome</a>
       <a href="https://addons.mozilla.org/en-US/firefox/addon/readspace/" target="_blank" rel="noopener" data-draw-trigger class="pill-platform">
-        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.4 6.2h13.2a.9.9 0 0 1 .9.9v7.6a.9.9 0 0 1-.9.9H3.4a.9.9 0 0 1-.9-.9V7.1a.9.9 0 0 1 .9-.9z"></path><path d="M2.5 6.2 5 3.3h10l2.5 2.9"></path></svg>Firefox</a>
+        <svg width="14" height="14" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M503.52,241.48c-.12-1.56-.24-3.12-.24-4.68v-.12l-.36-4.68v-.12a245.86,245.86,0,0,0-7.32-41.15c0-.12,0-.12-.12-.24l-1.08-4c-.12-.24-.12-.48-.24-.6-.36-1.2-.72-2.52-1.08-3.72-.12-.24-.12-.6-.24-.84-.36-1.2-.72-2.4-1.08-3.48-.12-.36-.24-.6-.36-1-.36-1.2-.72-2.28-1.2-3.48l-.36-1.08c-.36-1.08-.84-2.28-1.2-3.36a8.27,8.27,0,0,0-.36-1c-.48-1.08-.84-2.28-1.32-3.36-.12-.24-.24-.6-.36-.84-.48-1.2-1-2.28-1.44-3.48,0-.12-.12-.24-.12-.36-1.56-3.84-3.24-7.68-5-11.4l-.36-.72c-.48-1-.84-1.8-1.32-2.64-.24-.48-.48-1.08-.72-1.56-.36-.84-.84-1.56-1.2-2.4-.36-.6-.6-1.2-1-1.8s-.84-1.44-1.2-2.28c-.36-.6-.72-1.32-1.08-1.92s-.84-1.44-1.2-2.16a18.07,18.07,0,0,0-1.2-2c-.36-.72-.84-1.32-1.2-2s-.84-1.32-1.2-2-.84-1.32-1.2-1.92-.84-1.44-1.32-2.16a15.63,15.63,0,0,0-1.2-1.8L463.2,119a15.63,15.63,0,0,0-1.2-1.8c-.48-.72-1.08-1.56-1.56-2.28-.36-.48-.72-1.08-1.08-1.56l-1.8-2.52c-.36-.48-.6-.84-1-1.32-1-1.32-1.8-2.52-2.76-3.72a248.76,248.76,0,0,0-23.51-26.64A186.82,186.82,0,0,0,412,62.46c-4-3.48-8.16-6.72-12.48-9.84a162.49,162.49,0,0,0-24.6-15.12c-2.4-1.32-4.8-2.52-7.2-3.72a254,254,0,0,0-55.43-19.56c-1.92-.36-3.84-.84-5.64-1.2h-.12c-1-.12-1.8-.36-2.76-.48a236.35,236.35,0,0,0-38-4H255.14a234.62,234.62,0,0,0-45.48,5c-33.59,7.08-63.23,21.24-82.91,39-1.08,1-1.92,1.68-2.4,2.16l-.48.48H124l-.12.12.12-.12a.12.12,0,0,0,.12-.12l-.12.12a.42.42,0,0,1,.24-.12c14.64-8.76,34.92-16,49.44-19.56l5.88-1.44c.36-.12.84-.12,1.2-.24,1.68-.36,3.36-.72,5.16-1.08.24,0,.6-.12.84-.12C250.94,20.94,319.34,40.14,367,85.61a171.49,171.49,0,0,1,26.88,32.76c30.36,49.2,27.48,111.11,3.84,147.59-34.44,53-111.35,71.27-159,24.84a84.19,84.19,0,0,1-25.56-59,74.05,74.05,0,0,1,6.24-31c1.68-3.84,13.08-25.67,18.24-24.59-13.08-2.76-37.55,2.64-54.71,28.19-15.36,22.92-14.52,58.2-5,83.28a132.85,132.85,0,0,1-12.12-39.24c-12.24-82.55,43.31-153,94.31-170.51-27.48-24-96.47-22.31-147.71,15.36-29.88,22-51.23,53.16-62.51,90.36,1.68-20.88,9.6-52.08,25.8-83.88-17.16,8.88-39,37-49.8,62.88-15.6,37.43-21,82.19-16.08,124.79.36,3.24.72,6.36,1.08,9.6,19.92,117.11,122,206.38,244.78,206.38C392.77,503.42,504,392.19,504,255,503.88,250.48,503.76,245.92,503.52,241.48Z"></path></svg>Firefox</a>
     </div>
   </div>
 
-  <div data-reveal style="position:relative;z-index:2;max-width:1180px;margin:52px auto 0;padding:0 24px">
+  <div data-reveal style="position:relative;z-index:2;max-width:1180px;margin:36px auto 0;padding:0 24px">
     <div style="display:flex;justify-content:center;margin:0 0 20px">
       <div class="cycle-toggle-group">
         <button type="button" class="cycle-toggle active" data-hero-tab="feed">Your feed</button>
@@ -201,7 +211,7 @@
   <div style="max-width:1180px;margin:0 auto;padding:0 24px">
     <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">The problem</div>
     <div style="margin-top:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:32px 64px;align-items:start">
-      <h2 style="margin:0;max-width:16ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.05;letter-spacing:-.02em;color:#171C18">Following the internet shouldn&rsquo;t be a <span data-fill data-fill-to="#171C18" class="squiggle">full-time job.</span></h2>
+      <h2 style="margin:0;max-width:16ch;font-family:'Instrument Serif',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.05;letter-spacing:-.02em;color:#171C18">Following the internet shouldn&rsquo;t be a <span data-fill data-fill-to="#171C18" class="squiggle">full-time job.</span></h2>
       <div>
         <p style="margin:6px 0 0;max-width:44ch;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">Newsletters pile up. Interesting articles disappear into bookmarks and open tabs. And there&rsquo;s always another one waiting.</p>
         <p style="margin:16px 0 0;max-width:44ch;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">Readspace brings it all together, so you can catch up without keeping up with everything.</p>
@@ -254,7 +264,7 @@
 <section id="digest" style="margin-top:120px;padding-bottom:64px">
   <div style="max-width:1180px;margin:0 auto;padding:0 24px;text-align:center">
     <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Daily Digest</div>
-    <h2 style="margin:16px auto 0;max-width:22ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.4vw,56px);line-height:1.02;letter-spacing:-.02em;color:#171C18">What mattered across your sources. <span data-fill data-fill-to="#38663F" style="font-style:italic;color:#38663F">Five minutes.</span></h2>
+    <h2 style="margin:16px auto 0;max-width:22ch;font-family:'Instrument Serif',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.4vw,56px);line-height:1.02;letter-spacing:-.02em;color:#171C18">What mattered across your sources. <span data-fill data-fill-to="#6E9C4E" style="font-style:italic;color:#6E9C4E">Five minutes.</span></h2>
     <p style="margin:22px auto 0;max-width:54ch;font-size:17.5px;line-height:1.62;color:#4D554E;text-wrap:pretty">Hundreds of articles become a handful of stories &mdash; every source&rsquo;s take on the same news, folded into one. Read it over coffee, go deeper when you want.</p>
   </div>
 
@@ -278,7 +288,7 @@
   <div style="padding:108px 0;background:#233026;position:relative;overflow:hidden">
     <div style="position:absolute;inset:0;opacity:.07;background-image:linear-gradient(#9EC28C 1px,transparent 1px),linear-gradient(90deg,#9EC28C 1px,transparent 1px);background-size:96px 96px"></div>
     <div style="position:relative;max-width:1180px;margin:0 auto;padding:0 24px;text-align:center">
-      <h2 style="margin:0 auto;max-width:20ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(36px,5vw,66px);line-height:1.02;letter-spacing:-.022em;color:#F6FBF3">Nothing enters your feed unless <span data-fill data-fill-to="#B6D6A2" data-fill-from="#3E5742" style="font-style:italic;color:#B6D6A2">you follow it.</span></h2>
+      <h2 style="margin:0 auto;max-width:20ch;font-family:'Instrument Serif',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(36px,5vw,66px);line-height:1.02;letter-spacing:-.022em;color:#F6FBF3">Nothing enters your feed unless <span data-fill data-fill-to="#B6D6A2" data-fill-from="#3E5742" style="font-style:italic;color:#B6D6A2">you follow it.</span></h2>
       <p style="margin:18px auto 0;max-width:62ch;font-size:17.5px;line-height:1.62;color:#BFCFB7">Your favorite publications, independent blogs, and newsletters, together in one chronological feed. No engagement ranking. No suggested posts mixed in. Just the latest from the sources you chose.</p>
     </div>
   </div>
@@ -288,7 +298,7 @@
 <section id="discovery" style="margin-top:120px">
   <div style="max-width:1180px;margin:0 auto;padding:0 24px;text-align:center">
     <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Discovery</div>
-    <h2 style="margin:16px auto 0;max-width:22ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.4vw,56px);line-height:1.02;letter-spacing:-.02em;color:#171C18">All your favorite sources. <span data-fill data-fill-to="#38663F" style="font-style:italic;color:#38663F">And thousands more.</span></h2>
+    <h2 style="margin:16px auto 0;max-width:22ch;font-family:'Instrument Serif',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.4vw,56px);line-height:1.02;letter-spacing:-.02em;color:#171C18">All your favorite sources. <span data-fill data-fill-to="#6E9C4E" style="font-style:italic;color:#6E9C4E">And thousands more.</span></h2>
     <p style="margin:22px auto 0;max-width:60ch;font-size:17.5px;line-height:1.62;color:#4D554E;text-wrap:pretty">From the biggest news outlets to your favorite magazines, newsletters, and independent blogs. Explore over 120,000 sources and follow everything you care about in one place.</p>
   </div>
   <div class="orbit-wrap">
@@ -411,9 +421,13 @@
     <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-end;justify-content:space-between">
       <div style="flex:1;min-width:min(100%,420px)">
         <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Read later</div>
-        <h2 style="margin:16px 0 0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.02;letter-spacing:-.02em;color:#171C18;max-width:20ch">Save articles from anywhere. Read them when you actually have time.</h2>
+        <h2 style="margin:16px 0 0;font-family:'Instrument Serif',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.02;letter-spacing:-.02em;color:#171C18;max-width:20ch">Save articles from anywhere. Read them when you actually have time.</h2>
       </div>
       <div style="flex:1;min-width:min(100%,340px);max-width:500px">
+        <div class="ext-badges">
+          <a href="https://chromewebstore.google.com/detail/readspace/ppadpdoicnolpjnflfladjllhmkonedi" target="_blank" rel="noopener"><img src="./assets/img/chrome-web-store.png" alt="Available in the Chrome Web Store" width="481" height="140" loading="lazy"></a>
+          <a href="https://addons.mozilla.org/en-US/firefox/addon/readspace/" target="_blank" rel="noopener"><img src="./assets/img/firefox-add-ons.png" alt="Get the Firefox add-on" width="172" height="60" loading="lazy"></a>
+        </div>
         <p style="margin:0;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">A long essay, a newsletter, something you stumbled on halfway through the day. Save it to Readspace instead of another bookmark folder.</p>
       </div>
     </div>
@@ -436,7 +450,7 @@
   <div style="max-width:1180px;margin:0 auto;padding:0 24px">
     <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Reader</div>
     <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-end;justify-content:space-between;margin-top:16px">
-      <h2 style="margin:0;flex:1;min-width:min(100%,340px);font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.02;letter-spacing:-.02em;color:#171C18">When you do read, just read.</h2>
+      <h2 style="margin:0;flex:1;min-width:min(100%,340px);font-family:'Instrument Serif',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.02;letter-spacing:-.02em;color:#171C18">When you do read, just read.</h2>
       <p style="margin:0;flex:1;min-width:min(100%,320px);max-width:470px;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">Open articles in a clean reading view inside Readspace, without the usual page clutter getting in the way.</p>
     </div>
 
@@ -454,7 +468,7 @@
 <!-- Gist / summary -->
 <section class="feature-section">
   <div style="max-width:1180px;margin:0 auto;padding:0 24px">
-    <h2 style="margin:0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(27px,3vw,40px);line-height:1.04;letter-spacing:-.022em;color:#171C18;max-width:22ch;text-wrap:balance">Read the whole thing. <span data-fill data-fill-to="#828C81" style="color:#828C81">Or just the gist.</span></h2>
+    <h2 style="margin:0;font-family:'Instrument Serif',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(27px,3vw,40px);line-height:1.04;letter-spacing:-.022em;color:#171C18;max-width:22ch;text-wrap:balance">Read the whole thing. <span data-fill data-fill-to="#828C81" style="color:#828C81">Or just the gist.</span></h2>
     <div data-gistgrid class="feature-visual" style="display:grid;grid-template-columns:1fr;gap:30px;align-items:stretch">
       <div style="display:flex;flex-direction:column">
         <div style="font-size:19px;font-weight:600;letter-spacing:-.015em;color:#1F2620">Get the gist</div>
@@ -502,7 +516,7 @@
   <div style="max-width:1180px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:56px;align-items:center">
     <div>
       <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Newsletters</div>
-      <h2 style="margin:16px 0 0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(32px,3.6vw,48px);line-height:1.04;letter-spacing:-.02em;color:#171C18">Your newsletters finally have a home.</h2>
+      <h2 style="margin:16px 0 0;font-family:'Instrument Serif',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(32px,3.6vw,48px);line-height:1.04;letter-spacing:-.02em;color:#171C18">Your newsletters finally have a home.</h2>
       <p style="margin:20px 0 0;font-size:17px;line-height:1.6;color:#4D554E;max-width:48ch;text-wrap:pretty">No more hunting through Gmail for the issue you meant to read — newsletters show up in your feed, right alongside everything else you follow.</p>
     </div>
     <div>
@@ -553,9 +567,9 @@
       <img src="./assets/img/why-branch.webp" alt="" width="600" height="749" loading="lazy" decoding="async" style="display:block;width:100%;height:100%;object-fit:contain;object-position:left bottom">
     </div>
     <div style="position:relative;z-index:2;max-width:900px;margin:0 auto;padding:0 24px;text-align:center">
-      <div style="display:flex;align-items:center;justify-content:center;gap:clamp(12px,3vw,40px);font-family:'EB Garamond',ui-serif,Georgia,serif">
+      <div style="display:flex;align-items:center;justify-content:center;gap:clamp(12px,3vw,40px);font-family:'Instrument Serif',ui-serif,Georgia,serif">
         <span style="font-size:clamp(44px,6vw,78px);line-height:1;color:#A6B99C">(</span>
-        <h2 style="margin:0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,5vw,62px);line-height:1;letter-spacing:-.02em;color:#171C18">Philosophy</h2>
+        <h2 style="margin:0;font-family:'Instrument Serif',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,5vw,62px);line-height:1;letter-spacing:-.02em;color:#171C18">Philosophy</h2>
         <span style="font-size:clamp(44px,6vw,78px);line-height:1;color:#A6B99C">)</span>
       </div>
     </div>
@@ -592,7 +606,7 @@
 <section id="opensource" style="margin-top:120px">
   <div style="max-width:760px;margin:0 auto;padding:0 24px;text-align:center">
     <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Open source</div>
-    <h2 style="margin:16px auto 0;max-width:22ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(32px,3.6vw,48px);line-height:1.04;letter-spacing:-.02em;color:#171C18">Your subscriptions aren&rsquo;t trapped here.</h2>
+    <h2 style="margin:16px auto 0;max-width:22ch;font-family:'Instrument Serif',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(32px,3.6vw,48px);line-height:1.04;letter-spacing:-.02em;color:#171C18">Your subscriptions aren&rsquo;t trapped here.</h2>
     <p style="margin:20px auto 0;font-size:17px;line-height:1.6;color:#4D554E;max-width:48ch;text-wrap:pretty">Import and export your source list using an open format, any time. Readspace is open source, and technical users can run the whole platform on their own server.</p>
     <div style="margin:26px 0 0;display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
       <a href="https://github.com/kamui-fin/readspace#self-hosting" target="_blank" rel="noopener" class="btn-dark">Self-hosting instructions</a>
@@ -605,7 +619,7 @@
   <div style="padding:96px 0;background:#F1F3E7;border-top:1px solid #E7E8DA;border-bottom:1px solid #E7E8DA">
   <div style="max-width:1180px;margin:0 auto;padding:0 24px;text-align:center">
     <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Pricing</div>
-    <h2 style="margin:16px auto 0;max-width:26ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.03;letter-spacing:-.02em;color:#171C18">Start free. Pay when Readspace saves you more time.</h2>
+    <h2 style="margin:16px auto 0;max-width:26ch;font-family:'Instrument Serif',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.03;letter-spacing:-.02em;color:#171C18">Start free. Pay when Readspace saves you more time.</h2>
     <p style="margin:18px auto 0;font-size:17px;color:#4D554E">Three ways to run Readspace — pick the one that matches how you read.</p>
     <div class="cycle-toggle-group" style="margin:28px 0 0">
       <button type="button" id="cycle-monthly" class="cycle-toggle active">Monthly</button>
@@ -616,7 +630,7 @@
     <div class="plan-card">
       <div>
         <div style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Basic</div>
-        <div style="margin-top:14px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap"><span style="font-family:'EB Garamond',serif;font-size:40px;line-height:1;color:#171C18">$0</span><span style="font-family:'Geist Mono',ui-monospace;font-size:11px;color:#9AA497"></span></div>
+        <div style="margin-top:14px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap"><span style="font-family:'Instrument Serif',serif;font-size:40px;line-height:1;color:#171C18">$0</span><span style="font-family:'Geist Mono',ui-monospace;font-size:11px;color:#9AA497"></span></div>
         <div style="margin-top:10px;font-size:14.5px;color:#5E665F">For trying it out.</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;flex:1">
@@ -634,7 +648,7 @@
       <div class="plan-badge">Recommended</div>
       <div>
         <div style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Pro</div>
-        <div style="margin-top:14px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap"><span id="pro-price" style="font-family:'EB Garamond',serif;font-size:40px;line-height:1;color:#171C18">$5.99</span><span id="pro-per" style="font-family:'Geist Mono',ui-monospace;font-size:11px;color:#5E665F">/ month</span></div>
+        <div style="margin-top:14px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap"><span id="pro-price" style="font-family:'Instrument Serif',serif;font-size:40px;line-height:1;color:#171C18">$5.99</span><span id="pro-per" style="font-family:'Geist Mono',ui-monospace;font-size:11px;color:#5E665F">/ month</span></div>
         <div id="pro-sub" style="margin-top:10px;font-size:14.5px;color:#5E665F">For people who want to spend less time catching up.</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;flex:1">
@@ -650,7 +664,7 @@
     <div class="plan-card">
       <div>
         <div style="font-family:'Geist Mono',ui-monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Self-hosted</div>
-        <div style="margin-top:14px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap"><span style="font-family:'EB Garamond',serif;font-size:40px;line-height:1;color:#171C18">$0</span><span style="font-family:'Geist Mono',ui-monospace;font-size:11px;color:#5E665F">forever</span></div>
+        <div style="margin-top:14px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap"><span style="font-family:'Instrument Serif',serif;font-size:40px;line-height:1;color:#171C18">$0</span><span style="font-family:'Geist Mono',ui-monospace;font-size:11px;color:#5E665F">forever</span></div>
         <div style="margin-top:10px;font-size:14.5px;color:#5E665F">For complete control.</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;flex:1">
@@ -671,7 +685,7 @@
   <div style="max-width:1180px;margin:0 auto;padding:0 24px">
     <div style="max-width:820px;margin:0 auto">
       <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">FAQ</div>
-      <h2 style="margin:16px 0 0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(32px,3.8vw,50px);line-height:1.03;letter-spacing:-.02em;color:#171C18">Questions, answered plainly.</h2>
+      <h2 style="margin:16px 0 0;font-family:'Instrument Serif',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(32px,3.8vw,50px);line-height:1.03;letter-spacing:-.02em;color:#171C18">Questions, answered plainly.</h2>
       <div style="margin-top:36px;border-top:1px solid #E7E8DA">
         <details class="faq-item">
           <summary class="faq-summary"><span>Why use Readspace if social media already keeps me informed?</span><span class="faq-chev"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l5 5 5-5"></path></svg></span></summary>
@@ -726,7 +740,7 @@
     <div style="max-width:330px;flex:1;min-width:min(100%,280px)">
       <div style="display:flex;align-items:center;gap:9px;color:#1B211C">
         <img src="./readspace.svg" alt="" width="26" height="26" loading="lazy" decoding="async" style="width:26px;height:26px;display:block;border-radius:7px" data-logo>
-        <span style="display:none;width:26px;height:26px;border-radius:7px;background:#38663F;align-items:center;justify-content:center;color:#fff;font-family:'EB Garamond',serif;font-size:17px;line-height:1" data-logo-fallback>R</span>
+        <span style="display:none;width:26px;height:26px;border-radius:7px;background:#38663F;align-items:center;justify-content:center;color:#fff;font-family:'Instrument Serif',serif;font-size:17px;line-height:1" data-logo-fallback>R</span>
         <span style="font-family:'Figtree',sans-serif;font-size:21px;font-weight:600;letter-spacing:-.02em">readspace</span>
       </div>
       <p style="margin:16px 0 0;font-size:14.5px;line-height:1.6;color:#5E665F">Your news, blogs, and newsletters in one calm feed. Open source, and yours to host.</p>

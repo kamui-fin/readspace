@@ -217,6 +217,21 @@
   wide();
   window.addEventListener('resize', wide);
 
+  // Mobile/tablet nav menu
+  var menuBtn = root.querySelector('[data-menu-btn]');
+  var menuPanel = root.querySelector('[data-menu]');
+  if (menuBtn && menuPanel) {
+    var setMenu = function (open) {
+      menuPanel.hidden = !open;
+      menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      menuBtn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    };
+    menuBtn.addEventListener('click', function () { setMenu(menuPanel.hidden); });
+    menuPanel.addEventListener('click', function (e) { if (e.target.closest('a')) setMenu(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setMenu(false); });
+    window.addEventListener('resize', function () { if (window.innerWidth > 1000) setMenu(false); });
+  }
+
   // Text color-fill on scroll: paints character-by-character as the element scrolls into view
   var fills = Array.prototype.slice.call(root.querySelectorAll('[data-fill]'));
   if (fills.length) {
