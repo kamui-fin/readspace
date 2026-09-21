@@ -1,9 +1,9 @@
-import { HistoryIcon } from '@solar-icons/react-native/broken';
 /** biome-ignore-all lint/suspicious/noExplicitAny: any is used for compatibility with the toast library */
 
 import { Header } from '@components/navigation/header';
 import { ArticleListItem } from '@components/screens/following/components/article-list-item';
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
+import { BackButton } from '@components/ui/back-button';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { NativeScreenHeader } from '@components/ui/native-screen-header';
 import { toast } from '@components/ui/toast';
@@ -19,6 +19,7 @@ import {
   useInfiniteRecentlyReadArticles,
   useUpdateArticle,
 } from '@readspace/shared';
+import { HistoryIcon } from '@solar-icons/react-native/broken';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -246,22 +247,28 @@ export function RecentsScreen() {
     );
   };
 
-  // This is a pushed screen, so it needs a way out. iOS gets the real navigation bar (with the
-  // edge-swipe that comes with it) and drops the in-list heading's own chevron; Android keeps it.
+  // Keep navigation above the page heading on both platforms.
   const renderHeader = () => (
-    <Header
-      variant="static"
-      title="Recents"
-      subtitle="Articles you've read"
-      showBackButton={!USES_NATIVE_HEADER}
-      onBackPress={() => router.back()}
-      // The static header defaults to `colors.card` and its own status-bar inset. Neither is
-      // right here: the navigation bar above already cleared the notch (so the inset was being
-      // paid twice, leaving a gap between the chevron and "Recents"), and a card-tinted band
-      // above a background-tinted list reads as a seam rather than a heading.
-      transparentBackground
-      disableSafeAreaTop={USES_NATIVE_HEADER}
-    />
+    <View>
+      {!USES_NATIVE_HEADER && (
+        <View
+          style={{
+            paddingTop: insets.top + 8,
+            paddingHorizontal: 16,
+            paddingBottom: 12,
+            alignItems: 'flex-start',
+          }}>
+          <BackButton onPress={() => router.back()} color={colors.primary_foreground} />
+        </View>
+      )}
+      <Header
+        variant="static"
+        title="Recents"
+        subtitle="Articles you've read"
+        transparentBackground
+        disableSafeAreaTop
+      />
+    </View>
   );
 
   return (

@@ -1,12 +1,7 @@
 import { type MenuAction, MenuView } from '@expo/ui/community/menu';
 import type { ReactNode } from 'react';
 import type { ArticleOptionsMenuModel, ArticleViewMode } from '../article-actions.bar.types';
-import {
-  availableViewModes,
-  OPEN_IN_BROWSER_LABEL,
-  VIEW_MODE_SECTION_TITLE,
-  viewModeLabel,
-} from './types';
+import { availableViewModes, OPEN_IN_BROWSER_LABEL, viewModeLabel } from './types';
 
 export * from './types';
 
@@ -39,18 +34,13 @@ export function ArticleOptionsMenu({ model, children }: ArticleOptionsMenuProps)
     ...(model.onOpenInBrowser
       ? [{ id: 'browser', title: OPEN_IN_BROWSER_LABEL, image: 'safari' as const }]
       : []),
-    {
-      id: 'view-mode',
-      title: VIEW_MODE_SECTION_TITLE,
-      // Inline, so the modes read as one checked group in the same menu instead of hiding
-      // behind a submenu the way a plain `subactions` list would.
-      displayInline: true,
-      subactions: modes.map((mode) => ({
+    ...modes.map(
+      (mode): MenuAction => ({
         id: `${VIEW_ACTION_PREFIX}${mode}`,
         title: viewModeLabel(mode, model),
-        state: model.currentView === mode ? ('on' as const) : ('off' as const),
-      })),
-    },
+        state: model.currentView === mode ? 'on' : 'off',
+      })
+    ),
   ];
 
   const onPressAction = ({ nativeEvent: { event } }: { nativeEvent: { event: string } }) => {

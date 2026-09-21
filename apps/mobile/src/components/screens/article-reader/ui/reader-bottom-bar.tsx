@@ -7,10 +7,9 @@ import {
 } from '@components/screens/article-reader/ui/reader-corner-menu.types';
 import { ReadingProgressRing } from '@components/screens/article-reader/ui/reading-progress.ring';
 import { Text } from '@components/ui/text';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   FadeIn,
   runOnJS,
@@ -25,16 +24,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 /** Quick on purpose — chrome should feel like it was already there. */
 const CHROME_DURATION_MS = 140;
 const CHROME_TRAVEL = 12;
-
-/**
- * The pill is a raised object over the page, so it needs a fill the page does not share.
- * `card` was that fill and it is nearly the page in both themes — 245/246 against white,
- * 32 against 25 — which left the control readable only by its hairline. Light mode lifts to
- * pure white (the page is already off-white and the shadow does the separating); dark mode
- * lifts *up* the grey ramp instead, since a darker pill on a dark page cannot be seen at all.
- */
-const pillSurface = (colors: ReaderCornerMenuProps['colors'], isDark: boolean) =>
-  isDark ? colors.grey5 : colors.white;
 
 interface ReaderBottomBarProps extends ReaderCornerMenuProps {
   visible: boolean;
@@ -60,7 +49,6 @@ export function ReaderBottomBar({
   ...menuProps
 }: ReaderBottomBarProps) {
   const insets = useSafeAreaInsets();
-  const isDark = useIsDarkMode();
   const [percent, setPercent] = useState(0);
   const shown = useSharedValue(visible ? 1 : 0);
 
@@ -119,23 +107,10 @@ export function ReaderBottomBar({
         className="flex-shrink flex-row items-center gap-2.5 rounded-full pl-2.5 pr-4"
         style={({ pressed }) => ({
           height: READER_CORNER_BUTTON_SIZE,
-          backgroundColor: pillSurface(colors, isDark),
-          // A full point, not a hairline: at 0.5px over a shadow the edge disappears on the
-          // exact backgrounds this floats over.
-          borderWidth: 1,
+          backgroundColor: colors.card,
+          borderWidth: StyleSheet.hairlineWidth,
           borderColor: colors.grey4,
           opacity: pressed ? 0.75 : 1,
-          ...Platform.select({
-            ios: {
-              shadowColor: '#000',
-              // Dark mode gets a deeper, tighter shadow: a soft 8% shadow is invisible
-              // against a near-black page, so the pill had nothing anchoring it.
-              shadowOpacity: isDark ? 0.4 : 0.12,
-              shadowRadius: isDark ? 10 : 14,
-              shadowOffset: { width: 0, height: 4 },
-            },
-            android: { elevation: 6 },
-          }),
         })}>
         <ReadingProgressRing
           progress={percent / 100}
@@ -164,7 +139,7 @@ export function ReaderBottomBar({
                 fontFamily="geist-medium"
                 numberOfLines={1}
                 ellipsizeMode="tail"
-                style={{ color: colors.grey }}>
+                style={{ color: colors.primary_foreground }}>
                 {activeSectionLabel}
               </Text>
             </Animated.View>

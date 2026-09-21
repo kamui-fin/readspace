@@ -40,12 +40,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
    * On `system` the override is released so the phone is back in charge.
    */
   useEffect(() => {
-    // `null` releases the override; RN's types omit it, but it is the documented reset value.
-    Appearance.setColorScheme(
-      (theme === 'system' ? null : effectiveScheme) as Parameters<
-        typeof Appearance.setColorScheme
-      >[0]
-    );
+    // React Native 0.86 requires 'unspecified' to follow the system; Android rejects null.
+    Appearance.setColorScheme(theme === 'system' ? 'unspecified' : effectiveScheme);
   }, [theme, effectiveScheme]);
 
   return <>{children}</>;

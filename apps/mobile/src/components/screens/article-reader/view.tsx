@@ -51,8 +51,8 @@ const CHROME_AUTO_HIDE_TRAVEL = 4;
 /** Back within this of the top counts as "at the top", where the chrome returns on its own. */
 const CHROME_REVEAL_AT_TOP = 8;
 
-/** Fewer headings than this and an outline tells you nothing you can't already see. */
-const MIN_OUTLINE_ITEMS = 3;
+/** Any heading is a useful jump target. */
+const MIN_OUTLINE_ITEMS = 1;
 
 interface ArticleScreenProps {
   articleId: string;
@@ -78,8 +78,7 @@ export function ArticleScreen({
   const readingProgress = useSharedValue(0);
   const readerRef = useRef<ArticleReaderHandle>(null);
 
-  // An outline of one or two headings is noise, not navigation — below this the
-  // reader doesn't offer the control at all.
+  // Offer navigation whenever the article contains headings.
   const [outline, setOutline] = useState<OutlineItem[]>([]);
   const hasOutline = outline.length >= MIN_OUTLINE_ITEMS;
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);

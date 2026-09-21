@@ -128,13 +128,11 @@ export function ArticleHeader({
         {stripHtml(article.title)}
       </Text>
 
-      {/* Note for clipped articles */}
+      {/* Note for clipped articles — plain text, matching how the article cards render it. */}
       {isClipped && article.user_note && (
-        <View className="border-grey4 bg-grey6 mb-3 rounded-lg border px-3 py-2">
-          <Text size="sm" fontFamily="geist" className="text-grey leading-relaxed">
-            {article.user_note}
-          </Text>
-        </View>
+        <Text size="sm" fontFamily="geist" className="text-grey mb-3 leading-relaxed">
+          {article.user_note}
+        </Text>
       )}
 
       {/* Metadata */}

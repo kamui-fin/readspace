@@ -156,7 +156,8 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
       setSession(newSession);
       setUser(newSession?.user ?? null);
-      configureApiClient();
+      // The token provider reads the current session on each request; a token
+      // refresh does not change the API configuration.
 
       // For OAuth sign-ins (Google), check is_onboarded from the server
       // to detect first-time users who haven't been through onboarding

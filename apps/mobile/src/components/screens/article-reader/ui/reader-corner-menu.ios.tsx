@@ -11,15 +11,13 @@ import {
   menuIndicator,
   tint,
 } from '@expo/ui/swift-ui/modifiers';
-import { SUPPORTS_GLASS } from '@lib/constants/platform';
+import { StyleSheet } from 'react-native';
 import { READER_CORNER_BUTTON_SIZE, type ReaderCornerMenuProps } from './reader-corner-menu.types';
 
 export type { ReaderCornerMenuProps } from './reader-corner-menu.types';
 
 /**
- * iOS reader corner menu: a SwiftUI `Menu` whose trigger is the same circular glass button as the
- * reader's back button and the floating actions elsewhere in the app, so the bottom chrome is one
- * native object rather than a hand-drawn "Aa" pill next to a system menu.
+ * A native SwiftUI menu on the same quiet surface as the reading-progress control.
  *
  * Android keeps `index.tsx` (our pressable + Expo UI's cross-platform `MenuView`), because
  * Jetpack Compose is deliberately out of scope for this app's Android UI.
@@ -35,20 +33,27 @@ export function ReaderCornerMenu({
   return (
     <NativeHost
       matchContents={false}
-      style={{ width: READER_CORNER_BUTTON_SIZE, height: READER_CORNER_BUTTON_SIZE }}>
+      style={{
+        width: READER_CORNER_BUTTON_SIZE,
+        height: READER_CORNER_BUTTON_SIZE,
+        borderRadius: READER_CORNER_BUTTON_SIZE / 2,
+        backgroundColor: colors.card,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.grey4,
+      }}>
       <Menu
         label="Reader menu"
         systemImage="textformat"
         modifiers={[
           labelStyle('iconOnly'),
-          buttonStyle(SUPPORTS_GLASS ? 'glass' : 'bordered'),
+          buttonStyle('plain'),
           buttonBorderShape('circle'),
           controlSize('large'),
           imageScale('large'),
           // An icon-only trigger has no room for SwiftUI's default menu chevron.
           menuIndicator('hidden'),
           frame({ width: READER_CORNER_BUTTON_SIZE, height: READER_CORNER_BUTTON_SIZE }),
-          tint(colors.grey),
+          tint(colors.primary_foreground),
         ]}>
         <Button label="Reader Settings" systemImage="textformat" onPress={onOpenSettings} />
         {onOpenOutline && (

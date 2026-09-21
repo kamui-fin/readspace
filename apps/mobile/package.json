@@ -2,7 +2,8 @@
   "name": "@readspace/mobile",
   "version": "1.1.0",
   "scripts": {
-    "eas-build-post-install": "bun scripts/patch-galeria.mjs",
+    "eas-build-post-install": "bun scripts/patch-galeria.mjs && bun scripts/patch-reanimated.mjs",
+    "postinstall": "bun scripts/patch-reanimated.mjs",
     "check-types": "tsc --noEmit",
     "android": "expo run:android",
     "android:dev": "APP_VARIANT=development expo run:android",

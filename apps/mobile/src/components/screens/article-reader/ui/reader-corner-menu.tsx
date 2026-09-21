@@ -1,5 +1,6 @@
 import { Text } from '@components/ui/text';
-import { type MenuAction, MenuView } from '@expo/ui/community/menu';
+import { type MenuAction, type MenuComponentRef, MenuView } from '@expo/ui/community/menu';
+import { useRef } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { READER_CORNER_BUTTON_SIZE, type ReaderCornerMenuProps } from './reader-corner-menu.types';
 
@@ -18,6 +19,7 @@ export function ReaderCornerMenu({
   skim,
   onTranslate,
 }: ReaderCornerMenuProps) {
+  const menuRef = useRef<MenuComponentRef>(null);
   // `image` takes an SF Symbol on iOS and a drawable name on Android; Android has no matching
   // drawables shipped, so it falls back to a text-only row there rather than showing nothing.
   const actions: MenuAction[] = [
@@ -49,9 +51,12 @@ export function ReaderCornerMenu({
   };
 
   return (
-    <MenuView actions={actions} onPressAction={onPressAction}>
+    <MenuView ref={menuRef} actions={actions} onPressAction={onPressAction}>
       <Pressable
+        onPress={() => menuRef.current?.show()}
+        accessibilityRole="button"
         accessibilityLabel="Reader menu"
+        accessibilityHint="Open reader settings and actions"
         className="items-center justify-center rounded-full"
         style={({ pressed }) => ({
           width: READER_CORNER_BUTTON_SIZE,
@@ -60,10 +65,9 @@ export function ReaderCornerMenu({
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: colors.grey4,
           opacity: pressed ? 0.6 : 1,
-          elevation: Platform.OS === 'android' ? 4 : 0,
         })}>
         <View>
-          <Text size={15} fontFamily="geist-semibold" style={{ color: colors.grey }}>
+          <Text size={15} fontFamily="geist-semibold" style={{ color: colors.primary_foreground }}>
             Aa
           </Text>
         </View>

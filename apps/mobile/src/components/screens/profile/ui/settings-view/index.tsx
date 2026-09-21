@@ -1,10 +1,11 @@
 import { SettingsGroup } from '@components/screens/profile/ui/settings-group';
 import { SettingsItem } from '@components/screens/profile/ui/settings-item';
 import { SettingsValueChip } from '@components/screens/profile/ui/settings-value.chip';
-import { type MenuAction, MenuView } from '@expo/ui/community/menu';
+import { type MenuAction, type MenuComponentRef, MenuView } from '@expo/ui/community/menu';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { ScrollView, View } from 'react-native';
+import { useRef } from 'react';
+import { Platform, ScrollView, View } from 'react-native';
 import type { SettingsPickerRow, SettingsRow, SettingsViewProps } from './types';
 
 export type {
@@ -15,6 +16,7 @@ export type {
 } from './types';
 
 function PickerRow({ row, isLast }: { row: SettingsPickerRow; isLast: boolean }) {
+  const menuRef = useRef<MenuComponentRef>(null);
   const current = row.options.find((option) => option.value === row.value);
   const currentLabel = current?.label ?? row.value;
   const actions: MenuAction[] = row.options.map((option) => ({
@@ -35,9 +37,19 @@ function PickerRow({ row, isLast }: { row: SettingsPickerRow; isLast: boolean })
       isLast={isLast}
       trailing={
         <MenuView
+          ref={menuRef}
           actions={actions}
           onPressAction={({ nativeEvent }) => row.onChange(nativeEvent.event)}>
-          <SettingsValueChip value={currentLabel} />
+          {/*
+           * Android's MenuView opens from its own `Pressable` wrapper around these children, so a
+           * `Pressable` chip inside it wins the responder and the menu never opens. Drive it
+           * imperatively there instead. iOS needs no handler — SwiftUI's `Menu` gets the tap
+           * natively — and `show()` is a documented no-op there, so we don't wire it.
+           */}
+          <SettingsValueChip
+            value={currentLabel}
+            onPress={Platform.OS === 'android' ? () => menuRef.current?.show() : undefined}
+          />
         </MenuView>
       }
     />

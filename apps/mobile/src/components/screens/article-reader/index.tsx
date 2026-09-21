@@ -46,7 +46,7 @@ import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 export interface OutlineItem {
   id: string;
   text: string;
-  level: 2 | 3;
+  level: 1 | 2 | 3 | 4 | 5 | 6;
   /** Offset of the heading within the WebView document, in px. */
   top: number;
 }
@@ -722,7 +722,7 @@ export const ArticleReader = forwardRef<ArticleReaderHandle, ArticleReaderProps>
       // because anything that changes the height (text size, highlights,
       // late-loading images) also moves every heading's offset.
       function readOutline() {
-        var nodes = container.querySelectorAll('h1, h2, h3');
+        var nodes = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
         var items = [];
         for (var i = 0; i < nodes.length; i++) {
           var node = nodes[i];
@@ -730,8 +730,8 @@ export const ArticleReader = forwardRef<ArticleReaderHandle, ArticleReaderProps>
           if (!text) continue;
           items.push({
             id: 'rs-outline-' + i,
-            text: text.length > 90 ? text.slice(0, 89) + '\\u2026' : text,
-            level: node.tagName === 'H3' ? 3 : 2,
+            text: text,
+            level: Number(node.tagName.slice(1)),
             top: Math.round(node.getBoundingClientRect().top + window.scrollY)
           });
         }
