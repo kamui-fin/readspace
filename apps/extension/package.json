@@ -1,6 +1,6 @@
 {
   "name": "@readspace/extension",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Find and follow RSS or Atom feeds on any website, save articles to read later, and sync everything across web and mobile.",
   "type": "module",
   "scripts": {
@@ -11,8 +11,8 @@
     "build:chrome": "tsc && vite build",
     "build:firefox": "tsc && vite build --mode firefox",
     "build:all": "npm run build:chrome && npm run build:firefox",
-    "package:chrome": "npm run build:chrome && web-ext build --no-config-discovery --source-dir dist --artifacts-dir web-ext-artifacts --filename readspace-1.1.4-chrome.zip --overwrite-dest",
-    "package:firefox": "npm run build:firefox && web-ext build --no-config-discovery --source-dir dist-firefox --artifacts-dir web-ext-artifacts --filename readspace-1.1.4-firefox.zip --overwrite-dest",
+    "package:chrome": "npm run build:chrome && web-ext build --no-config-discovery --source-dir dist --artifacts-dir web-ext-artifacts --filename readspace-1.1.5-chrome.zip --overwrite-dest",
+    "package:firefox": "npm run build:firefox && web-ext build --no-config-discovery --source-dir dist-firefox --artifacts-dir web-ext-artifacts --filename readspace-1.1.5-firefox.zip --overwrite-dest",
     "package:all": "npm run package:chrome && npm run package:firefox",
     "package:source": "node scripts/package-source.js",
     "preview": "vite preview",

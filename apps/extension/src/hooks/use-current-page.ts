@@ -69,7 +69,7 @@ export function useCurrentPage() {
 
   const extractPageMetadata = useCallback(
     async (tab: chrome.tabs.Tab) => {
-      if (!tab.id || !tab.url) return
+      if (tab.id == null || !tab.url) return
 
       // 1. Basic info
       setCurrentPageMetadata({
@@ -92,17 +92,25 @@ export function useCurrentPage() {
 
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const tab = tabs[0]
-      if (tab) {
-        setCurrentTab(tab)
-        const url = tab.url
-        if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
-          setIsUnsupportedPage(true)
-          return
-        }
-        setIsUnsupportedPage(false)
-        extractPageMetadata(tab)
+      const queryFailed = !!chrome.runtime.lastError
+      const tab = tabs?.[0]
+      setCurrentTab(tab ?? null)
+
+      // Internal pages may omit their URL when we lack host access.
+      if (
+        queryFailed ||
+        tab?.id == null ||
+        !tab.url ||
+        (!tab.url.startsWith('http://') && !tab.url.startsWith('https://'))
+      ) {
+        setIsUnsupportedPage(true)
+        setIsMetadataLoading(false)
+        setIsFeedDataLoading(false)
+        return
       }
+
+      setIsUnsupportedPage(false)
+      void extractPageMetadata(tab)
     })
   }, [extractPageMetadata])
 

@@ -6,7 +6,7 @@ interface UnsupportedPageProps {
 
 export function UnsupportedPage({ currentUrl }: UnsupportedPageProps) {
   return (
-    <div className="w-[450px] min-h-[500px] p-6">
+    <div className="w-[450px] min-h-[500px] p-6 flex items-center justify-center">
       <div className="text-center space-y-4">
         {/* Unsupported page message */}
         <div className="space-y-3">
@@ -18,14 +18,18 @@ export function UnsupportedPage({ currentUrl }: UnsupportedPageProps) {
             Readspace extension only works on websites (http:// and https://
             pages). This page type is not supported for saving articles.
           </p>
-          <div className="pt-2">
-            <p className="text-xs text-muted-foreground">
-              Current page:{' '}
-              <span className="font-mono text-xs">
-                {currentUrl?.substring(0, 50)}...
-              </span>
-            </p>
-          </div>
+          {currentUrl && (
+            <div className="pt-2">
+              <p className="text-xs text-muted-foreground">
+                Current page:{' '}
+                <span className="font-mono text-xs">
+                  {currentUrl.length > 50
+                    ? `${currentUrl.substring(0, 50)}...`
+                    : currentUrl}
+                </span>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

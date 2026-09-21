@@ -53,7 +53,10 @@ export async function handleMessage(msg: ExtensionMessage) {
       return FeedHandlers.handleDeleteFeed(msg.payload)
 
     case 'startGoogleOAuth':
-      return AuthHandlers.startGoogleOAuth()
+      return AuthHandlers.startOAuth('google')
+
+    case 'startAppleOAuth':
+      return AuthHandlers.startOAuth('apple')
 
     case 'getCachedPageByUrl':
       return pageCache.get(msg.payload)

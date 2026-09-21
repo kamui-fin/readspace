@@ -1,10 +1,11 @@
 import browser from 'webextension-polyfill'
 import { supabase } from '../supabase-client'
 
-export async function startGoogleOAuth() {
+export async function startOAuth(provider: 'google' | 'apple') {
+  const providerName = provider === 'apple' ? 'Apple' : 'Google'
   const { data: authData, error: authError } =
     await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider,
       options: {
         redirectTo: browser.identity.getRedirectURL(),
         skipBrowserRedirect: true,
@@ -20,9 +21,14 @@ export async function startGoogleOAuth() {
       url: authData.url,
       interactive: true,
     })
-  } catch {
-    // User cancelled the auth flow
-    throw new Error('Google sign-in was cancelled')
+  } catch (error) {
+    const reason =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : 'The browser could not complete the authorization flow'
+    throw new Error(`${providerName} sign-in failed: ${reason}`)
   }
 
   if (!redirectUrl) {
@@ -30,6 +36,13 @@ export async function startGoogleOAuth() {
   }
 
   const urlObj = new URL(redirectUrl)
+  const hashParams = new URLSearchParams(urlObj.hash.substring(1))
+  const oauthError =
+    urlObj.searchParams.get('error_description') ||
+    hashParams.get('error_description') ||
+    urlObj.searchParams.get('error') ||
+    hashParams.get('error')
+  if (oauthError) throw new Error(oauthError)
 
   // Check for code (PKCE)
   const code = urlObj.searchParams.get('code')
@@ -41,7 +54,6 @@ export async function startGoogleOAuth() {
   }
 
   // Check for access_token (Implicit)
-  const hashParams = new URLSearchParams(urlObj.hash.substring(1))
   const access_token = hashParams.get('access_token')
   const refresh_token = hashParams.get('refresh_token')
 

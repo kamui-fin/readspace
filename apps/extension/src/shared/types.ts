@@ -23,6 +23,7 @@ export type MessageType =
   | 'extractContent'
   | 'discoverFeeds'
   | 'startGoogleOAuth'
+  | 'startAppleOAuth'
   | 'checkFeedFollowed'
   | 'follow-changed'
   | 'save-changed'
