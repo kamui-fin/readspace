@@ -1,9 +1,9 @@
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { BottomSheetInput } from '@components/ui/input';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { useUpdateFeed } from '@readspace/shared';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
@@ -20,7 +20,7 @@ export interface RenameFeedModalProps {
 
 export const RenameFeedModal = forwardRef<RenameFeedModalRef, RenameFeedModalProps>(
   ({ onSuccess }, ref) => {
-    const bottomSheetRef = useRef<BottomSheetModal>(null);
+    const bottomSheetRef = useRef<SheetRef>(null);
     const updateFeed = useUpdateFeed();
     // The current value lives in a ref, not state — BottomSheetInput renders as an
     // *uncontrolled* input (defaultValue, not value). Feeding onChangeText back into a
@@ -83,12 +83,7 @@ export const RenameFeedModal = forwardRef<RenameFeedModalRef, RenameFeedModalPro
     }));
 
     return (
-      <BottomSheet
-        ref={bottomSheetRef}
-        enablePanDownToClose={true}
-        snapPoints={['25%']}
-        keyboardBehavior="interactive"
-        keyboardBlurBehavior="restore">
+      <BottomSheet ref={bottomSheetRef} enablePanDownToClose={true} snapPoints={['25%']}>
         {/* Heading */}
         <Text
           className="font-geist-bold text-primary-foreground mb-1 text-2xl"

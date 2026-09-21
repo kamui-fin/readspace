@@ -9,7 +9,7 @@ import { ExpandTab } from '@components/navigation/bottom-tabs/ui/expand-tab';
 import { BlurView } from '@components/ui/blurview';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import React, { useRef } from 'react';
 import { DeviceEventEmitter, Platform, View } from 'react-native';
 import Animated, {

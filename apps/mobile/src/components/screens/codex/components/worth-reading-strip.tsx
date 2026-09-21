@@ -28,6 +28,7 @@ function WorthReadingRow({
   return (
     <Card
       variant="article"
+      isSaved={!!article.is_saved}
       title={article.title || article.link}
       // The reason it stands alone *is* the standfirst here — showing the article's own
       // description underneath it would just stack two summaries on top of each other.

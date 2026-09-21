@@ -1,10 +1,10 @@
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { BottomSheetInput } from '@components/ui/input';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useSession } from '@contexts/auth-context';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
@@ -21,7 +21,7 @@ export interface DeleteAccountModalRef {
 const CONFIRM_PHRASE = 'DELETE';
 
 export const DeleteAccountModal = forwardRef<DeleteAccountModalRef>((_props, ref) => {
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const bottomSheetRef = useRef<SheetRef>(null);
   const deleteAccount = useDeleteAccount();
   const { signOut } = useSession();
   const queryClient = useQueryClient();

@@ -1,15 +1,17 @@
-import { HistoryIcon } from '@solar-icons/react-native/broken';
 /** biome-ignore-all lint/suspicious/noExplicitAny: any is used for compatibility with the toast library */
 
 import { Header } from '@components/navigation/header';
 import { ArticleListItem } from '@components/screens/following/components/article-list-item';
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
+import { BackButton } from '@components/ui/back-button';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
+import { NativeScreenHeader } from '@components/ui/native-screen-header';
 import { toast } from '@components/ui/toast';
 import { useToast } from '@contexts/toast-provider';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { USES_NATIVE_HEADER } from '@lib/constants/platform';
 import { createListItems, type ListItem } from '@lib/utils/article';
 import type { Article } from '@readspace/shared';
 import {
@@ -17,14 +19,16 @@ import {
   useInfiniteRecentlyReadArticles,
   useUpdateArticle,
 } from '@readspace/shared';
+import { HistoryIcon } from '@solar-icons/react-native/broken';
 import * as Haptics from 'expo-haptics';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, RefreshControl, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/ui/empty-state';
 
 export function RecentsScreen() {
+  const router = useRouter();
   const listRef = useRef<any>(null);
   const { showToast, updateToast } = useToast();
   const isDark = useIsDarkMode();
@@ -213,6 +217,7 @@ export function RecentsScreen() {
         onToggleRead={handleToggleRead}
         onBookmark={handleBookmark}
         hideReadState
+        disableSwipe
         lastRefreshedAt={lastRefreshedAt}
       />
     ),
@@ -242,12 +247,35 @@ export function RecentsScreen() {
     );
   };
 
+  // Keep navigation above the page heading on both platforms.
   const renderHeader = () => (
-    <Header variant="static" title="Recents" subtitle="Articles you've read" />
+    <View>
+      {!USES_NATIVE_HEADER && (
+        <View
+          style={{
+            paddingTop: insets.top + 8,
+            paddingHorizontal: 16,
+            paddingBottom: 12,
+            alignItems: 'flex-start',
+          }}>
+          <BackButton onPress={() => router.back()} color={colors.primary_foreground} />
+        </View>
+      )}
+      <Header
+        variant="static"
+        title="Recents"
+        subtitle="Articles you've read"
+        transparentBackground
+        disableSafeAreaTop
+      />
+    </View>
   );
 
   return (
     <View className="bg-background flex-1" style={{ backgroundColor: colors.background }}>
+      {/* No title in the bar: the list's own "Recents" heading is right under it, and two of
+          them stacked reads as a mistake. The bar is here for the back chevron. */}
+      <NativeScreenHeader />
       <InfiniteScrollList
         key={isDark ? 'dark' : 'light'}
         ref={listRef}

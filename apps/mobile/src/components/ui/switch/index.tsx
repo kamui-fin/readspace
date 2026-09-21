@@ -5,6 +5,7 @@ import { MotiView } from 'moti';
 import { useCallback } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Extrapolation } from 'react-native-reanimated';
+import type { SwitchProps } from './types';
 
 const PRESET_SIZE = {
   small: {
@@ -23,11 +24,7 @@ const PRESET_SIZE = {
   },
 };
 
-export type SwitchProps = {
-  checked?: boolean;
-  onChange?: (nextValue: boolean) => void;
-  size?: 'small' | 'regular';
-};
+export type { SwitchProps } from './types';
 
 export const Switch = (props: SwitchProps) => {
   const { checked, onChange, size = 'regular', ...rest } = props;

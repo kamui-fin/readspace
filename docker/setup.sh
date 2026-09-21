@@ -16,12 +16,15 @@
 # 3. Run it:
 #    - For production with custom domain: ./setup.sh
 #    - For local development: ./setup.sh --dev
+<<<<<<< Updated upstream
 #
 # Re-running this script is safe: existing secrets (JWT, Postgres password,
 # Meilisearch master key) are reused so a running deployment isn't broken —
 # only deployment config (URLs, RSSHub mode, AI settings) is updated. Pass
 # --regenerate-secrets to rotate secrets for a fresh instance (refused while
 # an existing database container is present — run docker/reset.sh first).
+=======
+>>>>>>> Stashed changes
 #
 # It will create the following files:
 # - docker/supabase/.env (Supabase secrets and config)
@@ -148,6 +151,7 @@ normalize_url() {
 
 # --- Access Configuration ---
 # Check if --dev flag is provided
+<<<<<<< Updated upstream
 if [ "$DEV_FLAG" = true ]; then
     ACCESS_TYPE="dev"
     API_HOST="localhost"
@@ -207,6 +211,44 @@ else
 
         echo "✅ Access via $API_HOST"
     fi
+=======
+if [ "$1" = "--dev" ]; then
+    ACCESS_TYPE="1"
+    echo ""
+    echo "🌐 Development Mode"
+    echo "📋 IP Address Configuration"
+    echo "Enter your machine's IP address (e.g., 192.168.1.100)"
+    echo "This allows access from other devices on your network."
+    echo ""
+    read -p "IP Address: " API_HOST
+    
+    if [ -z "$API_HOST" ]; then
+        echo "❌ Error: IP address is required for development mode" >&2
+        exit 1
+    fi
+
+    WEB_URL="http://${API_HOST}:18042"
+    API_URL="http://${API_HOST}:18008"
+    SUPABASE_PUBLIC_URL="http://${API_HOST}:18000"
+
+    echo "✅ Using IP:PORT access"
+else
+    ACCESS_TYPE="2"
+    echo ""
+    echo "🌐 Production Mode - Custom Domain Configuration"
+    echo "📋 Domain Configuration"
+    echo "Enter the full URLs for each service (including http:// or https://)"
+    echo ""
+    read -p "Web app URL (e.g., https://app.example.com): " WEB_URL
+    read -p "API URL (e.g., https://api.example.com): " API_URL
+    read -p "Supabase URL (e.g., https://supabase.example.com): " SUPABASE_PUBLIC_URL
+
+    echo ""
+    echo "✅ Domain configuration:"
+    echo "   Web:      ${WEB_URL}"
+    echo "   API:      ${API_URL}"
+    echo "   Supabase: ${SUPABASE_PUBLIC_URL}"
+>>>>>>> Stashed changes
 fi
 
 # --- RSSHub Configuration ---

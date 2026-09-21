@@ -9,6 +9,7 @@ Usage:
     python scripts/trigger_task.py compact-unread  # Compact unread articles
     python scripts/trigger_task.py compact-old     # Delete old articles
     python scripts/trigger_task.py codex-generate <user_id>  # Generate a Codex digest
+    python scripts/trigger_task.py backfill-favicons [orphans] [N]  # Favicons -> PNG (writes!)
 
 Or using poethepoet:
     poe trigger refresh-all
@@ -102,6 +103,33 @@ async def trigger_reset_failed() -> None:
         print(f"\nSuccess: Reset {res.rowcount} feeds from failed enrichment state!")
 
 
+async def trigger_backfill_favicons(*flags: str) -> None:
+    """Normalize stored favicons to PNG and null out generated placeholders. WRITES to prod data.
+
+    Flags: ``orphans`` (instead: delete bucket objects no feed references). Pass a positive
+    integer to cap the number of storage keys processed.
+    """
+    from app.services.feeds.favicon_backfill import backfill_favicons, sweep_orphan_favicons
+
+    if "orphans" in flags:
+        count = await sweep_orphan_favicons()
+        print(f"\nOrphan sweep: deleted {count} unreferenced objects")
+        return
+
+    limit = next((int(f) for f in flags if f.isdigit()), None)
+    logger.info("Triggering: favicon backfill", limit=limit)
+    stats = await backfill_favicons(limit=limit)
+    print(
+        f"\nFavicon backfill: converted={stats.converted} unchanged={stats.unchanged} "
+        f"nulled={stats.nulled} dangling={stats.dangling} unusable={stats.skipped_unusable} "
+        f"failed={stats.failed} meilisearch_failed_batches={stats.meilisearch_failed_batches} "
+        f"bytes {stats.bytes_before} -> {stats.bytes_after}"
+    )
+    if stats.failed or stats.meilisearch_failed_batches:
+        print("WARNING: some keys or Meilisearch batches failed - see logs; the run is safe to repeat")
+        sys.exit(2)
+
+
 TASKS = {
     "refresh-all": trigger_refresh_all,
     "compact-unread": trigger_compact_unread,
@@ -109,6 +137,7 @@ TASKS = {
     "batch-enrich": trigger_batch_enrich,
     "reset-failed": trigger_reset_failed,
     "codex-generate": trigger_codex_generate,
+    "backfill-favicons": trigger_backfill_favicons,
 }
 
 # Tasks that take a positional argument beyond the task name (e.g. a user_id).
@@ -125,6 +154,7 @@ def print_usage() -> None:
     print("  batch-enrich            - Batch enrich feeds")
     print("  reset-failed            - Reset all feeds marked as 'failed-enrichment'")
     print("  codex-generate <user_id> - Generate a Codex digest for a user")
+    print("  backfill-favicons [orphans] [N] - Favicons -> PNG (WRITES), or delete orphaned favicon objects")
     print("\nExample:")
     print("  python scripts/trigger_task.py refresh-all")
     print("  python scripts/trigger_task.py codex-generate 3fa85f64-5717-4562-b3fc-2c963f66afa6")
@@ -133,7 +163,7 @@ def print_usage() -> None:
 
 async def main() -> None:
     """Main entry point for the script."""
-    if len(sys.argv) not in (2, 3):
+    if len(sys.argv) < 2:
         print_usage()
         sys.exit(1)
 

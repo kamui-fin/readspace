@@ -1,20 +1,40 @@
+import {
+  FEATURED_IMAGE_HEIGHT,
+  FEATURED_IMAGE_TOP_OFFSET,
+} from '@components/screens/article-reader/ui/article-featured-image';
 import { Divider } from '@components/ui/divider';
 import { Skeleton } from '@components/ui/skeleton';
-import type { Article } from '@readspace/shared';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ArticleReaderSkeletonProps {
-  article?: Article;
+  /**
+   * Whatever is already known about the article. Deliberately not `Article`: while the detail
+   * query is still in flight there is no `Article` yet, and the only thing the skeleton needs is
+   * the hero's presence — which the list row the reader was opened from already carries.
+   */
+  article?: { image_url?: string | null } | null;
 }
 
 export function ArticleReaderSkeleton({ article }: ArticleReaderSkeletonProps) {
   const insets = useSafeAreaInsets();
 
   return (
-    <View className="bg-background flex-1">
-      {/* Featured Image placeholder */}
-      <Skeleton variant="rectangle" height={200} width="100%" className="rounded-none" />
+    <View
+      className="bg-background flex-1"
+      style={{ paddingTop: insets.top + FEATURED_IMAGE_TOP_OFFSET }}>
+      {/* Featured Image placeholder — height and top offset mirror ArticleFeaturedImage exactly,
+          so the real image doesn't jump into place when it swaps in. */}
+      {article?.image_url && (
+        <View>
+          <Skeleton
+            variant="rectangle"
+            height={FEATURED_IMAGE_HEIGHT}
+            width="100%"
+            className="rounded-none"
+          />
+        </View>
+      )}
 
       {/* Article Header */}
       <View className="mb-6 px-6 pb-6 pt-6">

@@ -1,3 +1,4 @@
+import { FOLLOWING_TAB } from '@lib/constants/tabs';
 import { groupArticlesByDate } from '@lib/utils/date';
 import type { Article, ArticleSummary } from '@readspace/shared';
 import type { InfiniteData } from '@tanstack/react-query';
@@ -33,21 +34,21 @@ export function processArticles(
   let result = Array.from(uniqueArticles.values());
 
   // When viewing a feed/folder, apply tab-specific filters client-side
-  if (isViewingFeedOrFolder && activeTab !== 0) {
+  if (isViewingFeedOrFolder && activeTab !== FOLLOWING_TAB.ALL) {
     const now = new Date();
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    if (activeTab === 1) {
+    if (activeTab === FOLLOWING_TAB.TODAY) {
       // Today: articles published in last 24 hours
       result = result.filter((article) => {
         if (!article.published_at) return false;
         const publishedDate = new Date(article.published_at);
         return publishedDate >= twentyFourHoursAgo && publishedDate <= now;
       });
-    } else if (activeTab === 2) {
+    } else if (activeTab === FOLLOWING_TAB.SAVED) {
       // Saved: articles marked as read_later
       result = result.filter((article) => article.is_saved);
-    } else if (activeTab === 3) {
+    } else if (activeTab === FOLLOWING_TAB.RECENT) {
       // Recent: articles that have been read (is_read = true)
       result = result.filter((article) => article.is_read);
     }
@@ -150,3 +151,4 @@ export function getAdjacentArticle(
   if (index === -1) return undefined;
   return items[index + 1] ?? items[index - 1];
 }
+

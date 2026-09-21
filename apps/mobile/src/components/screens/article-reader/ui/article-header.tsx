@@ -69,11 +69,8 @@ export function ArticleHeader({
         {!isClipped && feedId ? (
           <Pressable
             onPress={() => {
-              // Store current article ID in the navigation params so feed can navigate back correctly
-              router.push({
-                pathname: `/(protected)/(tabs)/discover/feed/${feedId}` as any,
-                params: { returnTo: `/(protected)/articles/${article.id}` },
-              });
+              // Same stack as the reader, so the feed profile gets a real back button.
+              router.push(`/(protected)/feed/${feedId}` as any);
             }}
             style={{
               flexDirection: 'row',
@@ -131,13 +128,11 @@ export function ArticleHeader({
         {stripHtml(article.title)}
       </Text>
 
-      {/* Note for clipped articles */}
+      {/* Note for clipped articles — plain text, matching how the article cards render it. */}
       {isClipped && article.user_note && (
-        <View className="border-grey4 bg-grey6 mb-3 rounded-lg border px-3 py-2">
-          <Text size="sm" fontFamily="geist" className="text-grey leading-relaxed">
-            {article.user_note}
-          </Text>
-        </View>
+        <Text size="sm" fontFamily="geist" className="text-grey mb-3 leading-relaxed">
+          {article.user_note}
+        </Text>
       )}
 
       {/* Metadata */}

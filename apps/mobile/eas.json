@@ -8,7 +8,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
-      "bun": "1.3.14",
+      "bun": "1.4.2",
       "env": {
         "APP_VARIANT": "development",
         "EAS_NO_FROZEN_LOCKFILE": "1",
@@ -18,7 +18,7 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
-      "bun": "1.3.14",
+      "bun": "1.4.2",
       "env": {
         "APP_VARIANT": "preview",
         "EAS_NO_FROZEN_LOCKFILE": "1",
@@ -29,7 +29,7 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
-      "bun": "1.3.14",
+      "bun": "1.4.2",
       "env": {
         "APP_VARIANT": "production",
         "EAS_NO_FROZEN_LOCKFILE": "1",

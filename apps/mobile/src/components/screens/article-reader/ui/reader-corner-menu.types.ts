@@ -1,0 +1,31 @@
+import type { ReaderSurfaceColors } from '@lib/constants/reader';
+
+export interface ReaderSkimState {
+  /** Highlights are currently visible on the page. */
+  active: boolean;
+  /** A generation request is in flight — the row shows as busy and can't be re-triggered. */
+  generating: boolean;
+  onPress: () => void;
+}
+
+export interface ReaderCornerMenuProps {
+  colors: ReaderSurfaceColors;
+  onOpenSettings: () => void;
+  onScrollToTop: () => void;
+  /** Omitted when the article has too few headings for an outline to be useful. */
+  onOpenOutline?: () => void;
+  /** Omitted for articles AI Skim can't run on (newsletters). */
+  skim?: ReaderSkimState;
+  /** Opens the language picker. Omitted for content that can't be translated. */
+  onTranslate?: () => void;
+}
+
+/** Diameter of the corner button — shared so both platforms line up with the bottom bar. */
+export const READER_CORNER_BUTTON_SIZE = 44;
+
+/**
+ * Progress ring geometry. Sized off the button so the ring reads as the same weight of object
+ * as the glyph beside it rather than a detail floating in a pill.
+ */
+export const READER_PROGRESS_RING_SIZE = 24;
+export const READER_PROGRESS_RING_STROKE = 2.5;

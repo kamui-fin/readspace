@@ -13,7 +13,6 @@ export default function DiscoverLayout() {
         contentStyle: { backgroundColor },
       }}>
       <Stack.Screen name="index" />
-      <Stack.Screen name="feed/[id]" />
     </Stack>
   );
 }

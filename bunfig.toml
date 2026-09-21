@@ -1,0 +1,3 @@
+[install]
+# Keep one physical copy of native modules across Expo and its peer dependencies.
+linker = "hoisted"

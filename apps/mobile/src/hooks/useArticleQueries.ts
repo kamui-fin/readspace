@@ -1,3 +1,4 @@
+import { FOLLOWING_TAB } from '@lib/constants/tabs';
 import {
   useInfiniteArticles,
   useInfiniteReadLaterArticles,
@@ -20,19 +21,19 @@ export function useArticleQueries({
   feedFolderParams,
 }: UseArticleQueriesParams) {
   const todayQuery = useInfiniteTodayArticles({ limit: 25 }, {
-    enabled: activeTab === 1 && !isViewingFeedOrFolder,
+    enabled: activeTab === FOLLOWING_TAB.TODAY && !isViewingFeedOrFolder,
   } as any);
 
   const savedQuery = useInfiniteReadLaterArticles({ limit: 25 }, {
-    enabled: activeTab === 2 && !isViewingFeedOrFolder,
+    enabled: activeTab === FOLLOWING_TAB.SAVED && !isViewingFeedOrFolder,
   } as any);
 
   const allQuery = useInfiniteArticles({ ...feedFolderParams, limit: 25 }, {
-    enabled: activeTab === 0 || isViewingFeedOrFolder,
+    enabled: activeTab === FOLLOWING_TAB.ALL || isViewingFeedOrFolder,
   } as any);
 
   const recentQuery = useInfiniteRecentlyReadArticles({ limit: 25 }, {
-    enabled: activeTab === 3 && !isViewingFeedOrFolder,
+    enabled: activeTab === FOLLOWING_TAB.RECENT && !isViewingFeedOrFolder,
   } as any);
 
   // Select active query based on tab
@@ -45,13 +46,11 @@ export function useArticleQueries({
 
     // When NOT viewing a feed/folder, use the tab-specific query
     switch (activeTab) {
-      case 0:
-        return allQuery;
-      case 1:
+      case FOLLOWING_TAB.TODAY:
         return todayQuery;
-      case 2:
+      case FOLLOWING_TAB.SAVED:
         return savedQuery;
-      case 3:
+      case FOLLOWING_TAB.RECENT:
         return recentQuery;
       default:
         return allQuery;

@@ -2,11 +2,11 @@ import {
   CreateFolderModal,
   type CreateFolderModalRef,
 } from '@components/bottom-sheets/create-folder';
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { EmptyState } from '@components/ui/empty-state';
 import { Radio } from '@components/ui/radio';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { useFeeds } from '@readspace/shared';
 import { FolderIcon } from '@solar-icons/react-native/linear';
@@ -30,7 +30,7 @@ export const FolderPickerBottomSheet = forwardRef<
   FolderPickerBottomSheetRef,
   FolderPickerBottomSheetProps
 >(({ onFolderSelect, initialFolderId }, ref) => {
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const bottomSheetRef = useRef<SheetRef>(null);
   const createFolderModalRef = useRef<CreateFolderModalRef>(null);
 
   useImperativeHandle(ref, () => ({
@@ -86,14 +86,35 @@ export const FolderPickerBottomSheet = forwardRef<
         ref={bottomSheetRef}
         headerTitle="Select Folder"
         headerTitleAlign="left"
+        snapPoints={['auto']}
         enablePanDownToClose={true}
-        // This picker is presented from inside FeedSwitcherBottomSheet, which is
-        // already open. @gorhom/bottom-sheet's default stackBehavior ('switch')
-        // minimizes/closes whatever sheet is currently open when a new one presents —
-        // which fires the Feed Switcher's own onDismiss and wipes selectedFeedIds
-        // before "Confirm" can ever read it. 'push' lets both sheets coexist so the
-        // sheet underneath is untouched.
-        stackBehavior="push">
+        footerActions={
+          <View className="flex-row gap-3">
+            <Button
+              variant={typedFolders.length > 0 ? 'secondary' : 'primary'}
+              size="large"
+              fullWidth={false}
+              className="flex-1"
+              onPress={handleNewFolder}
+              style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
+              New Folder
+            </Button>
+            {typedFolders.length > 0 && (
+              <Button
+                variant="primary"
+                size="large"
+                fullWidth={false}
+                className="flex-1"
+                onPress={handleConfirm}
+                style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
+                Confirm
+              </Button>
+            )}
+          </View>
+        }>
+        {/* This picker is presented from inside FeedSwitcherBottomSheet, which is already open.
+            True Sheet stacks the new sheet on top of the presenting one, so the Feed Switcher's
+            own onDismiss (which wipes selectedFeedIds) never fires before "Confirm" reads it. */}
         {typedFolders.length > 0 ? (
           <View className="gap-3">
             {typedFolders.map((folder) => (
@@ -108,30 +129,6 @@ export const FolderPickerBottomSheet = forwardRef<
         ) : (
           <EmptyState icon={FolderIcon} message="No folders" className="py-8" />
         )}
-
-        {/* Bottom action buttons */}
-        <View className="mt-6 flex-row gap-3">
-          <Button
-            variant={typedFolders.length > 0 ? 'secondary' : 'primary'}
-            size="large"
-            fullWidth={false}
-            className="flex-1"
-            onPress={handleNewFolder}
-            style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
-            New Folder
-          </Button>
-          {typedFolders.length > 0 && (
-            <Button
-              variant="primary"
-              size="large"
-              fullWidth={false}
-              className="flex-1"
-              onPress={handleConfirm}
-              style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
-              Confirm
-            </Button>
-          )}
-        </View>
       </BottomSheet>
 
       {/* Create Folder Modal */}

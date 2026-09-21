@@ -1,23 +1,25 @@
-import {
-  ArticleOptionsBottomSheet,
-  type ArticleViewMode,
-} from '@components/bottom-sheets/article-options';
+import { ArticleOutlineBottomSheet } from '@components/bottom-sheets/article-outline';
 import { ArticleSummaryBottomSheet } from '@components/bottom-sheets/article-summary';
-
+import { ReaderSettingsBottomSheet } from '@components/bottom-sheets/reader-settings';
+import type { ArticleReaderHandle, OutlineItem } from '@components/screens/article-reader/index';
 import { ArticleReader } from '@components/screens/article-reader/index';
 import { ArticleActionBar } from '@components/screens/article-reader/ui/article-actions.bar';
+import type { ArticleViewMode } from '@components/screens/article-reader/ui/article-actions.bar.types';
 import { ArticleReaderSkeleton } from '@components/screens/article-reader/ui/article-reader.skeleton';
+import { ReaderBottomBar } from '@components/screens/article-reader/ui/reader-bottom-bar';
 import type { LanguageOption } from '@components/screens/discover/ui/language-picker.dropdown';
 import { LanguagePicker } from '@components/screens/discover/ui/language-picker.dropdown';
-
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useLimitChecker } from '@hooks/useLimitChecker';
+import { useReaderTheme } from '@hooks/useReaderTheme';
 import { READ_LATER_READER_MODE } from '@lib/constants/app';
 import { SUPPORTED_LANGUAGES } from '@lib/constants/languages';
+import { recordReviewActivity } from '@lib/review';
 import { getAdjacentArticle } from '@lib/utils/article';
 import {
+  getCachedArticleState,
   isPaywallError,
   queryKeys,
   useArticle,
@@ -34,7 +36,23 @@ import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Share, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, useSharedValue } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  runOnJS,
+  useAnimatedReaction,
+  useSharedValue,
+} from 'react-native-reanimated';
+
+/** How far into the article before scrolling down starts hiding the chrome. */
+const CHROME_AUTO_HIDE_AFTER = 96;
+/** Per-frame downward travel that counts as deliberate scrolling rather than jitter. */
+const CHROME_AUTO_HIDE_TRAVEL = 4;
+/** Back within this of the top counts as "at the top", where the chrome returns on its own. */
+const CHROME_REVEAL_AT_TOP = 8;
+
+/** Any heading is a useful jump target. */
+const MIN_OUTLINE_ITEMS = 1;
 
 interface ArticleScreenProps {
   articleId: string;
@@ -53,22 +71,79 @@ export function ArticleScreen({
 }: ArticleScreenProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { colors } = useReaderTheme();
   const scrollY = useSharedValue(0);
   const lastScrollY = useSharedValue(0);
   const scrollDirection = useSharedValue<'up' | 'down'>('down');
+  const readingProgress = useSharedValue(0);
+  const readerRef = useRef<ArticleReaderHandle>(null);
+
+  // Offer navigation whenever the article contains headings.
+  const [outline, setOutline] = useState<OutlineItem[]>([]);
+  const hasOutline = outline.length >= MIN_OUTLINE_ITEMS;
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+  const activeSectionLabel = hasOutline
+    ? (outline.find((item) => item.id === activeSectionId)?.text ?? null)
+    : null;
+
+  // Tapping the page toggles the chrome, like Apple Books. It opens visible so
+  // the controls are discoverable, then steps aside once reading starts.
+  const [chromeVisible, setChromeVisible] = useState(true);
+  const handleToggleChrome = useCallback(() => setChromeVisible((visible) => !visible), []);
+  // Mirror of the state for the scroll worklet, so it can skip the JS hop
+  // entirely once the chrome is already hidden.
+  const chromeShown = useSharedValue(1);
+  useEffect(() => {
+    chromeShown.value = chromeVisible ? 1 : 0;
+  }, [chromeVisible, chromeShown]);
+
+  // Scrolling *down* is the reader committing to the text, so the chrome tucks away. Scrolling
+  // back up mid-article deliberately does not bring it back — that was the old sticky behaviour
+  // and it kept fighting the reader. Returning all the way to the top does, though: at the top
+  // you've left the text, and the header is what you came back for.
+  useAnimatedReaction(
+    () => scrollY.value,
+    (current, previous) => {
+      if (previous === null) return;
+      if (
+        chromeShown.value === 1 &&
+        current > CHROME_AUTO_HIDE_AFTER &&
+        current - previous > CHROME_AUTO_HIDE_TRAVEL
+      ) {
+        chromeShown.value = 0;
+        runOnJS(setChromeVisible)(false);
+        return;
+      }
+      if (chromeShown.value === 0 && current <= CHROME_REVEAL_AT_TOP && current < previous) {
+        chromeShown.value = 1;
+        runOnJS(setChromeVisible)(true);
+      }
+    }
+  );
 
   const { checkAndTriggerUpgrade } = useLimitChecker();
 
   // Bottom sheet refs
-  const summaryBottomSheetRef = useRef<BottomSheetModal>(null);
-  const languagePickerRef = useRef<BottomSheetModal>(null);
-  const optionsBottomSheetRef = useRef<BottomSheetModal>(null);
+  const summaryBottomSheetRef = useRef<SheetRef>(null);
+  const languagePickerRef = useRef<SheetRef>(null);
+  const readerSettingsRef = useRef<SheetRef>(null);
+  const outlineSheetRef = useRef<SheetRef>(null);
 
   // Fetch article data
-  const { data: article, isLoading: isArticleLoading } = useArticle(articleId || '', {
+  const {
+    data: article,
+    isLoading: isArticleLoading,
+    status: articleStatus,
+  } = useArticle(articleId || '', {
     enabled: !!articleId,
     articleType,
   });
+
+  // Only claim "not found" once the query has actually settled. A query that is
+  // merely idle — cancelled, or waiting to be retried — has `isLoading === false`
+  // with no data, and treating that as a miss showed "Article not found" over a
+  // perfectly good article.
+  const isArticleMissing = articleStatus === 'error' || (articleStatus === 'success' && !article);
 
   // Check if this is a clipped article (route param covers the loading state)
   const isClipped = (article?.article_type ?? articleType) === 'clipped';
@@ -78,6 +153,10 @@ export function ArticleScreen({
   const [contentSource, setContentSource] = useState<ArticleViewMode>('original');
   const [userSelectedView, setUserSelectedView] = useState<ArticleViewMode | null>(null);
   const [targetLanguage, setTargetLanguage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (article?.id) void recordReviewActivity(article.id);
+  }, [article?.id]);
 
   // ============ Extraction & Translation ============
   const extractMutation = useExtractFullTextMutation();
@@ -174,24 +253,37 @@ export function ArticleScreen({
   // (and two quota charges) for a single open. Tapping "Full Text" still extracts on
   // demand via `extractFullText()` for anything the server chose not to extract.
 
-  // Mark as read on mount (only if subscribed to the feed)
+  // Mark as read the moment the reader opens — in parallel with the detail
+  // fetch, not after it.
+  //
+  // This used to wait for `article` to resolve. Opening an article and backing
+  // out before the fetch finished meant the PATCH never fired, while the list
+  // had already dimmed the card: the UI said "read", the server said "unread",
+  // and the two only reconciled on the next refetch. Keying off `articleId`
+  // (which we have immediately, from the route) removes that window entirely.
+  //
+  // The read state comes from whatever the cache already holds, so re-opening a
+  // read article still costs nothing. An article that's in no cache at all
+  // (deep link, cold start) is treated as unread — one idempotent PATCH is a
+  // far better trade than a missed one.
+  const markedReadForRef = useRef<string | null>(null);
   useEffect(() => {
-    if (article && !article.is_read && isSubscribed) {
-      updateArticle.mutate(
-        {
-          articleId: article.id,
-          data: { is_read: true },
-          articleType: article.article_type || 'feed',
-        },
-        {
-          // Silently mark as read - optimistic update handles UI
-          onError: () => {
-            // Rollback already handled by the hook
-          },
-        }
-      );
-    }
-  }, [article, isSubscribed, updateArticle]);
+    if (!articleId || !isSubscribed) return;
+    if (markedReadForRef.current === articleId) return;
+    if (getCachedArticleState(queryClient, articleId)?.is_read) return;
+
+    markedReadForRef.current = articleId;
+    updateArticle.mutate({
+      articleId,
+      data: { is_read: true },
+      // Rollback on failure is handled by the hook; there's nothing useful to
+      // tell the reader about a background mark-as-read.
+      articleType: articleType || 'feed',
+    });
+    // `updateArticle` is intentionally omitted: its identity churns with the
+    // mutation's own state and the ref guard already makes this fire once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [articleId, articleType, isSubscribed, queryClient]);
 
   // Refetch article list when navigating back to ensure updated state
   useFocusEffect(
@@ -320,9 +412,29 @@ export function ArticleScreen({
     }
   }, [article]);
 
-  const handleMenuPress = useCallback(() => {
-    optionsBottomSheetRef.current?.present();
+  const handleOpenSettings = useCallback(() => {
+    readerSettingsRef.current?.present();
   }, []);
+
+  const handleOpenOutline = useCallback(() => {
+    outlineSheetRef.current?.present();
+  }, []);
+
+  const handleOutlineSelect = useCallback((item: OutlineItem) => {
+    readerRef.current?.scrollToOutlineItem(item.top);
+  }, []);
+
+  const handleScrollToTop = useCallback(() => {
+    readerRef.current?.scrollToTop();
+  }, []);
+
+  // Read Later advances in place via router.replace, so the screen is reused
+  // for the next article and the previous article's outline has to be dropped.
+  useEffect(() => {
+    setOutline([]);
+    setActiveSectionId(null);
+    setChromeVisible(true);
+  }, [articleId]);
 
   const handleGenerateSummary = useCallback(() => {
     if (!article) return;
@@ -391,6 +503,12 @@ export function ArticleScreen({
     [article, articleId, currentContent, addRecentLanguage, translateMutation]
   );
 
+  // The skeleton's hero bone is gated on the article having an image — but while the detail
+  // query is pending `article` is undefined, which is exactly when the skeleton is up, so the
+  // bone never rendered and the hero popped in. The list row the reader was opened from is
+  // already in the cache and already knows, so ask it.
+  const skeletonArticle = article ?? getCachedArticleState(queryClient, articleId);
+
   const hasHighlightsForView = highlightedFor === contentSource;
 
   const handleGenerateHighlights = useCallback(() => {
@@ -433,10 +551,6 @@ export function ArticleScreen({
     checkAndTriggerUpgrade,
   ]);
 
-  const handleToggleHighlights = useCallback((enabled: boolean) => {
-    setHighlightsEnabled(enabled);
-  }, []);
-
   const handleSelectView = useCallback(
     (view: ArticleViewMode) => {
       // Mark user selection to prevent auto-switch effects
@@ -476,16 +590,52 @@ export function ArticleScreen({
     [article?.extracted_content, extractedData?.content, extractFullText]
   );
 
-  if (!isArticleLoading && !article) {
+  const isNewsletter =
+    !!article?.link?.startsWith('newsletter://') ||
+    (article as any)?.feed_type === 'newsletter' ||
+    (article as any)?.article_type === 'newsletter';
+
+  // Memoised, and above the early return so it stays an unconditional hook. On iOS this object
+  // is a dependency of the bar's `headerRight`, which feeds `Stack.Screen options` — a fresh
+  // identity every render would rebuild the native navigation bar on every render too.
+  //
+  // Newsletters get no overflow control at all: no web page to open and one viewing mode, so
+  // the menu would be an empty gesture. Everything else gets the real thing.
+  const optionsMenu = useMemo(
+    () =>
+      isNewsletter
+        ? undefined
+        : {
+            currentView: contentSource,
+            onSelectView: handleSelectView,
+            onOpenInBrowser: isArticleLoading ? undefined : handleOpenInBrowser,
+            canExtract: !isClipped,
+            hasExtractedContent: !!article?.extracted_content || !!extractedData?.content,
+            hasTranslatedContent: !!translateData?.translated_content,
+          },
+    [
+      isNewsletter,
+      contentSource,
+      handleSelectView,
+      handleOpenInBrowser,
+      isArticleLoading,
+      isClipped,
+      article?.extracted_content,
+      extractedData?.content,
+      translateData?.translated_content,
+    ]
+  );
+
+  if (isArticleMissing) {
     return (
-      <View className="bg-background flex-1">
+      <View className="flex-1" style={{ backgroundColor: colors.background }}>
         <ArticleActionBar
           onClose={handleClose}
           onShare={handleShare}
           onBookmark={handleBookmark}
-          onMenuPress={() => {}}
           isBookmarked={false}
           isClipped={false}
+          colors={colors}
         />
         <View className="flex-1 items-center justify-center px-6">
           <Text size="base" fontFamily="geist" className="text-grey text-center">
@@ -503,36 +653,31 @@ export function ArticleScreen({
       extractMutation.isPending
     : false;
 
-  const isNewsletter =
-    !!article?.link?.startsWith('newsletter://') ||
-    (article as any)?.feed_type === 'newsletter' ||
-    (article as any)?.article_type === 'newsletter';
-
   return (
-    <View className="bg-background flex-1">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <ArticleActionBar
-        scrollY={isArticleLoading ? undefined : scrollY}
-        scrollDirection={isArticleLoading ? undefined : scrollDirection}
+        visible={chromeVisible}
         onClose={handleClose}
         onShare={handleShare}
         onBookmark={showDone ? handleMarkAsDone : handleBookmark}
-        onMenuPress={isArticleLoading ? () => {} : handleMenuPress}
-        hideMenu={isNewsletter}
         onGenerateSummary={isArticleLoading ? undefined : handleGenerateSummary}
         onCopyLink={isArticleLoading ? undefined : handleCopyLink}
         isBookmarked={article?.is_saved || false}
         isClipped={isClipped}
         showDone={showDone}
+        options={optionsMenu}
+        colors={colors}
       />
 
-      {isArticleLoading || translateMutation.isPending ? (
+      {articleStatus === 'pending' || translateMutation.isPending ? (
         <Animated.View key="skeleton-view" exiting={FadeOut.duration(300)} className="flex-1">
-          <ArticleReaderSkeleton article={article} />
+          <ArticleReaderSkeleton article={skeletonArticle} />
         </Animated.View>
       ) : (
         <Animated.View key="content-view" entering={FadeIn.duration(400)} className="flex-1">
           {article && (
             <ArticleReader
+              ref={readerRef}
               article={{
                 ...article,
                 // Override content with active content
@@ -554,6 +699,10 @@ export function ArticleScreen({
               scrollY={scrollY}
               lastScrollY={lastScrollY}
               scrollDirection={scrollDirection}
+              readingProgress={readingProgress}
+              onOutlineChange={setOutline}
+              onActiveOutlineChange={setActiveSectionId}
+              onTap={handleToggleChrome}
               isLoadingContent={isExtracting}
               highlightedContent={
                 hasHighlightsForView ? highlightMutation.data?.highlighted_content : undefined
@@ -563,6 +712,40 @@ export function ArticleScreen({
           )}
         </Animated.View>
       )}
+
+      {/* Bottom chrome: reading position + the corner menu. Withheld while a
+          skeleton is up — a progress ring over a skeleton reports on nothing. */}
+      {article && !translateMutation.isPending && (
+        <ReaderBottomBar
+          visible={chromeVisible}
+          readingProgress={readingProgress}
+          activeSectionLabel={activeSectionLabel}
+          colors={colors}
+          onOpenSettings={handleOpenSettings}
+          onScrollToTop={handleScrollToTop}
+          onOpenOutline={hasOutline ? handleOpenOutline : undefined}
+          skim={
+            isNewsletter
+              ? undefined
+              : {
+                  active: highlightsEnabled && hasHighlightsForView,
+                  generating: highlightMutation.isPending,
+                  onPress: handleGenerateHighlights,
+                }
+          }
+          onTranslate={() => languagePickerRef.current?.present()}
+        />
+      )}
+
+      {/* Reader typography */}
+      <ReaderSettingsBottomSheet ref={readerSettingsRef} />
+
+      {/* Article outline */}
+      <ArticleOutlineBottomSheet
+        ref={outlineSheetRef}
+        outline={outline}
+        onSelect={handleOutlineSelect}
+      />
 
       {/* AI Summary Bottom Sheet */}
       <ArticleSummaryBottomSheet
@@ -580,25 +763,6 @@ export function ArticleScreen({
         title="Translate to..."
         initialLanguage={targetLanguage || undefined}
         onLanguageChange={handleTranslateSelect}
-      />
-
-      {/* Options Bottom Sheet */}
-      <ArticleOptionsBottomSheet
-        ref={optionsBottomSheetRef}
-        currentView={contentSource}
-        onSelectView={handleSelectView}
-        onTranslate={() => languagePickerRef.current?.present()}
-        onOpenInBrowser={isArticleLoading ? undefined : handleOpenInBrowser}
-        hasExtractedContent={!!article?.extracted_content || !!extractedData?.content}
-        hasTranslatedContent={!!translateData?.translated_content}
-        canExtractContent={true}
-        isClipped={isClipped}
-        isNewsletter={isNewsletter}
-        hasHighlightedContent={hasHighlightsForView}
-        highlightsEnabled={highlightsEnabled && hasHighlightsForView}
-        isGeneratingHighlights={highlightMutation.isPending}
-        onGenerateHighlights={handleGenerateHighlights}
-        onToggleHighlights={handleToggleHighlights}
       />
     </View>
   );

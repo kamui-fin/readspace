@@ -1,247 +1,75 @@
-/** biome-ignore-all assist/source/organizeImports: false positive */
-import {
-  BottomSheetBackdrop,
-  type BottomSheetBackdropProps,
-  BottomSheetModal,
-  type BottomSheetModalProps,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
-import clsx from 'clsx';
-import type { ReactNode } from 'react';
-import { forwardRef, useCallback, useRef } from 'react';
-import { Platform, View } from 'react-native';
-import { Text } from '@components/ui/text';
-import { useBottomSheetBackHandler } from '@hooks/useBottomSheetBackHandler';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-
 import { CloseCircle } from '@components/icons/svg';
+import { BottomSheet, type BottomSheetProps, type SheetRef } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import clsx from 'clsx';
+import { forwardRef } from 'react';
+import { View } from 'react-native';
 
-export interface ModalProps extends Omit<BottomSheetModalProps, 'children'> {
-  children: ReactNode;
-  headerTitle?: string;
-  headerTitleAlign?: 'left' | 'center';
-  headerLeft?: ReactNode;
-  headerRight?: ReactNode;
+export interface ModalProps extends Omit<BottomSheetProps, 'contentScrollable'> {
   onClose?: () => void;
   showCloseButton?: boolean;
   containerClassName?: string;
-  headerClassName?: string;
-  secondaryAction?: ReactNode; // Positioned to the left of close button
-  footerActions?: ReactNode; // Fixed footer buttons outside scroll view
-  footerClassName?: string;
 }
 
-export const Modal = forwardRef<BottomSheetModal, ModalProps>(
+/**
+ * A non-draggable sheet with a close button: same native True Sheet as `BottomSheet`, but the
+ * content is laid out as a plain flex column (no pinned ScrollView) and drag-to-dismiss is off,
+ * so it only closes via the close button, backdrop tap, or Android back.
+ */
+export const Modal = forwardRef<SheetRef, ModalProps>(
   (
     {
       children,
-      headerTitle,
-      headerTitleAlign = 'center',
-      headerLeft,
-      headerRight,
       onClose,
       showCloseButton = true,
       containerClassName,
-      headerClassName,
+      headerRight,
       secondaryAction,
       footerActions,
       footerClassName,
-      snapPoints = ['90%'],
-      enablePanDownToClose = false,
-      backdropComponent,
-      onChange,
+      contentPaddingHorizontal = 16,
       ...props
     },
     ref
   ) => {
-    const insets = useSafeAreaInsets();
     const isDark = useIsDarkMode();
-    const colors = COLORS[isDark ? 'dark' : 'light'];
-    const isIOS = Platform.OS === 'ios';
+    const closeButton =
+      showCloseButton && onClose ? (
+        <Button variant="icon" size="small" className="h-8 w-8" fullWidth={false} onPress={onClose}>
+          <CloseCircle
+            width={16}
+            height={16}
+            color={isDark ? COLORS.dark.grey : COLORS.light.grey}
+          />
+        </Button>
+      ) : null;
 
-    // Merge the forwarded ref with an internal one so the back-handler hook always has an
-    // instance to dismiss, regardless of whether the consumer passed an object or callback ref.
-    const sheetRef = useRef<BottomSheetModal>(null);
-    const setRefs = useCallback(
-      (instance: BottomSheetModal | null) => {
-        sheetRef.current = instance;
-        if (typeof ref === 'function') {
-          ref(instance);
-        } else if (ref) {
-          ref.current = instance;
-        }
-      },
-      [ref]
-    );
-    const { handleSheetPositionChange } = useBottomSheetBackHandler(sheetRef);
-
-    const renderBackdrop = useCallback(
-      (backdropProps: BottomSheetBackdropProps) => (
-        <BottomSheetBackdrop
-          {...backdropProps}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          opacity={0.5}
-        />
-      ),
-      []
-    );
-
-    const handleSheetChanges = useCallback<NonNullable<BottomSheetModalProps['onChange']>>(
-      (index, position, type) => {
-        console.log('[Modal] Sheet index changed to:', index);
-        handleSheetPositionChange(index, position, type);
-        onChange?.(index, position, type);
-      },
-      [handleSheetPositionChange, onChange]
-    );
+    const trailing = headerRight ?? secondaryAction;
 
     return (
-      <BottomSheetModal
-        ref={setRefs}
-        snapPoints={snapPoints}
-        enablePanDownToClose={enablePanDownToClose}
-        enableContentPanningGesture={false}
-        enableOverDrag={false}
-        backdropComponent={backdropComponent || renderBackdrop}
-        backgroundStyle={{
-          backgroundColor: isIOS
-            ? 'transparent'
-            : isDark
-              ? COLORS.dark.background
-              : COLORS.light.background,
-        }}
-        handleIndicatorStyle={{ display: 'none' }}
-        animateOnMount={true}
-        detached={isIOS}
-        bottomInset={insets.bottom}
-        android_keyboardInputMode="adjustResize"
-        keyboardBehavior="interactive"
-        keyboardBlurBehavior="restore"
-        onChange={handleSheetChanges}
-        style={isIOS ? { marginHorizontal: 6 } : undefined}
+      <BottomSheet
+        ref={ref}
+        draggable={false}
+        contentScrollable={false}
+        headerRight={
+          trailing || closeButton ? (
+            <View className="flex-row items-center gap-2">
+              {trailing}
+              {closeButton}
+            </View>
+          ) : undefined
+        }
+        footerActions={footerActions}
+        footerClassName={clsx('px-4', footerClassName)}
         {...props}>
-        <BottomSheetView
-          className={clsx(
-            'bg-background flex-1 ',
-            isIOS && 'overflow-hidden rounded-3xl',
-            containerClassName
-          )}
-          style={{ backgroundColor: colors.background }}>
-          {/* Header Container */}
-          {(headerTitle ||
-            headerLeft ||
-            headerRight ||
-            secondaryAction ||
-            (showCloseButton && onClose)) && (
-            <>
-              <View
-                className={clsx('relative flex-row items-center px-4 py-2', headerClassName)}
-                style={{ minHeight: 56 }}>
-                {/* Header Left */}
-                {headerLeft && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      left: 16,
-                      top: 0,
-                      bottom: 0,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      zIndex: 10,
-                    }}>
-                    {headerLeft}
-                  </View>
-                )}
-
-                {/* Header Content - Centered or Left Aligned */}
-                <View className="flex-1" style={{ justifyContent: 'center' }}>
-                  {headerTitle && (
-                    <Text
-                      className={clsx(
-                        'font-geist-semibold text-primary-foreground text-2xl',
-                        headerTitleAlign === 'center' ? 'text-center' : 'text-left'
-                      )}
-                      style={{ lineHeight: 28 }}>
-                      {headerTitle}
-                    </Text>
-                  )}
-                </View>
-
-                {/* Secondary Action - Absolutely Positioned (to the left of close button) */}
-                {secondaryAction && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      right: showCloseButton && onClose ? 56 : 16,
-                      top: 0,
-                      bottom: 0,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      zIndex: 10,
-                    }}>
-                    {secondaryAction}
-                  </View>
-                )}
-
-                {/* Close Button - Absolutely Positioned */}
-                {showCloseButton && onClose && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      right: 16,
-                      top: 0,
-                      bottom: 0,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      zIndex: 10,
-                    }}>
-                    <Button
-                      variant="icon"
-                      size="small"
-                      className="h-8 w-8"
-                      fullWidth={false}
-                      onPress={onClose}>
-                      <CloseCircle
-                        width={16}
-                        height={16}
-                        color={isDark ? COLORS.dark.grey : COLORS.light.grey}
-                      />
-                    </Button>
-                  </View>
-                )}
-
-                {/* Header Right */}
-                {headerRight && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      right: showCloseButton && onClose ? 56 : 16,
-                      top: 0,
-                      bottom: 0,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      zIndex: 10,
-                    }}>
-                    {headerRight}
-                  </View>
-                )}
-              </View>
-            </>
-          )}
-
-          {/* Content */}
-          <View className="flex-1 px-4 pb-6">{children}</View>
-
-          {/* Footer Actions - Fixed at bottom */}
-          {footerActions && (
-            <View className={clsx('px-4 pb-4', footerClassName)}>{footerActions}</View>
-          )}
-        </BottomSheetView>
-      </BottomSheetModal>
+        <View
+          className={clsx('flex-1 pb-6', containerClassName)}
+          style={{ paddingHorizontal: contentPaddingHorizontal }}>
+          {children}
+        </View>
+      </BottomSheet>
     );
   }
 );

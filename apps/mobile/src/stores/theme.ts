@@ -25,7 +25,7 @@ export const useThemeStore = create<ThemeStore>()(
   persist(
     (set, get) => ({
       theme: 'system',
-      systemColorScheme: Appearance.getColorScheme(),
+      systemColorScheme: Appearance.getColorScheme() ?? 'light',
       isHydrated: false,
 
       setTheme: (theme) => {

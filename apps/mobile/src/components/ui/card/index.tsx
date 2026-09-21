@@ -6,6 +6,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { stripHtml } from '@lib/utils/html';
 import { EyeIcon } from '@solar-icons/react-native/linear';
+import { BookmarkIcon } from '@solar-icons/react-native/bold';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import { Image as ExpoImage } from 'expo-image';
@@ -13,11 +14,11 @@ import type { ReactNode } from 'react';
 import { forwardRef, useMemo, useState } from 'react';
 import { Pressable, type PressableProps, View } from 'react-native';
 
-const cardVariants = cva('bg-background ', {
+const cardVariants = cva('', {
   variants: {
     variant: {
       feed: 'flex-row items-center gap-4 py-4 px-4',
-      'image-top': 'w-full rounded-2xl bg-background  overflow-hidden',
+      'image-top': 'w-full overflow-hidden rounded-2xl',
       article: 'flex-row gap-3 py-4', // Edge-to-edge article card with image on right
       'text-only': 'rounded-2xl p-4',
     },
@@ -28,8 +29,7 @@ const cardVariants = cva('bg-background ', {
 });
 
 export interface CardProps
-  extends Omit<PressableProps, 'children'>,
-    VariantProps<typeof cardVariants> {
+  extends Omit<PressableProps, 'children'>, VariantProps<typeof cardVariants> {
   children?: ReactNode;
   className?: string;
   // Feed variant props
@@ -41,6 +41,7 @@ export interface CardProps
   imageUrl?: string;
   timestamp?: string;
   faviconUrl?: string;
+  showFeedIcon?: boolean;
   fallbackComponent?: React.FC<{ size?: number; className?: string }>;
   feedName?: string;
   badge?: ReactNode;
@@ -50,6 +51,7 @@ export interface CardProps
   // Text-only variant props
   content?: ReactNode;
   isRead?: boolean;
+  isSaved?: boolean;
 }
 
 /**
@@ -69,6 +71,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
       imageUrl,
       timestamp,
       faviconUrl,
+      showFeedIcon = true,
       fallbackComponent: FallbackComponent,
       feedName,
       badge,
@@ -77,6 +80,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
       showBottomDivider = true,
       content,
       isRead,
+      isSaved,
       children,
       ...props
     },
@@ -87,8 +91,11 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
     const colors = COLORS[isDark ? 'dark' : 'light'];
 
     const containerStyle = useMemo(() => {
+      // Transparent, not `colors.background`: a card paints nothing of its own so it sits on
+      // whatever surface hosts it — the screen, or a sheet whose background differs. Variants
+      // that need their own surface set one below.
       const baseStyle: any = {
-        backgroundColor: colors.background,
+        backgroundColor: 'transparent',
       };
 
       if (variant === 'image-top') {
@@ -171,12 +178,14 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
               {(feedName || timestamp || badge) && (
                 <View className="mb-3 flex-row items-center gap-1.5">
                   {badge}
-                  <FeedIcon
-                    url={faviconUrl}
-                    fallbackComponent={FallbackComponent}
-                    size={16}
-                    borderRadius={4}
-                  />
+                  {showFeedIcon && (
+                    <FeedIcon
+                      url={faviconUrl}
+                      fallbackComponent={FallbackComponent}
+                      size={16}
+                      borderRadius={4}
+                    />
+                  )}
 
                   {/* Feed name */}
                   {feedName && (
@@ -239,18 +248,27 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
               )}
             </View>
 
-            {/* Thumbnail on right - only show if imageUrl exists */}
-            {imageUrl && (
-              <View className="bg-grey5 h-24 w-24 overflow-hidden rounded-xl">
-                <ExpoImage
-                  source={{ uri: imageUrl }}
-                  style={{ width: 96, height: 96 }}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                  transition={200}
-                  placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-                  placeholderContentFit="cover"
-                />
+            {(isSaved || imageUrl) && (
+              <View className="items-end gap-3">
+                {isSaved && (
+                  <View accessibilityLabel="Saved" accessible>
+                    <BookmarkIcon size={16} color="#FBBC04" />
+                  </View>
+                )}
+                {/* Thumbnail on right - only show if imageUrl exists */}
+                {imageUrl && (
+                  <View className="bg-grey5 h-24 w-24 overflow-hidden rounded-xl">
+                    <ExpoImage
+                      source={{ uri: imageUrl }}
+                      style={{ width: 96, height: 96 }}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      transition={200}
+                      placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                      placeholderContentFit="cover"
+                    />
+                  </View>
+                )}
               </View>
             )}
           </Pressable>
@@ -318,7 +336,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
             {/* Bottom Meta Row */}
             <View className="mt-auto flex-row items-center justify-between pt-1">
               <View className="mr-2 flex-1 flex-row items-center gap-1.5">
-                {(faviconUrl || feedName) && (
+                {showFeedIcon && (faviconUrl || feedName) && (
                   <FeedIcon
                     url={faviconUrl}
                     fallbackComponent={FallbackComponent}

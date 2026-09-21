@@ -1,8 +1,8 @@
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
@@ -19,7 +19,7 @@ export interface OPMLImportBottomSheetProps {
   onImportStarted?: (taskId: string) => void;
 }
 
-export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBottomSheetProps>(
+export const OPMLImportBottomSheet = forwardRef<SheetRef, OPMLImportBottomSheetProps>(
   ({ file, feedCount, onCancel, onImportStarted }, ref) => {
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];

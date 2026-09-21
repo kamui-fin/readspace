@@ -49,9 +49,7 @@ async def create_bucket_if_not_exists():
         traceback.print_exc()
 
 
-async def upload_favicon(
-    image_path: str, content_type: str = "image/jpeg"
-) -> Optional[str]:
+async def upload_favicon(image_path: str, content_type: str = "image/jpeg") -> Optional[str]:
     """
     Uploads a local favicon to Supabase storage.
     Returns the public path/key in the bucket.
@@ -115,7 +113,6 @@ async def import_data():
     try:
         with open(FEEDS_JSONL, "r") as f:
             for line in f:
-
                 try:
                     record = json.loads(line)
 
@@ -125,9 +122,7 @@ async def import_data():
                     # 2. Extract Fields
                     url = record.get("feed_url")
                     title = record.get("title")
-                    description = record.get(
-                        "summary"
-                    )  # Mapping summary -> description
+                    description = record.get("summary")  # Mapping summary -> description
                     link = record.get("website_url")  # Mapping website_url -> link
                     language = record.get("language")
 

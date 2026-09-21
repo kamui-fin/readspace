@@ -7,13 +7,13 @@ import {
   RenameFolderModal,
   type RenameFolderModalRef,
 } from '@components/bottom-sheets/rename-folder';
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Checkbox } from '@components/ui/checkbox';
-import { DropdownMenuRoot, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
+import { useNativeConfirm } from '@components/ui/confirm-dialog';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import {
@@ -44,15 +44,18 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const PINNED_YELLOW = '#EAB308';
 
 import { FolderPickerBottomSheet, type FolderPickerBottomSheetRef } from '../folder-picker';
 import { FeedListItem } from './feed-list-item';
 import { FolderGroup } from './folder-group';
 import { SectionLabel } from './section-label';
+
+const PINNED_YELLOW = '#EAB308';
+
+/** Index into `snapPoints` below — open halfway, with room to expand. */
+const DEFAULT_DETENT = 0;
 
 export interface FeedSwitcherBottomSheetRef {
   present: () => void;
@@ -71,7 +74,7 @@ interface ListItem {
 
 export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, object>(
   (_props, ref) => {
-    const bottomSheetRef = useRef<BottomSheetModal>(null);
+    const bottomSheetRef = useRef<SheetRef>(null);
     const createFolderModalRef = useRef<CreateFolderModalRef>(null);
     const renameFolderModalRef = useRef<RenameFolderModalRef>(null);
     const renameFeedModalRef = useRef<RenameFeedModalRef>(null);
@@ -96,6 +99,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
     const router = useRouter();
 
     const updateFeed = useUpdateFeed();
+    const { confirm, dialog: confirmDialog } = useNativeConfirm();
     const deleteFeed = useDeleteFeed();
     const deleteFolder = useDeleteFolder();
     const bulkDeleteFeeds = useBulkDeleteFeeds();
@@ -118,7 +122,9 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
 
     useImperativeHandle(ref, () => ({
       present: () => {
-        bottomSheetRef.current?.present();
+        // The opening detent has to be passed here rather than
+        // as the sheet's `index`, which True Sheet reads as "present on mount".
+        bottomSheetRef.current?.present(DEFAULT_DETENT);
         queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS, 'list'] });
         queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
       },
@@ -254,50 +260,40 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
 
     const handleUnfollow = useCallback(
       (sub: Subscription) => {
-        Alert.alert(
-          'Unfollow Feed',
-          `Are you sure you want to unfollow "${sub.custom_title || sub.feed.title}"?`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Unfollow',
-              style: 'destructive',
-              onPress: () => {
-                toast.promise(deleteFeed.mutateAsync({ feedId: sub.feed.id }), {
-                  loading: 'Unfollowing...',
-                  success: 'Unfollowed feed',
-                  error: 'Failed to unfollow feed',
-                });
-              },
-            },
-          ]
-        );
+        confirm({
+          title: 'Unfollow Feed',
+          message: `Are you sure you want to unfollow "${sub.custom_title || sub.feed.title}"?`,
+          confirmLabel: 'Unfollow',
+          destructive: true,
+          onConfirm: () => {
+            toast.promise(deleteFeed.mutateAsync({ feedId: sub.feed.id }), {
+              loading: 'Unfollowing...',
+              success: 'Unfollowed feed',
+              error: 'Failed to unfollow feed',
+            });
+          },
+        });
       },
-      [deleteFeed]
+      [confirm, deleteFeed]
     );
 
     const handleDeleteFolder = useCallback(
       (folder: Folder) => {
-        Alert.alert(
-          'Delete Folder',
-          `Are you sure you want to delete "${folder.name}"? This will unfollow all feeds inside it.`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Delete',
-              style: 'destructive',
-              onPress: () => {
-                toast.promise(deleteFolder.mutateAsync(folder.id), {
-                  loading: 'Deleting...',
-                  success: 'Folder deleted',
-                  error: 'Failed to delete folder',
-                });
-              },
-            },
-          ]
-        );
+        confirm({
+          title: 'Delete Folder',
+          message: `Are you sure you want to delete "${folder.name}"? This will unfollow all feeds inside it.`,
+          confirmLabel: 'Delete',
+          destructive: true,
+          onConfirm: () => {
+            toast.promise(deleteFolder.mutateAsync(folder.id), {
+              loading: 'Deleting...',
+              success: 'Folder deleted',
+              error: 'Failed to delete folder',
+            });
+          },
+        });
       },
-      [deleteFolder]
+      [confirm, deleteFolder]
     );
 
     const handleRenameFolder = useCallback((folder: Folder) => {
@@ -307,44 +303,39 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
     const handleBulkDelete = useCallback(() => {
       if (selectedFeedIds.size === 0 && selectedFolderIds.size === 0) return;
 
-      Alert.alert(
-        'Delete Items',
-        `Are you sure you want to delete ${selectedFeedIds.size} feed(s) and ${selectedFolderIds.size} folder(s)?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: () => {
-              const feedIds = Array.from(selectedFeedIds);
-              const folderIds = Array.from(selectedFolderIds);
+      confirm({
+        title: 'Delete Items',
+        message: `Are you sure you want to delete ${selectedFeedIds.size} feed(s) and ${selectedFolderIds.size} folder(s)?`,
+        confirmLabel: 'Delete',
+        destructive: true,
+        onConfirm: () => {
+          const feedIds = Array.from(selectedFeedIds);
+          const folderIds = Array.from(selectedFolderIds);
 
-              // Exit selection mode right away — deleting can take a moment, and the
-              // loading toast below is the feedback while it's in flight.
-              setIsSelectionMode(false);
-              setSelectedFeedIds(new Set());
-              setSelectedFolderIds(new Set());
-              bottomSheetRef.current?.snapToIndex(1);
+          // Exit selection mode right away — deleting can take a moment, and the
+          // loading toast below is the feedback while it's in flight.
+          setIsSelectionMode(false);
+          setSelectedFeedIds(new Set());
+          setSelectedFolderIds(new Set());
+          bottomSheetRef.current?.snapToIndex(1);
 
-              const deletePromise = (async () => {
-                if (feedIds.length > 0) {
-                  await bulkDeleteFeeds.mutateAsync({ feedIds });
-                }
-                if (folderIds.length > 0) {
-                  await Promise.all(folderIds.map((id) => deleteFolder.mutateAsync(id)));
-                }
-              })();
+          const deletePromise = (async () => {
+            if (feedIds.length > 0) {
+              await bulkDeleteFeeds.mutateAsync({ feedIds });
+            }
+            if (folderIds.length > 0) {
+              await Promise.all(folderIds.map((id) => deleteFolder.mutateAsync(id)));
+            }
+          })();
 
-              toast.promise(deletePromise, {
-                loading: 'Deleting...',
-                success: 'Successfully deleted selected items',
-                error: 'Failed to delete some items',
-              });
-            },
-          },
-        ]
-      );
-    }, [selectedFeedIds, selectedFolderIds, bulkDeleteFeeds, deleteFolder]);
+          toast.promise(deletePromise, {
+            loading: 'Deleting...',
+            success: 'Successfully deleted selected items',
+            error: 'Failed to delete some items',
+          });
+        },
+      });
+    }, [confirm, selectedFeedIds, selectedFolderIds, bulkDeleteFeeds, deleteFolder]);
 
     const handleBulkMove = useCallback(() => {
       if (selectedFeedIds.size === 0) {
@@ -547,12 +538,9 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
           }
           headerTitleAlign="left"
           headerTitleStyle={isSelectionMode ? { fontSize: 18 } : {}}
-          enableContentPanningGesture={true}
-          enableOverDrag
           headerLeft={headerLeftActions}
           headerRight={headerRightActions}
           snapPoints={['50%', '90%', '100%']}
-          index={1}
           contentPaddingHorizontal={0}>
           {listData.length === 0 && favoriteFeeds.length === 0 ? (
             <View className="items-center justify-center py-12">
@@ -636,15 +624,16 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
               </View>
             </>
           )}
+          {confirmDialog}
         </BottomSheet>
 
         <CreateFolderModal
           ref={createFolderModalRef}
-          onSuccess={() => bottomSheetRef.current?.present()}
+          onSuccess={() => bottomSheetRef.current?.present(DEFAULT_DETENT)}
         />
         <RenameFolderModal
           ref={renameFolderModalRef}
-          onSuccess={() => bottomSheetRef.current?.present()}
+          onSuccess={() => bottomSheetRef.current?.present(DEFAULT_DETENT)}
         />
         <RenameFeedModal ref={renameFeedModalRef} />
         <FolderPickerBottomSheet

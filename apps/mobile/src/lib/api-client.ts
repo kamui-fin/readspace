@@ -2,7 +2,6 @@ import { supabase } from '@lib/supabase/client';
 import { resolveHostname } from '@lib/utils/network';
 import { ApiClient } from '@readspace/shared';
 import { getSettings, useSettingsStore } from '@stores/settings';
-import { Platform } from 'react-native';
 
 /**
  * Configure the API client with the current settings from the store.
@@ -27,49 +26,22 @@ export function configureApiClient(readspaceUrl?: string) {
         return null;
       }
 
-      // Get the current session
+      // Supabase getSession already refreshes expiring tokens and deduplicates
+      // refresh requests. Refreshing again here churns short-lived sessions.
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) {
-        return null;
-      }
-
-      // Check if token is expired or about to expire (within 60 seconds)
-      const expiresAt = session.expires_at;
-      if (expiresAt) {
-        const now = Math.floor(Date.now() / 1000);
-        const timeUntilExpiry = expiresAt - now;
-
-        // If token expires in less than 60 seconds, refresh it
-        if (timeUntilExpiry < 60) {
-          console.log('[API] Token expiring soon, refreshing...');
-          const {
-            data: { session: refreshedSession },
-            error,
-          } = await supabase.auth.refreshSession();
-
-          if (error) {
-            console.error('[API] Failed to refresh session:', error);
-            return session.access_token; // Return old token as fallback
-          }
-
-          if (refreshedSession) {
-            console.log('[API] Session refreshed successfully');
-            return refreshedSession.access_token;
-          }
-        }
-      }
-
-      return session.access_token;
+      return session?.access_token ?? null;
     },
   });
 }
 
 // Listen for settings changes to reconfigure client
 if (typeof useSettingsStore !== 'undefined') {
-  useSettingsStore.subscribe((state) => {
-    configureApiClient(state.settings.readspace_url);
+  useSettingsStore.subscribe((state, previousState) => {
+    if (state.settings.readspace_url !== previousState.settings.readspace_url) {
+      configureApiClient(state.settings.readspace_url);
+    }
   });
 }

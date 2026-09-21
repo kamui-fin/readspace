@@ -1,3 +1,4 @@
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Divider } from '@components/ui/divider';
@@ -6,7 +7,6 @@ import { Skeleton } from '@components/ui/skeleton';
 import { Switch } from '@components/ui/switch';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useCodexPreferences, useFeeds, useUpdateCodexPreferences } from '@readspace/shared';
 import { FolderIcon } from '@solar-icons/react-native/linear';
 import {
@@ -38,7 +38,7 @@ export interface CodexSettingsBottomSheetRef {
  */
 export const CodexSettingsBottomSheet = forwardRef<CodexSettingsBottomSheetRef, object>(
   (_props, ref) => {
-    const bottomSheetRef = useRef<BottomSheetModal>(null);
+    const bottomSheetRef = useRef<SheetRef>(null);
 
     /** null = "no unsaved edits, mirror the server"; a Set = the in-progress excluded set. */
     const [draft, setDraft] = useState<Set<string> | null>(null);
@@ -48,7 +48,7 @@ export const CodexSettingsBottomSheet = forwardRef<CodexSettingsBottomSheetRef, 
     const updatePreferences = useUpdateCodexPreferences();
 
     useImperativeHandle(ref, () => ({
-      // Refetching here (tried it) raced with gorhom's open animation/dynamic-sizing and made
+      // Refetching here (tried it) raced with the sheet's open animation and made
       // the sheet snap itself shut right after presenting. The save mutation's own onSettled
       // already invalidates+refetches this query (verified against the installed
       // @tanstack/query-core source — mutateAsync genuinely awaits it), so by the time a human

@@ -99,6 +99,41 @@ export function useArticle(
   });
 }
 
+/**
+ * The article's current state from whatever is already cached: the detail query
+ * if it has been fetched, otherwise the list page it appeared in.
+ *
+ * Two callers need this. Optimistic updates need `feed_id` and the previous
+ * `is_read` / `is_saved` to adjust unread counts — the detail query is often
+ * absent (marking read from a list, or from a reader that fires the mutation in
+ * parallel with its own detail fetch), and without a fallback those counts were
+ * silently skipped. Readers need it to avoid re-marking an article they already
+ * know is read.
+ *
+ * Returns `undefined` when the article is in no cache at all, which callers
+ * should treat as "unknown", never as a definite value.
+ */
+export function getCachedArticleState(
+  queryClient: QueryClient,
+  articleId: string
+): Article | ArticleSummary | undefined {
+  const detail = queryClient.getQueryData<Article>(queryKeys.article(articleId));
+  if (detail) return detail;
+
+  const lists = queryClient.getQueriesData<InfiniteData<{ items?: ArticleSummary[] }>>({
+    queryKey: [RSS_QUERY_KEYS.ARTICLES],
+  });
+
+  for (const [, data] of lists) {
+    for (const page of data?.pages ?? []) {
+      const match = page.items?.find((item) => item.id === articleId);
+      if (match) return match;
+    }
+  }
+
+  return undefined;
+}
+
 export function useUpdateArticle(
   options?: UseMutationOptions<
     void,
@@ -148,16 +183,31 @@ export function useUpdateArticle(
       await ApiClient.updateArticle(articleId, updateData, articleType);
     },
     onMutate: async ({ articleId, data }) => {
-      // Cancel any outgoing refetches to avoid race conditions
+      // Snapshot first: whether the detail query already holds data decides
+      // whether it's safe to cancel it.
+      const previousArticle = queryClient.getQueryData<Article>(queryKeys.article(articleId));
+      // Falls back to the list summary, which carries feed_id / is_read / is_saved.
+      // Read before the optimistic writes below overwrite them.
+      const previousState = previousArticle ?? getCachedArticleState(queryClient, articleId);
+
+      // Cancel any outgoing refetches to avoid race conditions.
+      //
+      // The article detail is the exception: cancelling an *initial* load leaves
+      // that query settled with no data, and `onSettled` below deliberately
+      // never invalidates this key, so nothing would ever refetch it. Callers
+      // that mark an article read the moment the reader opens do so in parallel
+      // with that very fetch — cancelling it there renders "Article not found".
+      // With no cached data there's also no optimistic write to protect, so
+      // there's nothing to cancel for.
       await Promise.all([
-        queryClient.cancelQueries({ queryKey: queryKeys.article(articleId) }),
+        ...(previousArticle !== undefined
+          ? [queryClient.cancelQueries({ queryKey: queryKeys.article(articleId) })]
+          : []),
         queryClient.cancelQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] }),
         queryClient.cancelQueries({ queryKey: queryKeys.unreadCounts() }),
         queryClient.cancelQueries({ queryKey: queryKeys.infiniteReadLater() }),
       ]);
 
-      // Snapshot the previous values
-      const previousArticle = queryClient.getQueryData<Article>(queryKeys.article(articleId));
       const previousUnreadCounts = queryClient.getQueryData<ArticleCountsResponse>(
         queryKeys.unreadCounts()
       );
@@ -216,17 +266,16 @@ export function useUpdateArticle(
         const newFeedCounts = { ...old.feed_counts };
         let newReadLater = old.read_later;
 
-        // Handle is_read changes
+        // Handle is_read changes. `previousState` falls back to the list
+        // summary, so marking read from a list (or from a reader whose detail
+        // fetch hasn't landed yet) still adjusts the right feed's count.
         if (data.is_read !== undefined) {
-          // We need the feedId to update specific feed counts
-          // If we don't have previousArticle (e.g. from list view without detail),
-          // we can't reliably update the specific feed count, so we skip it.
-          const feedId = previousArticle?.feed_id;
+          const feedId = previousState?.feed_id;
 
           if (feedId && newFeedCounts[feedId] !== undefined) {
-            if (data.is_read === true && (!previousArticle || !previousArticle.is_read)) {
+            if (data.is_read === true && (!previousState || !previousState.is_read)) {
               newFeedCounts[feedId] = Math.max(0, newFeedCounts[feedId] - 1);
-            } else if (data.is_read === false && (!previousArticle || previousArticle.is_read)) {
+            } else if (data.is_read === false && (!previousState || previousState.is_read)) {
               newFeedCounts[feedId] = newFeedCounts[feedId] + 1;
             }
           }
@@ -234,9 +283,9 @@ export function useUpdateArticle(
 
         // Handle is_saved changes
         if (data.is_saved !== undefined) {
-          if (data.is_saved === true && (!previousArticle || !previousArticle.is_saved)) {
+          if (data.is_saved === true && (!previousState || !previousState.is_saved)) {
             newReadLater++;
-          } else if (data.is_saved === false && (!previousArticle || previousArticle.is_saved)) {
+          } else if (data.is_saved === false && (!previousState || previousState.is_saved)) {
             newReadLater = Math.max(0, newReadLater - 1);
           }
         }

@@ -1,4 +1,4 @@
-import 'global.css';
+import '../../global.css';
 import { SessionProvider, useSession } from '@contexts/auth-context';
 import { RevenueCatProvider } from '@contexts/revenuecat-context';
 import { ThemeProvider } from '@contexts/theme-provider';
@@ -33,9 +33,9 @@ import {
   GeistMono_600SemiBold,
   GeistMono_700Bold,
 } from '@expo-google-fonts/geist-mono';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { NAVIGATION_THEME } from '@lib/constants/navigation-theme';
 import { ApiError } from '@readspace/shared';
 import * as Sentry from '@sentry/react-native';
 import { useHasSettingsHydrated, useSettingsStore } from '@stores/settings';
@@ -44,7 +44,12 @@ import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@ta
 import clsx from 'clsx';
 import Constants from 'expo-constants';
 import * as Font from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import {
+  ThemeProvider as NavigationThemeProvider,
+  Stack,
+  useRouter,
+  useSegments,
+} from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -236,6 +241,17 @@ function RootNavigator() {
 
   // Handle splash screen hiding
   useEffect(() => {
+    if (__DEV__) {
+      console.log('[Splash] gate', {
+        fontsLoaded,
+        fontError: !!fontError,
+        isAuthLoading,
+        isHydrated,
+        hasSession: !!session,
+        isOnboarded,
+        segments: segments.join('/'),
+      });
+    }
     if ((fontsLoaded || fontError) && !isAuthLoading && isHydrated) {
       const inAuthGroup = segments[0] === '(auth)';
       const inProtectedGroup = segments[0] === '(protected)';
@@ -271,10 +287,13 @@ function RootNavigator() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }} className={clsx(isDark && 'dark')}>
       <KeyboardProvider>
-        <BottomSheetModalProvider>
-          <ToastProvider>
-            <StatusBar style={isDark ? 'light' : 'dark'} />
-            {/* <OfflineBanner /> (@components/ui/offline-banner) is hidden for now */}
+        <ToastProvider>
+          <StatusBar style={isDark ? 'light' : 'dark'} />
+          {/* <OfflineBanner /> (@components/ui/offline-banner) is hidden for now */}
+          {/* Native headers read their appearance from this theme, not from our store — see
+              NAVIGATION_THEME. Without it every UINavigationBar (and the search field inside it)
+              stays in light appearance regardless of the app theme. */}
+          <NavigationThemeProvider value={NAVIGATION_THEME[isDark ? 'dark' : 'light']}>
             <Stack
               key={isDark ? 'dark' : 'light'}
               screenOptions={{ headerShown: false, contentStyle: { backgroundColor } }}>
@@ -282,9 +301,9 @@ function RootNavigator() {
               <Stack.Screen name="(protected)" />
               <Stack.Screen name="(auth)" />
             </Stack>
-            <UpgradePaywallModal />
-          </ToastProvider>
-        </BottomSheetModalProvider>
+          </NavigationThemeProvider>
+          <UpgradePaywallModal />
+        </ToastProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>
   );

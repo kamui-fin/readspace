@@ -1,8 +1,7 @@
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Card } from '@components/ui/card/index';
 import { Text } from '@components/ui/text';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useFavicon } from '@hooks/useFavicon';
 import { type ArticleSummary, type CodexDevelopment, formatRelativeDate } from '@readspace/shared';
 import { useRouter } from 'expo-router';
@@ -34,6 +33,7 @@ function WriteupRow({
   return (
     <Card
       variant="article"
+      isSaved={!!article.is_saved}
       title={article.title || article.link}
       description={article.description || undefined}
       imageUrl={article.image_url || undefined}
@@ -55,7 +55,7 @@ function WriteupRow({
  * the same flat article layout the Following feed uses.
  */
 export const CodexWriteupsSheet = forwardRef<CodexWriteupsSheetHandle, object>((_props, ref) => {
-  const modalRef = useRef<BottomSheetModal>(null);
+  const modalRef = useRef<SheetRef>(null);
   const router = useRouter();
   const [development, setDevelopment] = useState<CodexDevelopment | null>(null);
 
@@ -73,7 +73,7 @@ export const CodexWriteupsSheet = forwardRef<CodexWriteupsSheetHandle, object>((
   return (
     <BottomSheet ref={modalRef} snapPoints={['70%', '92%']} contentPaddingHorizontal={20}>
       {development ? (
-        <BottomSheetScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+        <View style={{ paddingBottom: 40 }}>
           <Text
             fontFamily="garamond-semibold"
             className="text-primary-foreground"
@@ -100,7 +100,7 @@ export const CodexWriteupsSheet = forwardRef<CodexWriteupsSheetHandle, object>((
               />
             ))}
           </View>
-        </BottomSheetScrollView>
+        </View>
       ) : null}
     </BottomSheet>
   );

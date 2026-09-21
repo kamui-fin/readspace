@@ -1,3 +1,4 @@
+import { FOLLOWING_TAB } from '@lib/constants/tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -5,7 +6,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 export type ArticleFilter = 'all' | 'unread' | 'read' | 'read_later';
 
 interface FollowingState {
-  // Active tab index (0: All, 1: Today, 2: Saved, 3: Recent)
+  // Active tab index — see FOLLOWING_TAB in @lib/constants/tabs
   activeTab: number;
   // Previous tab index (for back button navigation)
   previousTab: number | null;
@@ -42,7 +43,7 @@ interface FollowingActions {
 export type FollowingStore = FollowingState & FollowingActions;
 
 const initialState: FollowingState = {
-  activeTab: 0,
+  activeTab: FOLLOWING_TAB.TODAY,
   previousTab: null,
   filter: 'all',
   loadingStates: {
@@ -115,6 +116,23 @@ export const useFollowingStore = create<FollowingStore>()(
     {
       name: 'readspace-following',
       storage: createJSONStorage(() => AsyncStorage),
+      // v1 moved Today to the front of the tab row (was All, Today, Saved).
+      // Without this, everyone with a persisted tab index would silently land
+      // on the neighbouring tab after updating.
+      version: 1,
+      migrate: (persisted, version) => {
+        const state = persisted as Partial<FollowingState> | undefined;
+        if (!state || version >= 1) return state as FollowingState;
+
+        const V0_TO_V1_TAB: Record<number, number> = {
+          0: FOLLOWING_TAB.ALL, // v0 "All" was index 0
+          1: FOLLOWING_TAB.TODAY, // v0 "Today" was index 1
+        };
+        return {
+          ...state,
+          activeTab: V0_TO_V1_TAB[state.activeTab ?? 0] ?? state.activeTab,
+        } as FollowingState;
+      },
       partialize: (state) => ({
         // Persist the active tab and filter, not loading states or counts
         // Don't persist previousTab as it's only for navigation within session
@@ -137,11 +155,9 @@ export const getActiveTab = () => useFollowingStore.getState().activeTab;
 // Helper function to get tab name for display
 export const getTabName = (tab: number): string => {
   switch (tab) {
-    case 0:
-      return 'articles';
-    case 1:
+    case FOLLOWING_TAB.TODAY:
       return "today's articles";
-    case 2:
+    case FOLLOWING_TAB.SAVED:
       return 'saved articles';
     default:
       return 'articles';
@@ -151,11 +167,9 @@ export const getTabName = (tab: number): string => {
 // Helper function to get tab key from index
 export const getTabKey = (tab: number): 'today' | 'saved' | 'all' => {
   switch (tab) {
-    case 0:
-      return 'all';
-    case 1:
+    case FOLLOWING_TAB.TODAY:
       return 'today';
-    case 2:
+    case FOLLOWING_TAB.SAVED:
       return 'saved';
     default:
       return 'all';

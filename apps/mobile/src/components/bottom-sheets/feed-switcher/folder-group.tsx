@@ -1,16 +1,9 @@
 import { Button } from '@components/ui/button';
 import { Chip } from '@components/ui/chip';
-import {
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuItemIcon,
-  DropdownMenuItemTitle,
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-} from '@components/ui/dropdown-menu';
 import { FeedFallbackIcon } from '@components/ui/feed-fallback-icon';
 import { FeedIcon } from '@components/ui/feed-icon';
 import { Text } from '@components/ui/text';
+import { type MenuAction, MenuView } from '@expo/ui/community/menu';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { resolveSupabaseImageUrl } from '@lib/utils/network';
@@ -135,6 +128,15 @@ const FolderGroupComponent = ({
 }: FolderGroupProps) => {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+  const menuActions: MenuAction[] = [
+    { id: 'rename', title: 'Rename', image: 'pencil' },
+    { id: 'delete', title: 'Delete', image: 'trash', attributes: { destructive: true } },
+  ];
+
+  const handleMenuAction = ({ nativeEvent: { event } }: { nativeEvent: { event: string } }) => {
+    if (event === 'rename') onRenameFolder(folder);
+    else if (event === 'delete') onDeleteFolder(folder);
+  };
 
   const FolderIcon = isExpanded
     ? isEmpty
@@ -232,30 +234,15 @@ const FolderGroupComponent = ({
 
             {/* Context menu */}
             {!isSelectionMode && (
-              <DropdownMenuRoot>
-                <DropdownMenuTrigger>
-                  <Button
-                    variant="icon"
-                    size="small"
-                    fullWidth={false}
-                    className="flex h-9 w-9 items-center justify-center bg-transparent dark:bg-transparent">
-                    <MenuDotsIcon size={18} color={colors.grey2} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem key="rename" onSelect={() => onRenameFolder(folder)}>
-                    <DropdownMenuItemIcon ios={{ name: 'pencil' }} />
-                    <DropdownMenuItemTitle>Rename</DropdownMenuItemTitle>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    key="delete"
-                    destructive
-                    onSelect={() => onDeleteFolder(folder)}>
-                    <DropdownMenuItemIcon ios={{ name: 'trash' }} />
-                    <DropdownMenuItemTitle>Delete</DropdownMenuItemTitle>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenuRoot>
+              <MenuView actions={menuActions} onPressAction={handleMenuAction}>
+                <Button
+                  variant="icon"
+                  size="small"
+                  fullWidth={false}
+                  className="flex h-9 w-9 items-center justify-center bg-transparent dark:bg-transparent">
+                  <MenuDotsIcon size={18} color={colors.grey2} />
+                </Button>
+              </MenuView>
             )}
 
             {/* Expand / collapse toggle — bold outline chevron */}

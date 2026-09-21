@@ -2,6 +2,20 @@ import { Dimensions, Platform } from 'react-native';
 
 export const BOTTOM_TABBAR_BASE_HEIGHT = 64;
 
+/**
+ * Size of the back button on both platforms. Shared so the iOS SwiftUI glass circle matches the
+ * Android chevron button, which derives it from the `icon`/`small` Button variant — that variant
+ * is `h-10 w-10`, so this has to stay 40 or the glass circle reads as the odd one out next to the
+ * other controls in a bar.
+ */
+export const BACK_BUTTON_SIZE = 40;
+
+/**
+ * Glyph size for the icons sitting inside those 40pt buttons. One number so a bar never mixes a
+ * chunky chevron with hairline action icons.
+ */
+export const BAR_ICON_SIZE = 20;
+
 // Pull-to-refresh: how far (px) the Android refresh spinner is pulled up behind
 // the header's tab row. Without this, `progressViewOffset` sits at the full
 // header height and the spinner rests a visible gap below the tabs; overlapping
@@ -13,6 +27,17 @@ export const REFRESH_SPINNER_HEADER_OVERLAP = 44;
 // Article reader `mode` route param: opened from the Saved tab, so the reader shows
 // the "mark as read & remove" checkmark and advances to the next saved article.
 export const READ_LATER_READER_MODE = 'read-later';
+
+/**
+ * How long a settled query has to stay the active one before it's written to
+ * search history. Keyword search runs as you type and is often never submitted,
+ * so history can't hang off submit alone — resting on a query is what marks it
+ * intentional, and the delay keeps every prefix along the way out of the list.
+ */
+export const SEARCH_HISTORY_COMMIT_MS = 1200;
+
+/** Shortest query worth remembering. */
+export const MIN_SEARCH_HISTORY_LENGTH = 3;
 
 export const MAX_TRENDING_ITEMS = 100;
 export const TRENDING_PAGE_SIZE = 20;

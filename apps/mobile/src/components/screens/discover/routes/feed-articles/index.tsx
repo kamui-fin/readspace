@@ -1,15 +1,17 @@
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
+import { BackButton } from '@components/ui/back-button';
 import { Button } from '@components/ui/button';
 import { Card } from '@components/ui/card';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
+import { NativeScreenHeader } from '@components/ui/native-screen-header';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useNetworkConnectivity } from '@hooks/useNetworkConnectivity';
-import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { USES_NATIVE_HEADER } from '@lib/constants/platform';
 import { resolveSupabaseImageUrl } from '@lib/utils/network';
 import { ApiClient, type Article, formatRelativeDate, useFeed } from '@readspace/shared';
-import { ArrowLeftIcon, InboxLineIcon } from '@solar-icons/react-native/linear';
+import { InboxLineIcon } from '@solar-icons/react-native/linear';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSegments } from 'expo-router';
 import { useCallback, useRef } from 'react';
@@ -78,6 +80,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
         <View>
           <Card
             variant="article"
+            isSaved={!!article.is_saved}
             imageUrl={article.image_url ?? undefined}
             title={article.title ?? ''}
             description={article.description ?? undefined}
@@ -101,27 +104,33 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
     [handleArticlePress, feedData, feedTitle]
   );
 
+  // On iOS the title and the back chevron belong to the screen's real navigation bar — that is
+  // the only back affordance that carries the edge-swipe gesture and the long-press stack menu,
+  // so the in-page row is dropped there entirely. Android keeps it.
   const headerSection = (
-    <View style={{ paddingTop: insets.top }}>
-      <View className="px-4 py-3">
-        <View className="flex-row items-center">
-          <Button variant="icon" size="small" fullWidth={false} onPress={handleBack}>
-            <ArrowLeftIcon size={18} strokeWidth={2.4} color={colors.grey} />
-          </Button>
-          <View className="absolute inset-x-12 items-center justify-center">
-            <Text
-              size="lg"
-              fontFamily="geist-semibold"
-              className="text-primary-foreground tracking-tight"
-              numberOfLines={1}
-              ellipsizeMode="tail">
-              {feedTitle}
-            </Text>
+    <>
+      <NativeScreenHeader title={feedTitle} />
+      {!USES_NATIVE_HEADER && (
+        <View style={{ paddingTop: insets.top }}>
+          <View className="px-4 py-3">
+            <View className="flex-row items-center">
+              <BackButton onPress={handleBack} color={colors.grey} />
+              <View className="absolute inset-x-12 items-center justify-center">
+                <Text
+                  size="lg"
+                  fontFamily="geist-semibold"
+                  className="text-primary-foreground tracking-tight"
+                  numberOfLines={1}
+                  ellipsizeMode="tail">
+                  {feedTitle}
+                </Text>
+              </View>
+              <View style={{ width: 40 }} />
+            </View>
           </View>
-          <View style={{ width: 40 }} />
         </View>
-      </View>
-    </View>
+      )}
+    </>
   );
 
   if (isError) {
@@ -156,7 +165,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
             keyExtractor={(item) => item.id}
             contentContainerStyle={{
               paddingTop: 8,
-              paddingBottom: BOTTOM_TABBAR_BASE_HEIGHT + 16,
+              paddingBottom: insets.bottom + 16,
             }}
             showsVerticalScrollIndicator={false}
             onEndReachedThreshold={0.5}

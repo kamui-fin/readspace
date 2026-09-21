@@ -14,6 +14,8 @@
 - TanStack Query: [https://tanstack.com/query](https://tanstack.com/query)
 - Sonner Native: [https://github.com/sonner-toast/sonner-native](https://github.com/sonner-toast/sonner-native)
 - Expo Router: [https://expo.github.io/router](https://expo.github.io/router)
+- React Native True Sheet: [https://github.com/lodev09/react-native-true-sheet](https://github.com/lodev09/react-native-true-sheet)
+- Expo UI (SwiftUI): [https://docs.expo.dev/versions/latest/sdk/ui/swift-ui/](https://docs.expo.dev/versions/latest/sdk/ui/swift-ui/)
 
 Include these links when giving the model follow-up instructions that require deeper reading.
 
@@ -42,7 +44,10 @@ This file does _not_ authorize any automated pushes to remote repositories. Huma
 - **One component per file.** If a file grows > 250 lines, split it into smaller components.
 - Keep components small: prefer composition over large `if/else` rendering logic.
 - Name folders with `snake-case` (note the hyphen, not underscore) for components (each component should have `index.tsx` file with implementation of component), `camelCase` for hooks/utils.
-- **Bottom sheets & Android back gesture:** every `BottomSheetModal` must dismiss on the hardware/gesture back press instead of letting it fall through to the screen underneath (which pops the whole screen, e.g. kicking the user out of an article instead of just closing its AI overview sheet). `BottomSheet` (`@components/ui/bottom-sheet`) and `Modal` (`@components/ui/modal`) already wire this up internally via `useBottomSheetBackHandler` (`@hooks/useBottomSheetBackHandler`) — building new sheets on top of those wrappers gets the fix for free, including your own `onChange` handler (it composes rather than replaces the internal one). Only wire the hook yourself if a sheet renders a raw `<BottomSheetModal>` directly (see `language-picker.dropdown.tsx` for the pattern: an internal ref merged with the forwarded ref, passed to both `ref` and the hook).
+- **Sheets: always use `@lodev09/react-native-true-sheet`, never `@gorhom/bottom-sheet`.** All new sheets are built on True Sheet. `@gorhom/bottom-sheet` has been removed from the app.
+- **Native UI: prefer SwiftUI via `@expo/ui/swift-ui` on iOS whenever a suitable component exists** (pickers, toggles, sliders, menus, forms/sections, buttons, etc.). On Android, do **not** use Expo UI / Jetpack Compose; stick to our own custom Readspace components (`@components/ui/*`). Use `.ios.tsx` / `.android.tsx` platform files (or `Platform.select`) to split implementations, keeping a shared props contract.
+- **Spot-refactor rule:** whenever you notice code that violates the two rules above (a gorhom sheet, or a hand-rolled iOS control where an Expo UI SwiftUI component fits), refactor it to comply on the spot as part of the current change, rather than leaving it or just flagging it. Keep the refactor scoped to the offending component and verify with `bun run check-types`.
+- **Sheets are `BottomSheet` / `Modal` (`@components/ui/bottom-sheet`, `@components/ui/modal`), built on True Sheet.** Type refs with `SheetRef` (`present` / `dismiss` / `snapToIndex`). Keyboard avoidance and Android back-dismiss are native, so no back-handler hook, provider, or gorhom-style props (`keyboardBehavior`, `enableDynamicSizing`, …) exist. Use `snapPoints={['auto']}` to fit content; the wrapper pins its own `ScrollView` (pass `contentScrollable={false}` if the children bring their own list, and never nest a second scroll view).
 - Exports: prefer named exports for components and hooks, default export only for `pages`/route components when required by router conventions.
 - For any API call, use hooks in `packages/shared` — do not create new fetch hooks unless strictly necessary and agreed by reviewer.
 - Imports should follow the format designated by the paths in `apps/universal/tsconfig.json` for concision and consistency, i.e., `@components/button`.

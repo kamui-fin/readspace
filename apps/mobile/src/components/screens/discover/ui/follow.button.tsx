@@ -2,6 +2,8 @@ import {
   FolderPickerBottomSheet,
   type FolderPickerBottomSheetRef,
 } from '@components/bottom-sheets/folder-picker';
+import { Plus } from '@components/icons/svg';
+import { Check } from '@components/icons/svg/check';
 import { Spinner } from '@components/ui/spinner';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
@@ -80,6 +82,7 @@ interface FollowButtonProps extends VariantProps<typeof followButtonVariants> {
   onFollowRequest?: (feedUrl: string) => void | Promise<void>; // For onboarding flow
   onUnfollowRequest?: (feedId: string) => void | Promise<void>; // For onboarding flow
   disabled?: boolean;
+  iconOnly?: boolean;
 }
 
 export function FollowButton({
@@ -92,6 +95,7 @@ export function FollowButton({
   onFollowRequest,
   onUnfollowRequest,
   disabled = false,
+  iconOnly = false,
 }: FollowButtonProps) {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
@@ -211,13 +215,21 @@ export function FollowButton({
           opacity: disabled ? 0.4 : 1,
         };
 
-    if (isLoading) {
+    if (iconOnly) {
+      baseStyle.width = 32;
+      baseStyle.height = 32;
+      baseStyle.paddingHorizontal = 0;
+      baseStyle.paddingVertical = 0;
+      baseStyle.flexShrink = 0;
+      baseStyle.justifyContent = 'center';
+      baseStyle.alignItems = 'center';
+    } else if (isLoading) {
       baseStyle.minWidth = variant === 'large' ? 110 : 72;
       baseStyle.justifyContent = 'center';
       baseStyle.alignItems = 'center';
     }
     return baseStyle;
-  }, [isStylingFollowing, colors, disabled, isLoading, variant]);
+  }, [isStylingFollowing, colors, disabled, isLoading, variant, iconOnly]);
 
   const textStyle = useMemo(() => {
     if (isStylingFollowing) {
@@ -233,7 +245,11 @@ export function FollowButton({
   return (
     <>
       <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={displayFollowing ? 'Unfollow feed' : 'Follow feed'}
+        accessibilityState={{ disabled: isLoading || disabled, busy: isLoading }}
         onPress={handlePress}
+        hitSlop={iconOnly ? 6 : undefined}
         disabled={isLoading || disabled}
         className={clsx(
           followButtonVariants({
@@ -258,6 +274,12 @@ export function FollowButton({
               }
             />
           </View>
+        ) : iconOnly ? (
+          displayFollowing ? (
+            <Check width={18} height={18} color={textStyle.color} />
+          ) : (
+            <Plus width={18} height={18} color={textStyle.color} />
+          )
         ) : (
           <Text
             size={variant === 'large' ? 'base' : 'sm'}

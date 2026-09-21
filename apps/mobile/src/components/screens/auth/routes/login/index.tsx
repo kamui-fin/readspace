@@ -1,10 +1,10 @@
 import { SelfHostSettingsBottomSheet } from '@components/bottom-sheets/self-hosted-settings.bottom-sheet';
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Input, InputPressable } from '@components/ui/input';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useSession } from '@contexts/auth-context';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useAuthErrorHandler } from '@hooks/useAuthErrorHandler';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
@@ -30,7 +30,7 @@ import { toFormikValidationSchema } from 'zod-formik-adapter';
 export function LoginScreen() {
   const { signIn } = useSession();
   const insets = useSafeAreaInsets();
-  const selfHostSettingsRef = useRef<BottomSheetModal>(null);
+  const selfHostSettingsRef = useRef<SheetRef>(null);
   const { settings, setSelfHosted, resetToCloud } = useSettingsStore();
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];

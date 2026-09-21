@@ -48,8 +48,8 @@
 <link rel="icon" type="image/svg+xml" href="./readspace.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet"></noscript>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="./assets/styles.css">
 <script>
     !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],Object.defineProperty(u,"toString",{configurable:!0,enumerable:!0,writable:!0,value:function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e}}),Object.defineProperty(u.people,"toString",{configurable:!0,enumerable:!0,writable:!0,value:function(){return u.toString(1)+".people (stub)"}}),o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagResult isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
@@ -74,8 +74,8 @@
 <div style="width:100%;overflow-x:clip">
 
 <!-- Nav -->
-<div data-sticky-nav style="position:sticky;top:0;z-index:50;backdrop-filter:blur(16px);background:rgba(250,250,244,.86);border-bottom:1px solid #E7E8DA;transition:box-shadow .25s ease">
-  <div class="nav-bar" style="max-width:1220px;margin:0 auto;padding:0 22px;height:64px;display:flex;align-items:center;gap:20px;transition:height .25s ease">
+<div data-sticky-nav>
+  <div class="nav-bar">
     <a href="#top" style="display:flex;align-items:center;gap:9px;color:#1B211C;flex:none">
       <img src="./readspace.svg" alt="" width="24" height="24" style="width:24px;height:24px;display:block;border-radius:7px" data-logo>
       <span style="display:none;width:24px;height:24px;border-radius:7px;background:#38663F;align-items:center;justify-content:center;color:#fff;font-family:'EB Garamond',serif;font-size:16px;line-height:1" data-logo-fallback>R</span>
@@ -201,13 +201,51 @@
   <div style="max-width:1180px;margin:0 auto;padding:0 24px">
     <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">The problem</div>
     <div style="margin-top:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:32px 64px;align-items:start">
-      <h2 style="margin:0;max-width:16ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.05;letter-spacing:-.02em;color:#171C18">Following the internet shouldn&rsquo;t be a <span data-fill data-fill-to="#171C18">full-time job.</span></h2>
-      <p style="margin:6px 0 0;max-width:44ch;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">Newsletters pile up. Blogs get forgotten. Articles scatter across tabs, bookmarks, and inboxes. There&rsquo;s always something else waiting.</p>
+      <h2 style="margin:0;max-width:16ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.05;letter-spacing:-.02em;color:#171C18">Following the internet shouldn&rsquo;t be a <span data-fill data-fill-to="#171C18" class="squiggle">full-time job.</span></h2>
+      <div>
+        <p style="margin:6px 0 0;max-width:44ch;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">Newsletters pile up. Interesting articles disappear into bookmarks and open tabs. And there&rsquo;s always another one waiting.</p>
+        <p style="margin:16px 0 0;max-width:44ch;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">Readspace brings it all together, so you can catch up without keeping up with everything.</p>
+      </div>
     </div>
-    <div style="margin:96px 0 0;border-top:1px solid #E7E8DA"></div>
-    <div style="margin-top:56px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:24px 64px;align-items:start">
-      <h3 style="margin:0;max-width:18ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(24px,2.8vw,36px);line-height:1.15;letter-spacing:-.015em;color:#171C18">Keeping up shouldn&rsquo;t mean reading everything.</h3>
-      <p style="margin:8px 0 0;max-width:40ch;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">You just need to know what mattered, what&rsquo;s worth your time, and what can wait.</p>
+
+    <div data-reveal class="shift-grid">
+      <div>
+        <div class="shift-panel">
+          <div class="shift-pile">
+            <span class="shift-tile" style="--r:-5deg;--dx:-8px;--dy:-8px"><img src="./assets/img/apps/gmail.webp" alt="Gmail" width="128" height="128" loading="lazy" decoding="async"><i>47</i></span>
+            <span class="shift-tile" style="--r:4deg;--dx:5px;--dy:-14px"><img src="./assets/img/apps/youtube.webp" alt="YouTube" width="128" height="128" loading="lazy" decoding="async"><i>23</i></span>
+            <span class="shift-tile" style="--r:-3deg;--dx:9px;--dy:-4px"><img src="./assets/img/apps/instagram.webp" alt="Instagram" width="128" height="128" loading="lazy" decoding="async"><i>12</i></span>
+            <span class="shift-tile" style="--r:5deg;--dx:-9px;--dy:-11px"><img src="./assets/img/apps/tiktok.webp" alt="TikTok" width="128" height="128" loading="lazy" decoding="async"><i>99+</i></span>
+            <span class="shift-tile" style="--r:-4deg;--dx:7px;--dy:-13px"><img src="./assets/img/apps/threads.webp" alt="Threads" width="128" height="128" loading="lazy" decoding="async"><i>8</i></span>
+            <span class="shift-tile" style="--r:3deg;--dx:-10px;--dy:5px"><img src="./assets/img/apps/x.webp" alt="X" width="128" height="128" loading="lazy" decoding="async"><i>99+</i></span>
+            <span class="shift-tile" style="--r:-5deg;--dx:6px;--dy:11px"><img src="./assets/img/apps/bluesky.webp" alt="Bluesky" width="128" height="128" loading="lazy" decoding="async"><i>14</i></span>
+            <span class="shift-tile" style="--r:4deg;--dx:-7px;--dy:2px"><img src="./assets/img/apps/reddit.webp" alt="Reddit" width="128" height="128" loading="lazy" decoding="async"><i>99+</i></span>
+            <span class="shift-tile" style="--r:-2deg;--dx:10px;--dy:9px"><img src="./assets/img/apps/linkedin.webp" alt="LinkedIn" width="128" height="128" loading="lazy" decoding="async"><i>31</i></span>
+            <span class="shift-tile" style="--r:5deg;--dx:-6px;--dy:3px"><img src="./assets/img/apps/substack.webp" alt="Substack" width="128" height="128" loading="lazy" decoding="async"><i>18</i></span>
+            <span class="shift-tile" style="--r:-4deg;--dx:8px;--dy:-6px"><img src="./assets/img/apps/nytimes.webp" alt="The New York Times" width="128" height="128" loading="lazy" decoding="async"><i>64</i></span>
+            <span class="shift-tile" style="--r:3deg;--dx:-9px;--dy:10px"><img src="./assets/img/apps/googlenews.webp" alt="Google News" width="128" height="128" loading="lazy" decoding="async"><i>128</i></span>
+            <span class="shift-tile" style="--r:-5deg;--dx:5px;--dy:4px"><img src="./assets/img/apps/medium.webp" alt="Medium" width="128" height="128" loading="lazy" decoding="async"><i>5</i></span>
+            <span class="shift-tile" style="--r:4deg;--dx:-7px;--dy:12px"><img src="./assets/img/favicons/hackernews.svg" alt="Hacker News" width="128" height="128" loading="lazy" decoding="async"><i>41</i></span>
+            <span class="shift-tile" style="--r:-2deg;--dx:10px;--dy:2px"><img src="./assets/img/apps/chrome.webp" alt="Chrome tabs" width="128" height="128" loading="lazy" decoding="async"><i>9</i></span>
+          </div>
+        </div>
+        <div class="shift-tag">Before</div>
+        <p class="shift-caption">Check, switch, save for later, repeat.</p>
+      </div>
+
+      <div class="shift-arrow" aria-hidden="true">
+        <svg viewBox="0 0 307 92" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.35508 79.7965C12.6684 71.3239 20.0654 63.7148 28.3571 57.1634C33.5731 52.8736 39.551 48.3481 46.0645 43.7274C53.0101 38.7425 60.2933 34.2453 67.8618 30.2682C71.9443 28.1418 76.1623 26.286 80.4884 24.7128C84.96 23.026 89.5744 21.7446 94.2756 20.8843C99.0826 19.9474 103.984 19.5828 108.876 19.7982C113.822 19.9453 118.724 20.7639 123.449 22.2315L124.224 22.4955C124.064 22.7248 123.85 22.9384 123.666 23.1719C116.739 32.033 112.878 42.9021 112.663 54.1442C112.616 59.8471 113.731 65.4998 115.94 70.7579C118.25 76.2672 121.934 81.0925 126.641 84.7731C129.064 86.7889 131.793 88.4059 134.725 89.5633C138.001 90.8844 141.536 91.4416 145.061 91.1924C148.476 90.8645 151.785 89.8196 154.769 88.1261C157.753 86.4327 160.346 84.1287 162.379 81.365C166.059 76.3563 167.866 70.2175 167.487 64.0158C167.172 58.3346 165.741 52.7712 163.274 47.6437C160.892 42.5807 157.742 37.9156 153.936 33.8131C149.175 28.7038 143.577 24.443 137.383 21.2135C138.595 20.2005 139.873 19.2692 141.208 18.4257C149.051 13.3922 157.914 10.1637 167.158 8.97364C175.769 7.80553 184.508 7.94672 193.077 9.39241C200.566 10.6162 207.878 12.7491 214.85 15.7435C220.716 18.4246 226.329 21.6289 231.619 25.3176C239.956 31.0027 247.643 37.5843 254.544 44.9444C259.212 49.8443 263.502 55.0911 267.377 60.6395C270.457 65.1133 272.533 68.4599 274.081 71.0969C275.463 73.3619 276.312 74.893 277.02 76.0476L275.185 75.1935C269.956 72.7582 265.185 70.6431 261.118 68.9554C252.988 65.6041 247.647 63.8162 247.185 64.7516C246.723 65.6871 251.041 68.7864 258.512 73.2336C262.251 75.4816 266.746 78.0223 271.804 80.7642L273.722 81.8043C274.542 82.2609 275.4 82.646 276.287 82.9555C276.859 83.1447 277.447 83.2839 278.044 83.3715C278.802 83.4845 279.572 83.4913 280.333 83.3919C281.899 83.187 283.358 82.4882 284.5 81.3969C285.865 79.9173 286.939 78.1936 287.666 76.3162L289.708 72.113C300.601 48.5905 307.986 28.9293 306.104 28.2342C304.223 27.539 293.842 46.0253 282.924 69.552L281.517 72.6635C281.09 71.2751 280.572 69.9163 279.966 68.5961C278.241 64.6229 276.217 60.7865 273.91 57.1199C270.176 51.0455 265.89 45.3277 261.107 40.0388C254.015 32.0627 246.008 24.9492 237.252 18.8452C231.505 14.8052 225.394 11.3101 218.997 8.40516C211.312 5.05213 203.237 2.67405 194.96 1.3264C185.411 -0.288332 175.67 -0.429878 166.077 0.906691C155.389 2.31961 145.154 6.10982 136.124 11.9984C133.515 13.6843 131.083 15.6299 128.866 17.8054C127.822 17.4386 126.777 17.0718 125.721 16.7824C120.402 15.2137 114.896 14.3675 109.351 14.2667C103.975 14.1475 98.6028 14.6548 93.3439 15.7782C88.3162 16.803 83.3919 18.2822 78.6319 20.1976C74.1482 21.9275 69.7838 23.9518 65.5674 26.2575C57.9015 30.484 50.5578 35.2698 43.5961 40.576C37.08 45.4648 31.2221 50.195 26.0226 54.7664C17.8202 61.7365 10.6924 69.879 4.87018 78.9305C3.36002 81.3523 2.03823 83.8864 0.916473 86.5106C0.207663 88.3183 -0.112385 89.2035 0.0352824 89.3279C0.18295 89.4523 2.11623 85.7704 6.40379 79.7878L6.35508 79.7965ZM130.847 27.9718C131.357 27.304 131.923 26.6762 132.49 26.0484C138.517 29.1083 143.928 33.2537 148.45 38.2765C151.743 41.9524 154.455 46.11 156.491 50.6052C158.53 54.9978 159.681 59.7499 159.878 64.5886C160.09 69.1857 158.691 73.713 155.922 77.3905C154.583 79.2126 152.876 80.7326 150.911 81.8514C148.946 82.9702 146.767 83.6627 144.516 83.8837C139.94 83.8822 135.527 82.1778 132.139 79.1026C128.444 76.1367 125.57 72.2739 123.793 67.8825C122.062 63.5103 121.232 58.8337 121.352 54.1329C121.444 49.4119 122.311 44.7379 123.918 40.2974C125.501 35.8337 127.827 31.6694 130.799 27.9804" fill="#5E7059"/></svg>
+      </div>
+
+      <div>
+        <div class="shift-panel shift-panel-after">
+          <div class="shift-one">
+            <img src="./readspace.svg" alt="" width="72" height="72" class="shift-one-mark" loading="lazy" decoding="async">
+          </div>
+        </div>
+        <div class="shift-tag shift-tag-after">After</div>
+        <p class="shift-caption shift-caption-after">Everything you follow, in one place. Catch up in five minutes.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -216,8 +254,8 @@
 <section id="digest" style="margin-top:120px;padding-bottom:64px">
   <div style="max-width:1180px;margin:0 auto;padding:0 24px;text-align:center">
     <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Daily Digest</div>
-    <h2 style="margin:16px auto 0;max-width:22ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.4vw,56px);line-height:1.02;letter-spacing:-.02em;color:#171C18">Everything that mattered. <span data-fill data-fill-to="#38663F" style="font-style:italic;color:#38663F">Five minutes.</span></h2>
-    <p style="margin:22px auto 0;max-width:60ch;font-size:17.5px;line-height:1.6;color:#4D554E;text-wrap:pretty">What mattered across your sources, plus what's worth reading next. Catch up over coffee, then move on.</p>
+    <h2 style="margin:16px auto 0;max-width:22ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.4vw,56px);line-height:1.02;letter-spacing:-.02em;color:#171C18">What mattered across your sources. <span data-fill data-fill-to="#38663F" style="font-style:italic;color:#38663F">Five minutes.</span></h2>
+    <p style="margin:22px auto 0;max-width:54ch;font-size:17.5px;line-height:1.62;color:#4D554E;text-wrap:pretty">Hundreds of articles become a handful of stories &mdash; every source&rsquo;s take on the same news, folded into one. Read it over coffee, go deeper when you want.</p>
   </div>
 
   <div data-reveal style="max-width:900px;margin:52px auto 0;padding:0 24px">
@@ -226,7 +264,7 @@
         <img src="./assets/img/daily_digest_part_two.webp" alt="Five separate articles from different sources, all covering the same Blizzard news" width="438" height="904" loading="lazy" decoding="async" style="width:100%;height:auto;display:block">
       </div>
       <div class="digest-transform-arrow" aria-hidden="true">
-        <svg viewBox="0 0 307 92" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.35508 79.7965C12.6684 71.3239 20.0654 63.7148 28.3571 57.1634C33.5731 52.8736 39.551 48.3481 46.0645 43.7274C53.0101 38.7425 60.2933 34.2453 67.8618 30.2682C71.9443 28.1418 76.1623 26.286 80.4884 24.7128C84.96 23.026 89.5744 21.7446 94.2756 20.8843C99.0826 19.9474 103.984 19.5828 108.876 19.7982C113.822 19.9453 118.724 20.7639 123.449 22.2315L124.224 22.4955C124.064 22.7248 123.85 22.9384 123.666 23.1719C116.739 32.033 112.878 42.9021 112.663 54.1442C112.616 59.8471 113.731 65.4998 115.94 70.7579C118.25 76.2672 121.934 81.0925 126.641 84.7731C129.064 86.7889 131.793 88.4059 134.725 89.5633C138.001 90.8844 141.536 91.4416 145.061 91.1924C148.476 90.8645 151.785 89.8196 154.769 88.1261C157.753 86.4327 160.346 84.1287 162.379 81.365C166.059 76.3563 167.866 70.2175 167.487 64.0158C167.172 58.3346 165.741 52.7712 163.274 47.6437C160.892 42.5807 157.742 37.9156 153.936 33.8131C149.175 28.7038 143.577 24.443 137.383 21.2135C138.595 20.2005 139.873 19.2692 141.208 18.4257C149.051 13.3922 157.914 10.1637 167.158 8.97364C175.769 7.80553 184.508 7.94672 193.077 9.39241C200.566 10.6162 207.878 12.7491 214.85 15.7435C220.716 18.4246 226.329 21.6289 231.619 25.3176C239.956 31.0027 247.643 37.5843 254.544 44.9444C259.212 49.8443 263.502 55.0911 267.377 60.6395C270.457 65.1133 272.533 68.4599 274.081 71.0969C275.463 73.3619 276.312 74.893 277.02 76.0476L275.185 75.1935C269.956 72.7582 265.185 70.6431 261.118 68.9554C252.988 65.6041 247.647 63.8162 247.185 64.7516C246.723 65.6871 251.041 68.7864 258.512 73.2336C262.251 75.4816 266.746 78.0223 271.804 80.7642L273.722 81.8043C274.542 82.2609 275.4 82.646 276.287 82.9555C276.859 83.1447 277.447 83.2839 278.044 83.3715C278.802 83.4845 279.572 83.4913 280.333 83.3919C281.899 83.187 283.358 82.4882 284.5 81.3969C285.865 79.9173 286.939 78.1936 287.666 76.3162L289.708 72.113C300.601 48.5905 307.986 28.9293 306.104 28.2342C304.223 27.539 293.842 46.0253 282.924 69.552L281.517 72.6635C281.09 71.2751 280.572 69.9163 279.966 68.5961C278.241 64.6229 276.217 60.7865 273.91 57.1199C270.176 51.0455 265.89 45.3277 261.107 40.0388C254.015 32.0627 246.008 24.9492 237.252 18.8452C231.505 14.8052 225.394 11.3101 218.997 8.40516C211.312 5.05213 203.237 2.67405 194.96 1.3264C185.411 -0.288332 175.67 -0.429878 166.077 0.906691C155.389 2.31961 145.154 6.10982 136.124 11.9984C133.515 13.6843 131.083 15.6299 128.866 17.8054C127.822 17.4386 126.777 17.0718 125.721 16.7824C120.402 15.2137 114.896 14.3675 109.351 14.2667C103.975 14.1475 98.6028 14.6548 93.3439 15.7782C88.3162 16.803 83.3919 18.2822 78.6319 20.1976C74.1482 21.9275 69.7838 23.9518 65.5674 26.2575C57.9015 30.484 50.5578 35.2698 43.5961 40.576C37.08 45.4648 31.2221 50.195 26.0226 54.7664C17.8202 61.7365 10.6924 69.879 4.87018 78.9305C3.36002 81.3523 2.03823 83.8864 0.916473 86.5106C0.207663 88.3183 -0.112385 89.2035 0.0352824 89.3279C0.18295 89.4523 2.11623 85.7704 6.40379 79.7878L6.35508 79.7965Z" fill="#171C18"></path></svg>
+        <svg viewBox="0 0 307 92" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.35508 79.7965C12.6684 71.3239 20.0654 63.7148 28.3571 57.1634C33.5731 52.8736 39.551 48.3481 46.0645 43.7274C53.0101 38.7425 60.2933 34.2453 67.8618 30.2682C71.9443 28.1418 76.1623 26.286 80.4884 24.7128C84.96 23.026 89.5744 21.7446 94.2756 20.8843C99.0826 19.9474 103.984 19.5828 108.876 19.7982C113.822 19.9453 118.724 20.7639 123.449 22.2315L124.224 22.4955C124.064 22.7248 123.85 22.9384 123.666 23.1719C116.739 32.033 112.878 42.9021 112.663 54.1442C112.616 59.8471 113.731 65.4998 115.94 70.7579C118.25 76.2672 121.934 81.0925 126.641 84.7731C129.064 86.7889 131.793 88.4059 134.725 89.5633C138.001 90.8844 141.536 91.4416 145.061 91.1924C148.476 90.8645 151.785 89.8196 154.769 88.1261C157.753 86.4327 160.346 84.1287 162.379 81.365C166.059 76.3563 167.866 70.2175 167.487 64.0158C167.172 58.3346 165.741 52.7712 163.274 47.6437C160.892 42.5807 157.742 37.9156 153.936 33.8131C149.175 28.7038 143.577 24.443 137.383 21.2135C138.595 20.2005 139.873 19.2692 141.208 18.4257C149.051 13.3922 157.914 10.1637 167.158 8.97364C175.769 7.80553 184.508 7.94672 193.077 9.39241C200.566 10.6162 207.878 12.7491 214.85 15.7435C220.716 18.4246 226.329 21.6289 231.619 25.3176C239.956 31.0027 247.643 37.5843 254.544 44.9444C259.212 49.8443 263.502 55.0911 267.377 60.6395C270.457 65.1133 272.533 68.4599 274.081 71.0969C275.463 73.3619 276.312 74.893 277.02 76.0476L275.185 75.1935C269.956 72.7582 265.185 70.6431 261.118 68.9554C252.988 65.6041 247.647 63.8162 247.185 64.7516C246.723 65.6871 251.041 68.7864 258.512 73.2336C262.251 75.4816 266.746 78.0223 271.804 80.7642L273.722 81.8043C274.542 82.2609 275.4 82.646 276.287 82.9555C276.859 83.1447 277.447 83.2839 278.044 83.3715C278.802 83.4845 279.572 83.4913 280.333 83.3919C281.899 83.187 283.358 82.4882 284.5 81.3969C285.865 79.9173 286.939 78.1936 287.666 76.3162L289.708 72.113C300.601 48.5905 307.986 28.9293 306.104 28.2342C304.223 27.539 293.842 46.0253 282.924 69.552L281.517 72.6635C281.09 71.2751 280.572 69.9163 279.966 68.5961C278.241 64.6229 276.217 60.7865 273.91 57.1199C270.176 51.0455 265.89 45.3277 261.107 40.0388C254.015 32.0627 246.008 24.9492 237.252 18.8452C231.505 14.8052 225.394 11.3101 218.997 8.40516C211.312 5.05213 203.237 2.67405 194.96 1.3264C185.411 -0.288332 175.67 -0.429878 166.077 0.906691C155.389 2.31961 145.154 6.10982 136.124 11.9984C133.515 13.6843 131.083 15.6299 128.866 17.8054C127.822 17.4386 126.777 17.0718 125.721 16.7824C120.402 15.2137 114.896 14.3675 109.351 14.2667C103.975 14.1475 98.6028 14.6548 93.3439 15.7782C88.3162 16.803 83.3919 18.2822 78.6319 20.1976C74.1482 21.9275 69.7838 23.9518 65.5674 26.2575C57.9015 30.484 50.5578 35.2698 43.5961 40.576C37.08 45.4648 31.2221 50.195 26.0226 54.7664C17.8202 61.7365 10.6924 69.879 4.87018 78.9305C3.36002 81.3523 2.03823 83.8864 0.916473 86.5106C0.207663 88.3183 -0.112385 89.2035 0.0352824 89.3279C0.18295 89.4523 2.11623 85.7704 6.40379 79.7878L6.35508 79.7965ZM130.847 27.9718C131.357 27.304 131.923 26.6762 132.49 26.0484C138.517 29.1083 143.928 33.2537 148.45 38.2765C151.743 41.9524 154.455 46.11 156.491 50.6052C158.53 54.9978 159.681 59.7499 159.878 64.5886C160.09 69.1857 158.691 73.713 155.922 77.3905C154.583 79.2126 152.876 80.7326 150.911 81.8514C148.946 82.9702 146.767 83.6627 144.516 83.8837C139.94 83.8822 135.527 82.1778 132.139 79.1026C128.444 76.1367 125.57 72.2739 123.793 67.8825C122.062 63.5103 121.232 58.8337 121.352 54.1329C121.444 49.4119 122.311 44.7379 123.918 40.2974C125.501 35.8337 127.827 31.6694 130.799 27.9804" fill="#5E7059"></path></svg>
       </div>
       <div class="digest-transform-phone">
         <img src="./assets/img/daily_digest_part_one.webp" alt="The same story condensed into a single card in your Daily Digest, linking back to every source" width="438" height="904" loading="lazy" decoding="async" style="width:100%;height:auto;display:block">
@@ -241,7 +279,7 @@
     <div style="position:absolute;inset:0;opacity:.07;background-image:linear-gradient(#9EC28C 1px,transparent 1px),linear-gradient(90deg,#9EC28C 1px,transparent 1px);background-size:96px 96px"></div>
     <div style="position:relative;max-width:1180px;margin:0 auto;padding:0 24px;text-align:center">
       <h2 style="margin:0 auto;max-width:20ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(36px,5vw,66px);line-height:1.02;letter-spacing:-.022em;color:#F6FBF3">Nothing enters your feed unless <span data-fill data-fill-to="#B6D6A2" data-fill-from="#3E5742" style="font-style:italic;color:#B6D6A2">you follow it.</span></h2>
-      <p style="margin:18px auto 0;max-width:62ch;font-size:17.5px;line-height:1.62;color:#BFCFB7">You choose what you follow. Readspace brings it together in one chronological feed — no recommendations, no engagement ranking, nothing quietly added.</p>
+      <p style="margin:18px auto 0;max-width:62ch;font-size:17.5px;line-height:1.62;color:#BFCFB7">Your favorite publications, independent blogs, and newsletters, together in one chronological feed. No engagement ranking. No suggested posts mixed in. Just the latest from the sources you chose.</p>
     </div>
   </div>
 </section>
@@ -250,8 +288,8 @@
 <section id="discovery" style="margin-top:120px">
   <div style="max-width:1180px;margin:0 auto;padding:0 24px;text-align:center">
     <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Discovery</div>
-    <h2 style="margin:16px auto 0;max-width:24ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.03;letter-spacing:-.02em;color:#171C18">Find the sources you already care about.</h2>
-    <p style="margin:20px auto 0;max-width:52ch;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">Search more than 120,000 publications, blogs, and writers, paste a website, or import your subscriptions from another reader. Follow what you want; ignore the rest.</p>
+    <h2 style="margin:16px auto 0;max-width:22ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.4vw,56px);line-height:1.02;letter-spacing:-.02em;color:#171C18">All your favorite sources. <span data-fill data-fill-to="#38663F" style="font-style:italic;color:#38663F">And thousands more.</span></h2>
+    <p style="margin:22px auto 0;max-width:60ch;font-size:17.5px;line-height:1.62;color:#4D554E;text-wrap:pretty">From the biggest news outlets to your favorite magazines, newsletters, and independent blogs. Explore over 120,000 sources and follow everything you care about in one place.</p>
   </div>
   <div class="orbit-wrap">
     <div class="orbit-stage">
@@ -280,60 +318,89 @@
     </div>
     <img src="./readspace.svg" alt="Readspace" width="104" height="104" loading="lazy" decoding="async" class="orbit-mark" data-logo>
     <div class="orbit-mark orbit-mark-fallback" data-logo-fallback>R</div>
-    <div class="orbit-caption"><span data-count-to="120000" data-count-suffix="+">0</span> feeds indexed</div>
   </div>
 
-  <div style="max-width:1020px;margin:36px auto 0;padding:0 24px">
-    <div class="spotlight-grid">
-      <div class="spotlight-card category-card">
-        <div style="font-size:17px;font-weight:600;letter-spacing:-.015em;color:#1F2620">Browse by category</div>
-        <div style="margin-top:8px;font-size:15px;line-height:1.55;color:#5E665F;max-width:52ch">Not sure where to start? Every feed is shelved into twenty categories, so you can pick a subject and follow the best sources in it.</div>
-        <div class="category-grid">
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8"></path><path d="M15 18h-5"></path><path d="M10 6h8v4h-8V6Z"></path></svg>News</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"></path><path d="m6 8-4 4 4 4"></path><path d="m14.5 4-5 16"></path></svg>Software</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"></path><path d="m6 8-4 4 4 4"></path><path d="m14.5 4-5 16"></path></svg>Tech</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>Business</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"></path><path d="M3 22h18"></path><path d="M14 22a7 7 0 1 0 0-14h-1"></path><path d="M9 14h2"></path><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"></path><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"></path></svg>Science</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>Sports</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="10" y1="11" y2="11"></line><line x1="8" x2="8" y1="9" y2="13"></line><line x1="15" x2="15.01" y1="12" y2="12"></line><line x1="18" x2="18.01" y1="10" y2="10"></line><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"></path></svg>Gaming</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="10" y1="11" y2="11"></line><line x1="8" x2="8" y1="9" y2="13"></line><line x1="15" x2="15.01" y1="12" y2="12"></line><line x1="18" x2="18.01" y1="10" y2="10"></line><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"></path></svg>Entertainment</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg>Society</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.622 17.897-10.68-2.913"></path><path d="M18.376 2.622a1 1 0 1 1 3.002 3.002L17.36 9.643a.5.5 0 0 0 0 .707l.944.944a2.41 2.41 0 0 1 0 3.408l-.944.944a.5.5 0 0 1-.707 0L8.354 7.348a.5.5 0 0 1 0-.707l.944-.944a2.41 2.41 0 0 1 3.408 0l.944.944a.5.5 0 0 0 .707 0z"></path><path d="M9 8c-1.804 2.71-3.97 3.46-6.583 3.948a.507.507 0 0 0-.302.819l7.32 8.883a1 1 0 0 0 1.185.204C12.735 20.405 16 16.792 16 15"></path></svg>Culture</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path></svg>Travel</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"></path><path d="M14 2v2"></path><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"></path><path d="M6 2v2"></path></svg>Food</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>Health</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg>Style</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Hobbies</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Family</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Identity</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>Industry</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path><circle cx="7" cy="17" r="2"></circle><path d="M9 17h6"></path><circle cx="17" cy="17" r="2"></circle></svg>Automotive</span>
-          <span class="category-chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6A994E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>Regional</span>
+  <div data-reveal class="discover-shot">
+    <div class="discover-shot-lead">
+      <div class="discover-shot-eyebrow">Smart search</div>
+      <h3>Find your next favorite corner of the internet.</h3>
+      <p>Discover writers, blogs, and publications you didn&rsquo;t know existed. Search by name, topic, or simply describe what you&rsquo;re looking for, then follow in a click.</p>
+    </div>
+    <div class="discover-frame">
+      <div data-tilt class="discover-window">
+        <div class="discover-window-bar">
+          <span class="discover-window-dot"></span>
+          <span class="discover-window-dot"></span>
+          <span class="discover-window-dot"></span>
+          <span class="discover-window-url">app.readspace.ai/discover</span>
         </div>
+        <img src="./assets/img/smart_discover.webp" alt="Readspace Discover with Smart search turned on: the query &ldquo;writers who think deeply about technology &amp; society&rdquo; returns 119 newsletters, each with a description and a Follow button" width="986" height="876" loading="lazy" decoding="async">
       </div>
-      <div class="spotlight-card bento-card">
-        <div class="bento-title">Follow it from the page you're on</div>
-        <div class="bento-sub">Found a writer worth hearing from again? The browser extension finds the feed for you — no hunting for an RSS link.</div>
-        <div class="bento-visual">
-          <img src="./assets/img/extension-badge.webp" alt="The Readspace browser extension's Subscribe to Feed dialog, detected automatically from the current page" width="446" height="546" loading="lazy" decoding="async">
-        </div>
-      </div>
-      <div class="spotlight-card bento-card">
-        <div class="bento-title">Already use RSS?</div>
-        <div class="bento-sub">Drop in an OPML file and every subscription comes across, folders and all — and you can export yours the same way, any time.</div>
-        <div class="opml-drop">
-          <span class="opml-drop-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V3M6.5 6.5 10 3l3.5 3.5M3.5 13v2.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V13"></path></svg>
-          </span>
-          <div class="opml-drop-title">Drop your OPML file here</div>
-          <div class="opml-drop-hint">.opml or .xml, straight out of Feedly, Inoreader, or NetNewsWire</div>
-          <div class="opml-file">
-            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="#9AA497" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5H6a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 6 17.5h8a1.5 1.5 0 0 0 1.5-1.5V6.5z"></path><path d="M11.5 2.5v4h4"></path></svg>
-            <span class="opml-file-name">feedly-export.opml</span>
-            <span class="opml-file-count">214 feeds</span>
+    </div>
+  </div>
+
+  <div class="ways-wrap">
+    <div class="ways-label">Other ways in</div>
+    <div class="ways-grid">
+
+      <div class="spotlight-card way-card">
+        <div class="way-title">Browse by category</div>
+        <p class="way-sub">Not sure what you&rsquo;re looking for? Explore 20 categories &mdash; open one and see the best sources in it.</p>
+        <div class="way-well">
+          <div class="cat-cloud">
+            <span class="cat-pill">News</span>
+            <span class="cat-pill">Software</span>
+            <span class="cat-pill">Tech</span>
+            <span class="cat-pill">Business</span>
+            <span class="cat-pill">Science</span>
+            <span class="cat-pill">Sports</span>
+            <span class="cat-pill">Gaming</span>
+            <span class="cat-pill">Entertainment</span>
+            <span class="cat-pill">Society</span>
+            <span class="cat-pill">Culture</span>
+            <span class="cat-pill">Travel</span>
+            <span class="cat-pill">Food</span>
+            <span class="cat-pill">Health</span>
+            <span class="cat-pill">Style</span>
+            <span class="cat-pill">Hobbies</span>
+            <span class="cat-pill">Family</span>
+            <span class="cat-pill">Identity</span>
+            <span class="cat-pill">Industry</span>
+            <span class="cat-pill">Automotive</span>
+            <span class="cat-pill">Regional</span>
           </div>
         </div>
       </div>
+
+      <div class="spotlight-card way-card">
+        <div class="way-title">Follow from the page you&rsquo;re on</div>
+        <p class="way-sub">Found a writer worth hearing from again? The browser extension finds the feed for you &mdash; no hunting for an RSS link.</p>
+        <div class="way-well way-well-shot">
+          <div class="way-shot">
+            <img src="./assets/img/extension-popup.webp" alt="The Readspace browser extension&rsquo;s Subscribe to Feed popup open in Chrome, with the feed detected automatically from the current page" width="446" height="524" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+
+      <div class="spotlight-card way-card">
+        <div class="way-title">Already use RSS?</div>
+        <p class="way-sub">Drop in an OPML file and every subscription comes across, folders and all &mdash; and you can export yours the same way, any time.</p>
+        <div class="way-well">
+          <div class="opml-mini">
+            <div class="opml-file">
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="#9AA497" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5H6a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 6 17.5h8a1.5 1.5 0 0 0 1.5-1.5V6.5z"></path><path d="M11.5 2.5v4h4"></path></svg>
+              <span class="opml-file-name">feedly-export.opml</span>
+              <span class="opml-file-count">214 feeds</span>
+            </div>
+            <span class="opml-drop-icon">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V3M6.5 6.5 10 3l3.5 3.5M3.5 13v2.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V13"></path></svg>
+            </span>
+            <div class="opml-drop-title">Drop your OPML file here</div>
+            <div class="opml-drop-hint">.opml or .xml, straight out of Feedly, Inoreader, or NetNewsWire</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -344,11 +411,10 @@
     <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-end;justify-content:space-between">
       <div style="flex:1;min-width:min(100%,420px)">
         <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Read later</div>
-        <h2 style="margin:16px 0 0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.02;letter-spacing:-.02em;color:#171C18;max-width:20ch">Save anything. Read it when you actually have time.</h2>
+        <h2 style="margin:16px 0 0;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.02;letter-spacing:-.02em;color:#171C18;max-width:20ch">Save articles from anywhere. Read them when you actually have time.</h2>
       </div>
       <div style="flex:1;min-width:min(100%,340px);max-width:500px">
-        <p style="margin:0;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">A long essay, a newsletter, something you stumbled on halfway through the day. Save it to readspace instead of another bookmark folder.</p>
-        <p style="margin:16px 0 0;font-size:15px;font-weight:500;color:#5E665F">Save from anywhere. Read anywhere.</p>
+        <p style="margin:0;font-size:17px;line-height:1.6;color:#4D554E;text-wrap:pretty">A long essay, a newsletter, something you stumbled on halfway through the day. Save it to Readspace instead of another bookmark folder.</p>
       </div>
     </div>
 
@@ -405,7 +471,7 @@
         </div>
       </div>
       <div style="display:flex;flex-direction:column">
-        <div style="font-size:19px;font-weight:600;letter-spacing:-.015em;color:#1F2620">Find what matters</div>
+        <div style="font-size:19px;font-weight:600;letter-spacing:-.015em;color:#1F2620">Highlight the important parts</div>
         <div style="margin-top:9px;font-size:15px;line-height:1.55;color:#818A80;max-width:34ch;text-wrap:pretty">Surface the key parts without digging through the entire piece.</div>
         <div class="gist-card" style="margin-top:22px;border-radius:22px;background:#E7EBDA;padding:26px 24px;flex:1;display:flex;align-items:center">
           <div style="width:100%;border-radius:9px;background:#fff;padding:17px;box-shadow:0 18px 30px -22px rgba(24,48,30,.5)">
@@ -540,7 +606,7 @@
   <div style="max-width:1180px;margin:0 auto;padding:0 24px;text-align:center">
     <div style="font-family:'Geist Mono',ui-monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#5E7059">Pricing</div>
     <h2 style="margin:16px auto 0;max-width:26ch;font-family:'EB Garamond',ui-serif,Georgia,serif;font-weight:500;font-size:clamp(34px,4.2vw,54px);line-height:1.03;letter-spacing:-.02em;color:#171C18">Start free. Pay when Readspace saves you more time.</h2>
-    <p style="margin:18px auto 0;font-size:17px;color:#4D554E">Three ways to run readspace — pick the one that matches how you read.</p>
+    <p style="margin:18px auto 0;font-size:17px;color:#4D554E">Three ways to run Readspace — pick the one that matches how you read.</p>
     <div class="cycle-toggle-group" style="margin:28px 0 0">
       <button type="button" id="cycle-monthly" class="cycle-toggle active">Monthly</button>
       <button type="button" id="cycle-annual" class="cycle-toggle">Yearly<span class="save-badge">Save 17%</span></button>
@@ -556,10 +622,10 @@
       <div style="display:flex;flex-direction:column;gap:10px;flex:1">
         <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">10 feeds</span></div>
         <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Save up to 50 articles at a time</span></div>
-        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">5 AI interactions per day</span></div>
-        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">5 article extractions / scrapes per day</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">5 summaries, translations, or highlights a day</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">5 clean article views a day</span></div>
         <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">3 Daily Digests a month</span></div>
-        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Search across 120k+ sources</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Search the full source catalog</span></div>
         <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Web, iOS, Android &amp; browser extensions</span></div>
       </div>
       <div style="font-size:12.5px;line-height:1.5;color:#9AA497"></div>
@@ -573,9 +639,9 @@
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;flex:1">
         <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Generous feed limit, built for power users</span></div>
-        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Generous summaries, translations &amp; highlights</span></div>
-        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Generous clean article views</span></div>
-        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Newsletters inside readspace</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Summaries, translations &amp; highlights, without the daily cap</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Clean article views, without the daily cap</span></div>
+        <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Newsletters inside Readspace</span></div>
         <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Daily Digests every day</span></div>
         <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Everything in Basic</span></div>
       </div>
@@ -594,7 +660,7 @@
         <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Extension and mobile apps supported</span></div>
         <div class="plan-feature-row"><span style="color:#6E9C4E;font-size:12px;line-height:1.5;flex:none">✓</span><span class="plan-feature-text" style="font-size:14.5px;line-height:1.5;color:#545C55">Fully open source</span></div>
       </div>
-      <div style="font-size:12.5px;line-height:1.5;color:#5E665F">Source database will be empty</div>
+      <div style="font-size:12.5px;line-height:1.5;color:#5E665F">No hosted catalog &mdash; import your own via OPML. AI billed by your provider.</div>
     </div>
   </div>
   </div>

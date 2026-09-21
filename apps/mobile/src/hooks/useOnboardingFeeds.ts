@@ -31,7 +31,7 @@ export function useOnboardingFeeds(selectedCategories: string[] = []) {
         return [];
       }
 
-      const queries = buildOnboardingFeedQueries(FEEDS_INDEX_NAME, selectedCategories, 20);
+      const queries = buildOnboardingFeedQueries(FEEDS_INDEX_NAME, selectedCategories, 50);
 
       const multiSearchResults = await meilisearchClient.multiSearch({
         queries,

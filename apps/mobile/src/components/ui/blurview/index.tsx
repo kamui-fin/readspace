@@ -17,21 +17,17 @@ export type BlurViewProps = Omit<RNBlurViewProps, 'style'> & {
 export const BlurView = ({
   children,
   style,
-  experimentalBlurMethod = 'dimezisBlurView',
+  blurMethod = 'dimezisBlurView',
   intensity = 100,
   ...rest
 }: BlurViewProps) => {
-  // Use provided style or fallback to absoluteFillObject
-  const combinedStyle = style ?? StyleSheet.absoluteFillObject;
+  // Use provided style or fill the parent.
+  const combinedStyle = style ?? StyleSheet.absoluteFill;
 
   // Render with JSX but ensure no className is passed to avoid NativeWind processing
   // The key is that we never pass className, so NativeWind shouldn't try to process it
   return (
-    <RNBlurView
-      experimentalBlurMethod={experimentalBlurMethod}
-      style={combinedStyle}
-      intensity={intensity}
-      {...rest}>
+    <RNBlurView blurMethod={blurMethod} style={combinedStyle} intensity={intensity} {...rest}>
       {children}
     </RNBlurView>
   );

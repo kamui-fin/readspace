@@ -1,16 +1,23 @@
+import asyncio
 import io
 import uuid
 
 import structlog
 from extract_favicon.main_async import get_best_favicon
+from PIL import Image
 from supabase import AsyncClient
 from supabase import acreate_client as create_async_client
 
 from app.core.config import get_settings
-from app.core.constants import FAVICONS_BUCKET_NAME
+from app.core.constants import FAVICON_CACHE_CONTROL_SECONDS, FAVICON_CONTENT_TYPE, FAVICONS_BUCKET_NAME
+from app.services.feeds.favicon_image import is_generated_placeholder, normalize_favicon_to_png
 from app.typing.feeds import FaviconResult
 
 logger = structlog.get_logger(__name__)
+
+# "generate" is deliberately excluded: it fabricates a grey letter-box SVG that carries no
+# information, and clients render a better themed fallback when image_url is NULL.
+FAVICON_STRATEGIES = ["content", "duckduckgo", "google"]
 
 
 async def _get_async_supabase() -> AsyncClient:
@@ -31,7 +38,7 @@ async def extract_favicon_and_canonical_url(
         return FaviconResult()
 
     try:
-        favicon = await get_best_favicon(url=feed_link)
+        favicon = await get_best_favicon(url=feed_link, strategy=FAVICON_STRATEGIES)
 
         result = FaviconResult()
 
@@ -66,43 +73,61 @@ async def extract_favicon_and_canonical_url(
         return FaviconResult()
 
 
-async def upload_favicon_to_storage(feed_url: str, image_content: any, image_format: str) -> str | None:
+async def put_favicon_png(supabase: AsyncClient, png: bytes) -> str:
     """
-    Uploads favicon image content to Supabase Storage and returns the storage path (relative path).
-    Uses AsyncClient to avoid blocking the event loop.
+    Upload already-normalized PNG bytes under a fresh immutable key.
+
+    Args:
+        supabase: Async Supabase client authenticated with the service role key
+        png: PNG bytes produced by normalize_favicon_to_png
+
+    Returns:
+        The relative storage path (``<uuid>.png``)
+    """
+    path = f"{uuid.uuid4()}.png"
+    await supabase.storage.from_(FAVICONS_BUCKET_NAME).upload(
+        path=path,
+        file=png,
+        file_options={
+            "content-type": FAVICON_CONTENT_TYPE,
+            "cache-control": str(FAVICON_CACHE_CONTROL_SECONDS),
+        },
+    )
+    return path
+
+
+async def upload_favicon_to_storage(feed_url: str, image_content: bytes | Image.Image, image_format: str) -> str | None:
+    """
+    Normalize a favicon to a bounded PNG and upload it to Supabase Storage.
+
+    Every stored favicon is a PNG regardless of source format (SVG, ICO, JPEG, ...), so clients
+    only ever need one decoder. Uses AsyncClient to avoid blocking the event loop.
+
+    Args:
+        feed_url: Feed link, used for logging
+        image_content: Raw bytes, or a PIL image as produced by extract_favicon for raster formats
+        image_format: Format reported by extract_favicon (informational; real format is sniffed)
+
+    Returns:
+        The relative storage path (``<uuid>.png``), or None if the favicon was unusable or the upload failed
     """
     try:
-        supabase = await _get_async_supabase()
-
-        # Convert PIL Image to bytes if necessary
-        # Note: image_content.save() is blocking CPU work, but for small icons it's negligible.
-        # If it were large images, run in executor.
         if not isinstance(image_content, bytes):
             buf = io.BytesIO()
-            fmt = image_format or "PNG"
-            try:
-                image_content.save(buf, format=fmt)
-                image_content = buf.getvalue()
-            except Exception as e:
-                logger.warning(f"Failed to convert PIL image to bytes: {e}")
-                return None
+            image_content.save(buf, format="PNG")
+            image_content = buf.getvalue()
 
-        file_ext = (image_format or "png").lower()
-        if file_ext == "svg+xml":
-            file_ext = "svg"
+        if is_generated_placeholder(image_content):
+            logger.info("favicon_placeholder_skipped", feed_url=feed_url)
+            return None
 
-        # Generate a unique path
-        filename = f"{uuid.uuid4()}.{file_ext}"
-        path = f"{filename}"
+        png = await asyncio.to_thread(normalize_favicon_to_png, image_content)
+        if png is None:
+            logger.warning("favicon_unusable", feed_url=feed_url, source_format=image_format)
+            return None
 
-        # Upload using AsyncClient
-        # Note: supabase-py async storage seems to use standard 'upload' method but on async client?
-        # Actually checking docs/usage: await client.storage.from_().upload()
-
-        await supabase.storage.from_(FAVICONS_BUCKET_NAME).upload(
-            path=path, file=image_content, file_options={"content-type": f"image/{file_ext}"}
-        )
-
+        supabase = await _get_async_supabase()
+        path = await put_favicon_png(supabase, png)
         return path
 
     except Exception as e:

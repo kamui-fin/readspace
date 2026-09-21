@@ -5,9 +5,9 @@ import { COLORS } from '@lib/constants/colors';
 import { PasswordConfirmationSchema } from '@lib/validation/auth-schemas';
 import { EyeClosedIcon, EyeIcon } from '@solar-icons/react-native/bold';
 import { Formik, type FormikProps } from 'formik';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Keyboard, TouchableWithoutFeedback, View } from 'react-native';
-import { toFormikValidationSchema } from 'zod-formik-adapter';
+import { toFormikValidate } from 'zod-formik-adapter';
 
 interface PasswordStepProps {
   initialPassword?: string;
@@ -30,6 +30,13 @@ function PasswordFormContent({
   onPasswordChange?: (password: string) => void;
   onConfirmPasswordChange?: (password: string) => void;
 }) {
+  const focusedField = useRef<keyof PasswordFormValues | null>(null);
+  const handleFieldBlur = (field: keyof PasswordFormValues) => {
+    // Ignore native blur events from steps the user has not focused.
+    if (focusedField.current !== field) return;
+    focusedField.current = null;
+    setFieldTouched(field, true);
+  };
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const isDark = useIsDarkMode();
@@ -64,7 +71,10 @@ function PasswordFormContent({
           placeholder="Enter your password"
           value={values.password}
           onChangeText={handleChange('password')}
-          onBlur={() => setFieldTouched('password', true)}
+          onFocus={() => {
+            focusedField.current = 'password';
+          }}
+          onBlur={() => handleFieldBlur('password')}
           secureTextEntry={!showPassword}
           autoCapitalize="none"
           autoComplete="password-new"
@@ -88,7 +98,10 @@ function PasswordFormContent({
             accessibilityLabel="Confirm password"
             value={values.confirmPassword}
             onChangeText={handleChange('confirmPassword')}
-            onBlur={() => setFieldTouched('confirmPassword', true)}
+            onFocus={() => {
+              focusedField.current = 'confirmPassword';
+            }}
+            onBlur={() => handleFieldBlur('confirmPassword')}
             secureTextEntry={!showConfirmPassword}
             autoCapitalize="none"
             autoComplete="password-new"
@@ -124,9 +137,9 @@ export function PasswordStep({
   return (
     <Formik
       initialValues={{ password: initialPassword, confirmPassword: initialConfirmPassword }}
-      validationSchema={toFormikValidationSchema(PasswordConfirmationSchema)}
+      validate={toFormikValidate(PasswordConfirmationSchema)}
       onSubmit={() => {}}
-      validateOnMount
+      validateOnMount={false}
       validateOnChange
       validateOnBlur>
       {(formikProps) => (

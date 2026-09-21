@@ -14,6 +14,7 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { useScrollReset } from '@hooks/useScrollReset';
 import { BOTTOM_TABBAR_BASE_HEIGHT, REFRESH_SPINNER_HEADER_OVERLAP } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { FOLLOWING_TAB } from '@lib/constants/tabs';
 import { createListItems, type ListItem, processArticles } from '@lib/utils/article';
 import {
   isPaywallError,
@@ -152,7 +153,7 @@ export function FollowingScreen({
   // Group articles by date and create flat list with sections and dividers.
   // Saved tab lists by when the article was saved — remap created_at → published_at
   // so createListItems groups (and the row timestamp shows) the saved date.
-  const isSavedTab = activeTab === 2 && !isViewingFeedOrFolder;
+  const isSavedTab = activeTab === FOLLOWING_TAB.SAVED && !isViewingFeedOrFolder;
   const listItems = useMemo(() => {
     if (!isSavedTab) return createListItems(allArticles);
     const remapped = allArticles.map((article) => ({
@@ -209,6 +210,16 @@ export function FollowingScreen({
             toast.error('Failed to update bookmark');
           },
         }
+      );
+    },
+    [updateArticle]
+  );
+
+  const handleMarkAsDone = useCallback(
+    (articleId: string, articleType: 'feed' | 'clipped') => {
+      updateArticle.mutate(
+        { articleId, articleType, data: { is_read: true, is_saved: false } },
+        { onError: () => toast.error('Failed to mark as done') }
       );
     },
     [updateArticle]
@@ -489,12 +500,20 @@ export function FollowingScreen({
           item={item}
           onToggleRead={handleToggleRead}
           onBookmark={handleBookmark}
+          onMarkAsDone={handleMarkAsDone}
           lastRefreshedAt={lastRefreshedAt}
-          isReadLaterMode={activeTab === 2 && !isViewingFeedOrFolder}
+          isReadLaterMode={activeTab === FOLLOWING_TAB.SAVED && !isViewingFeedOrFolder}
         />
       );
     },
-    [handleToggleRead, handleBookmark, lastRefreshedAt, activeTab, isViewingFeedOrFolder]
+    [
+      handleToggleRead,
+      handleBookmark,
+      handleMarkAsDone,
+      lastRefreshedAt,
+      activeTab,
+      isViewingFeedOrFolder,
+    ]
   );
 
   const renderFooter = () => {

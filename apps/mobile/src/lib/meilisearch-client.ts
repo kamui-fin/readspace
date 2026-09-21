@@ -164,13 +164,20 @@ export function createSearchClient(getHybridConfig?: () => HybridSearchConfig | 
 
       // ⚠️ CRITICAL: instant-meilisearch doesn't pass sort parameters through!
       // Must add stable sort AFTER instant-meilisearch creates the query, not before
-      // Inject sort with stable tiebreaker (id) so results are consistent
-      const sortedRequests = processedRequests.map((r) => ({
-        ...r,
-        sort: ['frontend_rank_override:asc', 'popularity_score:desc', 'id:asc'],
-      }));
+      // Inject sort with stable tiebreaker (id) so results are consistent.
+      //
+      // Deliberately skipped in hybrid (Smart) mode: Meilisearch applies an explicit
+      // `sort` ahead of its ranking rules, which would throw away the semantic
+      // ranking score the hybrid query was run to produce and leave Smart search
+      // returning popularity-ordered noise.
+      const finalRequests = hybridConfig
+        ? processedRequests
+        : processedRequests.map((r) => ({
+            ...r,
+            sort: ['frontend_rank_override:asc', 'popularity_score:desc', 'id:asc'],
+          }));
 
-      return baseClient.searchClient.search(sortedRequests as any);
+      return baseClient.searchClient.search(finalRequests as any);
     },
   };
 
@@ -195,7 +202,7 @@ export const meilisearchClient = new Proxy({} as MeiliSearch, {
 
 export {
   createHybridSearchParams,
-  DEFAULT_SEMANTIC_RATIO,
   DEFAULT_RANKING_SCORE_THRESHOLD,
+  DEFAULT_SEMANTIC_RATIO,
   type HybridSearchConfig,
 } from '@readspace/shared';

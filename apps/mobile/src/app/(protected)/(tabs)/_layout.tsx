@@ -4,6 +4,7 @@ import { Avatar } from '@components/ui/avatar';
 import { useSession } from '@contexts/auth-context';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { getUserAvatarSeed, getUserDisplayName } from '@lib/utils/user';
 import { CompassIcon, StarsIcon } from '@solar-icons/react-native/bold';
 import { NotesIcon } from '@solar-icons/react-native/bold-duotone';
 import { Tabs } from 'expo-router';
@@ -66,7 +67,8 @@ export default function TabsLayout() {
                 opacity: focused ? 1 : 0.6,
               }}>
               <Avatar
-                name={user?.user_metadata?.full_name || user?.email || 'User'}
+                name={getUserDisplayName(user)}
+                seed={getUserAvatarSeed(user)}
                 imageUrl={user?.user_metadata?.avatar_url}
                 size={size}
               />

@@ -1,5 +1,5 @@
 /** biome-ignore-all assist/source/organizeImports: false positive */
-import { type BottomSheetModal } from '@gorhom/bottom-sheet';
+import type { SheetRef } from '@components/ui/bottom-sheet';
 import { forwardRef, useCallback, useEffect, useMemo, useState } from 'react';
 import { Keyboard, Platform, View } from 'react-native';
 import { Text } from '@components/ui/text';
@@ -60,7 +60,7 @@ export interface SelfHostSettingsProps {
   };
 }
 
-export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHostSettingsProps>(
+export const SelfHostSettingsBottomSheet = forwardRef<SheetRef, SelfHostSettingsProps>(
   ({ onSave, onClose, initialData }, ref) => {
     const { settings } = useSettingsStore();
     const [resetCounter, setResetCounter] = useState(0);
@@ -322,11 +322,26 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
         headerTitle="Self-hosted connection"
         headerTitleAlign="left"
         snapPoints={snapPoints}
-        enableDynamicSizing={false}
         enablePanDownToClose={true}
         onChange={handleSheetChange}
-        keyboardBehavior="extend"
-        keyboardBlurBehavior="restore">
+        footerActions={
+          <Button
+            variant="primary"
+            size="large"
+            fullWidth
+            onPress={handleSave}
+            disabled={!isValid || isValidating}
+            style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
+            {isValidating ? (
+              <View className="flex-row items-center justify-center gap-2">
+                <Spinner size="small" color={COLORS.white} />
+                <Text className="font-geist-semibold text-base text-white">Connecting...</Text>
+              </View>
+            ) : (
+              'Save and Connect'
+            )}
+          </Button>
+        }>
         <View style={{ gap: 16 }}>
           <Text className="font-geist-medium text-grey dark:text-grey text-base">
             Connect to your own Readspace instance URL
@@ -347,26 +362,6 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
             className="font-geist-mono"
             borderRadius={12}
           />
-
-          {/* Inline Action Button */}
-          <View className="mb-1 mt-4">
-            <Button
-              variant="primary"
-              size="large"
-              fullWidth
-              onPress={handleSave}
-              disabled={!isValid || isValidating}
-              style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
-              {isValidating ? (
-                <View className="flex-row items-center justify-center gap-2">
-                  <Spinner size="small" color={COLORS.white} />
-                  <Text className="font-geist-semibold text-base text-white">Connecting...</Text>
-                </View>
-              ) : (
-                'Save and Connect'
-              )}
-            </Button>
-          </View>
         </View>
       </BottomSheet>
     );

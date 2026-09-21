@@ -1,7 +1,7 @@
+import { BackButton } from '@components/ui/back-button';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { PAGE_INDICATOR, SPACING } from '@lib/constants/app';
+import { BACK_BUTTON_SIZE } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { ArrowLeftIcon } from '@solar-icons/react-native/linear';
 import type React from 'react';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
@@ -9,12 +9,10 @@ import {
   Easing,
   KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PageIndicator } from '../page-indicator';
 
 interface StepperProps {
   pages: React.ReactNode[];
@@ -35,16 +33,11 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
   ({ pages, onStepChange, initialStep = 0, onFirstStepBack, renderHeaderRight }, ref) => {
     const isDark = useIsDarkMode();
     const colors = COLORS[isDark ? 'dark' : 'light'];
-    const { width, height } = useWindowDimensions();
+    const { width } = useWindowDimensions();
     const insets = useSafeAreaInsets();
-    const indicatorSize = PAGE_INDICATOR.BASE_SIZE;
     const stepperHorizontalPadding = 20;
-    const indicatorWidth = width - stepperHorizontalPadding * 2;
-    const dashSize = PAGE_INDICATOR.getDashSize(indicatorWidth, pages.length, indicatorSize);
     const [current, setCurrent] = useState(initialStep);
     const animatedCurrent = useRef(new Animated.Value(initialStep)).current;
-
-    const topPadding = SPACING.getOnboardingTopPadding(height) * 0.7;
 
     const goToNext = () => {
       if (current < pages.length - 1) {
@@ -98,53 +91,38 @@ export const Stepper = forwardRef<StepperRef, StepperProps>(
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View className="bg-screen flex-1" style={{ backgroundColor: colors.background }}>
-          {/* Page Indicator and Back Button */}
+          {/* Keep the whole header row below the system UI, including its controls. */}
           <View
             style={{
-              paddingHorizontal: stepperHorizontalPadding,
-              paddingTop: Math.max(1.2 * insets.top, 24),
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
+              paddingTop: insets.top + 12,
+              paddingLeft: Math.max(insets.left, stepperHorizontalPadding),
+              paddingRight: Math.max(insets.right, stepperHorizontalPadding),
             }}>
-            {(current > 0 || onFirstStepBack) && (
-              <TouchableOpacity
-                onPress={() => {
-                  if (current > 0) {
-                    goToPrevious();
-                  } else if (onFirstStepBack) {
-                    onFirstStepBack();
-                  }
-                }}
-                style={{
-                  position: 'absolute',
-                  left: stepperHorizontalPadding - 4,
-                  padding: 12,
-                  zIndex: 10,
-                }}
-                activeOpacity={0.7}>
-                <ArrowLeftIcon size={24} strokeWidth={2.4} color={colors.primary_foreground} />
-              </TouchableOpacity>
-            )}
-            <PageIndicator
-              gap={8}
-              color={colors.grey4}
-              activeColor={colors.primary}
-              size={indicatorSize}
-              dashSize={dashSize}
-              count={pages.length}
-              current={animatedCurrent}
-            />
-            {renderHeaderRight && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ width: BACK_BUTTON_SIZE, minHeight: BACK_BUTTON_SIZE }}>
+                {(current > 0 || onFirstStepBack) && (
+                  <BackButton
+                    color={colors.primary_foreground}
+                    onPress={() => {
+                      if (current > 0) {
+                        goToPrevious();
+                      } else {
+                        onFirstStepBack?.();
+                      }
+                    }}
+                  />
+                )}
+              </View>
+              <View style={{ flex: 1 }} />
               <View
                 style={{
-                  position: 'absolute',
-                  right: stepperHorizontalPadding - 4,
-                  zIndex: 10,
+                  minWidth: BACK_BUTTON_SIZE,
+                  minHeight: BACK_BUTTON_SIZE,
+                  justifyContent: 'center',
                 }}>
-                {renderHeaderRight()}
+                {renderHeaderRight?.()}
               </View>
-            )}
+            </View>
           </View>
 
           {/* Pages Container with Horizontal Slide */}

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "truesheet-usage": {
+      "source": "lodev09/react-native-true-sheet",
+      "sourceType": "github",
+      "skillPath": "skills/truesheet-usage/SKILL.md",
+      "computedHash": "7a834ed6eaee3fd70ae73c17352c0a9262166c04718ee8988890c318f21fab11"
+    }
+  }
+}

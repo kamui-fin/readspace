@@ -1,13 +1,14 @@
 import { RefreshAI } from '@components/icons/svg';
-import { Button } from '@components/ui/button';
 import { Divider } from '@components/ui/divider';
+import { ExpandableText } from '@components/ui/expandable-text';
+import { GlassIconButton } from '@components/ui/glass-icon-button';
 import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
 import { type CodexDigestResponse, formatAbsoluteDate } from '@readspace/shared';
 import { StarsIcon } from '@solar-icons/react-native/bold';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AtAGlanceCard } from './at-a-glance-card';
@@ -35,7 +36,6 @@ export function CodexView({ digest, onRegenerate, isRegenerating }: CodexViewPro
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const sheetRef = useRef<CodexWriteupsSheetHandle>(null);
-  const [isStandfirstExpanded, setIsStandfirstExpanded] = useState(false);
   const { payload } = digest;
   if (!payload) return null;
 
@@ -87,16 +87,15 @@ export function CodexView({ digest, onRegenerate, isRegenerating }: CodexViewPro
             </Text>
           </View>
           {onRegenerate ? (
-            <Button
-              variant="icon"
-              size="small"
-              fullWidth={false}
+            <GlassIconButton
+              systemImage="arrow.trianglehead.2.clockwise.rotate.90"
               onPress={onRegenerate}
               disabled={isRegenerating}
               loading={isRegenerating}
+              color={colors.grey}
               accessibilityLabel="Regenerate Daily Digest">
               <RefreshAI width={16} height={16} color={colors.grey} />
-            </Button>
+            </GlassIconButton>
           ) : null}
         </View>
         <Text
@@ -105,24 +104,19 @@ export function CodexView({ digest, onRegenerate, isRegenerating }: CodexViewPro
           style={{ letterSpacing: -1.2, fontSize: 30, lineHeight: 38 }}>
           {headline}
         </Text>
-        {/* Long-form standfirsts collapse to a "more" toggle, same pattern the feed info
-            header uses for a feed's own description — the digest is meant to be skimmed, not
-            read as its own article. */}
+        {/* Long-form standfirsts fade out and collapse to a "More" toggle, same treatment the
+            feed info header gives a feed's own description — the digest is meant to be skimmed,
+            not read as its own article. Clamped by *lines* rather than by a character count: the
+            old 120-character cut landed mid-word at a different place on every device width. */}
         {standfirst ? (
-          <Text className="text-grey mt-2" style={{ fontSize: 16, lineHeight: 24 }}>
-            {standfirst.length > 120 && !isStandfirstExpanded
-              ? `${standfirst.slice(0, 120)}... `
-              : standfirst}
-            {standfirst.length > 120 ? (
-              <Text
-                fontFamily="geist-medium"
-                onPress={() => setIsStandfirstExpanded((v) => !v)}
-                className="text-primary-foreground"
-                style={{ fontSize: 16, lineHeight: 24 }}>
-                {isStandfirstExpanded ? ' less' : 'more'}
-              </Text>
-            ) : null}
-          </Text>
+          <View className="mt-2">
+            <ExpandableText
+              text={standfirst}
+              collapsedLines={3}
+              className="text-grey"
+              style={{ fontSize: 16, lineHeight: 24 }}
+            />
+          </View>
         ) : null}
 
         {/* Stat cards, up top under the masthead — web sinks these into a sidebar rail; here
