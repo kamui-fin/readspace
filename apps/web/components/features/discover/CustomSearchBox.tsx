@@ -78,10 +78,7 @@ export function CustomSearchBox({
                 placeholder={inputValue ? "" : placeholder}
                 value={inputValue}
                 onChange={handleInputChange}
-                className="flex-1 min-w-0 bg-transparent border-0 outline-none text-base md:text-lg text-foreground placeholder:text-[#D8E5D0] dark:placeholder:text-muted-foreground/60 h-full"
-                style={{
-                    color: inputValue ? "#475143" : undefined,
-                }}
+                className="flex-1 min-w-0 bg-transparent border-0 outline-none text-base md:text-lg text-[#475143] dark:text-foreground placeholder:text-[#D8E5D0] dark:placeholder:text-muted-foreground h-full"
             />
             {inputValue && (
                 <button

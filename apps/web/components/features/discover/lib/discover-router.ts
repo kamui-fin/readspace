@@ -25,8 +25,7 @@ type RouteState = {
  * `?type=`, so back/forward and shareable/bookmarkable search links work.
  *
  * The AI-search toggle and language preference are applied outside
- * InstantSearch's UiState (via the search-client proxy and a raw
- * `<Configure>` filter respectively) and are synced separately in
+ * routed refinements (via `<Configure>` parameters) and are synced separately in
  * DiscoverView/useDiscoverController via URL search params, which `createURL`
  * here preserves.
  */

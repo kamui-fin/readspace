@@ -4,7 +4,6 @@ import {
     useInfiniteHits,
     useInstantSearch,
     useSearchBox,
-    useStats,
 } from "react-instantsearch"
 
 import { FeedCard } from "@/components/features/feeds/FeedCard"
@@ -73,9 +72,8 @@ export function SearchResults({
     isInstantTyping = false,
     onSearchDone,
 }: SearchResultsProps) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { hits: items, showMore, isLastPage } = useInfiniteHits({} as any)
-    const { nbHits } = useStats()
+    const { items, results, showMore, isLastPage } = useInfiniteHits()
+    const nbHits = results?.nbHits ?? 0
     const { refine: refineQuery } = useSearchBox()
     const { status, error } = useInstantSearch()
 
@@ -150,7 +148,8 @@ export function SearchResults({
                         <div className="h-4 w-24 bg-muted/60 dark:bg-muted/40 animate-pulse rounded" />
                     ) : (
                         <div className="text-xs md:text-sm font-medium text-muted-foreground">
-                            {nbHits.toLocaleString()} {nbHits === 1 ? "feed" : "feeds"} found
+                            {nbHits.toLocaleString()}{" "}
+                            {nbHits === 1 ? "feed" : "feeds"} found
                         </div>
                     )}
                     <Button
@@ -184,7 +183,10 @@ export function SearchResults({
                         Try again
                     </Button>
                 </div>
-            ) : items.length === 0 && !isLoading && !isError && !previewFeedData ? (
+            ) : items.length === 0 &&
+              !isLoading &&
+              !isError &&
+              !previewFeedData ? (
                 <div className="flex flex-col items-center justify-center py-16">
                     <div className="mb-6">
                         <NextImage

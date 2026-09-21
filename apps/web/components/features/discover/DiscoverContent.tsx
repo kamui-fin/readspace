@@ -2,6 +2,8 @@ import { useState } from "react"
 import NextImage from "next/image"
 import { Configure } from "react-instantsearch"
 
+import { getDiscoverSearchParameters } from "./lib/discover-search-parameters"
+
 import { AiSearchToggle } from "./AiSearchToggle"
 import { CategoryGrid } from "./CategoryGrid"
 import { ContentTypeFilter } from "./ContentTypeFilter"
@@ -59,6 +61,7 @@ export function DiscoverContent({
                 use-discover-controller's isLanguageInitialized doc). */}
             {isLanguageInitialized && (
                 <Configure
+                    {...getDiscoverSearchParameters(aiSearchEnabled)}
                     hitsPerPage={20}
                     attributesToHighlight={["title", "description"]}
                     filters={languageFilter}
