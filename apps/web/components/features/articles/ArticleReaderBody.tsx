@@ -201,7 +201,6 @@ interface ArticleReaderBodyProps {
     shouldShowFeedBadge: boolean
     isMobile: boolean
     isRecentlyReadMode: boolean
-    shouldShowPreviewBanner: boolean
     /** Rendered into the header meta row on desktop; pass `null` for a chrome-free view. */
     toolbar: React.ReactNode
     aiSummary?: string | null
@@ -230,7 +229,6 @@ export function ArticleReaderBody({
     shouldShowFeedBadge,
     isMobile,
     isRecentlyReadMode,
-    shouldShowPreviewBanner,
     toolbar,
     aiSummary,
     onDismissAiSummary,
@@ -275,7 +273,6 @@ export function ArticleReaderBody({
                 shouldShowFeedBadge={shouldShowFeedBadge}
                 isMobile={isMobile}
                 isRecentlyReadMode={isRecentlyReadMode}
-                shouldShowPreviewBanner={shouldShowPreviewBanner}
                 toolbar={toolbar}
                 isBusy={isTranslating}
             />

@@ -5,7 +5,15 @@ let browserPurifier: DOMPurify | undefined
 function getPurifier(): DOMPurify | null {
     if (typeof window === "undefined") return null
     if (typeof createDOMPurify.sanitize === "function") return createDOMPurify
-    browserPurifier ||= createDOMPurify(window)
+    // `window` is cast rather than passed directly: dompurify types its factory argument
+    // against @types/trusted-types, and TrustedHTML & friends are nominal (private `brand`).
+    // If an install ends up with two physical copies of that package — which a restored
+    // Vercel build cache does, hoisting one at the root and keeping another in the bun store
+    // — the global `Window.trustedTypes` and dompurify's `WindowLike` resolve to different
+    // declarations and tsc rejects the call. The runtime value is correct either way.
+    browserPurifier ||= createDOMPurify(
+        window as unknown as Parameters<typeof createDOMPurify>[0]
+    )
     return browserPurifier
 }
 

@@ -253,7 +253,6 @@ export function ArticleContent({
                         shouldShowFeedBadge={shouldShowFeedBadge}
                         isMobile={!!isMobile}
                         isRecentlyReadMode={isRecentlyReadMode}
-                        shouldShowPreviewBanner={shouldShowPreviewBanner}
                         toolbar={toolbar}
                         aiSummary={reader.aiSummary}
                         onDismissAiSummary={reader.dismissAiSummary}
@@ -313,9 +312,6 @@ export function ArticleContent({
                                 shouldShowFeedBadge={shouldShowFeedBadge}
                                 isMobile={!!isMobile}
                                 isRecentlyReadMode={isRecentlyReadMode}
-                                shouldShowPreviewBanner={
-                                    shouldShowPreviewBanner
-                                }
                                 toolbar={null}
                                 isBusy={reader.isBusy}
                                 isTranslating={reader.isTranslating}

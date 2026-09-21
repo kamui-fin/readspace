@@ -11,7 +11,6 @@ interface ArticleHeaderProps {
     shouldShowFeedBadge: boolean
     isMobile: boolean
     isRecentlyReadMode: boolean
-    shouldShowPreviewBanner: boolean
     toolbar?: React.ReactNode
     /** True while the title/tags are being translated (or article is loading). */
     isBusy?: boolean
@@ -23,7 +22,6 @@ export function ArticleHeader({
     shouldShowFeedBadge,
     isMobile,
     isRecentlyReadMode,
-    shouldShowPreviewBanner,
     toolbar,
     isBusy = false,
 }: ArticleHeaderProps) {

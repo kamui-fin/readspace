@@ -195,7 +195,6 @@ function ReaderInner({
                         shouldShowFeedBadge
                         isMobile={isMobile}
                         isRecentlyReadMode={false}
-                        shouldShowPreviewBanner={false}
                         toolbar={null}
                         aiSummary={reader.aiSummary}
                         onDismissAiSummary={reader.dismissAiSummary}
