@@ -1,4 +1,4 @@
-import { CONTENT_TYPE_ATTRIBUTE, useContentTypeFilters } from '@hooks/useContentTypeFilters';
+import { useContentTypeFilters } from '@hooks/useContentTypeFilters';
 import { useDiscoverPreferences } from '@stores/discover-preferences';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -26,19 +26,29 @@ export type DiscoverMode = 'browse' | 'suggestions' | 'results';
 const CATEGORY_ATTRIBUTE = 'top_level_category';
 
 /**
- * The `SearchParameters` the currently rendered hits were produced from.
- * Used to tell "these results answer the current question" from "these are the
- * previous question's results, still on screen while a new request is in flight".
+ * The search inputs a set of hits was produced for. Used to tell "these results
+ * answer the current question" from "these are the previous question's results,
+ * still on screen while a new request is in flight".
  */
-interface RenderedSearchState {
-  query?: string;
-  filters?: string;
-  hierarchicalFacetsRefinements?: Record<string, string[] | undefined>;
-  disjunctiveFacetsRefinements?: Record<string, string[] | undefined>;
+interface SearchSnapshot {
+  query: string;
+  category: string;
+  /** Sorted, so order of selection doesn't matter. */
+  types: string[];
+  filters: string;
 }
 
 function sameValues(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function sameSearch(a: SearchSnapshot, b: SearchSnapshot): boolean {
+  return (
+    a.query === b.query &&
+    a.category === b.category &&
+    a.filters === b.filters &&
+    sameValues(a.types, b.types)
+  );
 }
 
 export function useDiscoverController(languageFilter: string) {
@@ -104,31 +114,40 @@ export function useDiscoverController(languageFilter: string) {
    * alone therefore appeared *after* the chip had already moved — the "selects
    * the chip AND ONLY THEN shows the skeleton" lag.
    */
-  const isStale = useMemo(() => {
-    const renderedState = (results as unknown as { _state?: RenderedSearchState })?._state;
-    if (!renderedState) return false;
-
-    const renderedQuery = renderedState.query ?? '';
-    const renderedCategory =
-      renderedState.hierarchicalFacetsRefinements?.[CATEGORY_ATTRIBUTE]?.[0] ?? '';
-    const renderedTypes =
-      renderedState.disjunctiveFacetsRefinements?.[CONTENT_TYPE_ATTRIBUTE] ?? [];
-    const renderedFilters = renderedState.filters ?? '';
-
-    return (
-      renderedQuery !== query ||
-      renderedCategory !== (selectedCategory ?? '') ||
-      !sameValues([...renderedTypes].sort(), [...selectedContentTypes].sort()) ||
-      renderedFilters !== languageFilter
-    );
-  }, [results, query, selectedCategory, selectedContentTypes, languageFilter]);
+  // In Smart mode a submit records `submittedQuery` synchronously while `query`
+  // catches up a render or two later, so it stands in for `query` here.
+  const currentSearch: SearchSnapshot = {
+    query: searchMode === 'smart' ? submittedQuery || query : query,
+    category: selectedCategory ?? '',
+    types: [...selectedContentTypes].sort(),
+    filters: languageFilter,
+  };
 
   /**
-   * Text typed but not yet answered — true across the Smart debounce window, so
-   * the results view can show progress from the first keystroke instead of
-   * briefly insisting there are no matches.
+   * What the hits on screen were answering, captured when the `results` object
+   * last changed. `results` is swapped only when a response actually lands, so
+   * the snapshot stays on the old question for the whole request.
+   *
+   * Do NOT read this from `results._state`: InstantSearch's `getResults()`
+   * overwrites it with the *current* helper state on every render (including the
+   * stalled render ~200ms after a request starts), so it flips to the new query
+   * while the old hits are still displayed.
    */
-  const hasUnansweredInput = inputValue !== query;
+  const renderedRef = useRef<{ results: unknown; snapshot: SearchSnapshot } | null>(null);
+  if (results && renderedRef.current?.results !== results) {
+    renderedRef.current = { results, snapshot: currentSearch };
+  }
+  const renderedSearch = renderedRef.current?.snapshot;
+  const isStale = renderedSearch ? !sameSearch(renderedSearch, currentSearch) : false;
+
+  /**
+   * Keyword text typed but not yet answered, so the results view can show
+   * progress from the first keystroke instead of briefly insisting there are no
+   * matches. Smart mode never fires per keystroke, so unsubmitted text there is
+   * not a pending request and must not raise skeletons — the previous results
+   * stay put until the user actually submits.
+   */
+  const hasUnansweredInput = searchMode !== 'smart' && inputValue !== query;
 
   const isPending = isStale || hasUnansweredInput || status === 'loading' || status === 'stalled';
 
