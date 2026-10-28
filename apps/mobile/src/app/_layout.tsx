@@ -1,4 +1,5 @@
 import '../../global.css';
+import { toast } from '@components/ui/toast';
 import { SessionProvider, useSession } from '@contexts/auth-context';
 import { RevenueCatProvider } from '@contexts/revenuecat-context';
 import { ThemeProvider } from '@contexts/theme-provider';
@@ -36,7 +37,13 @@ import {
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { NAVIGATION_THEME } from '@lib/constants/navigation-theme';
-import { ApiError, isDowngradeRequiredError, queryKeys } from '@readspace/shared';
+import {
+  ApiError,
+  isDowngradeRequiredError,
+  queryKeys,
+  type UserLimits,
+  UserRole,
+} from '@readspace/shared';
 import * as Sentry from '@sentry/react-native';
 import { useHasSettingsHydrated, useSettingsStore } from '@stores/settings';
 import { useThemeStore } from '@stores/theme';
@@ -95,6 +102,13 @@ const handleGlobalError = (error: unknown) => {
     return;
   }
   if (error instanceof ApiError && error.status === 429) {
+    // Pro/Admin have nothing to upgrade to: a 429 here is a hard cap, so show the server's
+    // explanation instead of the upgrade paywall.
+    const role = queryClient.getQueryData<UserLimits>(queryKeys.userLimits())?.role;
+    if (role === UserRole.PRO || role === UserRole.ADMIN) {
+      toast.error(error.message);
+      return;
+    }
     useUpgradeDialog.getState().open({
       title: 'Upgrade to Readspace Pro',
       description: error.message || 'You have reached a limit on your current plan.',

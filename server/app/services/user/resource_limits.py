@@ -83,8 +83,15 @@ async def enforce_subscription_limit(db: AsyncSession, user_id: UUID, additional
     if limit != -1:
         current = await get_current_usage(db, user_id, resource)
         if current + additional_count > limit:
+            # Pro is the top paid tier: there is nothing to upgrade to, so point at the cap instead.
+            is_pro = user_role.lower().split(".")[-1] == "pro"
+            hint = (
+                f"Pro accounts can follow up to {limit} feeds; unsubscribe from some to make room."
+                if is_pro
+                else "Please upgrade your plan."
+            )
             raise ResourceLimitError(
-                message="Subscription limit would be exceeded. Please upgrade your plan.",
+                message=f"Subscription limit would be exceeded. {hint}",
                 error_code="SUBSCRIPTION_LIMIT_EXCEEDED",
                 details={
                     "current_usage": current,

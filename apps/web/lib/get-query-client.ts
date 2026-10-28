@@ -3,7 +3,10 @@ import {
     ApiError,
     isDowngradeRequiredError,
     queryKeys,
+    UserRole,
+    type UserLimits,
 } from "@readspace/shared"
+import { toast } from "react-hot-toast"
 import { useUpgradeDialog } from "@/stores/upgrade-dialog"
 
 function makeQueryClient() {
@@ -16,6 +19,15 @@ function makeQueryClient() {
             return
         }
         if (error instanceof ApiError && error.status === 429) {
+            // Pro/Admin have nothing to upgrade to: a 429 here is a hard cap, so show the
+            // server's explanation instead of an "Upgrade to Pro" paywall.
+            const role = client.getQueryData<UserLimits>(
+                queryKeys.userLimits()
+            )?.role
+            if (role === UserRole.PRO || role === UserRole.ADMIN) {
+                toast.error(error.message)
+                return
+            }
             useUpgradeDialog.getState().open({
                 title: "Upgrade to Readspace Pro",
                 description:

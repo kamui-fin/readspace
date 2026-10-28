@@ -3,6 +3,7 @@
 This tests the fix for the bug where OPML import was bypassing subscription limits.
 """
 
+import asyncio
 import io
 from unittest.mock import patch
 from uuid import uuid4
@@ -364,3 +365,117 @@ class TestOPMLImportLimits:
         error_data = response.json()
         # The error message could be about invalid XML or no feed entries
         assert any(keyword in error_data["message"] for keyword in ["Invalid", "XML", "No feed entries", "found"])
+
+    @pytest.mark.asyncio
+    async def test_opml_reimport_does_not_count_already_followed_feeds(
+        self,
+        async_client: AsyncClient,
+        test_user: Profile,
+        test_folder: Folder,
+        db_session: AsyncSession,
+    ):
+        """Feeds the user already follows must not count against the cap (GitHub issue #10).
+
+        A user at 4/5 re-imports an OPML holding those 4 feeds plus 1 new one: only the new
+        feed takes a slot, so the import fits. Counting every entry (4 + 5 = 9 > 5) used to
+        reject it with the upgrade paywall.
+        """
+        test_limits = {
+            "basic": {"max_subscriptions": 5},
+            "pro": {"max_subscriptions": 5},
+            "admin": {"max_subscriptions": -1},
+        }
+
+        with patch("app.services.user.resource_limits.RESOURCE_LIMITS", test_limits):
+            for i in range(4):
+                feed = Feed(
+                    id=uuid4(),
+                    url=f"https://example.com/existing{i}.xml",
+                    title=f"Existing Feed {i}",
+                    link=f"https://example.com/existing{i}",
+                    description="Test feed description",
+                    language="en",
+                )
+                db_session.add(feed)
+                await db_session.flush()
+                db_session.add(FeedSubscription(user_id=test_user.id, feed_id=feed.id, folder_id=test_folder.id))
+            await db_session.flush()
+
+            outlines = "".join(
+                f'<outline type="rss" text="Existing {i}" xmlUrl="https://example.com/existing{i}.xml" />'
+                for i in range(4)
+            )
+            opml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+    <head><title>Feedly export</title></head>
+    <body>
+        <outline text="Tech">
+            {outlines}
+            <outline type="rss" text="New" xmlUrl="https://example.com/brand-new.xml" />
+        </outline>
+    </body>
+</opml>"""
+
+            files = {"opml_file": ("feedly.opml", io.BytesIO(opml_content.encode()), "application/xml")}
+            response = await async_client.post("/api/opml/import/", files=files)
+
+            assert response.status_code == 202
+            data = response.json()
+            assert data["estimated_feeds"] == 5
+
+            # Let the background import settle before the session is torn down
+            for _ in range(50):
+                status_res = await async_client.get(f"/api/opml/import/status/{data['task_id']}")
+                if status_res.status_code == 200 and status_res.json()["status"] in ("completed", "failed"):
+                    break
+                await asyncio.sleep(0.1)
+
+    @pytest.mark.asyncio
+    async def test_opml_import_still_blocked_when_new_feeds_exceed_limit(
+        self,
+        async_client: AsyncClient,
+        test_user: Profile,
+        test_folder: Folder,
+        db_session: AsyncSession,
+    ):
+        """Already-followed feeds are discounted, but genuinely new ones still hit the cap."""
+        test_limits = {
+            "basic": {"max_subscriptions": 3},
+            "pro": {"max_subscriptions": 3},
+            "admin": {"max_subscriptions": -1},
+        }
+
+        with patch("app.services.user.resource_limits.RESOURCE_LIMITS", test_limits):
+            feed = Feed(
+                id=uuid4(),
+                url="https://example.com/existing0.xml",
+                title="Existing Feed",
+                link="https://example.com/existing0",
+                description="Test feed description",
+                language="en",
+            )
+            db_session.add(feed)
+            await db_session.flush()
+            db_session.add(FeedSubscription(user_id=test_user.id, feed_id=feed.id, folder_id=test_folder.id))
+            await db_session.flush()
+
+            # 1 followed + 3 new = 4 > 3
+            outlines = "".join(
+                f'<outline type="rss" text="New {i}" xmlUrl="https://example.com/new{i}.xml" />' for i in range(3)
+            )
+            opml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+    <head><title>Feeds</title></head>
+    <body>
+        <outline text="Tech">
+            <outline type="rss" text="Existing" xmlUrl="https://example.com/existing0.xml" />
+            {outlines}
+        </outline>
+    </body>
+</opml>"""
+
+            files = {"opml_file": ("feeds.opml", io.BytesIO(opml_content.encode()), "application/xml")}
+            response = await async_client.post("/api/opml/import/", files=files)
+
+            assert response.status_code == 429
+            assert "Subscription limit would be exceeded" in response.json()["message"]

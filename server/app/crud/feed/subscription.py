@@ -143,6 +143,26 @@ async def get_followed_feed(db: AsyncSession, *, user_id: UUID, urls: list[str],
     return result.scalars().first()
 
 
+async def get_followed_feed_urls(db: AsyncSession, *, user_id: UUID, urls: list[str]) -> set[str]:
+    """
+    Return which of ``urls`` (after normalization) the user is already subscribed to.
+
+    Used by bulk imports so feeds the user already follows don't count against their
+    subscription cap a second time.
+    """
+    normalized_urls = {normalize_url(url) for url in urls if url}
+    if not normalized_urls:
+        return set()
+
+    stmt = (
+        select(Feed.url)
+        .join(FeedSubscription, FeedSubscription.feed_id == Feed.id)
+        .where(FeedSubscription.user_id == user_id, Feed.url.in_(normalized_urls))
+    )
+    result = await db.execute(stmt)
+    return set(result.scalars().all())
+
+
 async def get_subscriptions_by_user(
     db: AsyncSession,
     *,
