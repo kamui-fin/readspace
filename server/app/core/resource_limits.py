@@ -31,7 +31,7 @@ RESOURCE_LIMITS = {
         "max_saved_articles": 50,  # Saved articles never expire; the cap blocks new saves instead
     },
     "pro": {
-        "max_subscriptions": 1000,
+        "max_subscriptions": 5000,
         "max_newsletters": 100,  # Subset of max_subscriptions: distinct newsletter senders
         "max_daily_ai_calls": 100,
         "max_daily_scrapes": -1,  # Unlimited

@@ -62,7 +62,7 @@ def test_admin_limits_are_reported_as_unlimited() -> None:
 
 @pytest.mark.parametrize("role", ["PRO", "UserRole.PRO"])
 def test_existing_paid_holdings_above_new_caps_do_not_trigger_free_downgrade(role):
-    state = compute_over_limit_state(role, subscriptions=1101, newsletters=101, saved_articles=0)
+    state = compute_over_limit_state(role, subscriptions=5101, newsletters=101, saved_articles=0)
     assert state.subscriptions.over
     assert state.newsletters.over
     assert not state.downgrade_required
@@ -87,7 +87,7 @@ async def test_paid_overage_keeps_content_access_and_cannot_invoke_destructive_f
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(("subscriptions", "newsletters"), [(1000, 10), (101, 101)])
+@pytest.mark.parametrize(("subscriptions", "newsletters"), [(5000, 10), (101, 101)])
 async def test_paid_overage_still_blocks_new_newsletter_subscriptions(subscriptions, newsletters):
     from app.services.user import resource_limits
 
